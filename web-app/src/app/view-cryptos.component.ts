@@ -3,60 +3,138 @@ import { Component } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 
 import { CryptoX } from './interfaces/crypto.model';
+import { MatButtonModule } from '@angular/material/button';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-view-cryptos',
   standalone: true,
-  imports: [CommonModule, MatCardModule],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    FormsModule,
+    MatSelectModule],
   template: `
-    <div class="crypto-container">
-      <mat-card *ngFor="let crypto of cryptos" class="crypto-card">
-        <mat-card-header>
-          <mat-card-title>{{ crypto.name }}</mat-card-title>
-          <mat-card-subtitle>{{ crypto.symbol }}</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <p>Price: $ {{ crypto.price }}</p>
-          <p>Average Price: $ {{ crypto.averagePrice }}</p>
-          <p>Price Difference: {{ crypto.priceDifferencePercent | number: '1.2-2' }}%</p>
-        </mat-card-content>
-        <mat-card-actions align="end">
-          <button mat-button color="accent">Ver mais</button>
-        </mat-card-actions>
-      </mat-card>
-    </div>
+      <main class="main-container">
+        <header>
+          <h1>Portfolio</h1>
+          <div class="filters">
+
+        <button type="button" mat-raised-button color="primary">
+          <mat-icon>add</mat-icon> Add Crypto
+        </button>
+            <mat-form-field appearance="outline" style="margin-left: 10px;">
+              <mat-label>Search by name..</mat-label>
+              <input matInput type="text" [(ngModel)]="searchValue">
+              <button
+                color="primary"
+                matSuffix
+                mat-icon-button
+                aria-label="Search"
+                (click)="search($event)">
+                <mat-icon>search</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" style="margin-left: 10px;">
+              <mat-label>Order</mat-label>
+              <mat-select>
+                <mat-option *ngFor="let option of orderOptions" [value]="option">
+                  {{option}}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" style="margin-left: 10px;">
+              <mat-label>Filter by date</mat-label>
+              <mat-select>
+                <mat-option *ngFor="let option of dateOptions" [value]="option">
+                  {{option}}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+        </header>
+      <div class="crypto-container">
+        <mat-card *ngFor="let crypto of cryptos" class="crypto-card">
+          <mat-card-header>
+            <mat-card-title>{{ crypto.name }}</mat-card-title>
+            <mat-card-subtitle>{{ crypto.symbol }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>Price: $ {{ crypto.price }}</p>
+            <p>Average Price: $ {{ crypto.averagePrice }}</p>
+            <p>Price Difference: {{ crypto.priceDifferencePercent | number: '1.2-2' }}%</p>
+          </mat-card-content>
+          <mat-card-actions align="end">
+            <button mat-button color="primary">Ver mais</button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+    </main>
   `,
   styles: [`
-    .crypto-container {
+    .main-container {
+        display: flex;
+        flex-direction: column;
+        padding:20px;
+      }
+    header{
       display: flex;
-      flex-wrap: wrap;
-      justify-content: space-around;
-      padding: 20px;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
     }
-
-    .crypto-card {
-      width: 300px;
-      margin: 10px;
-      background-color: #f5f5f5;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    .filters{
+      padding:5px;
     }
-
-    .mat-card-header {
-      padding: 8px;
-      background-color: #2196f3;
-      color: white;
+    .crypto-container {
+      display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-gap: 1rem;
+        margin-bottom: 1rem;
     }
-
-    .mat-card-content {
-      padding: 8px;
+    mat-form-field{
+      width:20vw;
     }
-
-    .mat-card-actions {
-      padding: 8px;
-    }
+    @media (max-width: 640px) {
+        .crypto-container {
+          grid-template-columns: 1fr;
+          justify-content: center;
+          align-items: center;
+        }
+        header{
+          flex-direction:column;
+          align-items:center;
+        }
+        mat-form-field{
+          width:100%;
+        }
+      }
   `]
 })
 export class ViewCryptosComponent {
+  orderOptions: any[] = [
+    'ASC',
+    'DESC'
+  ];
+  dateOptions: any[] = [
+    '1 dia',
+    '7 dias',
+    '1 mês',
+    '3 meses',
+    '6 meses',
+    '1 ano'
+  ]
   cryptos: CryptoX[] = [
     {
       name: 'Bitcoin',
@@ -78,13 +156,69 @@ export class ViewCryptosComponent {
       price: 157,
       averagePrice: 124,
       priceDifferencePercent: 1.47,
-    }
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
+    {
+      name: 'Chain Link',
+      symbol: 'LINK',
+      price: 157,
+      averagePrice: 124,
+      priceDifferencePercent: 1.47,
+    },
   ];
-
+  searchValue = '';
   constructor() {
     this.calculateCryptoValues();
   }
-
+  search(event: any) { }
   private calculateCryptoValues(): void {
     // Assuming you have the purchased prices of each cryptocurrency stored in an array.
     // For simplicity, I'll use static data here. You should replace this with your actual data.
