@@ -29,7 +29,8 @@ export const initialState: AuthState = {
   providedIn: 'root'
 })
 export class AuthService {
-
+  fakeToken = '';
+  isLoggedIn = false;
   constructor(
     @Inject(API_URL) private api: string,
     private http: HttpClient,
@@ -85,6 +86,17 @@ export class AuthService {
     localStorage.removeItem('auth');
     this.auth.next(initialState);
     this.router.navigateByUrl('auth/login').then();
+  }
+  fakeLogin(): void {
+    localStorage.setItem('fake-auth', 'true');
+    this.router.navigateByUrl('/dashboard').then();
+  }
+  fakeLogout(): void {
+    localStorage.removeItem('fake-auth');
+    this.router.navigate(['/login']).then();
+  }
+  fakeGetLocalState(): boolean {
+    return localStorage.getItem('fake-auth') === 'true';
   }
 }
 

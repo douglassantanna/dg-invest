@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterModule } from '@angular/router';
 
 import { LayoutService } from './services/layout.service';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -69,6 +70,7 @@ import { LayoutService } from './services/layout.service';
 export class HeaderComponent {
   private layoutService = inject(LayoutService);
   private router = inject(Router);
+  authService = inject(AuthService);
 
   navItems = this.layoutService.navItems;
 
@@ -76,6 +78,7 @@ export class HeaderComponent {
     this.router.navigate([route]);
   }
   logout() {
+    this.authService.fakeLogout();
     this.router.navigate(['/login']);
   }
 }

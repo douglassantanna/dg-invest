@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -105,8 +106,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
   ]
 })
 export class LoginComponent {
-  loading = false;
+  authService = inject(AuthService);
   private router = inject(Router);
+
+  loading = false;
   userAuth = {
     password: '',
     email: ''
@@ -115,6 +118,7 @@ export class LoginComponent {
     this.loading = true;
     setTimeout(() => {
       this.router.navigate(['/dashboard']);
+      this.authService.fakeLogin();
     }, 2000);
   }
 }
