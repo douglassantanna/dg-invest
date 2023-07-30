@@ -1,14 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
-
-import { CryptoX } from './interfaces/crypto.model';
-import { MatButtonModule } from '@angular/material/button';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { Router } from '@angular/router';
+
+import { CryptoX } from './interfaces/crypto.model';
+import { CreateCryptoComponent } from './create-crypto.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -21,14 +24,19 @@ import { MatSelectModule } from '@angular/material/select';
     MatIconModule,
     MatInputModule,
     FormsModule,
-    MatSelectModule],
+    MatSelectModule,
+    MatDialogModule],
   template: `
       <main class="main-container">
         <header>
           <h1>Portfolio</h1>
           <div class="filters">
 
-        <button type="button" mat-raised-button color="primary">
+        <button
+          type="button"
+          mat-raised-button
+          color="primary"
+          (click)="createCrypto()">
           <mat-icon>add</mat-icon> Add Crypto
         </button>
             <mat-form-field appearance="outline" style="margin-left: 10px;">
@@ -123,6 +131,8 @@ import { MatSelectModule } from '@angular/material/select';
   `]
 })
 export class ViewCryptosComponent {
+  private router = inject(Router);
+  private dialog = inject(MatDialog);
   orderOptions: any[] = [
     'ASC',
     'DESC'
@@ -214,9 +224,23 @@ export class ViewCryptosComponent {
       priceDifferencePercent: 1.47,
     },
   ];
+
   searchValue = '';
   constructor() {
     this.calculateCryptoValues();
+  }
+  createCrypto(): void {
+    const dialogRef = this.dialog.open(CreateCryptoComponent, {
+      width: '400px',
+      height: '300px',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('The dialog was closed');
+      console.log(result);
+    }
+    );
+    // this.router.navigate(['/create-crypto']);
   }
   search(event: any) { }
   private calculateCryptoValues(): void {
