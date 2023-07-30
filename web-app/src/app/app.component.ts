@@ -1,35 +1,29 @@
-import { Component } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { AuthService } from './services/auth.service';
 import { HeaderComponent } from './header.component';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterOutlet,
-    HeaderComponent],
   template: `
-    <app-header />
-  `,
-  styles: [
-    `
-      .toolbar-container {
-        display: grid;
-        grid-template-columns: 3fr 1fr;
-        margin: 24px 0;
-      }
-      @media (max-width: 640px) {
-        .toolbar-container {
-          grid-template-columns: 1fr;
-          justify-content: center;
-          align-items: center;
-        }
-      }
-    `,
-  ],
+      <header>
+        <ng-container *ngIf="authService.fakeGetLocalState(); else unAuthorized">
+          <app-header />
+
+          <router-outlet></router-outlet>
+        </ng-container>
+      </header>
+      <main>
+        <ng-template #unAuthorized>
+          <router-outlet></router-outlet>
+        </ng-template>
+      </main>
+  <router-outlet></router-outlet>`,
+  standalone: true,
+  imports: [RouterModule, CommonModule, HeaderComponent],
 })
 export class AppComponent {
+  authService = inject(AuthService);
   title = 'web-app';
 }
