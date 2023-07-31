@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 
 import { CryptoX } from './interfaces/crypto.model';
 import { CreateCryptoComponent } from './create-crypto.component';
+import { AddTransactionComponent } from './add-transaction.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -84,7 +85,7 @@ import { CreateCryptoComponent } from './create-crypto.component';
             <p>Price Difference: {{ crypto.priceDifferencePercent | number: '1.2-2' }}%</p>
           </mat-card-content>
           <mat-card-actions align="end">
-            <button mat-button color="primary">Ver mais</button>
+            <button mat-button color="primary" (click)="addTransaction()">Ver mais</button>
           </mat-card-actions>
         </mat-card>
       </div>
@@ -240,12 +241,12 @@ export class ViewCryptosComponent {
       console.log(result);
     }
     );
-    // this.router.navigate(['/create-crypto']);
+  }
+  addTransaction() {
+    this.router.navigate(['/add-transaction', 1]);
   }
   search(event: any) { }
   private calculateCryptoValues(): void {
-    // Assuming you have the purchased prices of each cryptocurrency stored in an array.
-    // For simplicity, I'll use static data here. You should replace this with your actual data.
     const purchasedPrices: number[] = [46000, 48000, 44000];
 
     this.cryptos.forEach((crypto) => {

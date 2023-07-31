@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { PurchaseHistoryComponent } from './purchase-history.component';
 
 @Component({
   selector: 'app-add-transaction',
@@ -23,68 +24,127 @@ import { MatSelectModule } from '@angular/material/select';
     MatButtonModule,
     MatSelectModule,
     MatDatepickerModule,
-    MatNativeDateModule],
+    MatNativeDateModule,
+    PurchaseHistoryComponent],
   template: `
-  <mat-card>
-  <mat-card-header>
-    <mat-card-title>{{ title }}</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    <mat-form-field appearance="outline">
-      <mat-label>Pick a crypto</mat-label>
-      <mat-select  name="selectedCrypto">
-        <mat-option *ngFor="let option of cryptoOptions" [value]="option">
-          {{ option }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
+  <div class="grid-container">
+    <div class="div1">
+      <mat-card>
+        <h1>My crypto in U$</h1>
+        <mat-card-content>
+          <div class="fields">
+            <mat-form-field appearance="outline">
+              <mat-label>Name</mat-label>
+              <input matInput type="text" value="Bitcoin">
+            </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Amount</mat-label>
-      <input matInput type="number"  name="amount">
-    </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Price per Unit</mat-label>
+              <input matInput type="number"  value="29.000">
+            </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Currency</mat-label>
-      <input matInput  name="currency">
-    </mat-form-field>
+          </div>
+          <div class="fields">
+            <mat-form-field appearance="outline">
+              <mat-label>My avarege price</mat-label>
+              <input matInput type="number"  value="22.187">
+            </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Date of Purchase</mat-label>
-      <input matInput [matDatepicker]="picker"  name="date">
-      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-      <mat-datepicker #picker></mat-datepicker>
-    </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>% difference</mat-label>
+              <input matInput type="number"  value="22.187">
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+      <div class="div2">
+      <mat-card>
+        <h1>{{title}}</h1>
+        <mat-card-content>
+          <div class="fields">
+            <mat-form-field appearance="outline">
+              <mat-label>Amount</mat-label>
+              <input matInput type="number"  name="amount">
+            </mat-form-field>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Price per Unit</mat-label>
-      <input matInput type="number"  name="pricePerUnit">
-    </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Price per Unit</mat-label>
+              <input matInput type="number"  name="pricePerUnit">
+            </mat-form-field>
+          </div>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Exchange Name</mat-label>
-      <input matInput type="text" name="exchangeName">
-    </mat-form-field>
-  </mat-card-content>
-  <mat-card-actions align="end">
-    <button mat-raised-button color="accent">Cancel</button>
-    <button mat-raised-button (click)="save()" color="primary">Save</button>
-  </mat-card-actions>
-  <mat-card-footer>
-    Footer
-  </mat-card-footer>
-</mat-card>
+          <div class="fields">
+            <mat-form-field appearance="outline">
+              <mat-label>Date of Purchase</mat-label>
+              <input matInput [matDatepicker]="picker">
+              <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker></mat-datepicker>
+            </mat-form-field>
 
+            <mat-form-field appearance="outline">
+              <mat-label>Exchange Name</mat-label>
+              <input matInput type="text" name="exchangeName">
+            </mat-form-field>
+          </div>
+
+          <div class="fields">
+            <mat-form-field appearance="outline">
+              <mat-label>Transcation type</mat-label>
+              <mat-select>
+                <mat-option [value]="'1'">Buy</mat-option>
+                <mat-option [value]="'1'">Sell</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-raised-button color="warn">Reset</button>
+          <button mat-raised-button (click)="save()" color="primary">Save</button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+    <div class="div3">
+      <mat-card>
+        <h1>Purchase history</h1>
+        <mat-card-content>
+          <app-purchase-history />
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
   `,
   styles: [`
-    mat-card{
-      display:flex;
-      flex-direction: column;
-      width: 400px;
-      height: 100%;
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 0.4fr 1.6fr;
+      gap: 10px 10px;
+      grid-template-areas:
+        "div1 div3"
+        "div2 div3";
+      padding:10px;
+    }
+    .div1 {
+      grid-area:div1;
+    }
+    .div2 {
+      grid-area:div2;
+    }
+    .div3 {
+      grid-area:div3;
+      max-height:600px;
+      overflow:auto;
+    }
+    h1{
+      padding:16px 0px 0px 16px
     }
     mat-form-field{
       width: 100%;
+    }
+    .fields{
+      display:flex;
+      gap:10px;
     }
     button{
       margin-left:10px;
@@ -92,7 +152,7 @@ import { MatSelectModule } from '@angular/material/select';
   `]
 })
 export class AddTransactionComponent {
-  title = 'New Crypto';
+  title = 'Add transaction';
   cryptoOptions: any[] = [
     'Bitcoin',
     'Ethereum',

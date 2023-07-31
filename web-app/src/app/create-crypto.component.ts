@@ -1,14 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 
 
 interface CryptoPurchase {
@@ -59,7 +60,7 @@ interface CryptoPurchase {
       </div>
 
       <div class="actions">
-        <button mat-raised-button color="accent">Cancel</button>
+        <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
         <button mat-raised-button (click)="save()" color="primary">Save</button>
       </div>
     </div>
@@ -79,6 +80,8 @@ interface CryptoPurchase {
   `]
 })
 export class CreateCryptoComponent {
+  private dialogRef = inject(MatDialogRef<CreateCryptoComponent>);
+
   cryptoOptions: any[] = [
     'Bitcoin',
     'Ethereum',
@@ -94,5 +97,8 @@ export class CreateCryptoComponent {
     'BRL',
     'USD',
   ]
+  cancel() {
+    this.dialogRef.close()
+  }
   save() { }
 }

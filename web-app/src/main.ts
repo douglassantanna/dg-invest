@@ -1,5 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { enableProdMode, importProvidersFrom } from '@angular/core';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialogModule } from '@angular/material/dialog';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter, Routes } from '@angular/router';
@@ -10,7 +13,7 @@ import { DashboardComponent } from './app/dashboard.component';
 import { LoginComponent } from './app/login.component';
 import { ViewCryptosComponent } from './app/view-cryptos.component';
 import { environment } from './environments/environment.development';
-import { MatDialogModule } from '@angular/material/dialog';
+import { AddTransactionComponent } from './app/add-transaction.component';
 
 if (environment.production) {
   enableProdMode();
@@ -35,6 +38,10 @@ const routes: Routes = [
     component: CreateCryptoComponent,
   },
   {
+    path: "add-transaction/:cryptoId",
+    component: AddTransactionComponent,
+  },
+  {
     path: "login",
     component: LoginComponent,
   },
@@ -46,5 +53,7 @@ bootstrapApplication(AppComponent, {
     provideRouter(routes),
     provideAnimations(),
     importProvidersFrom(MatDialogModule),
+    importProvidersFrom(MatDatepickerModule),
+    importProvidersFrom(MatNativeDateModule),
   ],
 }).catch((err) => console.error(err));
