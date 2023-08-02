@@ -1,16 +1,13 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { PurchaseHistoryComponent } from './purchase-history.component';
-import { MyCryptoComponent } from './my-crypto.component';
 
 @Component({
   selector: 'app-add-transaction',
@@ -19,21 +16,13 @@ import { MyCryptoComponent } from './my-crypto.component';
     CommonModule,
     MatCardModule,
     MatFormFieldModule,
-    MatIconModule,
     MatInputModule,
     FormsModule,
     MatButtonModule,
     MatSelectModule,
     MatDatepickerModule,
-    MatNativeDateModule,
-    PurchaseHistoryComponent,
-    MyCryptoComponent],
+    MatNativeDateModule],
   template: `
-  <div class="grid-container">
-    <div class="div1">
-    <app-my-crypto />
-    </div>
-      <div class="div2">
       <mat-card>
         <h1>{{title}}</h1>
         <mat-card-content>
@@ -78,39 +67,8 @@ import { MyCryptoComponent } from './my-crypto.component';
           <button mat-raised-button (click)="save()" color="primary">Save</button>
         </mat-card-actions>
       </mat-card>
-    </div>
-    <div class="div3">
-      <mat-card>
-        <h1>Purchase history</h1>
-        <mat-card-content>
-          <app-purchase-history />
-        </mat-card-content>
-      </mat-card>
-    </div>
-  </div>
   `,
   styles: [`
-    .grid-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 0.4fr 1.6fr;
-      gap: 10px 10px;
-      grid-template-areas:
-        "div1 div3"
-        "div2 div3";
-      padding:10px;
-    }
-    .div1 {
-      grid-area:div1;
-    }
-    .div2 {
-      grid-area:div2;
-    }
-    .div3 {
-      grid-area:div3;
-      max-height:600px;
-      overflow:auto;
-    }
     h1{
       padding:16px 0px 0px 16px
     }
@@ -124,30 +82,10 @@ import { MyCryptoComponent } from './my-crypto.component';
     button{
       margin-left:10px;
     }
-    .row {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-    }
-    .col {
-      flex: 1;
-    }
     @media (max-width: 640px) {
-        .grid-container {
-          grid-template-columns: 1fr;
-          grid-template-rows: 0.4fr;
-          grid-template-areas:
-          "div1"
-          "div2"
-          "div3";
-          justify-content: center;
-          align-items: center;
-          gap: 5px;
-        }
         .fields{
           display:flex;
           flex-direction:column;
-          gap:10px;
         }
       }
   `]

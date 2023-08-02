@@ -9,11 +9,11 @@ import { provideRouter, Routes } from '@angular/router';
 
 import { AppComponent } from './app/app.component';
 import { CreateCryptoComponent } from './app/create-crypto.component';
+import { CryptoDashboardComponent } from './app/crypto-dashboard.component';
 import { DashboardComponent } from './app/dashboard.component';
 import { LoginComponent } from './app/login.component';
 import { ViewCryptosComponent } from './app/view-cryptos.component';
 import { environment } from './environments/environment.development';
-import { AddTransactionComponent } from './app/add-transaction.component';
 
 if (environment.production) {
   enableProdMode();
@@ -38,8 +38,8 @@ const routes: Routes = [
     component: CreateCryptoComponent,
   },
   {
-    path: "add-transaction/:cryptoId",
-    component: AddTransactionComponent,
+    path: "crypto-dashboard/:cryptoId",
+    component: CryptoDashboardComponent,
   },
   {
     path: "login",

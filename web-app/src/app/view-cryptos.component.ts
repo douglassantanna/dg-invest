@@ -85,7 +85,7 @@ import { AddTransactionComponent } from './add-transaction.component';
             <p>Price Difference: {{ crypto.priceDifferencePercent | number: '1.2-2' }}%</p>
           </mat-card-content>
           <mat-card-actions align="end">
-            <button mat-button color="primary" (click)="addTransaction()">Ver mais</button>
+            <button mat-button color="primary" (click)="cryptoDashboard()">Ver mais</button>
           </mat-card-actions>
         </mat-card>
       </div>
@@ -242,8 +242,8 @@ export class ViewCryptosComponent {
     }
     );
   }
-  addTransaction() {
-    this.router.navigate(['/add-transaction', 1]);
+  cryptoDashboard() {
+    this.router.navigate(['/crypto-dashboard', 1]);
   }
   search(event: any) { }
   private calculateCryptoValues(): void {
