@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { PurchaseHistoryComponent } from './purchase-history.component';
+import { MyCryptoComponent } from './my-crypto.component';
 
 @Component({
   selector: 'app-add-transaction',
@@ -25,42 +26,12 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
     MatSelectModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    PurchaseHistoryComponent],
+    PurchaseHistoryComponent,
+    MyCryptoComponent],
   template: `
   <div class="grid-container">
     <div class="div1">
-      <mat-card>
-        <h1>My {{myCrypto}} in {{myCurrency}}</h1>
-        <mat-card-content>
-          <div class="fields">
-            <mat-form-field appearance="outline">
-              <mat-label>Price per Unit</mat-label>
-              <input matInput type="number"  value="29.000">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>My avarege price</mat-label>
-              <input matInput type="number"  value="22.187">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>% difference</mat-label>
-              <input matInput type="number"  value="22.187">
-            </mat-form-field>
-          </div>
-          <div class="fields">
-            <mat-form-field appearance="outline">
-              <mat-label>Amount</mat-label>
-              <input matInput type="number"  value="0.00148">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Total in U$</mat-label>
-              <input matInput type="number"  value="1.489">
-            </mat-form-field>
-          </div>
-        </mat-card-content>
-      </mat-card>
+    <app-my-crypto />
     </div>
       <div class="div2">
       <mat-card>
@@ -195,6 +166,4 @@ export class AddTransactionComponent {
     'Avalanche',
   ];
   save() { }
-  myCrypto = 'Bitcoin';
-  myCurrency = 'U$';
 }
