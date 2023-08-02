@@ -1,14 +1,31 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
+import { MatFormField, MatFormFieldModule } from '@angular/material/form-field';
+import { FormsModule } from '@angular/forms';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-purchase-history',
   standalone: true,
   imports: [
     CommonModule,
-    MatTableModule],
+    MatTableModule,
+    MatFormFieldModule,
+    FormsModule,
+    MatSelectModule],
   template: `
+  <header style="display: flex; justify-content:space-between;align-items:center;">
+    <h1>Purchase history</h1>
+    <mat-form-field appearance="outline">
+    <mat-label>Filter by date</mat-label>
+    <mat-select>
+      <mat-option *ngFor="let option of dateOptions" [value]="option">
+        {{option}}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+  </header>
     <table mat-table [dataSource]="dataSource">
       <ng-container matColumnDef="amount">
         <th mat-header-cell *matHeaderCellDef> Amount </th>
@@ -138,4 +155,12 @@ export class PurchaseHistoryComponent {
     },
 
   ];
+  dateOptions: any[] = [
+    '1 dia',
+    '7 dias',
+    '1 mês',
+    '3 meses',
+    '6 meses',
+    '1 ano'
+  ]
 }

@@ -61,15 +61,6 @@ import { AddTransactionComponent } from './add-transaction.component';
                 </mat-option>
               </mat-select>
             </mat-form-field>
-
-            <mat-form-field appearance="outline" style="margin-left: 10px;">
-              <mat-label>Filter by date</mat-label>
-              <mat-select>
-                <mat-option *ngFor="let option of dateOptions" [value]="option">
-                  {{option}}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
           </div>
 
         </header>
