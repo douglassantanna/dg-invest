@@ -14,6 +14,7 @@ import { DashboardComponent } from './app/dashboard.component';
 import { LoginComponent } from './app/login.component';
 import { ViewCryptosComponent } from './app/view-cryptos.component';
 import { environment } from './environments/environment.development';
+import { ProfileComponent } from './app/profile.component';
 
 if (environment.production) {
   enableProdMode();
@@ -44,6 +45,10 @@ const routes: Routes = [
   {
     path: "login",
     component: LoginComponent,
+  },
+  {
+    path: "profile",
+    component: ProfileComponent,
   },
 ];
 
