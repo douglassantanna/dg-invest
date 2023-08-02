@@ -25,7 +25,6 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
     </div>
     <div class="div3">
       <mat-card>
-        <h1>Purchase history</h1>
         <mat-card-content>
           <app-purchase-history />
         </mat-card-content>
@@ -54,9 +53,6 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
       grid-area:div3;
       max-height:600px;
       overflow:auto;
-    }
-    h1{
-      padding:16px 0px 0px 16px
     }
     @media (max-width: 640px) {
         .grid-container {
