@@ -30,21 +30,14 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
   <div class="grid-container">
     <div class="div1">
       <mat-card>
-        <h1>My crypto in U$</h1>
+        <h1>My {{myCrypto}} in {{myCurrency}}</h1>
         <mat-card-content>
           <div class="fields">
-            <mat-form-field appearance="outline">
-              <mat-label>Name</mat-label>
-              <input matInput type="text" value="Bitcoin">
-            </mat-form-field>
-
             <mat-form-field appearance="outline">
               <mat-label>Price per Unit</mat-label>
               <input matInput type="number"  value="29.000">
             </mat-form-field>
 
-          </div>
-          <div class="fields">
             <mat-form-field appearance="outline">
               <mat-label>My avarege price</mat-label>
               <input matInput type="number"  value="22.187">
@@ -53,6 +46,17 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
             <mat-form-field appearance="outline">
               <mat-label>% difference</mat-label>
               <input matInput type="number"  value="22.187">
+            </mat-form-field>
+          </div>
+          <div class="fields">
+            <mat-form-field appearance="outline">
+              <mat-label>Amount</mat-label>
+              <input matInput type="number"  value="0.00148">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Total in U$</mat-label>
+              <input matInput type="number"  value="1.489">
             </mat-form-field>
           </div>
         </mat-card-content>
@@ -149,6 +153,32 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
     button{
       margin-left:10px;
     }
+    .row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
+    .col {
+      flex: 1;
+    }
+    @media (max-width: 640px) {
+        .grid-container {
+          grid-template-columns: 1fr;
+          grid-template-rows: 0.4fr;
+          grid-template-areas:
+          "div1"
+          "div2"
+          "div3";
+          justify-content: center;
+          align-items: center;
+          gap: 5px;
+        }
+        .fields{
+          display:flex;
+          flex-direction:column;
+          gap:10px;
+        }
+      }
   `]
 })
 export class AddTransactionComponent {
@@ -165,4 +195,6 @@ export class AddTransactionComponent {
     'Avalanche',
   ];
   save() { }
+  myCrypto = 'Bitcoin';
+  myCurrency = 'U$';
 }
