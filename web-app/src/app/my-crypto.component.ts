@@ -13,7 +13,7 @@ import { MatInputModule } from '@angular/material/input';
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
-    FormsModule,],
+    FormsModule],
   template: `
    <mat-card>
         <h1>My {{myCrypto}} in {{myCurrency}}</h1>

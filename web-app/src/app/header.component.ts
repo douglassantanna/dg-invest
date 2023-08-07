@@ -35,14 +35,13 @@ import { AuthService } from './services/auth.service';
       </div>
       <span class="example-spacer"></span>
       <div style="display: flex; align-items:center; gap: 8px;">
-        <a
+        <button
           mat-button
-          href="#blank"
-          target="_blank"
+          (click)="navigate('profile')"
         >
           <mat-icon>account_circle</mat-icon>
           Meus dados
-        </a>
+        </button>
         <button
           mat-button
           type="button"
