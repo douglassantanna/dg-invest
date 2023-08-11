@@ -1,3 +1,5 @@
+using System;
+
 namespace api.Models.Cryptos;
 public class CryptoTransaction
 {

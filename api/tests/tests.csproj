@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\api\api.csproj" />
+    <ProjectReference Include="..\function-api\function-api.csproj" />
   </ItemGroup>
 
 </Project>
