@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,10 +16,12 @@ public class CryptoWallet
     public decimal AveragePrice
     {
         get { return _transactions.Select(t => t.Price).Average(); }
+        private set { }
     }
     private readonly List<string> _addresses = new();
     public string Symbol { get; private set; } = string.Empty;
     public string CurrencyName { get; private set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
     private readonly List<CryptoTransaction> _transactions = new();
     public void AddBalance(decimal amount)
     {
