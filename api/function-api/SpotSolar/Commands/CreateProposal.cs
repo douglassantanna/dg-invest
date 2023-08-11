@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,8 +22,8 @@ public record CreateProposal(CustomerDto Customer,
                              int TotalPriceProducts,
                              int LabourValue,
                              int TotalPrice,
-                             string? Power = null,
-                             string? Notes = null) : IRequest<Response>;
+                             string Power,
+                             string Notes) : IRequest<Response>;
 
 public class CreateProposalHandler : IRequestHandler<CreateProposal, Response>
 {
@@ -34,11 +35,29 @@ public class CreateProposalHandler : IRequestHandler<CreateProposal, Response>
 
     public async Task<Response> Handle(CreateProposal request, CancellationToken cancellationToken)
     {
-        var proposal = new Proposal()
+        var products = request.Products.Select(p => new Product
         {
-            Customer = new() { },
-            Address = new() { },
-            Products = request.Products.Select(x => new Product { Name = x.Name, Quantity = x.Quantity }).ToList(),
+            Name = p.Name,
+            Quantity = p.Quantity
+        }).ToList();
+
+        var proposal = new Proposal
+        {
+            Customer = new Customer
+            {
+                Name = request.Customer.Name,
+                Email = request.Customer.Email,
+                Phone = request.Customer.Phone
+            },
+            Address = new Address
+            {
+                Street = request.Address.Street,
+                Number = request.Address.Number,
+                City = request.Address.City,
+                State = request.Address.State,
+                ZipCode = request.Address.ZipCode
+            },
+            Products = products,
             ServiceType = request.ServiceType,
             WarrantyType = request.WarrantyType,
             WarrantyQtd = request.WarrantyQtd,
@@ -51,7 +70,8 @@ public class CreateProposalHandler : IRequestHandler<CreateProposal, Response>
             PaymentMethods = request.PaymentMethods
         };
 
-        await _context.AddAsync(proposal);
+        await _context.Proposals.AddAsync(proposal);
+        await _context.SaveChangesAsync();
         return new Response("ok", true);
     }
 }
