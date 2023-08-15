@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -26,13 +25,13 @@ public class Function1
         ILogger log)
     {
         string body = await new StreamReader(req.Body).ReadToEndAsync();
-        var command = JsonConvert.DeserializeObject<CreateProposal>(body);
+        var command = JsonConvert.DeserializeObject<CreateProposalCommand>(body);
 
         var result = await _mediator.Send(command);
         if (result.IsSuccess)
-            return new OkObjectResult(result.Message);
+            return new OkObjectResult(result.Data);
         else
-            return new BadRequestObjectResult(result.Message);
+            return new BadRequestObjectResult(new { result.Message, result.Data });
     }
 
 }

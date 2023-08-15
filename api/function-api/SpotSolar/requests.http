@@ -5,28 +5,34 @@ Content-Type: application/json
 
 {
   "Customer": {
-    "Name": "John Doe",
-    "Email": "john@example.com",
-    "Phone": "123-456-7890"
+    "Name": "Douglas",
+    "Email": "douglas@example.com",
+    "Phone": "11941012994"
   },
   "Address": {
     "Street": "123 Main St",
     "Number": "Apt 4B",
     "City": "Cityville",
     "State": "ST",
-    "ZipCode": "12345"
+    "ZipCode": "13218110"
   },
-  "Product": {
-    "Name": "Widget",
-    "Quantity": 2
-  },
+  "Products": [
+    {
+      "Name": "Widget",
+      "Quantity": 2
+    },
+    {
+      "Name": "Caco",
+      "Quantity": 2
+    }
+  ],
   "WarrantyType": 1,
   "ServiceType": 1,
   "WarrantyQtd": 2,
   "ExcecutionTime": 5,
   "PaymentMethods": "Credit Card",
   "TotalPriceProducts": 100,
-  "LabourValue": 50,
+  "LabourValue": 60,
   "TotalPrice": 150,
   "Power": "220V",
   "Notes": "Additional notes go here"

@@ -15,8 +15,12 @@ public class Proposal
     public string Power { get; set; } = string.Empty;
     public decimal TotalPriceProducts { get; set; } = 0;
     public decimal LabourValue { get; set; } = 0;
-    public decimal TotalPrice { get; set; } = 0;
+    public decimal TotalPrice { get; set; }
     public string Notes { get; set; } = string.Empty;
     public string PaymentMethods { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
+    public decimal SumPriceProductsAndLabourValue()
+    {
+        return LabourValue + TotalPriceProducts;
+    }
 }
