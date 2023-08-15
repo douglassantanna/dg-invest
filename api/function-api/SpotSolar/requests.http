@@ -1,6 +1,6 @@
-@url = http://localhost:7071/api/Function1
+@url = http://localhost:7071/api/proposals
 
-POST {{url}}
+POST {{url}}/create
 Content-Type: application/json
 
 {
@@ -36,4 +36,12 @@ Content-Type: application/json
   "TotalPrice": 150,
   "Power": "220V",
   "Notes": "Additional notes go here"
+}
+
+###
+GET {{url}}/1
+Content-Type: application/json
+
+{
+  "proposalId":1
 }
