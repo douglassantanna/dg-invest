@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace api.Models.Cryptos;
-public class CryptoWallet
+public class CryptoAsset
 {
     public int Id { get; private set; }
     public string CryptoCurrency { get; private set; } = string.Empty;
@@ -33,7 +33,7 @@ public class CryptoWallet
         if (amount > 0.0m)
             _balance -= amount;
     }
-    public CryptoWallet(string cryptoCurrency,
+    public CryptoAsset(string cryptoCurrency,
                         string currencyName,
                         string symbol)
     {

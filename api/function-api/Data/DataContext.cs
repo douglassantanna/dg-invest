@@ -11,7 +11,7 @@ public class DataContext : DbContext
     }
 
     public DbSet<CryptoTransaction> CryptoTransactions { get; set; } = null!;
-    public DbSet<CryptoWallet> CryptoWallets { get; set; } = null!;
+    public DbSet<CryptoAsset> CryptoAssets { get; set; } = null!;
     public DbSet<Proposal> Proposals { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -20,11 +20,11 @@ public class DataContext : DbContext
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.Amount).HasPrecision(18, 8);
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.Price).HasPrecision(18, 8);
 
-        modelBuilder.Entity<CryptoWallet>().Property(x => x.Symbol).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<CryptoWallet>().Property(x => x.CurrencyName).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<CryptoWallet>().Property(x => x.CryptoCurrency).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<CryptoWallet>().Property(x => x.Balance).HasPrecision(18, 8);
-        modelBuilder.Entity<CryptoWallet>().Property(x => x.AveragePrice).HasPrecision(18, 8);
+        modelBuilder.Entity<CryptoAsset>().Property(x => x.Symbol).HasColumnType("varchar").HasMaxLength(255);
+        modelBuilder.Entity<CryptoAsset>().Property(x => x.CurrencyName).HasColumnType("varchar").HasMaxLength(255);
+        modelBuilder.Entity<CryptoAsset>().Property(x => x.CryptoCurrency).HasColumnType("varchar").HasMaxLength(255);
+        modelBuilder.Entity<CryptoAsset>().Property(x => x.Balance).HasPrecision(18, 8);
+        modelBuilder.Entity<CryptoAsset>().Property(x => x.AveragePrice).HasPrecision(18, 8);
 
         modelBuilder.Entity<Proposal>().OwnsOne(x => x.Customer, c =>
          {
