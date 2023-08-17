@@ -42,7 +42,7 @@ public class CryptoAsset
         Symbol = symbol;
     }
     public IReadOnlyCollection<string> GetAddresses() => _addresses.AsReadOnly();
-    public IReadOnlyCollection<CryptoTransaction> GetTransactions() => _transactions.AsReadOnly();
+    public IReadOnlyCollection<CryptoTransaction> Transactions => _transactions.AsReadOnly();
     public void AddAddress(string address)
     {
         _addresses.Add(address);

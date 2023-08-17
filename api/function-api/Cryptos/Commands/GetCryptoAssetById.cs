@@ -22,10 +22,19 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
     {
         var cryptoAsset = await _context.CryptoAssets
                                         .Where(x => x.Id == request.CryptoAssetId)
-                                        .Select(x => new ViewMinimalCryptoAssetDto(x.Id,
-                                                                                   x.CurrencyName,
-                                                                                   x.CryptoCurrency,
-                                                                                   x.Symbol))
+                                        .Select(x => new ViewCryptoAssetDto(x.Id,
+                                                                            x.CurrencyName,
+                                                                            x.CryptoCurrency,
+                                                                            x.Symbol,
+                                                                            x.CreatedAt,
+                                                                            x.Transactions.Select(x => new ViewCryptoTransactionDto(x.Amount,
+                                                                                                                                    x.Price,
+                                                                                                                                    x.PurchaseDate,
+                                                                                                                                    x.ExchangeName,
+                                                                                                                                    x.TransactionType)).ToList(),
+                                                                            x.Balance,
+                                                                            x.GetAddresses(),
+                                                                            x.AveragePrice))
                                         .FirstOrDefaultAsync(cancellationToken);
         if (cryptoAsset is null)
             return new Response("Crypto asset not found", false);
