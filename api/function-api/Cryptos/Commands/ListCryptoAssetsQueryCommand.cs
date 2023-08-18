@@ -40,6 +40,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             request.PageSize = maxPageSize;
         }
 
+        Console.WriteLine(request.CryptoName);
         if (!string.IsNullOrEmpty(request.CryptoName))
         {
             request.CryptoName = request.CryptoName?.ToLower();

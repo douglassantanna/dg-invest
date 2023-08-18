@@ -1,54 +1,65 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using function_api.Cryptos.Models;
 
 namespace api.Models.Cryptos;
 public class CryptoAsset
 {
     public int Id { get; private set; }
     public string CryptoCurrency { get; private set; } = string.Empty;
-    private decimal _balance;
-    public decimal Balance
-    {
-        get { return _transactions.Select(t => t.Amount).Sum(); }
-        set { _balance = value; }
-    }
-    public decimal AveragePrice
-    {
-        get { return _transactions.Select(t => t.Price).Average(); }
-        private set { }
-    }
-    private readonly List<string> _addresses = new();
+    public decimal Balance { get; private set; }
+    public decimal AveragePrice { get; private set; }
     public string Symbol { get; private set; } = string.Empty;
     public string CurrencyName { get; private set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
     private readonly List<CryptoTransaction> _transactions = new();
-    public void AddBalance(decimal amount)
-    {
-        if (amount > 0.0m)
-            _balance += amount;
-    }
-    public void SubtractBalance(decimal amount)
-    {
-        if (amount > 0.0m)
-            _balance -= amount;
-    }
+    public IReadOnlyCollection<CryptoTransaction> Transactions => _transactions.AsReadOnly();
+    private readonly List<Address> _addresses = new();
+    public IReadOnlyCollection<Address> Addresses => _addresses.AsReadOnly();
+    public bool Deleted { get; private set; }
+
     public CryptoAsset(string cryptoCurrency,
-                        string currencyName,
-                        string symbol)
+                       string currencyName,
+                       string symbol)
     {
         CryptoCurrency = cryptoCurrency;
         CurrencyName = currencyName;
         Symbol = symbol;
+        CreatedAt = DateTimeOffset.UtcNow;
+        Balance = 0;
+        AveragePrice = 0;
+        Deleted = false;
     }
-    public IReadOnlyCollection<string> GetAddresses() => _addresses.AsReadOnly();
-    public IReadOnlyCollection<CryptoTransaction> Transactions => _transactions.AsReadOnly();
-    public void AddAddress(string address)
+    public void Delete()
+    {
+        Deleted = true;
+    }
+    public decimal GetAveragePrice()
+    {
+        return _transactions.Select(t => t.Price).Average();
+    }
+    public void AddAddress(Address address)
     {
         _addresses.Add(address);
     }
     public void AddTransaction(CryptoTransaction transaction)
     {
-        _transactions.Add(transaction);
+        if (transaction.TransactionType == ETransactionType.Buy)
+            AddBalance(transaction.Amount);
+        else if (transaction.TransactionType == ETransactionType.Sell)
+            SubtractBalance(transaction.Amount);
+        if (transaction.Amount > 0.0m)
+            _transactions.Add(transaction);
+    }
+    public void AddBalance(decimal amount)
+    {
+        if (amount > 0.0m)
+            Balance += amount;
+    }
+    public void SubtractBalance(decimal amount)
+    {
+        if (amount > 0.0m)
+            Balance -= amount;
     }
 }

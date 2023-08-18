@@ -33,7 +33,9 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
                                                                                                                                     x.ExchangeName,
                                                                                                                                     x.TransactionType)).ToList(),
                                                                             x.Balance,
-                                                                            x.GetAddresses(),
+                                                                            x.Addresses.Select(a => new ViewAddressDto(a.Id,
+                                                                                                                       a.AddressName,
+                                                                                                                       a.AddressValue)).ToList(),
                                                                             x.AveragePrice))
                                         .FirstOrDefaultAsync(cancellationToken);
         if (cryptoAsset is null)

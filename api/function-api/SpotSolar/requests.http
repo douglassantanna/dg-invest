@@ -32,7 +32,7 @@ Content-Type: application/json
   "ExcecutionTime": 5,
   "PaymentMethods": "Credit Card",
   "TotalPriceProducts": 100,
-  "LabourValue": 60,
+  "LabourValue": 50,
   "TotalPrice": 150,
   "Power": "220V",
   "Notes": "Additional notes go here"

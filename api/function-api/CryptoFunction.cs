@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using function_api.Cryptos.Commands;
@@ -66,12 +67,36 @@ public class CryptoFunction
 
     [FunctionName("ListCryptoAssets")]
     public async Task<IActionResult> ListCryptoAssets(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "cryptos/list-assets")] HttpRequest req,
-        ILogger log)
+    [HttpTrigger(AuthorizationLevel.Function, "get", Route = "cryptos/list-assets")] HttpRequest req,
+    ILogger log)
     {
-        string body = await new StreamReader(req.Body).ReadToEndAsync();
-        var command = JsonConvert.DeserializeObject<ListCryptoAssetsQueryCommand>(body);
+        var cryptoName = req.Query["cryptoName"];
+        var currencyName = req.Query["currencyName"];
+        var sortColumn = req.Query["sortColumn"];
+        var sortOrder = req.Query["sortOrder"];
+        var page = req.Query["page"];
+        var pageSize = req.Query["pageSize"];
 
-        return new OkObjectResult(await _mediator.Send(command));
+        log.LogInformation(cryptoName);
+        log.LogInformation(currencyName);
+        log.LogInformation(sortColumn);
+        log.LogInformation(sortOrder);
+        log.LogInformation(page);
+        log.LogInformation(pageSize);
+
+        // ListCryptoAssetsQueryCommand commandWithQuery = new ListCryptoAssetsQueryCommand
+        // {
+        //     CryptoName = cryptoName,
+        //     CurrencyName = currencyName,
+        //     SortColumn = sortColumn,
+        //     SortOrder = sortOrder,
+        //     Page = Int32.Parse(page),
+        //     PageSize = Int32.Parse(pageSize)
+        // };
+
+        // var result = await _mediator.Send(commandWithQuery);
+
+        return new OkObjectResult("result");
     }
+
 }

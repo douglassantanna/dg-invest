@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using api.Models.Cryptos;
@@ -7,6 +11,7 @@ using function_api.Data;
 using function_api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace function_api.Cryptos.Commands;
 public record CreateCryptoAssetCommand(string Crypto, string Currency) : IRequest<Response>;
@@ -22,26 +27,35 @@ public class CreateCryptoAssetCommandValidator : AbstractValidator<CreateCryptoA
 public class CreateCryptoAssetCommandHandler : IRequestHandler<CreateCryptoAssetCommand, Response>
 {
     private readonly DataContext _context;
+    private readonly ILogger<CreateCryptoAssetCommandHandler> _logger;
 
-    public CreateCryptoAssetCommandHandler(DataContext context)
+    public CreateCryptoAssetCommandHandler(
+        DataContext context,
+        ILogger<CreateCryptoAssetCommandHandler> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<Response> Handle(CreateCryptoAssetCommand request, CancellationToken cancellationToken)
     {
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
-            return new Response("Validation failed", false, validationResult.Errors);
+            return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
 
         if (await CryptoAssetExists(request))
             return new Response("Asset already exists", false);
 
+        var stringBuilder = new StringBuilder();
+        stringBuilder.Append(request.Crypto);
+        stringBuilder.Append(request.Currency);
+        var cryptoAssetName = stringBuilder.ToString();
+
         var cryptoAsset = new CryptoAsset(request.Crypto,
                                           request.Currency,
-                                          request.Crypto + request.Currency);
+                                          cryptoAssetName);
 
-        await _context.CryptoAssets.AddAsync(cryptoAsset);
+        _context.CryptoAssets.Add(cryptoAsset);
         await _context.SaveChangesAsync();
 
         return new Response("ok", true, cryptoAsset.Id);

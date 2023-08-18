@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using api.Models.Cryptos;
@@ -7,13 +8,15 @@ using FluentValidation.Results;
 using function_api.Data;
 using function_api.Shared;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace function_api.Cryptos.Commands;
 public record CreateTransactionCommand(decimal Amount,
                                        decimal Price,
                                        DateTimeOffset PurchaseDate,
                                        string ExchangeName,
-                                       ETransactionType TransactionType) : IRequest<Response>;
+                                       ETransactionType TransactionType,
+                                       int CryptoAssetId) : IRequest<Response>;
 
 public class CreateTransactionCommandValidator : AbstractValidator<CreateTransactionCommand>
 {
@@ -21,6 +24,7 @@ public class CreateTransactionCommandValidator : AbstractValidator<CreateTransac
     {
         RuleFor(x => x.Amount).GreaterThan(0);
         RuleFor(x => x.Price).GreaterThan(0);
+        RuleFor(x => x.CryptoAssetId).GreaterThan(1);
         RuleFor(x => x.ExchangeName).NotEmpty();
         RuleFor(x => x.TransactionType).IsInEnum();
     }
@@ -38,13 +42,19 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
     {
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
-            return new Response("Validation failed", false, validationResult.Errors);
+            return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+
+        var cryptoAsset = await _context.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefaultAsync(cancellationToken);
+        if (cryptoAsset == null)
+            return new Response("Crypto asset not found", false);
 
         var transaction = new CryptoTransaction(request.Amount,
                                                 request.Price,
                                                 request.PurchaseDate,
                                                 request.ExchangeName,
                                                 request.TransactionType);
+
+        cryptoAsset.AddTransaction(transaction);
 
         await _context.CryptoTransactions.AddAsync(transaction, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);

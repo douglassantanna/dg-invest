@@ -15,7 +15,7 @@ public record ViewCryptoAssetDto(int Id,
                                  DateTimeOffset CreatedAt,
                                  IReadOnlyCollection<ViewCryptoTransactionDto> Transactions,
                                  decimal Balance,
-                                 IReadOnlyCollection<string> Addresses,
+                                 IReadOnlyCollection<ViewAddressDto> Addresses,
                                  decimal AveragePrice);
 
 public record ViewCryptoTransactionDto(decimal Amount,
@@ -23,3 +23,7 @@ public record ViewCryptoTransactionDto(decimal Amount,
                                        DateTimeOffset PurchaseDate,
                                        string ExchangeName,
                                        ETransactionType TransactionType);
+
+public record ViewAddressDto(int Id,
+                             string AddressName,
+                             string AddressValue);
