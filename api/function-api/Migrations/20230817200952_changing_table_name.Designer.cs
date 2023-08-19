@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using function_api.Data;
 
@@ -11,9 +12,10 @@ using function_api.Data;
 namespace function_api.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20230817200952_changing_table_name")]
+    partial class changing_table_name
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -49,9 +51,6 @@ namespace function_api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Symbol")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
@@ -73,12 +72,6 @@ namespace function_api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
-                    b.Property<int?>("CryptoAssetId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("ExchangeName")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
@@ -95,36 +88,7 @@ namespace function_api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CryptoAssetId");
-
                     b.ToTable("CryptoTransactions");
-                });
-
-            modelBuilder.Entity("function_api.Cryptos.Models.Address", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("AddressName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AddressValue")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CryptoAssetId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CryptoAssetId");
-
-                    b.ToTable("Address");
                 });
 
             modelBuilder.Entity("function_api.SpotSolar.Models.Proposal", b =>
@@ -176,24 +140,6 @@ namespace function_api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Proposals");
-                });
-
-            modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
-                {
-                    b.HasOne("api.Models.Cryptos.CryptoAsset", null)
-                        .WithMany("Transactions")
-                        .HasForeignKey("CryptoAssetId");
-                });
-
-            modelBuilder.Entity("function_api.Cryptos.Models.Address", b =>
-                {
-                    b.HasOne("api.Models.Cryptos.CryptoAsset", "CryptoAsset")
-                        .WithMany("Addresses")
-                        .HasForeignKey("CryptoAssetId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CryptoAsset");
                 });
 
             modelBuilder.Entity("function_api.SpotSolar.Models.Proposal", b =>
@@ -287,13 +233,6 @@ namespace function_api.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("Products");
-                });
-
-            modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
-                {
-                    b.Navigation("Addresses");
-
-                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

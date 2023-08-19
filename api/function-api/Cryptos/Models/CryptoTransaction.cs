@@ -14,6 +14,7 @@ public class CryptoTransaction
         PurchaseDate = purchaseDate;
         ExchangeName = exchangeName;
         TransactionType = transactionType;
+        Deleted = false;
     }
 
     public int Id { get; private set; }
@@ -22,5 +23,6 @@ public class CryptoTransaction
     public DateTimeOffset PurchaseDate { get; private set; }
     public string ExchangeName { get; private set; } = string.Empty;
     public ETransactionType TransactionType { get; private set; }
+    public bool Deleted { get; private set; }
 
 }

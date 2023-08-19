@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using function_api.SpotSolar.Models;
 
 namespace function_api.SpotSolar.Dtos;
-public record ProposalDto(CustomerDto Customer,
+public record ProposalDto(int Id,
+                          CustomerDto Customer,
                           AddressDto Address,
                           List<ProductDto> Products,
                           EWarrantyType WarrantyType,
@@ -10,9 +11,9 @@ public record ProposalDto(CustomerDto Customer,
                           int WarrantyQtd,
                           int ExcecutionTime,
                           string PaymentMethods,
-                          int TotalPriceProducts,
-                          int LabourValue,
-                          int TotalPrice,
+                          decimal TotalPriceProducts,
+                          decimal LabourValue,
+                          decimal TotalPrice,
                           string? Power = null,
                           string? Notes = null);
 

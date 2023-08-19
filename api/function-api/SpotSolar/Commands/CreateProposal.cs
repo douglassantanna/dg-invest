@@ -100,7 +100,7 @@ public class CreateProposalCommandHandler : IRequestHandler<CreateProposalComman
     {
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
-            return new Response("Validation failed", false, validationResult.Errors);
+            return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
 
         if (!CalculateTotalPrice(request))
             return new Response("TotalPrice is invalid", false);

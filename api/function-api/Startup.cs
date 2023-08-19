@@ -10,13 +10,14 @@ using Microsoft.Extensions.DependencyInjection;
 [assembly: FunctionsStartup(typeof(function_api.Startup))]
 
 namespace function_api;
-class Startup : FunctionsStartup
+public class Startup : FunctionsStartup
 {
     public override void Configure(IFunctionsHostBuilder builder)
     {
         builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
         builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
-        string connectionString = Environment.GetEnvironmentVariable("SqlConnectionString");
+        string connectionString = Environment.GetEnvironmentVariable("ConnectionString") ?? throw new Exception("ConnectionString not found");
+
         builder.Services.AddDbContext<DataContext>(
             options => SqlServerDbContextOptionsExtensions.UseSqlServer(options, connectionString));
     }

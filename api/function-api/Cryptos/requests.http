@@ -1,0 +1,31 @@
+@url = http://localhost:7071/api/cryptos
+
+POST {{url}}/create-crypto-asset
+Content-Type: application/json
+
+{
+    "crypto":"twt",
+    "currency":"usd"
+}
+
+
+###
+POST {{url}}/create-crypto-transaction
+Content-Type: application/json
+
+{
+    "amount":0,
+    "price":0,
+    "purchaseDate":"2023-08-18",
+    "ExchangeName":"binance",
+    "transactionType":1,
+    "cryptoAssetId":1
+}
+
+###
+GET {{url}}/list-assets?currencyName=usd
+# &cryptoCurrency=btc&sortColumn=link&page=1&pageSize=3&sortOrder=asc
+
+
+###
+GET {{url}}/id/1
