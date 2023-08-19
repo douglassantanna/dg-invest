@@ -4,7 +4,7 @@ POST {{url}}/create-crypto-asset
 Content-Type: application/json
 
 {
-    "crypto":"btc",
+    "crypto":"twt",
     "currency":"usd"
 }
 
@@ -23,15 +23,9 @@ Content-Type: application/json
 }
 
 ###
-GET {{url}}/list-assets?cryptoName=btc
-# /{currencyName}/{sortColumn}/{sortOrder}/{page}/{pageSize}
-Content-Type: application/json
+GET {{url}}/list-assets?currencyName=usd
+# &cryptoCurrency=btc&sortColumn=link&page=1&pageSize=3&sortOrder=asc
 
 
 ###
-GET {{url}}/1
-Content-Type: application/json
-
-{
-  "cryptoAssetId":1
-}
+GET {{url}}/id/1

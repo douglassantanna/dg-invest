@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace function_api.Cryptos.Commands;
 public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoAssetDto>>
 {
-    public string? CryptoName { get; set; } = string.Empty;
+    public string? CryptoCurrency { get; set; } = string.Empty;
     public string? CurrencyName { get; set; } = string.Empty;
     public string? SortColumn { get; set; } = string.Empty;
     public string? SortOrder { get; set; } = "ASC";
@@ -40,10 +40,16 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             request.PageSize = maxPageSize;
         }
 
-        Console.WriteLine(request.CryptoName);
-        if (!string.IsNullOrEmpty(request.CryptoName))
+        if (!string.IsNullOrEmpty(request.CryptoCurrency))
         {
-            request.CryptoName = request.CryptoName?.ToLower();
+            request.CryptoCurrency = request.CryptoCurrency?.ToLower().Trim();
+            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CryptoCurrency.ToLower().Contains(request.CryptoCurrency));
+        }
+
+        if (!string.IsNullOrEmpty(request.CurrencyName))
+        {
+            request.CurrencyName = request.CurrencyName?.ToLower().Trim();
+            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CurrencyName.ToLower().Contains(request.CryptoCurrency));
         }
 
         if (request.SortOrder?.ToUpper() == "DESC")
@@ -55,8 +61,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
         }
 
-        var collection = cryptoAssetQuery.AsNoTracking()
-                                         .Select(x => new ViewMinimalCryptoAssetDto(x.Id,
+        var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.CurrencyName,
                                                                                     x.CryptoCurrency,
                                                                                     x.Symbol));

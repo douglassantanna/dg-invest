@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using function_api.Cryptos.Commands;
 using MediatR;
@@ -52,13 +53,11 @@ public class CryptoFunction
 
     [FunctionName("GetCryptoAssetById")]
     public async Task<IActionResult> GetCryptoAssetById(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "cryptos/{id}")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "cryptos/id/{id}")] HttpRequest req,
+        int id,
         ILogger log)
     {
-        string body = await new StreamReader(req.Body).ReadToEndAsync();
-        var command = JsonConvert.DeserializeObject<GetCryptoAssetByIdCommand>(body);
-
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(new GetCryptoAssetByIdCommand(id));
         if (result.IsSuccess)
             return new OkObjectResult(result.Data);
         else
@@ -70,33 +69,43 @@ public class CryptoFunction
     [HttpTrigger(AuthorizationLevel.Function, "get", Route = "cryptos/list-assets")] HttpRequest req,
     ILogger log)
     {
-        var cryptoName = req.Query["cryptoName"];
+        var cryptoCurrency = req.Query["cryptoCurrency"];
         var currencyName = req.Query["currencyName"];
         var sortColumn = req.Query["sortColumn"];
         var sortOrder = req.Query["sortOrder"];
         var page = req.Query["page"];
         var pageSize = req.Query["pageSize"];
 
-        log.LogInformation(cryptoName);
-        log.LogInformation(currencyName);
-        log.LogInformation(sortColumn);
-        log.LogInformation(sortOrder);
-        log.LogInformation(page);
-        log.LogInformation(pageSize);
+        log.LogInformation($"cryptoCurrency: {cryptoCurrency}");
+        log.LogInformation($"currencyName: {currencyName}");
+        log.LogInformation($"sortColumn: {sortColumn}");
+        log.LogInformation($"sortOrder: {sortOrder}");
+        log.LogInformation($"page: {page}");
+        log.LogInformation($"pageSize: {pageSize}");
 
-        // ListCryptoAssetsQueryCommand commandWithQuery = new ListCryptoAssetsQueryCommand
-        // {
-        //     CryptoName = cryptoName,
-        //     CurrencyName = currencyName,
-        //     SortColumn = sortColumn,
-        //     SortOrder = sortOrder,
-        //     Page = Int32.Parse(page),
-        //     PageSize = Int32.Parse(pageSize)
-        // };
 
-        // var result = await _mediator.Send(commandWithQuery);
+        ListCryptoAssetsQueryCommand commandWithQuery = new ListCryptoAssetsQueryCommand
+        {
+            CryptoCurrency = cryptoCurrency.FirstOrDefault() ?? string.Empty,
+            CurrencyName = currencyName.FirstOrDefault() ?? string.Empty,
+            SortColumn = sortColumn.FirstOrDefault() ?? string.Empty,
+            SortOrder = sortOrder.FirstOrDefault() ?? string.Empty,
+            Page = TryParseInt(page.FirstOrDefault(), defaultValue: 1),
+            PageSize = TryParseInt(pageSize.FirstOrDefault(), defaultValue: 10)
+        };
 
-        return new OkObjectResult("result");
+        log.LogInformation($"ListCryptoAssetsQueryCommand: {JsonConvert.SerializeObject(commandWithQuery)}");
+
+        var result = await _mediator.Send(commandWithQuery);
+
+        return new OkObjectResult(result);
     }
-
+    private int TryParseInt(string value, int defaultValue)
+    {
+        if (int.TryParse(value, out int result))
+        {
+            return result;
+        }
+        return defaultValue;
+    }
 }
