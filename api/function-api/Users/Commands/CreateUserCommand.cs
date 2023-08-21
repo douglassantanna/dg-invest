@@ -54,13 +54,16 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
 {
     private readonly DataContext _context;
     private readonly IPasswordHelper _passwordHelper;
+    private readonly IApiKeyManager _apiKeyManager;
 
     public CreateUserCommandHandler(
         DataContext context,
-        IPasswordHelper passwordHelper)
+        IPasswordHelper passwordHelper,
+        IApiKeyManager apiKeyManager)
     {
         _context = context;
         _passwordHelper = passwordHelper;
+        _apiKeyManager = apiKeyManager;
     }
 
     public async Task<Response> Handle(CreateUserCommand request, CancellationToken cancellationToken)
@@ -78,7 +81,8 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
             LastName = request.LastName,
             Email = request.Email,
             Password = _passwordHelper.EncryptPassword(request.Password),
-            Role = request.Role
+            Role = request.Role,
+            ApiKey = _apiKeyManager.HashApiKey(_apiKeyManager.GenerateApiKey())
         };
 
         _context.Users.Add(user);
@@ -91,6 +95,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         var validation = new CreateUserCommandValidator();
         return await validation.ValidateAsync(request);
     }
+
     private bool UserExists(string email)
     {
         return _context.Users.Any(x => x.Email == email);
