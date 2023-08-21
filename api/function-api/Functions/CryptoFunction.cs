@@ -76,14 +76,6 @@ public class CryptoFunction
         var page = req.Query["page"];
         var pageSize = req.Query["pageSize"];
 
-        log.LogInformation($"cryptoCurrency: {cryptoCurrency}");
-        log.LogInformation($"currencyName: {currencyName}");
-        log.LogInformation($"sortColumn: {sortColumn}");
-        log.LogInformation($"sortOrder: {sortOrder}");
-        log.LogInformation($"page: {page}");
-        log.LogInformation($"pageSize: {pageSize}");
-
-
         ListCryptoAssetsQueryCommand commandWithQuery = new ListCryptoAssetsQueryCommand
         {
             CryptoCurrency = cryptoCurrency.FirstOrDefault() ?? string.Empty,
@@ -93,8 +85,6 @@ public class CryptoFunction
             Page = TryParseInt(page.FirstOrDefault(), defaultValue: 1),
             PageSize = TryParseInt(pageSize.FirstOrDefault(), defaultValue: 10)
         };
-
-        log.LogInformation($"ListCryptoAssetsQueryCommand: {JsonConvert.SerializeObject(commandWithQuery)}");
 
         var result = await _mediator.Send(commandWithQuery);
 

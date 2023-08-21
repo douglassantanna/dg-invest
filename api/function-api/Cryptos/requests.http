@@ -14,12 +14,12 @@ POST {{url}}/create-crypto-transaction
 Content-Type: application/json
 
 {
-    "amount":0,
-    "price":0,
+    "amount":5,
+    "price":0.89,
     "purchaseDate":"2023-08-18",
     "ExchangeName":"binance",
     "transactionType":1,
-    "cryptoAssetId":1
+    "cryptoAssetId":5
 }
 
 ###
@@ -28,4 +28,4 @@ GET {{url}}/list-assets?currencyName=usd
 
 
 ###
-GET {{url}}/id/1
+GET {{url}}/id/5

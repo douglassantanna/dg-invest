@@ -2,6 +2,8 @@ using System;
 using System.Reflection;
 using FluentValidation.AspNetCore;
 using function_api.Data;
+using function_api.Interfaces;
+using function_api.Shared;
 using MediatR;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +16,7 @@ public class Startup : FunctionsStartup
 {
     public override void Configure(IFunctionsHostBuilder builder)
     {
+        builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
         builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
         builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
         string connectionString = Environment.GetEnvironmentVariable("ConnectionString") ?? throw new Exception("ConnectionString not found");

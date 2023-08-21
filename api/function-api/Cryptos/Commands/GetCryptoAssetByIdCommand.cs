@@ -21,7 +21,9 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
     public async Task<Response> Handle(GetCryptoAssetByIdCommand request, CancellationToken cancellationToken)
     {
         var cryptoAsset = await _context.CryptoAssets
-                                        .Where(x => x.Id == request.CryptoAssetId)
+                                        .Include(x => x.Transactions)
+                                        .Include(x => x.Addresses)
+                                        .Where(x => x.Id == request.CryptoAssetId && !x.Deleted)
                                         .Select(x => new ViewCryptoAssetDto(x.Id,
                                                                             x.CurrencyName,
                                                                             x.CryptoCurrency,
@@ -36,7 +38,7 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
                                                                             x.Addresses.Select(a => new ViewAddressDto(a.Id,
                                                                                                                        a.AddressName,
                                                                                                                        a.AddressValue)).ToList(),
-                                                                            x.AveragePrice))
+                                                                            x.GetAveragePrice()))
                                         .FirstOrDefaultAsync(cancellationToken);
         if (cryptoAsset is null)
             return new Response("Crypto asset not found", false);

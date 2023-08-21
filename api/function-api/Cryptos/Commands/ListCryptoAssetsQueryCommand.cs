@@ -49,7 +49,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         if (!string.IsNullOrEmpty(request.CurrencyName))
         {
             request.CurrencyName = request.CurrencyName?.ToLower().Trim();
-            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CurrencyName.ToLower().Contains(request.CryptoCurrency));
+            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CurrencyName.ToLower().Contains(request.CurrencyName));
         }
 
         if (request.SortOrder?.ToUpper() == "DESC")
