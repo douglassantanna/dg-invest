@@ -1,5 +1,6 @@
 using api.Models.Cryptos;
 using function_api.SpotSolar.Models;
+using function_api.Users.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace function_api.Data;
@@ -13,9 +14,15 @@ public class DataContext : DbContext
     public DbSet<CryptoTransaction> CryptoTransactions { get; set; } = null!;
     public DbSet<CryptoAsset> CryptoAssets { get; set; } = null!;
     public DbSet<Proposal> Proposals { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>().Property(x => x.Email).HasColumnType("varchar").HasMaxLength(255);
+        modelBuilder.Entity<User>().Property(x => x.FirstName).HasColumnType("varchar").HasMaxLength(255);
+        modelBuilder.Entity<User>().Property(x => x.LastName).HasColumnType("varchar").HasMaxLength(255);
+        modelBuilder.Entity<User>().Property(x => x.Password).HasColumnType("varchar").HasMaxLength(255);
+
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.ExchangeName).HasColumnType("varchar").HasMaxLength(255);
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.Amount).HasPrecision(18, 8);
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.Price).HasPrecision(18, 8);
