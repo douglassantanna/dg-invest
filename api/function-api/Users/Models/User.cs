@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using function_api.Auth.Models;
 
 namespace function_api.Users.Models;
 public class User
@@ -11,5 +12,6 @@ public class User
     public string Password { get; set; }
     public Role Role { get; set; }
     [JsonIgnore]
-    public string ApiKey { get; set; }
+    public ApiKey ApiKey { get; set; }
+    public int ApiKeyId { get; set; }
 }

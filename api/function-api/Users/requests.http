@@ -1,0 +1,14 @@
+@url = http://localhost:7071/api/users
+
+###
+POST {{url}}/create
+Content-Type: application/json
+
+{
+    "firstName":"douglas",
+    "lastName":"santana",
+    "email":"douglassantana@teste.com",
+    "password":"111111",
+    "confirmPassword":"111111",
+    "role":1
+}

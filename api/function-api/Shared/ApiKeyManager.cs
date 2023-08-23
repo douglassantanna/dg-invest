@@ -7,8 +7,8 @@ public class ApiKeyManager : IApiKeyManager
 {
     public string GenerateApiKey()
     {
-        string apiKey = Guid.NewGuid().ToString();
-        return apiKey;
+        var apiKey = Guid.NewGuid();
+        return apiKey.ToString();
     }
 
     public string HashApiKey(string apiKey)
