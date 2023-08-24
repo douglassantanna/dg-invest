@@ -31,7 +31,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Response>
 
     public async Task<Response> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+        var user = await _context.Users
+                                 .AsNoTracking()
+                                 .FirstOrDefaultAsync(
+                                    x => x.Email == request.Email,
+                                    cancellationToken
+                                    );
         if (user == null)
         {
             return new Response("User not found", false);
@@ -42,7 +47,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Response>
             return new Response("Invalid password", false);
         }
 
-        var apiKey = await _context.ApiKeys.FirstOrDefaultAsync(x => x.UserId == user.Id, cancellationToken);
+        var apiKey = await _context.ApiKeys
+                                   .AsNoTracking()
+                                   .FirstOrDefaultAsync(
+                                    x => x.UserId == user.Id,
+                                    cancellationToken
+                                    );
         return new Response("Ok", true, new { user.FirstName, user.Role, apiKey.Key });
     }
 
