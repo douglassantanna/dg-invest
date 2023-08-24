@@ -1,10 +1,8 @@
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentValidation;
 using FluentValidation.Results;
-using function_api.Auth.Models;
 using function_api.Data;
 using function_api.Interfaces;
 using function_api.Shared;
@@ -86,15 +84,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
             Role = request.Role,
         };
 
-        var apiKey = new ApiKey
-        {
-            Key = _apiKeyManager.HashApiKey(_apiKeyManager.GenerateApiKey()),
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddDays(30),
-            User = user
-        };
-
-        _context.ApiKeys.Add(apiKey);
+        _context.Users.Add(user);
 
         await _context.SaveChangesAsync();
         return new Response("User created successfully", true, user.Id);

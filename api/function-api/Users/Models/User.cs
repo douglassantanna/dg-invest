@@ -11,7 +11,4 @@ public class User
     [JsonIgnore]
     public string Password { get; set; }
     public Role Role { get; set; }
-    [JsonIgnore]
-    public ApiKey ApiKey { get; set; }
-    public int ApiKeyId { get; set; }
 }

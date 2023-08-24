@@ -16,7 +16,6 @@ public class Startup : FunctionsStartup
 {
     public override void Configure(IFunctionsHostBuilder builder)
     {
-        builder.Services.AddScoped<IApiKeyManager, ApiKeyManager>();
         builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
         builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
         builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();

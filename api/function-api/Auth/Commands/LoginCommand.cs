@@ -47,13 +47,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Response>
             return new Response("Invalid password", false);
         }
 
-        var apiKey = await _context.ApiKeys
-                                   .AsNoTracking()
-                                   .FirstOrDefaultAsync(
-                                    x => x.UserId == user.Id,
-                                    cancellationToken
-                                    );
-        return new Response("Ok", true, new { user.FirstName, user.Role, apiKey.Key });
+        return new Response("Ok", true, new { user.FirstName, user.Role });
     }
 
 }
