@@ -37,8 +37,28 @@ public class CryptoAsset
     }
     public decimal GetAveragePrice()
     {
-        return _transactions.Select(t => t.Price).Average();
+        if (_transactions.Any())
+        {
+            var averagePrice = _transactions.Select(t => t.Price).Average();
+            if (averagePrice > 0)
+            {
+                AveragePrice = averagePrice;
+                return AveragePrice;
+            }
+        }
+        return 0;
     }
+
+    public decimal GetTotalSpen()
+    {
+        if (_transactions.Any())
+        {
+            return _transactions.Sum(t => t.Price * t.Amount);
+        }
+        return 0;
+    }
+
+
     public void AddAddress(Address address)
     {
         _addresses.Add(address);

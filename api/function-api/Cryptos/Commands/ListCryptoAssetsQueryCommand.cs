@@ -31,7 +31,9 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
 
     public async Task<PageList<ViewMinimalCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
-        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets;
+        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets
+                                                            .AsNoTracking()
+                                                            .Include(x => x.Transactions);
 
         int maxPageSize = 20;
 
@@ -64,7 +66,8 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.CurrencyName,
                                                                                     x.CryptoCurrency,
-                                                                                    x.Symbol));
+                                                                                    x.Symbol.ToUpper(),
+                                                                                    x.GetAveragePrice()));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
                                                                                     request.Page,

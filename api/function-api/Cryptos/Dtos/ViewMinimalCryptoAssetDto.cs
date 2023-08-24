@@ -6,7 +6,8 @@ namespace function_api.Cryptos.Dtos;
 public record ViewMinimalCryptoAssetDto(int Id,
                                         string CurrencyName,
                                         string CryptoCurrency,
-                                        string Symbol);
+                                        string Symbol,
+                                        decimal AveragePrice);
 
 public record ViewCryptoAssetDto(int Id,
                                  string CurrencyName,
@@ -16,7 +17,8 @@ public record ViewCryptoAssetDto(int Id,
                                  IReadOnlyCollection<ViewCryptoTransactionDto> Transactions,
                                  decimal Balance,
                                  IReadOnlyCollection<ViewAddressDto> Addresses,
-                                 decimal AveragePrice);
+                                 decimal AveragePrice,
+                                 decimal TotalSpent);
 
 public record ViewCryptoTransactionDto(decimal Amount,
                                        decimal Price,

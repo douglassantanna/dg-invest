@@ -1,9 +1,12 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule } from '@angular/material/table';
-import { MatFormField, MatFormFieldModule } from '@angular/material/form-field';
+import { Component, Input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+
+import { CryptoDto } from './services/crypto.service';
 
 @Component({
   selector: 'app-purchase-history',
@@ -13,7 +16,8 @@ import { MatSelectModule } from '@angular/material/select';
     MatTableModule,
     MatFormFieldModule,
     FormsModule,
-    MatSelectModule],
+    MatSelectModule,
+    MatIconModule],
   template: `
   <header style="display: flex; justify-content:space-between;align-items:center;">
     <h1>Purchase history</h1>
@@ -26,7 +30,7 @@ import { MatSelectModule } from '@angular/material/select';
     </mat-select>
   </mat-form-field>
   </header>
-    <table mat-table [dataSource]="dataSource">
+    <table mat-table [dataSource]="crypto.transactions">
       <ng-container matColumnDef="amount">
         <th mat-header-cell *matHeaderCellDef> Amount </th>
         <td mat-cell *matCellDef="let element"> {{element.amount}} </td>
@@ -34,22 +38,30 @@ import { MatSelectModule } from '@angular/material/select';
 
       <ng-container matColumnDef="priceUnit">
         <th mat-header-cell *matHeaderCellDef> Price Unit </th>
-        <td mat-cell *matCellDef="let element"> {{element.priceUnit}} </td>
+        <td mat-cell *matCellDef="let element"> {{element.price}} </td>
       </ng-container>
 
       <ng-container matColumnDef="transaction">
         <th mat-header-cell *matHeaderCellDef> Transaction </th>
-        <td mat-cell *matCellDef="let element"> {{element.transaction}} </td>
+        <td mat-cell *matCellDef="let element">
+          <ng-container *ngIf="element.transactionType === 1">
+            <mat-icon style="color: #32CD32;">add</mat-icon>
+          </ng-container>
+          <ng-container *ngIf="element.transactionType === 2">
+            <mat-icon style="color: #FF5733;">remove</mat-icon>
+          </ng-container>
+        </td>
       </ng-container>
+
 
       <ng-container matColumnDef="date">
         <th mat-header-cell *matHeaderCellDef> Date </th>
-        <td mat-cell *matCellDef="let element"> {{element.date | date:'dd/MM/y'}} </td>
+        <td mat-cell *matCellDef="let element"> {{element.purchaseDate | date:'dd/MM/y'}} </td>
       </ng-container>
 
       <ng-container matColumnDef="exchange">
         <th mat-header-cell *matHeaderCellDef> Exchange </th>
-        <td mat-cell *matCellDef="let element"> {{element.exchange}} </td>
+        <td mat-cell *matCellDef="let element"> {{element.exchangeName}} </td>
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
@@ -60,101 +72,10 @@ import { MatSelectModule } from '@angular/material/select';
   `]
 })
 export class PurchaseHistoryComponent {
-  displayedColumns = ['amount', 'priceUnit', 'transaction', 'date', 'exchange'];
-  dataSource: any[] = [
-    {
-      amount: 1.2,
-      priceUnit: 420,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
-    {
-      amount: 0.15,
-      priceUnit: 2.58,
-      date: Date.now(),
-      exchange: 'Binance',
-      transaction: 'buy'
-    },
+  @Input() crypto!: CryptoDto;
 
-  ];
+  displayedColumns = ['amount', 'priceUnit', 'transaction', 'date', 'exchange'];
+  dataSource: any[] = [];
   dateOptions: any[] = [
     '1 dia',
     '7 dias',

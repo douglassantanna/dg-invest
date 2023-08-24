@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -13,6 +13,8 @@ import { Router } from '@angular/router';
 import { CryptoX } from './interfaces/crypto.model';
 import { CreateCryptoComponent } from './create-crypto.component';
 import { AddTransactionComponent } from './add-transaction.component';
+import { CryptoService, ViewCrypto } from './services/crypto.service';
+import { take } from 'rxjs';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -48,7 +50,7 @@ import { AddTransactionComponent } from './add-transaction.component';
                 matSuffix
                 mat-icon-button
                 aria-label="Search"
-                (click)="search($event)">
+                (click)="listCryptos()">
                 <mat-icon>search</mat-icon>
               </button>
             </mat-form-field>
@@ -67,16 +69,16 @@ import { AddTransactionComponent } from './add-transaction.component';
       <div class="crypto-container">
         <mat-card *ngFor="let crypto of cryptos" class="crypto-card">
           <mat-card-header>
-            <mat-card-title>{{ crypto.name }}</mat-card-title>
+            <mat-card-title>{{ crypto.cryptoCurrency }}</mat-card-title>
             <mat-card-subtitle>{{ crypto.symbol }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p>Price: $ {{ crypto.price }}</p>
+            <p>Price: $</p>
             <p>Average Price: $ {{ crypto.averagePrice }}</p>
             <p>Price Difference: {{ crypto.priceDifferencePercent | number: '1.2-2' }}%</p>
           </mat-card-content>
           <mat-card-actions align="end">
-            <button mat-button color="primary" (click)="cryptoDashboard()">Ver mais</button>
+            <button mat-button color="primary" (click)="cryptoDashboard(crypto.id)">Ver mais</button>
           </mat-card-actions>
         </mat-card>
       </div>
@@ -122,9 +124,10 @@ import { AddTransactionComponent } from './add-transaction.component';
       }
   `]
 })
-export class ViewCryptosComponent {
+export class ViewCryptosComponent implements OnInit {
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private cryptoService = inject(CryptoService);
   orderOptions: any[] = [
     'ASC',
     'DESC'
@@ -137,89 +140,15 @@ export class ViewCryptosComponent {
     '6 meses',
     '1 ano'
   ]
-  cryptos: CryptoX[] = [
-    {
-      name: 'Bitcoin',
-      symbol: 'BTC',
-      price: 47000,
-      averagePrice: 45000,
-      priceDifferencePercent: 4.44,
-    },
-    {
-      name: 'Ethereum',
-      symbol: 'ETH',
-      price: 500,
-      averagePrice: 100,
-      priceDifferencePercent: 2.24,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-  ];
-
+  cryptos: ViewCrypto[] = [];
+  page = 1;
+  pageSize = 10;
+  cryptoCurrency = '';
+  sortOrder = 'asc';
   searchValue = '';
-  constructor() {
-    this.calculateCryptoValues();
+  constructor() { }
+  ngOnInit(): void {
+    this.listCryptos();
   }
   createCrypto(): void {
     const dialogRef = this.dialog.open(CreateCryptoComponent, {
@@ -233,21 +162,27 @@ export class ViewCryptosComponent {
     }
     );
   }
-  cryptoDashboard() {
-    this.router.navigate(['/crypto-dashboard', 1]);
+  cryptoDashboard(id: number) {
+    this.router.navigate(['/crypto-dashboard', id]);
   }
   search(event: any) { }
-  private calculateCryptoValues(): void {
-    const purchasedPrices: number[] = [46000, 48000, 44000];
 
-    this.cryptos.forEach((crypto) => {
-      const sumOfPurchasedPrices = purchasedPrices.reduce((acc, price) => acc + price, 0);
-      const averagePrice = sumOfPurchasedPrices / purchasedPrices.length;
-      const priceDifference = crypto.price - averagePrice;
-      const priceDifferencePercent = (priceDifference / averagePrice) * 100;
-
-      crypto.averagePrice = averagePrice;
-      crypto.priceDifferencePercent = priceDifferencePercent;
-    });
+  listCryptos() {
+    this.cryptoService.listCryptos(
+      this.page,
+      this.pageSize,
+      '',
+      this.searchValue,
+      '',
+      this.sortOrder
+    )
+      .pipe(take(1))
+      .subscribe({
+        next: (cryptos) => {
+          this.cryptos = cryptos.items;
+        },
+        error: (error) => { },
+      }
+      )
   }
 }

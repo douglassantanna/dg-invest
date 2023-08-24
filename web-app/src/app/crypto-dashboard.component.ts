@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 
 import { AddTransactionComponent } from './add-transaction.component';
 import { MyCryptoComponent } from './my-crypto.component';
 import { PurchaseHistoryComponent } from './purchase-history.component';
+import { ActivatedRoute, Router } from '@angular/router';
+import { CryptoDto, CryptoService } from './services/crypto.service';
 
 @Component({
   selector: 'app-crypto-dashboard',
@@ -18,7 +20,7 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
   template: `
   <div class="grid-container">
     <div class="div1">
-      <app-my-crypto />
+      <app-my-crypto [crypto]="crypto"/>
     </div>
     <div class="div2">
       <app-add-transaction/>
@@ -26,7 +28,7 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
     <div class="div3">
       <mat-card>
         <mat-card-content>
-          <app-purchase-history />
+          <app-purchase-history [crypto]="crypto"/>
         </mat-card-content>
       </mat-card>
     </div>
@@ -70,5 +72,37 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
   `]
 })
 export class CryptoDashboardComponent {
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private cryptoService = inject(CryptoService);
+  cryptoId = 0;
+  crypto: CryptoDto = {} as CryptoDto;
+  constructor() { }
 
+  ngOnInit(): void {
+    this.route.params.subscribe(params => {
+      this.cryptoId = params['cryptoId'];
+      if (this.cryptoId) {
+        this.getCryptoById(this.cryptoId);
+      }
+      else {
+        this.router.navigate(['/cryptos']);
+      }
+    })
+  }
+
+  private getCryptoById(cryptoId: number) {
+    this.cryptoService.getById(cryptoId).subscribe(
+      {
+        next: (crypto) => {
+          this.crypto = crypto;
+          console.log(this.crypto);
+        }
+        ,
+        error: (error) => {
+          console.log(error);
+        },
+      }
+    )
+  }
 }

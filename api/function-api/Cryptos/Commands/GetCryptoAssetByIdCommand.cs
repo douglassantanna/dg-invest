@@ -38,7 +38,8 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
                                                                             x.Addresses.Select(a => new ViewAddressDto(a.Id,
                                                                                                                        a.AddressName,
                                                                                                                        a.AddressValue)).ToList(),
-                                                                            x.GetAveragePrice()))
+                                                                            x.GetAveragePrice(),
+                                                                            x.GetTotalSpen()))
                                         .FirstOrDefaultAsync(cancellationToken);
         if (cryptoAsset is null)
             return new Response("Crypto asset not found", false);
