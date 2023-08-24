@@ -18,6 +18,15 @@ export interface CryptoDto {
   totalSpent: number
 }
 
+export interface CreateTransactionCommand {
+  amount: number,
+  price: number,
+  purchaseDate: Date,
+  exchangeName: string,
+  transactionType: ETransactionType,
+  cryptoAssedId: number,
+}
+
 export interface Transaction {
   amount: number,
   price: number,
@@ -51,6 +60,12 @@ export interface Pagination<T> {
   hasNextPage: boolean,
   hasPreviousPage: boolean
 }
+
+export interface Response {
+  message: string,
+  success: boolean,
+  data: any
+}
 @Injectable({
   providedIn: 'root'
 })
@@ -80,5 +95,9 @@ export class CryptoService {
 
   getById(id: number): Observable<CryptoDto> {
     return this.http.get<CryptoDto>(`${url}/id/${id}`);
+  }
+
+  createTransaction(transaction: CreateTransactionCommand): Observable<Response> {
+    return this.http.post<Response>(`${url}/create-crypto-transaction`, transaction);
   }
 }

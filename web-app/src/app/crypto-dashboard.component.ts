@@ -23,7 +23,7 @@ import { CryptoDto, CryptoService } from './services/crypto.service';
       <app-my-crypto [crypto]="crypto"/>
     </div>
     <div class="div2">
-      <app-add-transaction/>
+      <app-add-transaction [cryptoAssetId]="crypto.id" />
     </div>
     <div class="div3">
       <mat-card>
