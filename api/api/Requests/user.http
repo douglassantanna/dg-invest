@@ -1,0 +1,13 @@
+@url = http://localhost:5059/api/User
+
+POST {{url}}/create
+Content-Type: application/json
+
+{
+    "firstName":"Douglas",
+    "LastName":"Santanna",
+    "email":"douglas@test.com",
+    "password":"123test",
+    "confirmPassword":"123test",
+    "role":1
+}

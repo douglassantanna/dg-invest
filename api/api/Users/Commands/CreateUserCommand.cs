@@ -1,6 +1,3 @@
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using FluentValidation;
 using FluentValidation.Results;
 using api.Data;
@@ -54,16 +51,13 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
 {
     private readonly DataContext _context;
     private readonly IPasswordHelper _passwordHelper;
-    private readonly IApiKeyManager _apiKeyManager;
 
     public CreateUserCommandHandler(
         DataContext context,
-        IPasswordHelper passwordHelper,
-        IApiKeyManager apiKeyManager)
+        IPasswordHelper passwordHelper)
     {
         _context = context;
         _passwordHelper = passwordHelper;
-        _apiKeyManager = apiKeyManager;
     }
 
     public async Task<Response> Handle(CreateUserCommand request, CancellationToken cancellationToken)
@@ -81,8 +75,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
             LastName = request.LastName,
             Email = request.Email,
             Password = _passwordHelper.EncryptPassword(request.Password),
-            Role = request.Role,
-            ApiKey = _apiKeyManager.HashApiKey(_apiKeyManager.GenerateApiKey())
+            Role = request.Role
         };
 
         _context.Users.Add(user);
