@@ -1,4 +1,5 @@
 using api.Cryptos.Commands;
+using api.Cryptos.Queries;
 using api.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -28,4 +29,21 @@ public class CryptoController : ControllerBase
         }
         return Created("", result);
     }
+
+    [HttpGet]
+    public async Task<ActionResult> GetPreRegistrationByStepQuery([FromQuery] ListCryptoAssetsQueryCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult> GetPreRegistrationByStepQuery([FromRoute] GetCryptoAssetByIdCommand command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+            return NotFound(result);
+        return Ok(result);
+    }
 }
+

@@ -1,4 +1,4 @@
-@url = http://localhost:7071/api/cryptos
+@url = http://localhost:5059/api/crypto
 
 POST {{url}}/create-crypto-asset
 Content-Type: application/json
@@ -28,4 +28,4 @@ GET {{url}}/list-assets?currencyName=usd
 
 
 ###
-GET {{url}}/id/5
+GET {{url}}/id/1
