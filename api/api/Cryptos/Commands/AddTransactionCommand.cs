@@ -7,34 +7,34 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
-public record CreateTransactionCommand(decimal Amount,
+public record AddTransactionCommand(decimal Amount,
                                        decimal Price,
                                        DateTimeOffset PurchaseDate,
                                        string ExchangeName,
                                        ETransactionType TransactionType,
                                        int CryptoAssetId) : IRequest<Response>;
 
-public class CreateTransactionCommandValidator : AbstractValidator<CreateTransactionCommand>
+public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCommand>
 {
-    public CreateTransactionCommandValidator()
+    public AddTransactionCommandValidator()
     {
         RuleFor(x => x.Amount).GreaterThan(0);
         RuleFor(x => x.Price).GreaterThan(0);
-        RuleFor(x => x.CryptoAssetId).GreaterThan(1);
+        RuleFor(x => x.CryptoAssetId).GreaterThan(0);
         RuleFor(x => x.ExchangeName).NotEmpty();
         RuleFor(x => x.TransactionType).IsInEnum();
     }
 }
-public class CreateTransactionCommandHandler : IRequestHandler<CreateTransactionCommand, Response>
+public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
     private readonly DataContext _context;
 
-    public CreateTransactionCommandHandler(DataContext context)
+    public AddTransactionCommandHandler(DataContext context)
     {
         _context = context;
     }
 
-    public async Task<Response> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
+    public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
     {
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
@@ -58,9 +58,9 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
         return new Response("ok", true, transaction.Id);
     }
 
-    private async Task<ValidationResult> ValidateRequestAsync(CreateTransactionCommand request)
+    private async Task<ValidationResult> ValidateRequestAsync(AddTransactionCommand request)
     {
-        var validation = new CreateTransactionCommandValidator();
+        var validation = new AddTransactionCommandValidator();
         return await validation.ValidateAsync(request);
     }
 }

@@ -30,15 +30,27 @@ public class CryptoController : ControllerBase
         return Created("", result);
     }
 
-    [HttpGet]
+    [HttpPost("add-transaction")]
+    public async Task<ActionResult<Response>> AddTransaction([FromBody] AddTransactionCommand command)
+    {
+
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return Created("", result);
+    }
+
+    [HttpGet("list-assets")]
     public async Task<ActionResult> GetPreRegistrationByStepQuery([FromQuery] ListCryptoAssetsQueryCommand command)
     {
         var result = await _mediator.Send(command);
         return Ok(result);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult> GetPreRegistrationByStepQuery([FromRoute] GetCryptoAssetByIdCommand command)
+    [HttpGet("get-crypto-asset-by-id/{CryptoAssetId:int}")]
+    public async Task<ActionResult> GetCryptoAssetById([FromRoute] GetCryptoAssetByIdCommand command)
     {
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)

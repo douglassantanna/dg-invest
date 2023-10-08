@@ -40,6 +40,6 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
         if (cryptoAsset is null)
             return new Response("Crypto asset not found", false);
 
-        return new Response("ok", true, cryptoAsset);
+        return new Response("", true, cryptoAsset);
     }
 }
