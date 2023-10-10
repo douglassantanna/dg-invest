@@ -35,4 +35,13 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("get-user-by-id/{UserId:int}")]
+    public async Task<ActionResult> GetUserById([FromRoute] GetUserByIdCommand command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+            return NotFound(result);
+        return Ok(result);
+    }
+
 }
