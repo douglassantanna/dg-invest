@@ -1,15 +1,28 @@
 @url = http://localhost:5059/api/User
 
+PUT {{url}}/update-user
+Content-Type: application/json
+
+{
+    "firstName" : "Joao",
+    "lastName" : "Gomes",
+    "email" : "joao@test.com",
+    "role" : 1,
+    "userId" : 1,
+    "creatorId" : 2
+}
+
+###
 POST {{url}}/create
 Content-Type: application/json
 
 {
-    "firstName":"Douglas",
-    "LastName":"Santanna",
-    "email":"douglas@test.com",
+    "firstName":"Davi",
+    "lastName":"Craici",
+    "email":"davi@test.com",
     "password":"123test",
     "confirmPassword":"123test",
-    "role":1
+    "role":2
 }
 
 ###
@@ -17,4 +30,4 @@ Content-Type: application/json
 GET {{url}}/list-users?page=1&pageSize=5
 
 ###
-GET {{url}}/get-user-by-id/1
+GET {{url}}/get-user-by-id/2

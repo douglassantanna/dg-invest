@@ -1,3 +1,4 @@
+using System.Net;
 using api.Cryptos.Queries;
 using api.Shared;
 using api.Users.Commands;
@@ -44,4 +45,27 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("update-user")]
+    public async Task<ActionResult> UpdateUser([FromBody] UpdateUserCommand command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            if (result.Data is HttpStatusCode httpStatusCode)
+            {
+                switch (httpStatusCode)
+                {
+                    case HttpStatusCode.Unauthorized:
+                        return Unauthorized(result);
+                    case HttpStatusCode.NotFound:
+                        return NotFound(result);
+                    case HttpStatusCode.BadRequest:
+                        return BadRequest(result);
+                    default:
+                        return StatusCode((int)httpStatusCode, result);
+                }
+            }
+        }
+        return Ok(result);
+    }
 }
