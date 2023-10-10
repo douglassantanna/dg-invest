@@ -1,3 +1,4 @@
+using api.Cryptos.Queries;
 using api.Shared;
 using api.Users.Commands;
 using MediatR;
@@ -26,4 +27,12 @@ public class UserController : ControllerBase
         }
         return Created("", result);
     }
+
+    [HttpGet("list-users")]
+    public async Task<ActionResult> ListUsers([FromQuery] ListUsersQueryCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
 }

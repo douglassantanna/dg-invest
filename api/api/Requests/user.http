@@ -11,3 +11,7 @@ Content-Type: application/json
     "confirmPassword":"123test",
     "role":1
 }
+
+###
+
+GET {{url}}/list-users?page=1&pageSize=5
