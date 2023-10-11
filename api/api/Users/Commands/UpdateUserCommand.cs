@@ -16,8 +16,11 @@ public record UpdateUserCommand(string FirstName,
 
 public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
 {
-    public UpdateUserCommandValidator()
+    private readonly DataContext _context;
+    public UpdateUserCommandValidator(DataContext context)
     {
+        _context = context;
+
         RuleFor(x => x.FirstName)
             .NotNull().WithMessage("FirstName can't be null.")
             .NotEmpty().WithMessage("FirstName can't be empty.")
@@ -29,8 +32,9 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
             .Length(0, 255).WithMessage("Name must contain 0 to 255 characters.");
 
         RuleFor(x => x.Email)
-        .EmailAddress().WithMessage("E-mail can't be empty.")
-        .Length(0, 255).WithMessage("E-mail must contain 0 to 255 characters.");
+            .EmailAddress().WithMessage("E-mail can't be empty.")
+            .Length(0, 255).WithMessage("E-mail must contain 0 to 255 characters.")
+            .Must(BeUniqueEmail).WithMessage("Email already exists.");
 
         RuleFor(x => x.UserId).NotEmpty().WithMessage("UserId can't be empty.");
 
@@ -38,6 +42,11 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
 
         RuleFor(x => x.Role)
         .IsInEnum().WithMessage("Invalid role.");
+    }
+    private bool BeUniqueEmail(UpdateUserCommand command, string email)
+    {
+        var userWithSameEmail = _context.Users.FirstOrDefault(u => u.Email == email);
+        return userWithSameEmail == null;
     }
 }
 
@@ -49,7 +58,7 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Respo
 
     public async Task<Response> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
-        var validationResult = await ValidateRequestAsync(request);
+        var validationResult = await ValidateRequestAsync(request, _context);
         if (!validationResult.IsValid)
             return new Response("Validation failed", false, new { validationErrors = validationResult.Errors.Select(x => x.ErrorMessage).ToList(), HttpStatusCode = HttpStatusCode.BadRequest });
 
@@ -64,9 +73,6 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Respo
         if (user == null)
             return new Response("User not found", false, new { HttpStatusCode = HttpStatusCode.NotFound });
 
-        if (UserExists(request.Email))
-            return new Response("User already exists", false, new { HttpStatusCode = HttpStatusCode.BadRequest });
-
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
         user.Email = request.Email;
@@ -76,15 +82,10 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Respo
         return new Response("User updated successfully", true);
     }
 
-    private async Task<ValidationResult> ValidateRequestAsync(UpdateUserCommand request)
+    private async Task<ValidationResult> ValidateRequestAsync(UpdateUserCommand request, DataContext dataContext)
     {
-        var validation = new UpdateUserCommandValidator();
+        var validation = new UpdateUserCommandValidator(dataContext);
         return await validation.ValidateAsync(request);
-    }
-
-    private bool UserExists(string email)
-    {
-        return _context.Users.Any(x => x.Email == email);
     }
 }
 
