@@ -43,7 +43,7 @@ public class CryptoController : ControllerBase
     }
 
     [HttpGet("list-assets")]
-    public async Task<ActionResult> GetPreRegistrationByStepQuery([FromQuery] ListCryptoAssetsQueryCommand command)
+    public async Task<ActionResult> ListCryptoAssets([FromQuery] ListCryptoAssetsQueryCommand command)
     {
         var result = await _mediator.Send(command);
         return Ok(result);
