@@ -6,10 +6,10 @@ Content-Type: application/json
 {
     "firstName" : "Joao",
     "lastName" : "Gomes",
-    "email" : "joao@test.com",
-    "role" : 1,
+    "email" : "joao@teste.com",
+    "role" : 2,
     "userId" : 1,
-    "creatorId" : 2
+    "creatorId" : 1
 }
 
 ###

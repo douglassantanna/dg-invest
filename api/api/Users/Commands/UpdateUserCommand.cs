@@ -37,7 +37,7 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
         RuleFor(x => x.CreatorId).NotEmpty().WithMessage("CreatorId can't be empty.");
 
         RuleFor(x => x.Role)
-        .IsInEnum().WithMessage("Role can't be null.");
+        .IsInEnum().WithMessage("Invalid role.");
     }
 }
 
@@ -51,7 +51,7 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Respo
     {
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
-            return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+            return new Response("Validation failed", false, new { validationErrors = validationResult.Errors.Select(x => x.ErrorMessage).ToList(), HttpStatusCode = HttpStatusCode.BadRequest });
 
         var creator = _context.Users.FirstOrDefault(x => x.Id == request.CreatorId);
         if (creator == null)

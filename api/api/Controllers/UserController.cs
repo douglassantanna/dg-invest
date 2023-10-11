@@ -51,19 +51,15 @@ public class UserController : ControllerBase
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {
-            if (result.Data is HttpStatusCode httpStatusCode)
+            if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)
             {
-                switch (httpStatusCode)
+                return httpStatusCode switch
                 {
-                    case HttpStatusCode.Unauthorized:
-                        return Unauthorized(result);
-                    case HttpStatusCode.NotFound:
-                        return NotFound(result);
-                    case HttpStatusCode.BadRequest:
-                        return BadRequest(result);
-                    default:
-                        return StatusCode((int)httpStatusCode, result);
-                }
+                    HttpStatusCode.Unauthorized => Unauthorized(result),
+                    HttpStatusCode.NotFound => NotFound(result),
+                    HttpStatusCode.BadRequest => BadRequest(result),
+                    _ => BadRequest(result),
+                };
             }
         }
         return Ok(result);
