@@ -1,11 +1,29 @@
 import { HttpClient } from '@angular/common/http';
-import { Inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, distinctUntilChanged, Observable, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
+import jwt_decode from 'jwt-decode';
+import { environment } from 'src/environments/environment.development';
 
-import { LoginResponse } from '../interfaces/login-response';
-import { User } from '../interfaces/user.model';
-import { API_URL } from './api.token';
+const url = `${environment.apiUrl}/Authentication`;
+
+export interface IUserDecode {
+  fullName: string;
+  email: string;
+  role: string;
+  nameid: string;
+}
+
+export interface LoginCommand {
+  email: string;
+  password: string;
+}
+
+export interface CustomRespose {
+  message: string;
+  isSuccess: boolean;
+  data: any;
+}
 
 export interface AuthState {
   userId: number | null;
@@ -32,71 +50,48 @@ export class AuthService {
   fakeToken = '';
   isLoggedIn = false;
   constructor(
-    @Inject(API_URL) private api: string,
     private http: HttpClient,
     private router: Router
   ) { }
 
-  private auth = new BehaviorSubject<AuthState>(this.getLocalState());
-  public auth$ = this.auth.asObservable().pipe(distinctUntilChanged());
-
-
-  get state(): AuthState {
-    return this.auth.getValue();
-  }
-
   get role(): string | null {
-    return this.state.role;
+    return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
   }
 
-  adminExists$ = of(true);
+  private _user = new BehaviorSubject<IUserDecode>(
+    this.decodePayloadJWT()
+  );
+  user = this._user.asObservable();
 
-  profile$ = this.http.get<User>(`${this.api}/auth/user`);
-
-  public getLocalState(): AuthState {
-    const localState = localStorage.getItem('auth');
-    if (localState) {
-      return JSON.parse(localState) as AuthState;
-    }
-    return initialState;
+  get token(): any {
+    return localStorage.getItem('auth');
   }
-
-  login(credentials: Credential): Observable<LoginResponse> {
-    const path = `${this.api}/login`;
-    return this.http.post<LoginResponse>(path, credentials).pipe(
-      tap(data => {
-        this.auth.next(data);
-        localStorage.setItem('auth', JSON.stringify(data));
-        this.router.navigateByUrl('/dashboard').then();
+  removeToken() {
+    localStorage.removeItem('auth');
+  }
+  setToken(token: any) {
+    localStorage.setItem('auth', token as string);
+    this._user.next(this.decodePayloadJWT());
+  }
+  login(credentials: LoginCommand): Observable<CustomRespose> {
+    const path = `${url}/login`;
+    return this.http.post<CustomRespose>(path, credentials).pipe(
+      tap((response: CustomRespose) => {
+        this.setToken(response.data.token);
       })
     );
   }
-
-  changeName(name: string): Observable<User> {
-    return this.http
-      .post<User>(`${this.api}/auth/changeName`, { name })
-      .pipe(tap(_ => this.auth.next({ ...this.auth.getValue(), name })));
+  private decodePayloadJWT(): any {
+    try {
+      let response = jwt_decode(this.token as string);
+      return response;
+    } catch (error) {
+      return null;
+    }
   }
-
-  changePassword(payload: any): Observable<User> {
-    return this.http.post<User>(`${this.api}/auth/changePassword`, payload);
-  }
-
   logout(): void {
     localStorage.removeItem('auth');
-    this.auth.next(initialState);
     this.router.navigateByUrl('auth/login').then();
-  }
-  fakeLogin(): void {
-    localStorage.setItem('fake-auth', 'true');
-    this.router.navigateByUrl('/dashboard').then();
-  }
-  fakeLogout(): void {
-    localStorage.removeItem('fake-auth');
-    this.router.navigate(['/login']).then();
-  }
-  fakeGetLocalState(): boolean {
-    return localStorage.getItem('fake-auth') === 'true';
   }
 }
 

@@ -8,7 +8,7 @@ import { HeaderComponent } from './header.component';
   selector: 'app-root',
   template: `
       <header>
-        <ng-container *ngIf="authService.fakeGetLocalState(); else unAuthorized">
+        <ng-container *ngIf="authService.token; else unAuthorized">
           <app-header />
 
           <router-outlet></router-outlet>
