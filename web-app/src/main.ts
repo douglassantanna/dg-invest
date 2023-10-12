@@ -1,3 +1,5 @@
+/// <reference types="@angular/localize" />
+
 import { provideHttpClient } from '@angular/common/http';
 import { enableProdMode, importProvidersFrom } from '@angular/core';
 import { MatNativeDateModule } from '@angular/material/core';
