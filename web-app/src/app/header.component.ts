@@ -36,6 +36,7 @@ import { AuthService } from './services/auth.service';
       <span class="example-spacer"></span>
       <div style="display: flex; align-items:center; gap: 8px;">
         <button
+          *ngIf="this.authService.role && this.authService.role === 'Admin'"
           mat-button
           (click)="navigate('profile')"
         >
@@ -77,7 +78,7 @@ export class HeaderComponent {
     this.router.navigate([route]);
   }
   logout() {
-    this.authService.fakeLogout();
+    this.authService.removeToken();
     this.router.navigate(['/login']);
   }
 }

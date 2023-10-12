@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { AuthService } from './services/auth.service';
+import { AuthService, LoginCommand } from './services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -116,9 +116,21 @@ export class LoginComponent {
   }
   login() {
     this.loading = true;
-    setTimeout(() => {
-      this.router.navigate(['/dashboard']);
-      this.authService.fakeLogin();
-    }, 2000);
+
+    let command: LoginCommand = {
+      email: this.userAuth.email,
+      password: this.userAuth.password
+    }
+
+    this.authService.login(command).subscribe({
+      next: (value) => {
+        this.loading = false;
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        console.log(err);
+        this.loading = false;
+      }
+    });
   }
 }
