@@ -1,37 +1,39 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { LoginFormModel } from './models/login.form-models';
-import { FormDirective } from './directives/form-directive.directive';
-
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    FormDirective],
+    ReactiveFormsModule],
   template: `
     <div class="container">
     <div class="row justify-content-center align-items-center min-vh-100">
       <div class="col-md-6">
-        <form (ngSubmit)="login()" class="p-4 border rounded shadow" (formValueChange)="loginFormValue.set($event)">
+        <form (ngSubmit)="login()" class="p-4 border rounded shadow" [formGroup]="loginForm">
           <h2 class="mb-4 text-center">DG Invest</h2>
           <div class="mb-3">
             <label for="email" class="form-label">Email</label>
-            <input [ngModel]="loginFormValue().email" type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
+            <input required formControlName="email" type="email" id="email" class="form-control" placeholder="Enter your email">
+            <div style="color: red;" *ngIf="emailFormControl?.hasError('email') && !emailFormControl?.hasError('required')">
+              Please enter a valid email address.
+            </div>
           </div>
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
-            <input [ngModel]="loginFormValue().password" type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+            <input required formControlName="password" type="password" class="form-control" placeholder="Enter your password">
+            <div style="color: red;" *ngIf="passwordFormControl?.hasError('minlength')">
+              Minimun password length is 4 characters.
+            </div>
           </div>
           <div class="text-center">
             <button
               type="submit"
               class="btn btn-primary"
-              [disabled]="loading"
+              [disabled]="loading || loginForm.invalid"
               [ngStyle]="{'cursor': loading ? 'not-allowed' : 'pointer'}"
               >{{loading ? 'Loading...' : 'Login'}}</button>
           </div>
@@ -48,13 +50,20 @@ import { FormDirective } from './directives/form-directive.directive';
 export class LoginComponent {
   authService = inject(AuthService);
   private router = inject(Router);
-  protected readonly loginFormValue = signal<LoginFormModel>({});
   loading = false;
+  loginForm!: FormGroup;
+
+  constructor(private fb: FormBuilder) {
+    this.loginForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(4)]]
+    });
+  }
 
   login() {
     this.loading = true;
 
-    this.authService.login(this.loginFormValue()).subscribe({
+    this.authService.login(this.loginForm.value).subscribe({
       next: (value) => {
         this.loading = false;
         this.router.navigate(['/dashboard']);
@@ -64,5 +73,12 @@ export class LoginComponent {
         this.loading = false;
       }
     });
+  }
+
+  get emailFormControl() {
+    return this.loginForm.get('email');
+  }
+  get passwordFormControl() {
+    return this.loginForm.get('password');
   }
 }
