@@ -1,128 +1,60 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { AuthService, LoginCommand } from './services/auth.service';
+import { AuthService } from './services/auth.service';
+import { LoginFormModel } from './models/login.form-models';
+import { FormDirective } from './directives/form-directive.directive';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
     FormsModule,
-    MatButtonModule,
-    MatProgressBarModule],
+    FormDirective],
   template: `
-    <div class="main">
-    <div class="left-container">
-      <img src="assets/finance_illustration.png" alt="finance illustration image" />
-    </div>
-    <div class="right-container">
-        <mat-card class="mat-elevation-z1">
-            <mat-card-header>
-              <mat-card-title>
-                Bem vindo à DG Invest.
-                Acesse com seu email e senha.
-              </mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <form (ngSubmit)="login()" >
-                <mat-form-field appearance="outline">
-                  <mat-label>email</mat-label>
-                  <input matInput [(ngModel)]="userAuth.email" name="email" required type="email"/>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>senha</mat-label>
-                  <input
-                    matInput
-                    [(ngModel)]="userAuth.password"
-                    type="password"
-                    name="password"
-                    required
-                  />
-                </mat-form-field>
-              </form>
-            </mat-card-content>
-            <mat-card-actions align="end">
-              <button
-                mat-raised-button
-                color="primary"
-                type="submit"
-                (click)="login()"
-                [disabled]="loading"
-                >Acessar</button>
-            </mat-card-actions>
-            <mat-card-footer>
-                <a href="#forgot-password">Esqueci minha senha</a>
-                <mat-progress-bar mode="indeterminate" *ngIf="loading"></mat-progress-bar>
-            </mat-card-footer>
-        </mat-card>
+    <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-md-6">
+        <form (ngSubmit)="login()" class="p-4 border rounded shadow" (formValueChange)="loginFormValue.set($event)">
+          <h2 class="mb-4 text-center">DG Invest</h2>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input [ngModel]="loginFormValue().email" type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input [ngModel]="loginFormValue().password" type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+          </div>
+          <div class="text-center">
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="loading"
+              [ngStyle]="{'cursor': loading ? 'not-allowed' : 'pointer'}"
+              >{{loading ? 'Loading...' : 'Login'}}</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
   `,
   styles: [
     `
-    .main {
-      display: flex;
-      justify-content: center;
-      align-items:center;
-    }
-    img {
-      width: 43.75rem;
-    }
-    mat-form-field {
-      width: 100%;
-    }
-    a {
-      text-decoration: none;
-      color: inherit;
-    }
-    mat-card{
-      display:flex;
-      gap:10px;
-      padding:10px;
-    }
-    @media (max-width: 640px) {
-        .main {
-          flex-direction: column;
-          height: auto;
-        }
-        img {
-          width: 22rem;
-        }
-      }
     `
   ]
 })
 export class LoginComponent {
   authService = inject(AuthService);
   private router = inject(Router);
-
+  protected readonly loginFormValue = signal<LoginFormModel>({});
   loading = false;
-  userAuth = {
-    password: '',
-    email: ''
-  }
+
   login() {
     this.loading = true;
 
-    let command: LoginCommand = {
-      email: this.userAuth.email,
-      password: this.userAuth.password
-    }
-
-    this.authService.login(command).subscribe({
+    this.authService.login(this.loginFormValue()).subscribe({
       next: (value) => {
         this.loading = false;
         this.router.navigate(['/dashboard']);
