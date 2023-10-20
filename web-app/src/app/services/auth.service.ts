@@ -50,7 +50,7 @@ export const initialState: AuthState = {
   providedIn: 'root'
 })
 export class AuthService {
-  isLoggedIn$ = new BehaviorSubject<boolean>(false);
+  isLoggedIn$ = new BehaviorSubject<boolean>(true);
   isLoggedIn = this.isLoggedIn$.asObservable();
   constructor(
     private http: HttpClient,
@@ -69,12 +69,6 @@ export class AuthService {
 
   get token(): any {
     return localStorage.getItem(local_storage_token);
-  }
-
-  removeToken() {
-    localStorage.removeItem(local_storage_token);
-    this.isLoggedIn$.next(false);
-    this.router.navigateByUrl('auth/login').then();
   }
 
   setToken(token: any) {
@@ -102,7 +96,7 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(local_storage_token);
-    this.router.navigateByUrl('auth/login').then();
+    this.router.navigateByUrl('auth/login');
   }
 }
 

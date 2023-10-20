@@ -31,22 +31,22 @@ const routes: Routes = [
   },
   {
     path: "dashboard",
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     component: DashboardComponent,
   },
   {
     path: "cryptos",
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     component: ViewCryptosComponent,
   },
   {
     path: "create-crypto",
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     component: CreateCryptoComponent,
   },
   {
     path: "crypto-dashboard/:cryptoId",
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     component: CryptoDashboardComponent,
   },
   {
@@ -55,7 +55,7 @@ const routes: Routes = [
   },
   {
     path: "profile",
-    canActivate: [authGuard],
+    // canActivate: [authGuard],
     component: ProfileComponent,
   },
 ];

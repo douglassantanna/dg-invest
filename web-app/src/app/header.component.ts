@@ -1,9 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterModule } from '@angular/router';
 
 import { LayoutService } from './services/layout.service';
@@ -13,57 +9,36 @@ import { AuthService } from './services/auth.service';
   selector: 'app-header',
   standalone: true,
   imports: [
-    MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
     CommonModule,
-    RouterModule,
-    MatTooltipModule],
+    RouterModule],
   template: `
-    <mat-toolbar color="primary" class="toolbar">
-      <div style="display: flex; align-items:center; gap: 4px;">
-        <ng-container *ngFor="let item of navItems">
-          <button
-            class="mr-2"
-            (click)="navigate(item.path)"
-            mat-button
-            routerLinkActive="active">
-            <mat-icon class="mr-2">{{ item.icon }}</mat-icon>
-            <span>{{ item.label }}</span>
-          </button>
-        </ng-container>
-      </div>
-      <span class="example-spacer"></span>
-      <div style="display: flex; align-items:center; gap: 8px;">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <div class="container">
+        <a class="navbar-brand" href="#">DG</a>
         <button
-          *ngIf="this.authService.role && this.authService.role === 'Admin'"
-          mat-button
-          (click)="navigate('profile')"
-        >
-          <mat-icon>account_circle</mat-icon>
-          Meus dados
-        </button>
-        <button
-          mat-button
+          class="navbar-toggler"
           type="button"
-          (click)="logout()">
-          <mat-icon>logout</mat-icon>
-          Sair
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
         </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            <li
+              class="nav-item"
+              *ngFor="let item of navItems"
+              [ngClass]="{ 'd-none': authService.role }"
+            >
+                <a class="nav-link" [routerLink]="item.path">{{ item.label }}</a>
+            </li>
+          </ul>
+        </div>
       </div>
-    </mat-toolbar>
+    </nav>
   `,
   styles: [
     `
-    .example-spacer {
-      flex: 1 1 auto;
-    }
-    @media (max-width: 640px) {
-      .toolbar {
-        flex-direction: column;
-        height: auto;
-      }
-    }
   `,
   ],
 })
@@ -78,7 +53,6 @@ export class HeaderComponent {
     this.router.navigate([route]);
   }
   logout() {
-    this.authService.removeToken();
-    this.router.navigate(['/login']);
+    this.authService.logout();
   }
 }
