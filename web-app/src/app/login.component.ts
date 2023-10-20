@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
+import { ToastService } from './services/toast.service';
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -53,7 +55,7 @@ export class LoginComponent {
   loading = false;
   loginForm!: FormGroup;
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private toastService: ToastService) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(4)]]
@@ -69,8 +71,8 @@ export class LoginComponent {
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
-        console.log(err);
         this.loading = false;
+        this.toastService.showError(err.error.message);
       }
     });
   }

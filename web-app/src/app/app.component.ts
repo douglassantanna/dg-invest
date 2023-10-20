@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth.service';
 import { HeaderComponent } from './header.component';
+import { ToastComponent } from './toast.component';
 
 @Component({
   selector: 'app-root',
@@ -19,11 +20,12 @@ import { HeaderComponent } from './header.component';
           <router-outlet></router-outlet>
         </ng-template>
       </main>
-  <router-outlet></router-outlet>`,
+  <router-outlet></router-outlet>
+  <app-toast aria-live="polite" aria-atomic="true"></app-toast>
+  `,
   standalone: true,
-  imports: [RouterModule, CommonModule, HeaderComponent],
+  imports: [RouterModule, CommonModule, HeaderComponent, ToastComponent],
 })
 export class AppComponent {
   authService = inject(AuthService);
-  title = 'web-app';
 }
