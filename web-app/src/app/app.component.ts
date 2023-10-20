@@ -9,7 +9,7 @@ import { ToastComponent } from './toast.component';
   selector: 'app-root',
   template: `
       <header>
-        <ng-container *ngIf="authService.token; else unAuthorized">
+        <ng-container *ngIf="authService.isLoggedIn$ | async; else unAuthorized">
           <app-header />
 
           <router-outlet></router-outlet>

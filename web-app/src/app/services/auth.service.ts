@@ -50,7 +50,8 @@ export const initialState: AuthState = {
   providedIn: 'root'
 })
 export class AuthService {
-  isLoggedIn = false;
+  isLoggedIn$ = new BehaviorSubject<boolean>(false);
+  isLoggedIn = this.isLoggedIn$.asObservable();
   constructor(
     private http: HttpClient,
     private router: Router
@@ -63,18 +64,25 @@ export class AuthService {
   private _user = new BehaviorSubject<IUserDecode>(
     this.decodePayloadJWT()
   );
+
   user = this._user.asObservable();
 
   get token(): any {
     return localStorage.getItem(local_storage_token);
   }
+
   removeToken() {
     localStorage.removeItem(local_storage_token);
+    this.isLoggedIn$.next(false);
+    this.router.navigateByUrl('auth/login').then();
   }
+
   setToken(token: any) {
     localStorage.setItem(local_storage_token, token as string);
     this._user.next(this.decodePayloadJWT());
+    this.isLoggedIn$.next(true);
   }
+
   login(credentials: LoginFormModel): Observable<CustomRespose> {
     return this.http.post<CustomRespose>(`${url}/login`, credentials).pipe(
       tap((response: CustomRespose) => {
@@ -82,6 +90,7 @@ export class AuthService {
       })
     );
   }
+
   private decodePayloadJWT(): any {
     try {
       let response = jwt_decode(local_storage_token as string);
@@ -90,6 +99,7 @@ export class AuthService {
       return null;
     }
   }
+
   logout(): void {
     localStorage.removeItem(local_storage_token);
     this.router.navigateByUrl('auth/login').then();
