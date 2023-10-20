@@ -17,6 +17,7 @@ import { DashboardComponent } from './app/dashboard.component';
 import { LoginComponent } from './app/login.component';
 import { ProfileComponent } from './app/profile.component';
 import { ViewCryptosComponent } from './app/view-cryptos.component';
+import { authGuard } from './app/guards/auth.guard';
 
 if (environment.production) {
   enableProdMode();
@@ -30,18 +31,22 @@ const routes: Routes = [
   },
   {
     path: "dashboard",
+    canActivate: [authGuard],
     component: DashboardComponent,
   },
   {
     path: "cryptos",
+    canActivate: [authGuard],
     component: ViewCryptosComponent,
   },
   {
     path: "create-crypto",
+    canActivate: [authGuard],
     component: CreateCryptoComponent,
   },
   {
     path: "crypto-dashboard/:cryptoId",
+    canActivate: [authGuard],
     component: CryptoDashboardComponent,
   },
   {
@@ -50,6 +55,7 @@ const routes: Routes = [
   },
   {
     path: "profile",
+    canActivate: [authGuard],
     component: ProfileComponent,
   },
 ];

@@ -4,6 +4,9 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import jwt_decode from 'jwt-decode';
 import { environment } from 'src/environments/environment.development';
+import { LoginFormModel } from '../models/login.form-models';
+import { local_storage_token } from 'src/environments/environment.development';
+
 
 const url = `${environment.apiUrl}/Authentication`;
 
@@ -47,8 +50,8 @@ export const initialState: AuthState = {
   providedIn: 'root'
 })
 export class AuthService {
-  fakeToken = '';
-  isLoggedIn = false;
+  isLoggedIn$ = new BehaviorSubject<boolean>(false);
+  isLoggedIn = this.isLoggedIn$.asObservable();
   constructor(
     private http: HttpClient,
     private router: Router
@@ -61,36 +64,44 @@ export class AuthService {
   private _user = new BehaviorSubject<IUserDecode>(
     this.decodePayloadJWT()
   );
+
   user = this._user.asObservable();
 
   get token(): any {
-    return localStorage.getItem('auth');
+    return localStorage.getItem(local_storage_token);
   }
+
   removeToken() {
-    localStorage.removeItem('auth');
+    localStorage.removeItem(local_storage_token);
+    this.isLoggedIn$.next(false);
+    this.router.navigateByUrl('auth/login').then();
   }
+
   setToken(token: any) {
-    localStorage.setItem('auth', token as string);
+    localStorage.setItem(local_storage_token, token as string);
     this._user.next(this.decodePayloadJWT());
+    this.isLoggedIn$.next(true);
   }
-  login(credentials: LoginCommand): Observable<CustomRespose> {
-    const path = `${url}/login`;
-    return this.http.post<CustomRespose>(path, credentials).pipe(
+
+  login(credentials: LoginFormModel): Observable<CustomRespose> {
+    return this.http.post<CustomRespose>(`${url}/login`, credentials).pipe(
       tap((response: CustomRespose) => {
         this.setToken(response.data.token);
       })
     );
   }
+
   private decodePayloadJWT(): any {
     try {
-      let response = jwt_decode(this.token as string);
+      let response = jwt_decode(local_storage_token as string);
       return response;
     } catch (error) {
       return null;
     }
   }
+
   logout(): void {
-    localStorage.removeItem('auth');
+    localStorage.removeItem(local_storage_token);
     this.router.navigateByUrl('auth/login').then();
   }
 }
