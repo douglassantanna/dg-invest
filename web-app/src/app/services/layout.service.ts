@@ -17,6 +17,12 @@ export class LayoutService {
       icon: 'currency_bitcoin',
       roles: ['admin', 'manager', 'user'],
     },
-  ];
+    {
+      label: 'Sign out',
+      path: 'signout',
+      roles: ['admin', 'user'],
+    }
+  ]
+    ;
   constructor() { }
 }

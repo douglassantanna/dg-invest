@@ -7,7 +7,6 @@ import { environment } from 'src/environments/environment.development';
 import { LoginFormModel } from '../models/login.form-models';
 import { local_storage_token } from 'src/environments/environment.development';
 
-
 const url = `${environment.apiUrl}/Authentication`;
 
 export interface IUserDecode {
@@ -50,8 +49,12 @@ export const initialState: AuthState = {
   providedIn: 'root'
 })
 export class AuthService {
-  isLoggedIn$ = new BehaviorSubject<boolean>(true);
+  isLoggedIn$ = new BehaviorSubject<boolean>(false);
   isLoggedIn = this.isLoggedIn$.asObservable();
+  private _user = new BehaviorSubject<IUserDecode>(
+    this.decodePayloadJWT()
+  );
+  user = this._user.asObservable();
   constructor(
     private http: HttpClient,
     private router: Router
@@ -60,12 +63,6 @@ export class AuthService {
   get role(): string | null {
     return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
   }
-
-  private _user = new BehaviorSubject<IUserDecode>(
-    this.decodePayloadJWT()
-  );
-
-  user = this._user.asObservable();
 
   get token(): any {
     return localStorage.getItem(local_storage_token);
@@ -96,7 +93,8 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(local_storage_token);
-    this.router.navigateByUrl('auth/login');
+    this.isLoggedIn$.next(false);
+    this.router.navigateByUrl('login');
   }
 }
 

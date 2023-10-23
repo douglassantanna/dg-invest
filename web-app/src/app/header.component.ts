@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 
 import { LayoutService } from './services/layout.service';
 import { AuthService } from './services/auth.service';
@@ -12,27 +12,16 @@ import { AuthService } from './services/auth.service';
     CommonModule,
     RouterModule],
   template: `
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-      <div class="container">
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+      <div class="container-fluid">
         <a class="navbar-brand" href="#">DG</a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
+        <button class="navbar-toggler" type="button" (click)="toggleMenu()" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav">
-            <li
-              class="nav-item"
-              *ngFor="let item of navItems"
-              [ngClass]="{ 'd-none': authService.role }"
-            >
-                <a class="nav-link" [routerLink]="item.path">{{ item.label }}</a>
-            </li>
-          </ul>
+        <div class="collapse navbar-collapse" [ngClass]="{'collapse': isCollapsed}" id="navbarNavAltMarkup">
+        <div class="navbar-nav" *ngFor="let item of navItems">
+            <a class="nav-link" aria-current="page" [routerLink]="item.path"  (click)="logout(item)">{{ item.label }}</a>
+          </div>
         </div>
       </div>
     </nav>
@@ -43,16 +32,19 @@ import { AuthService } from './services/auth.service';
   ],
 })
 export class HeaderComponent {
+  isCollapsed: boolean = true;
+
+  toggleMenu() {
+    this.isCollapsed = !this.isCollapsed;
+  }
+
   private layoutService = inject(LayoutService);
-  private router = inject(Router);
   authService = inject(AuthService);
 
   navItems = this.layoutService.navItems;
 
-  navigate(route: string) {
-    this.router.navigate([route]);
-  }
-  logout() {
-    this.authService.logout();
+  logout(item: any) {
+    if (item.path === 'signout')
+      this.authService.logout();
   }
 }
