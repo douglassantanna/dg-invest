@@ -55,10 +55,20 @@ export class AuthService {
     this.decodePayloadJWT()
   );
   user = this._user.asObservable();
+
   constructor(
     private http: HttpClient,
     private router: Router
-  ) { }
+  ) {
+    if (this.token)
+      this.isLoggedIn$.next(true);
+    this.user = this._user.asObservable();
+    this.user.subscribe(user => {
+      if (user) {
+        localStorage.setItem(local_storage_token, user.nameid);
+      }
+    });
+  }
 
   get role(): string | null {
     return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
@@ -68,7 +78,7 @@ export class AuthService {
     return localStorage.getItem(local_storage_token);
   }
 
-  setToken(token: any) {
+  private setToken(token: any) {
     localStorage.setItem(local_storage_token, token as string);
     this._user.next(this.decodePayloadJWT());
     this.isLoggedIn$.next(true);
