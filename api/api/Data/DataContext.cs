@@ -18,15 +18,6 @@ public class DataContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-
-
-        modelBuilder.Entity<CryptoAsset>().Property(x => x.Symbol).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<CryptoAsset>().Property(x => x.CurrencyName).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<CryptoAsset>().Property(x => x.CryptoCurrency).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<CryptoAsset>().Property(x => x.Balance).HasPrecision(18, 8);
-        modelBuilder.Entity<CryptoAsset>().Property(x => x.AveragePrice).HasPrecision(18, 8);
-        modelBuilder.Entity<CryptoAsset>().HasMany(x => x.Addresses).WithOne(x => x.CryptoAsset);
-
         modelBuilder.Entity<Proposal>().OwnsOne(x => x.Customer, c =>
          {
              c.Property(x => x.Email).HasColumnType("varchar").HasMaxLength(255);
