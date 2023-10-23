@@ -7,7 +7,6 @@ import { environment } from 'src/environments/environment.development';
 import { LoginFormModel } from '../models/login.form-models';
 import { local_storage_token } from 'src/environments/environment.development';
 
-
 const url = `${environment.apiUrl}/Authentication`;
 
 export interface IUserDecode {
@@ -52,32 +51,34 @@ export const initialState: AuthState = {
 export class AuthService {
   isLoggedIn$ = new BehaviorSubject<boolean>(false);
   isLoggedIn = this.isLoggedIn$.asObservable();
+  private _user = new BehaviorSubject<IUserDecode>(
+    this.decodePayloadJWT()
+  );
+  user = this._user.asObservable();
+
   constructor(
     private http: HttpClient,
     private router: Router
-  ) { }
+  ) {
+    if (this.token)
+      this.isLoggedIn$.next(true);
+    this.user = this._user.asObservable();
+    this.user.subscribe(user => {
+      if (user) {
+        localStorage.setItem(local_storage_token, user.nameid);
+      }
+    });
+  }
 
   get role(): string | null {
     return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
   }
 
-  private _user = new BehaviorSubject<IUserDecode>(
-    this.decodePayloadJWT()
-  );
-
-  user = this._user.asObservable();
-
   get token(): any {
     return localStorage.getItem(local_storage_token);
   }
 
-  removeToken() {
-    localStorage.removeItem(local_storage_token);
-    this.isLoggedIn$.next(false);
-    this.router.navigateByUrl('auth/login').then();
-  }
-
-  setToken(token: any) {
+  private setToken(token: any) {
     localStorage.setItem(local_storage_token, token as string);
     this._user.next(this.decodePayloadJWT());
     this.isLoggedIn$.next(true);
@@ -102,7 +103,8 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(local_storage_token);
-    this.router.navigateByUrl('auth/login').then();
+    this.isLoggedIn$.next(false);
+    this.router.navigateByUrl('login');
   }
 }
 

@@ -13,33 +13,15 @@ import { HeaderComponent } from './header.component';
     HttpClientModule],
   template: `
     <div class="container">
-      <img src="assets/bitcoin_illustration2.png" alt="bitcoin illustration image" />
+      <div class="row">
+        <div class="col-lg-6 offset-lg-3 text-center">
+          <img src="assets/bitcoin_illustration2.png" alt="Bitcoin illustration image" class="img-fluid">
+        </div>
+      </div>
     </div>
   `,
   styles: [
-    `
-      .container{
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height:calc(80vh + 20px);
-      }
-      img {
-      width: 43.75rem;
-      }
-      .toolbar-container {
-        display: grid;
-        grid-template-columns: 3fr 1fr;
-        margin: 24px 0;
-      }
-      @media (max-width: 640px) {
-        .toolbar-container {
-          grid-template-columns: 1fr;
-          justify-content: center;
-          align-items: center;
-        }
-      }
-    `,
+    ``,
   ],
 })
 export class DashboardComponent {
