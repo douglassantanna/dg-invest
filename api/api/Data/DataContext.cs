@@ -18,12 +18,6 @@ public class DataContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<User>().Property(x => x.Email).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<User>().Property(x => x.FirstName).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<User>().Property(x => x.LastName).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<User>().Property(x => x.Password).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<User>().Property(x => x.ApiKey).HasColumnType("varchar").HasMaxLength(500);
-
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.ExchangeName).HasColumnType("varchar").HasMaxLength(255);
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.Amount).HasPrecision(18, 8);
         modelBuilder.Entity<CryptoTransaction>().Property(x => x.Price).HasPrecision(18, 8);
