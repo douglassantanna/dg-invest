@@ -18,9 +18,7 @@ public class DataContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<CryptoTransaction>().Property(x => x.ExchangeName).HasColumnType("varchar").HasMaxLength(255);
-        modelBuilder.Entity<CryptoTransaction>().Property(x => x.Amount).HasPrecision(18, 8);
-        modelBuilder.Entity<CryptoTransaction>().Property(x => x.Price).HasPrecision(18, 8);
+
 
         modelBuilder.Entity<CryptoAsset>().Property(x => x.Symbol).HasColumnType("varchar").HasMaxLength(255);
         modelBuilder.Entity<CryptoAsset>().Property(x => x.CurrencyName).HasColumnType("varchar").HasMaxLength(255);
