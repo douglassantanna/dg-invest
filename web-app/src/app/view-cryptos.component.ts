@@ -13,6 +13,7 @@ import { Router } from '@angular/router';
 import { CryptoX } from './interfaces/crypto.model';
 import { CreateCryptoComponent } from './create-crypto.component';
 import { AddTransactionComponent } from './add-transaction.component';
+import { CryptoCardComponent } from './crypto-card.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -26,60 +27,40 @@ import { AddTransactionComponent } from './add-transaction.component';
     MatInputModule,
     FormsModule,
     MatSelectModule,
-    MatDialogModule],
+    MatDialogModule,
+    CryptoCardComponent],
   template: `
-      <main class="main-container">
-        <header>
-          <h1>Portfolio</h1>
-          <div class="filters">
+    <main class="main-container">
+      <header>
+        <h1>Portfolio</h1>
+        <div class="filters">
 
-        <button
-          type="button"
-          mat-raised-button
-          color="primary"
-          (click)="createCrypto()">
-          <mat-icon>add</mat-icon> Add Crypto
-        </button>
-            <mat-form-field appearance="outline" style="margin-left: 10px;">
-              <mat-label>Search by name..</mat-label>
-              <input matInput type="text" [(ngModel)]="searchValue">
-              <button
-                color="primary"
-                matSuffix
-                mat-icon-button
-                aria-label="Search"
-                (click)="search($event)">
-                <mat-icon>search</mat-icon>
-              </button>
-            </mat-form-field>
+      <button
+        type="button"
+        mat-raised-button
+        color="primary"
+        (click)="createCrypto()">
+        <mat-icon>add</mat-icon> Add Crypto
+      </button>
 
-            <mat-form-field appearance="outline" style="margin-left: 10px;">
-              <mat-label>Order</mat-label>
-              <mat-select>
-                <mat-option *ngFor="let option of orderOptions" [value]="option">
-                  {{option}}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-          </div>
+        </div>
 
-        </header>
-      <div class="crypto-container">
-        <mat-card *ngFor="let crypto of cryptos" class="crypto-card">
-          <mat-card-header>
-            <mat-card-title>{{ crypto.name }}</mat-card-title>
-            <mat-card-subtitle>{{ crypto.symbol }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <p>Price: $ {{ crypto.price }}</p>
-            <p>Average Price: $ {{ crypto.averagePrice }}</p>
-            <p>Price Difference: {{ crypto.priceDifferencePercent | number: '1.2-2' }}%</p>
-          </mat-card-content>
-          <mat-card-actions align="end">
-            <button mat-button color="primary" (click)="cryptoDashboard()">Ver mais</button>
-          </mat-card-actions>
-        </mat-card>
+      </header>
+
+      <div>
+
+      <div class="row g-3">
+        <div class="col-sm">
+          <input type="text" class="form-control" placeholder="Search by name.." aria-label="Search">
+        </div>
+        <div class="col-sm">
+          <input type="text" class="form-control" placeholder="Zip" aria-label="Zip">
+        </div>
       </div>
+
+      </div>
+
+      <app-crypto-card [cryptos]="cryptos" />
     </main>
   `,
   styles: [`
