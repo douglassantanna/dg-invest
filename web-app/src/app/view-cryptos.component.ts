@@ -14,6 +14,7 @@ import { CryptoX } from './interfaces/crypto.model';
 import { CreateCryptoComponent } from './create-crypto.component';
 import { AddTransactionComponent } from './add-transaction.component';
 import { CryptoCardComponent } from './crypto-card.component';
+import { SearchComponent } from './search.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -28,36 +29,28 @@ import { CryptoCardComponent } from './crypto-card.component';
     FormsModule,
     MatSelectModule,
     MatDialogModule,
-    CryptoCardComponent],
+    CryptoCardComponent,
+    SearchComponent],
   template: `
     <main class="main-container">
       <header>
         <h1>Portfolio</h1>
         <div class="filters">
-
-      <button
-        type="button"
-        mat-raised-button
-        color="primary"
-        (click)="createCrypto()">
-        <mat-icon>add</mat-icon> Add Crypto
-      </button>
-
+          <button
+            type="button"
+            mat-raised-button
+            color="primary"
+            (click)="createCrypto()">
+            <mat-icon>add</mat-icon> Add Crypto
+          </button>
         </div>
-
       </header>
-
       <div>
-
       <div class="row g-3">
         <div class="col-sm">
-          <input type="text" class="form-control" placeholder="Search by name.." aria-label="Search">
-        </div>
-        <div class="col-sm">
-          <input type="text" class="form-control" placeholder="Zip" aria-label="Zip">
+          <input (keyup)="search($event)" id="search" name="search" type="text" class="form-control" placeholder="Search by name.." aria-label="Search">
         </div>
       </div>
-
       </div>
 
       <app-crypto-card [cryptos]="cryptos" />
@@ -217,7 +210,16 @@ export class ViewCryptosComponent {
   cryptoDashboard() {
     this.router.navigate(['/crypto-dashboard', 1]);
   }
-  search(event: any) { }
+  search(event: Event) {
+    const filterValue = (event.target as HTMLInputElement).value.toLowerCase();
+
+    if (!filterValue) {
+      this.cryptos = this.cryptos;
+    } else {
+      this.cryptos = this.cryptos.filter(crypto => crypto.symbol.toLowerCase().includes(filterValue));
+    }
+  }
+
   private calculateCryptoValues(): void {
     const purchasedPrices: number[] = [46000, 48000, 44000];
 
