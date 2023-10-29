@@ -1,12 +1,11 @@
-using System;
-using System.Collections.Generic;
 using api.Models.Cryptos;
 
 namespace api.Cryptos.Dtos;
 public record ViewMinimalCryptoAssetDto(int Id,
                                         string CurrencyName,
                                         string CryptoCurrency,
-                                        string Symbol);
+                                        string Symbol,
+                                        decimal CurrentPrice);
 
 public record ViewCryptoAssetDto(int Id,
                                  string CurrencyName,
@@ -16,7 +15,8 @@ public record ViewCryptoAssetDto(int Id,
                                  IReadOnlyCollection<ViewCryptoTransactionDto> Transactions,
                                  decimal Balance,
                                  IReadOnlyCollection<ViewAddressDto> Addresses,
-                                 decimal AveragePrice);
+                                 decimal AveragePrice,
+                                 decimal CurrentPrice);
 
 public record ViewCryptoTransactionDto(decimal Amount,
                                        decimal Price,

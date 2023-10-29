@@ -1,5 +1,7 @@
 using System.Reflection;
 using api.Authentication;
+using api.CoinMarketCap;
+using api.CoinMarketCap.Service;
 using api.Data;
 using api.Interfaces;
 using api.Shared;
@@ -9,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
-
+builder.Services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
+builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.AddDbContext<DataContext>(options =>
 {

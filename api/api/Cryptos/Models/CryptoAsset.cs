@@ -15,10 +15,12 @@ public class CryptoAsset
     private readonly List<Address> _addresses = new();
     public IReadOnlyCollection<Address> Addresses => _addresses.AsReadOnly();
     public bool Deleted { get; private set; }
+    public int CoinMarketCapId { get; private set; }
 
     public CryptoAsset(string cryptoCurrency,
                        string currencyName,
-                       string symbol)
+                       string symbol,
+                       int coinMarketCapId)
     {
         CryptoCurrency = cryptoCurrency;
         CurrencyName = currencyName;
@@ -27,6 +29,7 @@ public class CryptoAsset
         Balance = 0;
         AveragePrice = 0;
         Deleted = false;
+        CoinMarketCapId = coinMarketCapId;
     }
     public void Delete()
     {
