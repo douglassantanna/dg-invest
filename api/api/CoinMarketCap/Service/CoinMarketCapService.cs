@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace api.CoinMarketCap.Service;
 public class CoinMarketCapService : ICoinMarketCapService
 {
-    private readonly string endpoint = "v2/cryptocurrency/quotes/latest";
+    private readonly string quotesLatestEndpoint = "v2/cryptocurrency/quotes/latest";
     private readonly CoinMarketCapSettings _coinMarketCapSettings;
     public CoinMarketCapService(IOptions<CoinMarketCapSettings> coinMarketCapSettings)
     {
@@ -16,7 +16,7 @@ public class CoinMarketCapService : ICoinMarketCapService
         try
         {
             var response = await _coinMarketCapSettings.BaseUrl
-                                .AppendPathSegment(endpoint)
+                                .AppendPathSegment(quotesLatestEndpoint)
                                 .WithHeader(_coinMarketCapSettings.Header, _coinMarketCapSettings.ApiKey)
                                 .SetQueryParam("symbol", symbol)
                                 .GetJsonAsync<GetQuoteResponse>();
@@ -31,23 +31,16 @@ public class CoinMarketCapService : ICoinMarketCapService
 
     }
 
-    public async Task<GetQuoteResponse> GetQuotesBySymbols(string[] symbols)
+    public async Task<GetQuoteResponse> GetQuotesByIds(string[] ids)
     {
         try
         {
-            string symbolList = FormatSymbolList(symbols);
-
-            string bb = "";
-            foreach (var item in symbolList)
-            {
-                bb += item;
-            }
-            string baseer = $"{_coinMarketCapSettings.BaseUrl} + {endpoint} + {bb}";
+            string idList = FormatSymbolList(ids);
 
             var response = await _coinMarketCapSettings.BaseUrl
-                                .AppendPathSegment(endpoint)
+                                .AppendPathSegment(quotesLatestEndpoint)
                                 .WithHeader(_coinMarketCapSettings.Header, _coinMarketCapSettings.ApiKey)
-                                .SetQueryParam("symbol", symbolList)
+                                .SetQueryParam("id", idList)
                                 .GetJsonAsync<GetQuoteResponse>();
 
             return response;
@@ -60,14 +53,14 @@ public class CoinMarketCapService : ICoinMarketCapService
         }
     }
 
-    private static string FormatSymbolList(string[] symbols)
+    private static string FormatSymbolList(string[] ids)
     {
-        for (var i = 0; i < symbols.Length; i++)
+        for (var i = 0; i < ids.Length; i++)
         {
-            symbols[i] = symbols[i].ToUpper();
+            ids[i] = ids[i].ToUpper();
         }
 
-        string symbolList = string.Join(",", symbols);
+        string symbolList = string.Join(",", ids);
         return symbolList;
     }
 }

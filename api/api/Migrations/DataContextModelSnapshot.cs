@@ -48,7 +48,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("Address");
+                    b.ToTable("Address", (string)null);
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
@@ -93,7 +93,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CryptoAssets");
+                    b.ToTable("CryptoAssets", (string)null);
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
@@ -133,7 +133,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("CryptoTransactions");
+                    b.ToTable("CryptoTransactions", (string)null);
                 });
 
             modelBuilder.Entity("api.SpotSolar.Models.Proposal", b =>
@@ -187,7 +187,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Proposals");
+                    b.ToTable("Proposals", (string)null);
                 });
 
             modelBuilder.Entity("api.Users.Models.User", b =>
@@ -227,7 +227,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Address", b =>
@@ -250,7 +250,7 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.SpotSolar.Models.Proposal", b =>
                 {
-                    b.OwnsOne("api.SpotSolar.Models.Address", "Address", b1 =>
+                    b.OwnsOne("api.SpotSolar.Models.Proposal.Address#api.SpotSolar.Models.Address", "Address", b1 =>
                         {
                             b1.Property<int>("ProposalId")
                                 .HasColumnType("int");
@@ -282,13 +282,13 @@ namespace api.Migrations
 
                             b1.HasKey("ProposalId");
 
-                            b1.ToTable("Proposals");
+                            b1.ToTable("Proposals", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ProposalId");
                         });
 
-                    b.OwnsOne("api.SpotSolar.Models.Customer", "Customer", b1 =>
+                    b.OwnsOne("api.SpotSolar.Models.Proposal.Customer#api.SpotSolar.Models.Customer", "Customer", b1 =>
                         {
                             b1.Property<int>("ProposalId")
                                 .HasColumnType("int");
@@ -310,13 +310,13 @@ namespace api.Migrations
 
                             b1.HasKey("ProposalId");
 
-                            b1.ToTable("Proposals");
+                            b1.ToTable("Proposals", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ProposalId");
                         });
 
-                    b.OwnsMany("api.SpotSolar.Models.Product", "Products", b1 =>
+                    b.OwnsMany("api.SpotSolar.Models.Proposal.Products#api.SpotSolar.Models.Product", "Products", b1 =>
                         {
                             b1.Property<int>("ProposalId")
                                 .HasColumnType("int");
@@ -337,7 +337,7 @@ namespace api.Migrations
 
                             b1.HasKey("ProposalId", "Id");
 
-                            b1.ToTable("Product");
+                            b1.ToTable("Product", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ProposalId");

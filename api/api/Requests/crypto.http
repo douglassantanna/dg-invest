@@ -4,8 +4,9 @@ POST {{url}}/create
 Content-Type: application/json
 
 {
-    "crypto":"twt",
-    "currency":"usd"
+    "crypto":"matic",
+    "currency":"usd",
+    "coinMarketCapId": 3890
 }
 
 

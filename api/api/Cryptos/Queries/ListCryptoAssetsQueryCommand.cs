@@ -62,13 +62,13 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
         }
 
-        var cmpPrices = await GetPricesFromcoinMarketCap(cryptoAssetQuery);
+        var cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssetQuery);
 
         var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.CurrencyName,
                                                                                     x.CryptoCurrency,
                                                                                     x.Symbol,
-                                                                                    GetCryptoCurrentPriceBySymbol(x.CryptoCurrency, cmpPrices)));
+                                                                                    GetCryptoCurrentPriceBySymbol(x.CoinMarketCapId, cmpResponse)));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
                                                                                     request.Page,
@@ -77,19 +77,21 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
 
     }
 
-    private async Task<GetQuoteResponse> GetPricesFromcoinMarketCap(IQueryable<CryptoAsset> cryptoAssetQuery)
+    private async Task<GetQuoteResponse> GetCryptosFromcoinMarketCap(IQueryable<CryptoAsset> cryptoAssetQuery)
     {
-        string[] symbols = cryptoAssetQuery.Select(x => x.CryptoCurrency).ToArray();
-        return await _coinMarketCapService.GetQuotesBySymbols(symbols);
+        string[] ids = cryptoAssetQuery.Select(x => x.CoinMarketCapId.ToString()).ToArray();
+        return await _coinMarketCapService.GetQuotesByIds(ids);
     }
 
-    private static decimal GetCryptoCurrentPriceBySymbol(string symbol, GetQuoteResponse prices)
+    private static decimal GetCryptoCurrentPriceBySymbol(int coinMarketCapId, GetQuoteResponse cmpResponse)
     {
-        var coin = prices.Data.FirstOrDefault(coin => coin.Key.Contains(symbol));
-
+        var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
+        if (coin.Value != null)
+        {
+            return coin.Value.Quote.USD.Price;
+        }
         return 0;
     }
-
 
     private static Expression<Func<CryptoAsset, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)
     {
