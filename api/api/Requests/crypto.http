@@ -23,7 +23,7 @@ Content-Type: application/json
 }
 
 ###
-GET {{url}}/list-assets?page=1&pageSize=5
+GET {{url}}/list-assets?page=1&pageSize=5&cryptoCurrency=btc
 # &cryptoCurrency=btc&sortColumn=link&page=1&pageSize=3&sortOrder=asc
 
 

@@ -1,3 +1,4 @@
+using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
 using api.Data;
 using api.Shared;
@@ -9,10 +10,14 @@ public record GetCryptoAssetByIdCommand(int CryptoAssetId) : IRequest<Response>;
 public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetByIdCommand, Response>
 {
     private readonly DataContext _context;
+    private readonly ICoinMarketCapService _coinMarketCapService;
 
-    public GetCryptoAssetByIdCommandHandler(DataContext context)
+    public GetCryptoAssetByIdCommandHandler(
+        DataContext context,
+        ICoinMarketCapService coinMarketCapService)
     {
         _context = context;
+        _coinMarketCapService = coinMarketCapService;
     }
 
     public async Task<Response> Handle(GetCryptoAssetByIdCommand request, CancellationToken cancellationToken)
@@ -35,7 +40,8 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
                                                                             x.Addresses.Select(a => new ViewAddressDto(a.Id,
                                                                                                                        a.AddressName,
                                                                                                                        a.AddressValue)).ToList(),
-                                                                            x.GetAveragePrice()))
+                                                                            x.GetAveragePrice(),
+                                                                            123))
                                         .FirstOrDefaultAsync(cancellationToken);
         if (cryptoAsset is null)
             return new Response("Crypto asset not found", false);

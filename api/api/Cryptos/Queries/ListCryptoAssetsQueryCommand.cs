@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
 using api.Data;
 using api.Models.Cryptos;
@@ -18,10 +19,14 @@ public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoA
 public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAssetsQueryCommand, PageList<ViewMinimalCryptoAssetDto>>
 {
     private readonly DataContext _context;
+    private readonly ICoinMarketCapService _coinMarketCapService;
 
-    public ListCryptoAssetsQueryCommandHandler(DataContext context)
+
+    public ListCryptoAssetsQueryCommandHandler(DataContext context,
+                                               ICoinMarketCapService coinMarketCapService)
     {
         _context = context;
+        _coinMarketCapService = coinMarketCapService;
     }
 
     public async Task<PageList<ViewMinimalCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
@@ -56,10 +61,13 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
         }
 
+        var currentCryptoPrice = await _coinMarketCapService.GetQuoteBySymbol("BTC");
+
         var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.CurrencyName,
                                                                                     x.CryptoCurrency,
-                                                                                    x.Symbol));
+                                                                                    x.Symbol,
+                                                                                    currentCryptoPrice.Data.BTC[0].Quote["USD"].Price));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
                                                                                     request.Page,
