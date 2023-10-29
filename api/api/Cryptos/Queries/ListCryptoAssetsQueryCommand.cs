@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
 using api.Data;
@@ -61,13 +62,13 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
         }
 
-        var currentCryptoPrice = await _coinMarketCapService.GetQuoteBySymbol("BTC");
+        var cmpPrices = await GetPricesFromcoinMarketCap(cryptoAssetQuery);
 
         var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.CurrencyName,
                                                                                     x.CryptoCurrency,
                                                                                     x.Symbol,
-                                                                                    currentCryptoPrice.Data.BTC[0].Quote["USD"].Price));
+                                                                                    GetCryptoCurrentPriceBySymbol(x.CryptoCurrency, cmpPrices)));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
                                                                                     request.Page,
@@ -75,6 +76,20 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         return pagedCollection;
 
     }
+
+    private async Task<GetQuoteResponse> GetPricesFromcoinMarketCap(IQueryable<CryptoAsset> cryptoAssetQuery)
+    {
+        string[] symbols = cryptoAssetQuery.Select(x => x.CryptoCurrency).ToArray();
+        return await _coinMarketCapService.GetQuotesBySymbols(symbols);
+    }
+
+    private static decimal GetCryptoCurrentPriceBySymbol(string symbol, GetQuoteResponse prices)
+    {
+        var coin = prices.Data.FirstOrDefault(coin => coin.Key.Contains(symbol));
+
+        return 0;
+    }
+
 
     private static Expression<Func<CryptoAsset, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)
     {

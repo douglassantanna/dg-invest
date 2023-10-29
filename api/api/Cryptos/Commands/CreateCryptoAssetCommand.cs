@@ -8,7 +8,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
-public record CreateCryptoAssetCommand(string Crypto, string Currency) : IRequest<Response>;
+public record CreateCryptoAssetCommand(string Crypto, string Currency, int CoinMarketCapId) : IRequest<Response>;
 
 public class CreateCryptoAssetCommandValidator : AbstractValidator<CreateCryptoAssetCommand>
 {
@@ -16,6 +16,7 @@ public class CreateCryptoAssetCommandValidator : AbstractValidator<CreateCryptoA
     {
         RuleFor(x => x.Crypto).NotEmpty();
         RuleFor(x => x.Currency).NotEmpty();
+        RuleFor(x => x.CoinMarketCapId).NotNull();
     }
 }
 public class CreateCryptoAssetCommandHandler : IRequestHandler<CreateCryptoAssetCommand, Response>
@@ -47,7 +48,8 @@ public class CreateCryptoAssetCommandHandler : IRequestHandler<CreateCryptoAsset
 
         var cryptoAsset = new CryptoAsset(request.Crypto,
                                           request.Currency,
-                                          cryptoAssetName);
+                                          cryptoAssetName,
+                                          request.CoinMarketCapId);
 
         _context.CryptoAssets.Add(cryptoAsset);
         await _context.SaveChangesAsync();

@@ -9,7 +9,6 @@ public record Coin(int Id,
                    DateTime Last_updated,
                    IDictionary<string, Quote>? Quote);
 
-public record Data(List<Coin> BTC);
 
-public record GetQuoteResponse(Status Status, Data Data);
+public record GetQuoteResponse(Status Status, Dictionary<string, List<Coin>> Data);
 

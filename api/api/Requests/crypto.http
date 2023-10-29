@@ -1,6 +1,6 @@
 @url = http://localhost:5059/api/Crypto
 
-POST {{url}}/create-crypto-asset
+POST {{url}}/create
 Content-Type: application/json
 
 {
@@ -23,7 +23,7 @@ Content-Type: application/json
 }
 
 ###
-GET {{url}}/list-assets?page=1&pageSize=5&cryptoCurrency=btc
+GET {{url}}/list-assets?page=1&pageSize=5
 # &cryptoCurrency=btc&sortColumn=link&page=1&pageSize=3&sortOrder=asc
 
 

@@ -30,4 +30,44 @@ public class CoinMarketCapService : ICoinMarketCapService
         }
 
     }
+
+    public async Task<GetQuoteResponse> GetQuotesBySymbols(string[] symbols)
+    {
+        try
+        {
+            string symbolList = FormatSymbolList(symbols);
+
+            string bb = "";
+            foreach (var item in symbolList)
+            {
+                bb += item;
+            }
+            string baseer = $"{_coinMarketCapSettings.BaseUrl} + {endpoint} + {bb}";
+
+            var response = await _coinMarketCapSettings.BaseUrl
+                                .AppendPathSegment(endpoint)
+                                .WithHeader(_coinMarketCapSettings.Header, _coinMarketCapSettings.ApiKey)
+                                .SetQueryParam("symbol", symbolList)
+                                .GetJsonAsync<GetQuoteResponse>();
+
+            return response;
+
+        }
+        catch (FlurlHttpException ex)
+        {
+            Console.WriteLine(ex.Message);
+            throw;
+        }
+    }
+
+    private static string FormatSymbolList(string[] symbols)
+    {
+        for (var i = 0; i < symbols.Length; i++)
+        {
+            symbols[i] = symbols[i].ToUpper();
+        }
+
+        string symbolList = string.Join(",", symbols);
+        return symbolList;
+    }
 }
