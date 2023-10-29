@@ -15,6 +15,9 @@ import { CreateCryptoComponent } from './create-crypto.component';
 import { AddTransactionComponent } from './add-transaction.component';
 import { CryptoCardComponent } from './crypto-card.component';
 import { SearchComponent } from './search.component';
+import { CryptoService, ViewMinimalCryptoAssetDto } from './services/crypto.service';
+import { BehaviorSubject } from 'rxjs';
+import { Pagination } from './models/pagination';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -111,90 +114,20 @@ export class ViewCryptosComponent {
     '6 meses',
     '1 ano'
   ]
-  cryptos: CryptoX[] = [
-    {
-      name: 'Bitcoin',
-      symbol: 'BTC',
-      price: 47000,
-      averagePrice: 45000,
-      priceDifferencePercent: 4.44,
-    },
-    {
-      name: 'Ethereum',
-      symbol: 'ETH',
-      price: 500,
-      averagePrice: 100,
-      priceDifferencePercent: 2.24,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-  ];
-
+  dataSource: BehaviorSubject<Pagination<ViewMinimalCryptoAssetDto>> = new BehaviorSubject<Pagination<ViewMinimalCryptoAssetDto>>({
+    page: 0,
+    pageSize: 0,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+    items: [],
+  });
+  cryptos: ViewMinimalCryptoAssetDto[] = [];
   searchValue = '';
-  constructor() {
-    this.calculateCryptoValues();
+  constructor(private cryptoService: CryptoService) {
+    this.loadCryptoAssets();
   }
+
   createCrypto(): void {
     const dialogRef = this.dialog.open(CreateCryptoComponent, {
       width: '400px',
@@ -219,18 +152,9 @@ export class ViewCryptosComponent {
       this.cryptos = this.cryptos.filter(crypto => crypto.symbol.toLowerCase().includes(filterValue));
     }
   }
-
-  private calculateCryptoValues(): void {
-    const purchasedPrices: number[] = [46000, 48000, 44000];
-
-    this.cryptos.forEach((crypto) => {
-      const sumOfPurchasedPrices = purchasedPrices.reduce((acc, price) => acc + price, 0);
-      const averagePrice = sumOfPurchasedPrices / purchasedPrices.length;
-      const priceDifference = crypto.price - averagePrice;
-      const priceDifferencePercent = (priceDifference / averagePrice) * 100;
-
-      crypto.averagePrice = averagePrice;
-      crypto.priceDifferencePercent = priceDifferencePercent;
+  private loadCryptoAssets() {
+    this.cryptoService.getCryptoAssets().subscribe(cryptos => {
+      this.cryptos = cryptos.items;
     });
   }
 }
