@@ -1,6 +1,6 @@
 namespace api.CoinMarketCap;
 public record Status(int Error_code, string? Error_message);
-public record USD(decimal Price, DateTime Last_updated);
+public record USD(decimal Price, DateTime Last_updated, decimal Percent_change_24h);
 public record Quote(USD USD);
 public record Coin(int Id,
                    string Name,

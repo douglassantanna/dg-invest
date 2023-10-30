@@ -68,7 +68,8 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
                                                                                     x.CurrencyName,
                                                                                     x.CryptoCurrency,
                                                                                     x.Symbol,
-                                                                                    GetCryptoCurrentPriceBySymbol(x.CoinMarketCapId, cmpResponse)));
+                                                                                    GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse),
+                                                                                    GetPercentageChange24hById(x.CoinMarketCapId, cmpResponse)));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
                                                                                     request.Page,
@@ -83,12 +84,21 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         return await _coinMarketCapService.GetQuotesByIds(ids);
     }
 
-    private static decimal GetCryptoCurrentPriceBySymbol(int coinMarketCapId, GetQuoteResponse cmpResponse)
+    private static decimal GetCryptoCurrentPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse)
     {
         var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
         if (coin.Value != null)
         {
             return coin.Value.Quote.USD.Price;
+        }
+        return 0;
+    }
+    private static decimal GetPercentageChange24hById(int coinMarketCapId, GetQuoteResponse cmpResponse)
+    {
+        var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
+        if (coin.Value != null)
+        {
+            return coin.Value.Quote.USD.Percent_change_24h;
         }
         return 0;
     }

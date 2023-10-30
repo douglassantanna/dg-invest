@@ -13,6 +13,11 @@ import { Router } from '@angular/router';
 import { CryptoX } from './interfaces/crypto.model';
 import { CreateCryptoComponent } from './create-crypto.component';
 import { AddTransactionComponent } from './add-transaction.component';
+import { CryptoCardComponent } from './crypto-card.component';
+import { SearchComponent } from './search.component';
+import { CryptoService, ViewMinimalCryptoAssetDto } from './services/crypto.service';
+import { BehaviorSubject } from 'rxjs';
+import { Pagination } from './models/pagination';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -26,60 +31,32 @@ import { AddTransactionComponent } from './add-transaction.component';
     MatInputModule,
     FormsModule,
     MatSelectModule,
-    MatDialogModule],
+    MatDialogModule,
+    CryptoCardComponent,
+    SearchComponent],
   template: `
-      <main class="main-container">
-        <header>
-          <h1>Portfolio</h1>
-          <div class="filters">
-
-        <button
-          type="button"
-          mat-raised-button
-          color="primary"
-          (click)="createCrypto()">
-          <mat-icon>add</mat-icon> Add Crypto
-        </button>
-            <mat-form-field appearance="outline" style="margin-left: 10px;">
-              <mat-label>Search by name..</mat-label>
-              <input matInput type="text" [(ngModel)]="searchValue">
-              <button
-                color="primary"
-                matSuffix
-                mat-icon-button
-                aria-label="Search"
-                (click)="search($event)">
-                <mat-icon>search</mat-icon>
-              </button>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" style="margin-left: 10px;">
-              <mat-label>Order</mat-label>
-              <mat-select>
-                <mat-option *ngFor="let option of orderOptions" [value]="option">
-                  {{option}}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-          </div>
-
-        </header>
-      <div class="crypto-container">
-        <mat-card *ngFor="let crypto of cryptos" class="crypto-card">
-          <mat-card-header>
-            <mat-card-title>{{ crypto.name }}</mat-card-title>
-            <mat-card-subtitle>{{ crypto.symbol }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <p>Price: $ {{ crypto.price }}</p>
-            <p>Average Price: $ {{ crypto.averagePrice }}</p>
-            <p>Price Difference: {{ crypto.priceDifferencePercent | number: '1.2-2' }}%</p>
-          </mat-card-content>
-          <mat-card-actions align="end">
-            <button mat-button color="primary" (click)="cryptoDashboard()">Ver mais</button>
-          </mat-card-actions>
-        </mat-card>
+    <main class="main-container">
+      <header>
+        <h1>Portfolio</h1>
+        <div class="filters">
+          <button
+            type="button"
+            mat-raised-button
+            color="primary"
+            (click)="createCrypto()">
+            <mat-icon>add</mat-icon> Add Crypto
+          </button>
+        </div>
+      </header>
+      <div>
+      <div class="row g-3">
+        <div class="col-sm">
+          <input (keyup)="search($event)" id="search" name="search" type="text" class="form-control" placeholder="Search by name.." aria-label="Search">
+        </div>
       </div>
+      </div>
+
+      <app-crypto-card [cryptos]="cryptos" />
     </main>
   `,
   styles: [`
@@ -137,90 +114,20 @@ export class ViewCryptosComponent {
     '6 meses',
     '1 ano'
   ]
-  cryptos: CryptoX[] = [
-    {
-      name: 'Bitcoin',
-      symbol: 'BTC',
-      price: 47000,
-      averagePrice: 45000,
-      priceDifferencePercent: 4.44,
-    },
-    {
-      name: 'Ethereum',
-      symbol: 'ETH',
-      price: 500,
-      averagePrice: 100,
-      priceDifferencePercent: 2.24,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-    {
-      name: 'Chain Link',
-      symbol: 'LINK',
-      price: 157,
-      averagePrice: 124,
-      priceDifferencePercent: 1.47,
-    },
-  ];
-
+  dataSource: BehaviorSubject<Pagination<ViewMinimalCryptoAssetDto>> = new BehaviorSubject<Pagination<ViewMinimalCryptoAssetDto>>({
+    page: 0,
+    pageSize: 0,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+    items: [],
+  });
+  cryptos: ViewMinimalCryptoAssetDto[] = [];
   searchValue = '';
-  constructor() {
-    this.calculateCryptoValues();
+  constructor(private cryptoService: CryptoService) {
+    this.loadCryptoAssets();
   }
+
   createCrypto(): void {
     const dialogRef = this.dialog.open(CreateCryptoComponent, {
       width: '400px',
@@ -236,18 +143,18 @@ export class ViewCryptosComponent {
   cryptoDashboard() {
     this.router.navigate(['/crypto-dashboard', 1]);
   }
-  search(event: any) { }
-  private calculateCryptoValues(): void {
-    const purchasedPrices: number[] = [46000, 48000, 44000];
+  search(event: Event) {
+    const filterValue = (event.target as HTMLInputElement).value.toLowerCase();
 
-    this.cryptos.forEach((crypto) => {
-      const sumOfPurchasedPrices = purchasedPrices.reduce((acc, price) => acc + price, 0);
-      const averagePrice = sumOfPurchasedPrices / purchasedPrices.length;
-      const priceDifference = crypto.price - averagePrice;
-      const priceDifferencePercent = (priceDifference / averagePrice) * 100;
-
-      crypto.averagePrice = averagePrice;
-      crypto.priceDifferencePercent = priceDifferencePercent;
+    if (!filterValue) {
+      this.cryptos = this.cryptos;
+    } else {
+      this.cryptos = this.cryptos.filter(crypto => crypto.symbol.toLowerCase().includes(filterValue));
+    }
+  }
+  private loadCryptoAssets() {
+    this.cryptoService.getCryptoAssets().subscribe(cryptos => {
+      this.cryptos = cryptos.items;
     });
   }
 }
