@@ -2,11 +2,13 @@ using api.Cryptos.Commands;
 using api.Cryptos.Queries;
 using api.Shared;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class CryptoController : ControllerBase
 {
@@ -55,6 +57,13 @@ public class CryptoController : ControllerBase
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result);
+        return Ok(result);
+    }
+
+    [HttpGet("get-cryptos")]
+    public async Task<ActionResult> GetCryptos([FromRoute] GetCryptosCommand command)
+    {
+        var result = await _mediator.Send(command);
         return Ok(result);
     }
 }
