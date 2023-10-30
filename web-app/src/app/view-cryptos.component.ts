@@ -33,19 +33,14 @@ import { Pagination } from './models/pagination';
     MatSelectModule,
     MatDialogModule,
     CryptoCardComponent,
-    SearchComponent],
+    SearchComponent,
+    CreateCryptoComponent],
   template: `
     <main class="main-container">
       <header>
         <h1>Portfolio</h1>
         <div class="filters">
-          <button
-            type="button"
-            mat-raised-button
-            color="primary"
-            (click)="createCrypto()">
-            <mat-icon>add</mat-icon> Add Crypto
-          </button>
+          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
         </div>
       </header>
       <div>
@@ -152,7 +147,7 @@ export class ViewCryptosComponent {
       this.cryptos = this.cryptos.filter(crypto => crypto.symbol.toLowerCase().includes(filterValue));
     }
   }
-  private loadCryptoAssets() {
+  loadCryptoAssets() {
     this.cryptoService.getCryptoAssets().subscribe(cryptos => {
       this.cryptos = cryptos.items;
     });

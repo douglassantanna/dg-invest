@@ -1,8 +1,10 @@
 import { Pagination } from './../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
+import { CreateCryptoAssetCommand } from '../create-crypto.component';
+import { ToastService } from './toast.service';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -15,16 +17,30 @@ export interface ViewMinimalCryptoAssetDto {
   percentChange24h: number;
 }
 
+export interface Crypto {
+  id: number;
+  name: string;
+  symbol: string;
+  image: string;
+  coinMarketCapId: number;
+}
+
+export interface Response<T> {
+  data: T[];
+  isSuccess: boolean;
+  message: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class CryptoService {
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private toastService: ToastService) { }
 
   getCryptoAssets(
     page: number = 1,
-    pageSize: number = 5,
+    pageSize: number = 10,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC"): Observable<Pagination<ViewMinimalCryptoAssetDto>> {
     let params = new HttpParams()
@@ -38,4 +54,13 @@ export class CryptoService {
     });
   }
 
+  getCryptos(): Observable<Response<Crypto>> {
+    return this.http.get<Response<Crypto>>(`${url}/get-cryptos`).pipe(
+      tap()
+    );
+  }
+
+  createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/create`, command)
+  }
 }

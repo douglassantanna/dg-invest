@@ -59,7 +59,7 @@ public class CreateCryptoAssetCommandHandler : IRequestHandler<CreateCryptoAsset
 
     private async Task<bool> CryptoAssetExists(CreateCryptoAssetCommand request)
     {
-        return await _context.CryptoAssets.AnyAsync(x => x.CryptoCurrency == request.Crypto && x.CurrencyName == request.Currency);
+        return await _context.CryptoAssets.AnyAsync(x => x.CoinMarketCapId == request.CoinMarketCapId);
     }
 
     private async Task<ValidationResult> ValidateRequestAsync(CreateCryptoAssetCommand request)

@@ -1,24 +1,16 @@
+import { BehaviorSubject, finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { Crypto, CryptoService } from './services/crypto.service';
+import { ToastService } from './services/toast.service';
 
 
-interface CryptoPurchase {
-  cryptoName: string;
-  amount: number;
+export interface CreateCryptoAssetCommand {
+  crypto: string
   currency: string;
-  date: Date;
-  pricePerUnit: number;
-  exchangeName: string;
+  coinMarketCapId: number;
 }
 
 @Component({
@@ -26,79 +18,113 @@ interface CryptoPurchase {
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
     FormsModule,
-    MatButtonModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule],
+    NgbDatepickerModule],
   template: `
-    <div class="container">
-      <h1 matDialogTitle>New crypto tracker</h1>
-
-      <div class="content">
-        <mat-form-field appearance="outline">
-          <mat-label>Pick a crypto</mat-label>
-          <mat-select  name="selectedCrypto">
-            <mat-option *ngFor="let option of cryptoOptions" [value]="option">
-              {{ option }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Select currency of purchase</mat-label>
-          <mat-select  name="selectedCrypto">
-            <mat-option *ngFor="let option of currenciesOptions" [value]="option">
-              {{ option }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
+    <ng-template #content let-modal>
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-basic-title">New crypto asset</h2>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeModal(modal)"></button>
       </div>
-
-      <div class="actions">
-        <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
-        <button mat-raised-button (click)="save()" color="primary">Save</button>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+          <select
+            class="form-select"
+            aria-label="Crypto selector"
+            [(ngModel)]="selectedCoinMarketCapId"
+            name="selectedValue"
+            required>
+            <option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId" >
+              {{ crypto.symbol }}
+            </option>
+          </select>
+          </div>
+        </form>
       </div>
-    </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="createCryptoAsset(selectedCoinMarketCapId, modal)"
+          [disabled]="selectedCoinMarketCapId < 1" >Save
+          <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </ng-template>
+
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="open(content)">
+      Add asset
+    </button>
   `,
   styles: [`
-    mat-form-field{
-      width: 100%;
-    }
-    button{
-      margin-left:10px;
-    }
-    .container{
-      display:flex;
-      flex-direction:column;
-      padding:20px;
-    }
   `]
 })
-export class CreateCryptoComponent {
-  private dialogRef = inject(MatDialogRef<CreateCryptoComponent>);
+export class CreateCryptoComponent implements OnInit {
+  @Output() cryptoCreated = new EventEmitter();
+  selectedCoinMarketCapId = 0;
+  loading: boolean = false;
 
-  cryptoOptions: any[] = [
-    'Bitcoin',
-    'Ethereum',
-    'Tether',
-    'Litecoin',
-    'Cardano',
-    'Binance Coin',
-    'Polkadot',
-    'Solana',
-    'Avalanche',
-  ];
-  currenciesOptions: any[] = [
-    'BRL',
-    'USD',
-  ]
-  cancel() {
-    this.dialogRef.close()
+  cryptoOptions$ = new BehaviorSubject<Crypto[]>([]);
+
+  constructor(
+    private modalService: NgbModal,
+    private cryptoService: CryptoService,
+    private toastService: ToastService) {
   }
-  save() { }
+  ngOnInit(): void {
+    this.getCryptos();
+  }
+
+  createCryptoAsset(selectedCoinMarketCapId: number, modalRef: any): void {
+    this.loading = true;
+    const selectedCrypto = this.getCryptoById(selectedCoinMarketCapId);
+
+    if (!selectedCrypto) {
+      return;
+    }
+
+    const command: CreateCryptoAssetCommand = {
+      crypto: selectedCrypto.symbol,
+      currency: 'USD',
+      coinMarketCapId: selectedCrypto.coinMarketCapId,
+    };
+
+    this.cryptoService.createCryptoAsset(command)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      ).subscribe({
+        next: () => {
+          this.cryptoCreated.emit();
+          this.cryptoCreated.complete();
+          modalRef.close();
+        },
+        error: (err) => {
+          this.toastService.showError(err.error.message);
+        }
+      });
+  }
+
+  closeModal(modal: any) {
+    modal.close();
+  }
+
+  open(content: any) {
+    this.modalService.open(content);
+  }
+
+  private getCryptos() {
+    this.cryptoService.getCryptos().subscribe(response => {
+      this.cryptoOptions$.next(response.data);
+    });
+  }
+
+  private getCryptoById(coinMarketCapId: number): Crypto | undefined {
+    return this.cryptoOptions$.value.find((x) => x.coinMarketCapId == coinMarketCapId);
+  }
 }
