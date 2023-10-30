@@ -23,7 +23,7 @@ export interface CreateCryptoAssetCommand {
     <ng-template #content let-modal>
       <div class="modal-header">
         <h2 class="modal-title" id="modal-basic-title">New crypto asset</h2>
-        <button type="button" class="btn-close" aria-label="Close" (click)="modal.close()"></button>
+        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('dismis')"></button>
       </div>
       <div class="modal-body">
         <form>
@@ -95,11 +95,15 @@ export class CreateCryptoComponent implements OnInit {
   }
 
   open(content: any) {
-    const modalRef = this.modalService.open(content);
-    modalRef.result.then(result => {
-      if (result) {
-      }
-    })
+    this.modalService.open(content, { ariaLabelledBy: 'modal-basic-title' })
+      .result.then(
+        (result) => {
+          console.log(result);
+
+        },
+        (reason) => {
+        },
+      );
   }
 
   getCryptos() {

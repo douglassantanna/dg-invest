@@ -1,9 +1,10 @@
 import { Pagination } from './../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, of, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { CreateCryptoAssetCommand } from '../create-crypto.component';
+import { ToastService } from './toast.service';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -35,7 +36,7 @@ export interface Response<T> {
 })
 export class CryptoService {
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private toastService: ToastService) { }
 
   getCryptoAssets(
     page: number = 1,
@@ -60,6 +61,11 @@ export class CryptoService {
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/create`, command);
+    return this.http.post<Response<any>>(`${url}/create`, command).pipe(
+      catchError((err: any) => {
+        this.toastService.showError(err.error.message);
+        return of()
+      })
+    );
   }
 }
