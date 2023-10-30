@@ -12,6 +12,7 @@ export interface ViewMinimalCryptoAssetDto {
   cryptoCurrency: string;
   symbol: string;
   currentPrice: number;
+  percentChange24h: number;
 }
 
 @Injectable({

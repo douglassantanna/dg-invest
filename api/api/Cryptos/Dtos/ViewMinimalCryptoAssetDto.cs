@@ -5,7 +5,8 @@ public record ViewMinimalCryptoAssetDto(int Id,
                                         string CurrencyName,
                                         string CryptoCurrency,
                                         string Symbol,
-                                        decimal CurrentPrice);
+                                        decimal CurrentPrice,
+                                        decimal PercentChange24h);
 
 public record ViewCryptoAssetDto(int Id,
                                  string CurrencyName,
