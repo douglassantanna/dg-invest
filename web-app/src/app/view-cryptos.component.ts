@@ -40,7 +40,7 @@ import { Pagination } from './models/pagination';
       <header>
         <h1>Portfolio</h1>
         <div class="filters">
-          <app-create-crypto></app-create-crypto>
+          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
         </div>
       </header>
       <div>
@@ -147,7 +147,7 @@ export class ViewCryptosComponent {
       this.cryptos = this.cryptos.filter(crypto => crypto.symbol.toLowerCase().includes(filterValue));
     }
   }
-  private loadCryptoAssets() {
+  loadCryptoAssets() {
     this.cryptoService.getCryptoAssets().subscribe(cryptos => {
       this.cryptos = cryptos.items;
     });

@@ -1,6 +1,6 @@
 import { BehaviorSubject } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Crypto, CryptoService } from './services/crypto.service';
@@ -22,8 +22,8 @@ export interface CreateCryptoAssetCommand {
   template: `
     <ng-template #content let-modal>
       <div class="modal-header">
-        <h4 class="modal-title" id="modal-basic-title">New crypto asset</h4>
-        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+        <h2 class="modal-title" id="modal-basic-title">New crypto asset</h2>
+        <button type="button" class="btn-close" aria-label="Close" (click)="modal.close()"></button>
       </div>
       <div class="modal-body">
         <form>
@@ -31,8 +31,9 @@ export interface CreateCryptoAssetCommand {
           <select
             class="form-select"
             aria-label="Default select example"
-            [(ngModel)]="closeResult"
-            name="closeResult"
+            [(ngModel)]="selectedCoinMarketCapId"
+            #selectedValue
+            name="selectedValue"
             required>
             <option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId" >
               {{ crypto.symbol }}
@@ -42,13 +43,17 @@ export interface CreateCryptoAssetCommand {
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-dark" (click)="modal.close('Save click')">Save</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="modal.close(createCryptoAsset(selectedCoinMarketCapId))"
+          [disabled]="selectedCoinMarketCapId < 1" >Save</button>
       </div>
     </ng-template>
 
     <button
       type="button"
-      class="btn btn-lg btn-primary"
+      class="btn btn-primary"
       (click)="open(content)">
       Add Crypto
     </button>
@@ -57,7 +62,9 @@ export interface CreateCryptoAssetCommand {
   `]
 })
 export class CreateCryptoComponent implements OnInit {
-  closeResult = '';
+  @Output() cryptoCreated = new EventEmitter();
+  selectedCoinMarketCapId = 0;
+
   cryptoOptions$ = new BehaviorSubject<Crypto[]>([]);
 
   constructor(
@@ -68,24 +75,40 @@ export class CreateCryptoComponent implements OnInit {
     this.getCryptos();
   }
 
-  save() { }
+  createCryptoAsset(selectedCoinMarketCapId: number): void {
+    const selectedCrypto = this.getCryptoById(selectedCoinMarketCapId);
+
+    if (!selectedCrypto) {
+      return;
+    }
+
+    const command: CreateCryptoAssetCommand = {
+      crypto: selectedCrypto.symbol,
+      currency: 'USD',
+      coinMarketCapId: selectedCrypto.coinMarketCapId,
+    };
+
+    this.cryptoService.createCryptoAsset(command).subscribe((res) => {
+      this.cryptoCreated.emit(res.isSuccess);
+      this.cryptoCreated.complete();
+    });
+  }
 
   open(content: any) {
-    this.modalService.open(content, { ariaLabelledBy: 'modal-basic-title' }).result.then(
-      (result) => {
-        console.log('closeResult', this.closeResult);
-        console.log('result', result);
-      },
-      (reason) => {
-        console.log('closeResult', this.closeResult);
-        console.log('reason', reason);
-      },
-    );
+    const modalRef = this.modalService.open(content);
+    modalRef.result.then(result => {
+      if (result) {
+      }
+    })
   }
 
   getCryptos() {
     this.cryptoService.getCryptos().subscribe(response => {
       this.cryptoOptions$.next(response.data);
     });
+  }
+
+  private getCryptoById(coinMarketCapId: number): Crypto | undefined {
+    return this.cryptoOptions$.value.find((x) => x.coinMarketCapId == coinMarketCapId);
   }
 }

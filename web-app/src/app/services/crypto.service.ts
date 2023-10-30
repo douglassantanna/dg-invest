@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
+import { CreateCryptoAssetCommand } from '../create-crypto.component';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -38,7 +39,7 @@ export class CryptoService {
 
   getCryptoAssets(
     page: number = 1,
-    pageSize: number = 5,
+    pageSize: number = 10,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC"): Observable<Pagination<ViewMinimalCryptoAssetDto>> {
     let params = new HttpParams()
@@ -58,4 +59,7 @@ export class CryptoService {
     );
   }
 
+  createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/create`, command);
+  }
 }
