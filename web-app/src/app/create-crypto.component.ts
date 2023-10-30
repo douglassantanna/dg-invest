@@ -1,15 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { ModalDismissReasons, NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 
 interface CryptoPurchase {
@@ -26,61 +18,48 @@ interface CryptoPurchase {
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
     FormsModule,
-    MatButtonModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule],
+    NgbDatepickerModule],
   template: `
-    <div class="container">
-      <h1 matDialogTitle>New crypto tracker</h1>
-
-      <div class="content">
-        <mat-form-field appearance="outline">
-          <mat-label>Pick a crypto</mat-label>
-          <mat-select  name="selectedCrypto">
-            <mat-option *ngFor="let option of cryptoOptions" [value]="option">
-              {{ option }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Select currency of purchase</mat-label>
-          <mat-select  name="selectedCrypto">
-            <mat-option *ngFor="let option of currenciesOptions" [value]="option">
-              {{ option }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
+    <ng-template #content let-modal>
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">New crypto asset</h4>
+        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
       </div>
-
-      <div class="actions">
-        <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
-        <button mat-raised-button (click)="save()" color="primary">Save</button>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+          <select
+            class="form-select"
+            aria-label="Default select example"
+            [(ngModel)]="closeResult"
+            name="closeResult">
+            <option selected *ngFor="let item of cryptoOptions" [value]="item" >
+            {{ item }}
+            </option>
+          </select>
+          </div>
+        </form>
       </div>
-    </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-dark" (click)="modal.close('Save click')">Save</button>
+      </div>
+    </ng-template>
+
+    <button
+      type="button"
+      class="btn btn-lg btn-primary"
+      (click)="open(content)">
+      Add Crypto
+    </button>
   `,
   styles: [`
-    mat-form-field{
-      width: 100%;
-    }
-    button{
-      margin-left:10px;
-    }
-    .container{
-      display:flex;
-      flex-direction:column;
-      padding:20px;
-    }
   `]
 })
 export class CreateCryptoComponent {
-  private dialogRef = inject(MatDialogRef<CreateCryptoComponent>);
+  closeResult = '';
+
+  constructor(private modalService: NgbModal) { }
 
   cryptoOptions: any[] = [
     'Bitcoin',
@@ -98,7 +77,31 @@ export class CreateCryptoComponent {
     'USD',
   ]
   cancel() {
-    this.dialogRef.close()
   }
   save() { }
+
+  open(content: any) {
+    this.modalService.open(content, { ariaLabelledBy: 'modal-basic-title' }).result.then(
+      (result) => {
+        console.log('closeResult', this.closeResult);
+        console.log('result', result);
+      },
+      (reason) => {
+        console.log('closeResult', this.closeResult);
+        console.log('reason', reason);
+      },
+    );
+  }
+
+
+  private getDismissReason(reason: any): string {
+    if (reason === ModalDismissReasons.ESC) {
+      return 'by pressing ESC';
+    } else if (reason === ModalDismissReasons.BACKDROP_CLICK) {
+      return 'by clicking on a backdrop';
+    } else {
+      return `with: ${reason}`;
+    }
+  }
+
 }

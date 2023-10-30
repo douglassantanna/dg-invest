@@ -1,3 +1,4 @@
+using api.Cryptos.Models;
 using api.Models.Cryptos;
 using api.SpotSolar.Models;
 using api.Users.Models;
@@ -13,6 +14,7 @@ public class DataContext : DbContext
 
     public DbSet<CryptoTransaction> CryptoTransactions { get; set; } = null!;
     public DbSet<CryptoAsset> CryptoAssets { get; set; } = null!;
+    public DbSet<Crypto> Cryptos { get; set; } = null!;
     public DbSet<Proposal> Proposals { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
 
