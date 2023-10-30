@@ -155,8 +155,6 @@ export class ViewCryptosComponent {
   private loadCryptoAssets() {
     this.cryptoService.getCryptoAssets().subscribe(cryptos => {
       this.cryptos = cryptos.items;
-      console.log(this.cryptos);
-
     });
   }
 }
