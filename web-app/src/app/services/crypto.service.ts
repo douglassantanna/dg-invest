@@ -61,11 +61,6 @@ export class CryptoService {
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/create`, command).pipe(
-      catchError((err: any) => {
-        this.toastService.showError(err.error.message);
-        return of()
-      })
-    );
+    return this.http.post<Response<any>>(`${url}/create`, command)
   }
 }

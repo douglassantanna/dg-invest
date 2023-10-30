@@ -1,9 +1,10 @@
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Crypto, CryptoService } from './services/crypto.service';
+import { ToastService } from './services/toast.service';
 
 
 export interface CreateCryptoAssetCommand {
@@ -23,16 +24,15 @@ export interface CreateCryptoAssetCommand {
     <ng-template #content let-modal>
       <div class="modal-header">
         <h2 class="modal-title" id="modal-basic-title">New crypto asset</h2>
-        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('dismis')"></button>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeModal(modal)"></button>
       </div>
       <div class="modal-body">
         <form>
           <div class="mb-3">
           <select
             class="form-select"
-            aria-label="Default select example"
+            aria-label="Crypto selector"
             [(ngModel)]="selectedCoinMarketCapId"
-            #selectedValue
             name="selectedValue"
             required>
             <option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId" >
@@ -46,8 +46,10 @@ export interface CreateCryptoAssetCommand {
         <button
           type="button"
           class="btn btn-primary"
-          (click)="modal.close(createCryptoAsset(selectedCoinMarketCapId))"
-          [disabled]="selectedCoinMarketCapId < 1" >Save</button>
+          (click)="createCryptoAsset(selectedCoinMarketCapId, modal)"
+          [disabled]="selectedCoinMarketCapId < 1" >Save
+          <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </button>
       </div>
     </ng-template>
 
@@ -55,7 +57,7 @@ export interface CreateCryptoAssetCommand {
       type="button"
       class="btn btn-primary"
       (click)="open(content)">
-      Add Crypto
+      Add asset
     </button>
   `,
   styles: [`
@@ -64,18 +66,21 @@ export interface CreateCryptoAssetCommand {
 export class CreateCryptoComponent implements OnInit {
   @Output() cryptoCreated = new EventEmitter();
   selectedCoinMarketCapId = 0;
+  loading: boolean = false;
 
   cryptoOptions$ = new BehaviorSubject<Crypto[]>([]);
 
   constructor(
     private modalService: NgbModal,
-    private cryptoService: CryptoService) {
+    private cryptoService: CryptoService,
+    private toastService: ToastService) {
   }
   ngOnInit(): void {
     this.getCryptos();
   }
 
-  createCryptoAsset(selectedCoinMarketCapId: number): void {
+  createCryptoAsset(selectedCoinMarketCapId: number, modalRef: any): void {
+    this.loading = true;
     const selectedCrypto = this.getCryptoById(selectedCoinMarketCapId);
 
     if (!selectedCrypto) {
@@ -88,25 +93,32 @@ export class CreateCryptoComponent implements OnInit {
       coinMarketCapId: selectedCrypto.coinMarketCapId,
     };
 
-    this.cryptoService.createCryptoAsset(command).subscribe((res) => {
-      this.cryptoCreated.emit(res.isSuccess);
-      this.cryptoCreated.complete();
-    });
+    this.cryptoService.createCryptoAsset(command)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      ).subscribe({
+        next: () => {
+          this.cryptoCreated.emit();
+          this.cryptoCreated.complete();
+          modalRef.close();
+        },
+        error: (err) => {
+          this.toastService.showError(err.error.message);
+        }
+      });
+  }
+
+  closeModal(modal: any) {
+    modal.close();
   }
 
   open(content: any) {
-    this.modalService.open(content, { ariaLabelledBy: 'modal-basic-title' })
-      .result.then(
-        (result) => {
-          console.log(result);
-
-        },
-        (reason) => {
-        },
-      );
+    this.modalService.open(content);
   }
 
-  getCryptos() {
+  private getCryptos() {
     this.cryptoService.getCryptos().subscribe(response => {
       this.cryptoOptions$.next(response.data);
     });
