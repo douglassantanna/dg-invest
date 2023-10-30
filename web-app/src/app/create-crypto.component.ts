@@ -1,16 +1,15 @@
+import { BehaviorSubject } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ModalDismissReasons, NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { Crypto, CryptoService } from './services/crypto.service';
 
 
-interface CryptoPurchase {
-  cryptoName: string;
-  amount: number;
+export interface CreateCryptoAssetCommand {
+  crypto: string
   currency: string;
-  date: Date;
-  pricePerUnit: number;
-  exchangeName: string;
+  coinMarketCapId: number;
 }
 
 @Component({
@@ -33,9 +32,10 @@ interface CryptoPurchase {
             class="form-select"
             aria-label="Default select example"
             [(ngModel)]="closeResult"
-            name="closeResult">
-            <option selected *ngFor="let item of cryptoOptions" [value]="item" >
-            {{ item }}
+            name="closeResult"
+            required>
+            <option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId" >
+              {{ crypto.symbol }}
             </option>
           </select>
           </div>
@@ -56,28 +56,18 @@ interface CryptoPurchase {
   styles: [`
   `]
 })
-export class CreateCryptoComponent {
+export class CreateCryptoComponent implements OnInit {
   closeResult = '';
+  cryptoOptions$ = new BehaviorSubject<Crypto[]>([]);
 
-  constructor(private modalService: NgbModal) { }
-
-  cryptoOptions: any[] = [
-    'Bitcoin',
-    'Ethereum',
-    'Tether',
-    'Litecoin',
-    'Cardano',
-    'Binance Coin',
-    'Polkadot',
-    'Solana',
-    'Avalanche',
-  ];
-  currenciesOptions: any[] = [
-    'BRL',
-    'USD',
-  ]
-  cancel() {
+  constructor(
+    private modalService: NgbModal,
+    private cryptoService: CryptoService) {
   }
+  ngOnInit(): void {
+    this.getCryptos();
+  }
+
   save() { }
 
   open(content: any) {
@@ -93,15 +83,9 @@ export class CreateCryptoComponent {
     );
   }
 
-
-  private getDismissReason(reason: any): string {
-    if (reason === ModalDismissReasons.ESC) {
-      return 'by pressing ESC';
-    } else if (reason === ModalDismissReasons.BACKDROP_CLICK) {
-      return 'by clicking on a backdrop';
-    } else {
-      return `with: ${reason}`;
-    }
+  getCryptos() {
+    this.cryptoService.getCryptos().subscribe(response => {
+      this.cryptoOptions$.next(response.data);
+    });
   }
-
 }

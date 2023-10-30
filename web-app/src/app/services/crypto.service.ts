@@ -1,7 +1,7 @@
 import { Pagination } from './../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 
 const url = `${environment.apiUrl}/Crypto`;
@@ -13,6 +13,20 @@ export interface ViewMinimalCryptoAssetDto {
   symbol: string;
   currentPrice: number;
   percentChange24h: number;
+}
+
+export interface Crypto {
+  id: number;
+  name: string;
+  symbol: string;
+  image: string;
+  coinMarketCapId: number;
+}
+
+export interface Response<T> {
+  data: T[];
+  isSuccess: boolean;
+  message: string;
 }
 
 @Injectable({
@@ -36,6 +50,12 @@ export class CryptoService {
     return this.http.get<Pagination<ViewMinimalCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
     });
+  }
+
+  getCryptos(): Observable<Response<Crypto>> {
+    return this.http.get<Response<Crypto>>(`${url}/get-cryptos`).pipe(
+      tap()
+    );
   }
 
 }

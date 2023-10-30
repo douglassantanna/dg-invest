@@ -19,7 +19,7 @@ public class GetCryptosCommandHandler : IRequestHandler<GetCryptosCommand, Respo
     {
         var cryptos = await _context.Cryptos
                               .OrderByDescending(c => c.Name)
-                              .ToListAsync(cancellationToken); ;
+                              .ToListAsync(cancellationToken);
         return new Response("", true, cryptos);
     }
 }
