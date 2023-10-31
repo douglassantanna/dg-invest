@@ -18,44 +18,32 @@ import { Observable, Subject, debounceTime, distinctUntilChanged, switchMap, tak
     ReactiveFormsModule],
   template: `
     <main class="main-container">
-      <header>
+      <header class="d-flex justify-content-between align-items-center">
         <h1>Portfolio</h1>
         <div>
           <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
         </div>
       </header>
       <div>
-      <div class="row g-3">
-        <div class="col-sm">
-          <input class="form-control" placeholder="Search by name.." aria-label="Search" type="text" [formControl]="searchControl" >
+        <div class="row g-3">
+          <div class="col mb-3 position-relative">
+            <input class="form-control" placeholder="Search by name.." aria-label="Search" type="text" [formControl]="searchControl" >
+            <span
+              *ngIf="cryptos.length == 0">
+              No assets found. Add some. 🧳</span>
+          </div>
         </div>
       </div>
-      </div>
-
       <app-crypto-card [cryptos]="cryptos" />
     </main>
   `,
   styles: [`
-    .main-container {
-        display: flex;
-        flex-direction: column;
-        padding:20px;
-      }
-    header{
-      display: flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-    }
+
   `]
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private cryptoService = inject(CryptoService);
-  orderOptions: any[] = [
-    'ASC',
-    'DESC'
-  ];
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   cryptos: ViewMinimalCryptoAssetDto[] = [];
