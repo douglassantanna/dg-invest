@@ -62,7 +62,12 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
         }
 
-        var cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssetQuery);
+        GetQuoteResponse cmpResponse = null;
+
+        if (cryptoAssetQuery.Any())
+        {
+            cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssetQuery);
+        }
 
         var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.CurrencyName,
@@ -84,12 +89,15 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         return await _coinMarketCapService.GetQuotesByIds(ids);
     }
 
-    private static decimal GetCryptoCurrentPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse)
+    private static decimal GetCryptoCurrentPriceById(int coinMarketCapId, GetQuoteResponse? cmpResponse)
     {
-        var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
-        if (coin.Value != null)
+        if (cmpResponse != null)
         {
-            return coin.Value.Quote.USD.Price;
+            var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
+            if (coin.Value != null)
+            {
+                return coin.Value.Quote.USD.Price;
+            }
         }
         return 0;
     }
