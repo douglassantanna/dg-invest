@@ -1,8 +1,8 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CryptoX } from '../interfaces/crypto.model';
 import { ViewMinimalCryptoAssetDto } from '../services/crypto.service';
 import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-crypto-card',
@@ -20,7 +20,7 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
                 {{ crypto.percentChange24h | decimalRound }}%
               </span>
             </p>
-            <a (click)="cryptoDashboard()" class="btn btn-primary">Ver mais</a>
+            <a (click)="cryptoDashboard(crypto.id)" class="btn btn-primary">See details</a>
           </div>
         </div>
       </div>
@@ -29,7 +29,10 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
 })
 export class CryptoCardComponent {
   @Input() cryptos: ViewMinimalCryptoAssetDto[] = [];
-  cryptoDashboard() {
-    console.log('Crypto Dashboard');
+
+  private router = inject(Router);
+
+  cryptoDashboard(cryptoID: number) {
+    this.router.navigate(['/crypto-dashboard', cryptoID]);
   }
 }

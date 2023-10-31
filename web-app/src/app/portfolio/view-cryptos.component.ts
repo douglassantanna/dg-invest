@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 
 import { CreateCryptoComponent } from './create-crypto.component';
 import { CryptoCardComponent } from './crypto-card.component';
@@ -42,7 +41,6 @@ import { Observable, Subject, debounceTime, distinctUntilChanged, switchMap, tak
   `]
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
-  private router = inject(Router);
   private cryptoService = inject(CryptoService);
   private unsubscribe$: Subject<void> = new Subject<void>();
 
@@ -58,10 +56,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCryptoAssets();
     this.search();
-  }
-
-  cryptoDashboard() {
-    this.router.navigate(['/crypto-dashboard', 1]);
   }
 
   loadCryptoAssets(

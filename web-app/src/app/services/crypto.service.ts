@@ -60,6 +60,10 @@ export class CryptoService {
     );
   }
 
+  getCryptoAssetById(id: number): Observable<Response<Crypto>> {
+    return this.http.get<Response<Crypto>>(`${url}/get-crypto-asset-by-id/${id}`)
+  }
+
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/create`, command)
   }
