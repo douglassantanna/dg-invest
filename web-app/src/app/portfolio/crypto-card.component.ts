@@ -1,8 +1,8 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CryptoX } from './interfaces/crypto.model';
-import { ViewMinimalCryptoAssetDto } from './services/crypto.service';
-import { DecimalRoundPipe } from './pipes/decimal-round.pipe';
+import { CryptoX } from '../interfaces/crypto.model';
+import { ViewMinimalCryptoAssetDto } from '../services/crypto.service';
+import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
 
 @Component({
   selector: 'app-crypto-card',

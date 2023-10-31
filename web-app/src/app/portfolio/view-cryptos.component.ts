@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 
 import { CreateCryptoComponent } from './create-crypto.component';
 import { CryptoCardComponent } from './crypto-card.component';
-import { CryptoService, ViewMinimalCryptoAssetDto } from './services/crypto.service';
+import { CryptoService, ViewMinimalCryptoAssetDto } from '../services/crypto.service';
 import { Observable, Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-view-cryptos',
