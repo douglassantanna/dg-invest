@@ -1,7 +1,7 @@
 import { Pagination } from './../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { CreateCryptoAssetCommand } from '../create-crypto.component';
 import { ToastService } from './toast.service';
