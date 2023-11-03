@@ -18,20 +18,22 @@ import { ActivatedRoute } from '@angular/router';
     PurchaseHistoryComponent,
     MatCardModule],
   template: `
-  <div class="grid-container">
-    <div class="div1">
+  <div class="">
+    <div class="">
       <app-my-crypto />
+
+
     </div>
-    <div class="div2">
+    <!-- <div class="div2">
       <app-add-transaction/>
-    </div>
-    <div class="div3">
+    </div> -->
+    <!-- <div class="div3">
       <mat-card>
         <mat-card-content>
           <app-purchase-history />
         </mat-card-content>
       </mat-card>
-    </div>
+    </div> -->
   </div>
   `,
   styles: [`

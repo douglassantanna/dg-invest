@@ -1,73 +1,57 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { Component, Input } from '@angular/core';
+import { CryptoInformation } from '../services/crypto.service';
 
 @Component({
   selector: 'app-my-crypto',
   standalone: true,
   imports: [
-    CommonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    FormsModule],
+    CommonModule],
   template: `
-   <mat-card>
-        <h1>My {{myCrypto}} in {{myCurrency}}</h1>
-        <mat-card-content>
-          <div class="fields">
-            <mat-form-field appearance="outline">
-              <mat-label>Price per Unit</mat-label>
-              <input matInput type="number"  value="29.000">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>My avarege price</mat-label>
-              <input matInput type="number"  value="22.187">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>% difference</mat-label>
-              <input matInput type="number"  value="22.187">
-            </mat-form-field>
-          </div>
-          <div class="fields">
-            <mat-form-field appearance="outline">
-              <mat-label>Amount</mat-label>
-              <input matInput type="number"  value="0.00148">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Total in U$</mat-label>
-              <input matInput type="number"  value="1.489">
-            </mat-form-field>
-          </div>
-        </mat-card-content>
-      </mat-card>
+  <div class="card">
+    <div class="card-header">
+      {{ cryptoInfo.symbol }} Information
+    </div>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item d-flex justify-content-between">
+        <span>Price per Unit:</span>
+        <span>{{ cryptoInfo.pricePerUnit | currency:'USD':'symbol':'1.2-2' }}</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>My Average Price:</span>
+        <span>{{ cryptoInfo.myAveragePrice | currency:'USD':'symbol':'1.2-2' }}</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>% Difference:</span>
+        <span>{{ cryptoInfo.percentDifference }}</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>Amount:</span>
+        <span>{{ cryptoInfo.amount }}</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>Total in U$:</span>
+        <span>{{ cryptoInfo.totalInUSD | currency:'USD':'symbol':'1.2-2' }}</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>Invested Amount:</span>
+        <span>{{ cryptoInfo.investedAmount | currency:'USD':'symbol':'1.2-2' }}</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between">
+        <span>Current Worth:</span>
+        <span>{{ cryptoInfo.currentWorth | currency:'USD':'symbol':'1.2-2' }}</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between bg-primary text-white">
+        <span>Investment Gain/Loss:</span>
+        <span>{{ cryptoInfo.investmentGainLoss | currency:'USD':'symbol':'1.2-2' }}</span>
+      </li>
+    </ul>
+  </div>
   `,
-  styles: [`
-    h1{
-      padding:16px 0px 0px 16px
-    }
-    mat-form-field{
-      width: 100%;
-    }
-    .fields{
-      display:flex;
-      gap:10px;
-    }
-    @media (max-width: 640px) {
-        .fields{
-          display:flex;
-          flex-direction:column;
-        }
-      }
-  `]
+  styles: [``]
 })
 export class MyCryptoComponent {
+  @Input() cryptoInfo: CryptoInformation = {} as CryptoInformation;
   myCrypto = 'Bitcoin';
   myCurrency = 'U$';
 }

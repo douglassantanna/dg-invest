@@ -8,6 +8,19 @@ import { ToastService } from './toast.service';
 
 const url = `${environment.apiUrl}/Crypto`;
 
+export interface CryptoInformation {
+  symbol: string;
+  pricePerUnit: number;
+  myAveragePrice: number;
+  percentDifference: string;
+  amount: string;
+  totalInUSD: number;
+  investedAmount: number;
+  currentWorth: number;
+  investmentGainLoss: number;
+}
+
+
 export interface ViewMinimalCryptoAssetDto {
   id: number;
   currencyName: string;
