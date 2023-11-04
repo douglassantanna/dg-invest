@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     /// <inheritdoc />
     public partial class add_table_cryptos : Migration

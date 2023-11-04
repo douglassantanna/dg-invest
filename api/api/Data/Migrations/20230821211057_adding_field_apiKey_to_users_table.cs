@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     public partial class adding_field_apiKey_to_users_table : Migration
     {

@@ -9,20 +9,81 @@ using api.Data;
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20230818205626_create_addresses_table")]
-    partial class create_addresses_table
+    [Migration("20231104004455_add-property-TotalInvested-to-crypto-asset")]
+    partial class addpropertyTotalInvestedtocryptoasset
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.21")
+                .HasAnnotation("ProductVersion", "7.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("api.Cryptos.Models.Address", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AddressName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AddressValue")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CryptoAssetId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CryptoAssetId");
+
+                    b.ToTable("Address");
+                });
+
+            modelBuilder.Entity("api.Cryptos.Models.Crypto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CoinMarketCapId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Image")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Cryptos");
+                });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
                 {
@@ -30,7 +91,7 @@ namespace api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AveragePrice")
                         .HasPrecision(18, 8)
@@ -40,23 +101,33 @@ namespace api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
+                    b.Property<int>("CoinMarketCapId")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("CryptoCurrency")
+                        .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar");
 
                     b.Property<string>("CurrencyName")
+                        .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar");
 
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("Symbol")
+                        .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar");
+
+                    b.Property<decimal>("TotalInvested")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
 
                     b.HasKey("Id");
 
@@ -69,7 +140,7 @@ namespace api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 8)
@@ -82,8 +153,9 @@ namespace api.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("ExchangeName")
+                        .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 8)
@@ -102,40 +174,13 @@ namespace api.Migrations
                     b.ToTable("CryptoTransactions");
                 });
 
-            modelBuilder.Entity("api.Cryptos.Models.Address", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("AddressName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AddressValue")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CryptoAssetId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CryptoAssetId");
-
-                    b.ToTable("Address");
-                });
-
             modelBuilder.Entity("api.SpotSolar.Models.Proposal", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -148,15 +193,18 @@ namespace api.Migrations
                         .HasColumnType("decimal(18,8)");
 
                     b.Property<string>("Notes")
+                        .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar");
 
                     b.Property<string>("PaymentMethods")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Power")
+                        .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("varchar");
 
                     b.Property<int>("ServiceType")
                         .HasColumnType("int");
@@ -180,11 +228,44 @@ namespace api.Migrations
                     b.ToTable("Proposals");
                 });
 
-            modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
+            modelBuilder.Entity("api.Users.Models.User", b =>
                 {
-                    b.HasOne("api.Models.Cryptos.CryptoAsset", null)
-                        .WithMany("Transactions")
-                        .HasForeignKey("CryptoAssetId");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Address", b =>
@@ -198,6 +279,13 @@ namespace api.Migrations
                     b.Navigation("CryptoAsset");
                 });
 
+            modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
+                {
+                    b.HasOne("api.Models.Cryptos.CryptoAsset", null)
+                        .WithMany("Transactions")
+                        .HasForeignKey("CryptoAssetId");
+                });
+
             modelBuilder.Entity("api.SpotSolar.Models.Proposal", b =>
                 {
                     b.OwnsOne("api.SpotSolar.Models.Address", "Address", b1 =>
@@ -206,24 +294,29 @@ namespace api.Migrations
                                 .HasColumnType("int");
 
                             b1.Property<string>("City")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.Property<string>("Number")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.Property<string>("State")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.Property<string>("Street")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.Property<string>("ZipCode")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.HasKey("ProposalId");
 
@@ -239,16 +332,19 @@ namespace api.Migrations
                                 .HasColumnType("int");
 
                             b1.Property<string>("Email")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.Property<string>("Name")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.Property<string>("Phone")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.HasKey("ProposalId");
 
@@ -267,11 +363,12 @@ namespace api.Migrations
                                 .ValueGeneratedOnAdd()
                                 .HasColumnType("int");
 
-                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"), 1L, 1);
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
 
                             b1.Property<string>("Name")
+                                .IsRequired()
                                 .HasMaxLength(255)
-                                .HasColumnType("varchar(255)");
+                                .HasColumnType("varchar");
 
                             b1.Property<int>("Quantity")
                                 .HasColumnType("int");
@@ -284,9 +381,11 @@ namespace api.Migrations
                                 .HasForeignKey("ProposalId");
                         });
 
-                    b.Navigation("Address");
+                    b.Navigation("Address")
+                        .IsRequired();
 
-                    b.Navigation("Customer");
+                    b.Navigation("Customer")
+                        .IsRequired();
 
                     b.Navigation("Products");
                 });
