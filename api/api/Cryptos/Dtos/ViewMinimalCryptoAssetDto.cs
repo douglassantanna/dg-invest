@@ -9,15 +9,9 @@ public record ViewMinimalCryptoAssetDto(int Id,
                                         decimal PercentChange24h);
 
 public record ViewCryptoAssetDto(int Id,
-                                 string CurrencyName,
-                                 string CryptoCurrency,
-                                 string Symbol,
-                                 DateTimeOffset CreatedAt,
+                                 ViewCryptoInformation CryptoInformation,
                                  IReadOnlyCollection<ViewCryptoTransactionDto> Transactions,
-                                 decimal Balance,
-                                 IReadOnlyCollection<ViewAddressDto> Addresses,
-                                 decimal AveragePrice,
-                                 decimal CurrentPrice);
+                                 IReadOnlyCollection<ViewAddressDto> Addresses);
 
 public record ViewCryptoTransactionDto(decimal Amount,
                                        decimal Price,
@@ -28,3 +22,13 @@ public record ViewCryptoTransactionDto(decimal Amount,
 public record ViewAddressDto(int Id,
                              string AddressName,
                              string AddressValue);
+
+public record ViewCryptoInformation(string Symbol,
+                                    decimal PricePerUnit,
+                                    decimal MyAveragePrice,
+                                    decimal PercentDifference,
+                                    decimal Balance,
+                                    decimal InvestedAmount,
+                                    decimal CurrentWorth,
+                                    decimal InvestmentGainLoss,
+                                    int CoinMarketCapId);

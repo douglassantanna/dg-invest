@@ -12,8 +12,8 @@ export interface CryptoInformation {
   symbol: string;
   pricePerUnit: number;
   myAveragePrice: number;
-  percentDifference: string;
-  amount: string;
+  percentDifference: number;
+  balance: number;
   totalInUSD: number;
   investedAmount: number;
   currentWorth: number;

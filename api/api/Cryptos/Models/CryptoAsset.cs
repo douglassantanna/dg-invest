@@ -16,6 +16,7 @@ public class CryptoAsset
     public IReadOnlyCollection<Address> Addresses => _addresses.AsReadOnly();
     public bool Deleted { get; private set; }
     public int CoinMarketCapId { get; private set; }
+    public decimal TotalInvested { get; private set; }
 
     public CryptoAsset(string cryptoCurrency,
                        string currencyName,
@@ -46,12 +47,20 @@ public class CryptoAsset
     public void AddTransaction(CryptoTransaction transaction)
     {
         if (transaction.TransactionType == ETransactionType.Buy)
+        {
             AddBalance(transaction.Amount);
+            TotalInvested += transaction.Amount;
+        }
         else if (transaction.TransactionType == ETransactionType.Sell)
+        {
             SubtractBalance(transaction.Amount);
+            TotalInvested -= transaction.Amount;
+        }
+
         if (transaction.Amount > 0.0m)
             _transactions.Add(transaction);
     }
+
     public void AddBalance(decimal amount)
     {
         if (amount > 0.0m)
@@ -61,5 +70,35 @@ public class CryptoAsset
     {
         if (amount > 0.0m)
             Balance -= amount;
+    }
+
+    public decimal GetPercentDifference(decimal currentPrice)
+    {
+        decimal averagePrice = _transactions.Select(t => t.Price).Average();
+        if (averagePrice == 0)
+        {
+            if (currentPrice > 0)
+            {
+                return decimal.MaxValue;
+            }
+            else if (currentPrice < 0)
+            {
+                return decimal.MinValue;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            decimal difference = currentPrice - averagePrice;
+            decimal percentDifference = (difference / averagePrice) * 100;
+            return percentDifference;
+        }
+    }
+    internal decimal CurrentWorth(decimal currentPrice, decimal dollarValue)
+    {
+        return Balance * currentPrice * dollarValue;
     }
 }

@@ -26,12 +26,8 @@ import { CryptoInformation } from '../services/crypto.service';
         <span>{{ cryptoInfo.percentDifference }}</span>
       </li>
       <li class="list-group-item d-flex justify-content-between">
-        <span>Amount:</span>
-        <span>{{ cryptoInfo.amount }}</span>
-      </li>
-      <li class="list-group-item d-flex justify-content-between">
-        <span>Total in U$:</span>
-        <span>{{ cryptoInfo.totalInUSD | currency:'USD':'symbol':'1.2-2' }}</span>
+        <span>Balance:</span>
+        <span>{{ cryptoInfo.balance }}</span>
       </li>
       <li class="list-group-item d-flex justify-content-between">
         <span>Invested Amount:</span>
