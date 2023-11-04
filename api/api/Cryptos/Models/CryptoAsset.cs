@@ -97,8 +97,13 @@ public class CryptoAsset
             return percentDifference;
         }
     }
-    internal decimal CurrentWorth(decimal currentPrice, decimal dollarValue)
+    internal decimal CurrentWorth(decimal currentPrice)
     {
-        return Balance * currentPrice * dollarValue;
+        return Balance * currentPrice;
+    }
+
+    internal decimal GetInvestmentGainLoss()
+    {
+        return TotalInvested - Balance * AveragePrice;
     }
 }

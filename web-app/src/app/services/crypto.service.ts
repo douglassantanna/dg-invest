@@ -7,6 +7,42 @@ import { CreateCryptoAssetCommand } from '../portfolio/create-crypto.component';
 import { ToastService } from './toast.service';
 
 const url = `${environment.apiUrl}/Crypto`;
+export enum ETransactionType {
+  Buy = 1,
+  Sell = 2
+}
+export interface ViewCryptoAssetDto {
+  id: number;
+  cryptoInformation: ViewCryptoInformation;
+  transactions: ViewCryptoTransactionDto[];
+  addresses: ViewAddressDto[];
+}
+
+export interface ViewCryptoTransactionDto {
+  amount: number;
+  price: number;
+  purchaseDate: Date;
+  exchangeName: string;
+  transactionType: ETransactionType;
+}
+
+export interface ViewAddressDto {
+  id: number;
+  addressName: string;
+  addressValue: string;
+}
+
+export interface ViewCryptoInformation {
+  symbol: string;
+  pricePerUnit: number;
+  myAveragePrice: number;
+  percentDifference: number;
+  balance: number;
+  investedAmount: number;
+  currentWorth: number;
+  investmentGainLoss: number;
+  coinMarketCapId: number;
+}
 
 export interface CryptoInformation {
   symbol: string;
@@ -73,8 +109,8 @@ export class CryptoService {
     );
   }
 
-  getCryptoAssetById(id: number): Observable<Response<Crypto>> {
-    return this.http.get<Response<Crypto>>(`${url}/get-crypto-asset-by-id/${id}`)
+  getCryptoAssetById(id: number): Observable<Response<ViewCryptoAssetDto>> {
+    return this.http.get<Response<ViewCryptoAssetDto>>(`${url}/get-crypto-asset-by-id/${id}`)
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {

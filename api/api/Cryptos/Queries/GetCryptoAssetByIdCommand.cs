@@ -35,7 +35,7 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
 
         var cmpResponse = await _coinMarketCapService.GetQuotesByIds(new[] { cryptoAsset.CoinMarketCapId.ToString() });
 
-        var currentPrice = GetPercentageChange24hById(cryptoAsset.CoinMarketCapId, cmpResponse);
+        var currentPrice = GetCryptoCurrentPriceById(cryptoAsset.CoinMarketCapId, cmpResponse);
 
         var cryptoInfo = new ViewCryptoAssetDto(cryptoAsset.Id,
                                                 new ViewCryptoInformation(cryptoAsset.Symbol,
@@ -44,8 +44,8 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
                                                                           cryptoAsset.GetPercentDifference(currentPrice),
                                                                           cryptoAsset.Balance,
                                                                           cryptoAsset.TotalInvested,
-                                                                          cryptoAsset.CurrentWorth(currentPrice, dollarValue: 5),
-                                                                          1234,
+                                                                          cryptoAsset.CurrentWorth(currentPrice),
+                                                                          cryptoAsset.GetInvestmentGainLoss(),
                                                                           cryptoAsset.CoinMarketCapId),
                                                 cryptoAsset.Transactions.Select(t => new ViewCryptoTransactionDto(t.Amount,
                                                                                                                   t.Price,
@@ -55,17 +55,18 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
                                                 cryptoAsset.Addresses.Select(a => new ViewAddressDto(a.Id,
                                                                                                      a.AddressName,
                                                                                                      a.AddressValue)).ToList());
-        if (cryptoAsset is null)
-            return new Response("Crypto asset not found", false);
 
-        return new Response("", true, cryptoAsset);
+        return new Response("", true, cryptoInfo);
     }
-    private static decimal GetPercentageChange24hById(int coinMarketCapId, GetQuoteResponse cmpResponse)
+    private static decimal GetCryptoCurrentPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse)
     {
-        var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
-        if (coin.Value != null)
+        if (cmpResponse != null)
         {
-            return coin.Value.Quote.USD.Percent_change_24h;
+            var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
+            if (coin.Value != null)
+            {
+                return coin.Value.Quote.USD.Price;
+            }
         }
         return 0;
     }
