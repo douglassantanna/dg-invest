@@ -1,11 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, resolveForwardRef } from '@angular/core';
 
 import { AddTransactionComponent } from './add-transaction.component';
 import { MyCryptoComponent } from './my-crypto.component';
 import { PurchaseHistoryComponent } from './purchase-history.component';
-import { CryptoInformation, CryptoService } from '../services/crypto.service';
+import { CryptoInformation, CryptoService, ETransactionType } from '../services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
+
+export interface CryptoTransactionHistory {
+  amount: number;
+  price: number;
+  purchaseDate: number;
+  exchangeName: string;
+  transactionType: ETransactionType;
+}
 
 @Component({
   selector: 'app-crypto-dashboard',
@@ -20,12 +28,10 @@ import { ActivatedRoute } from '@angular/router';
   <div class="">
     <div class="">
       <app-my-crypto [cryptoInfo]="cryptoInfo" />
-
-
     </div>
-    <!-- <div class="div2">
-      <app-add-transaction/>
-    </div> -->
+    <div class="">
+      <app-purchase-history [transactionsHistory]="transactionsHistory" />
+    </div>
     <!-- <div class="div3">
       <mat-card>
         <mat-card-content>
@@ -76,12 +82,13 @@ export class CryptoDashboardComponent implements OnInit {
   private cryptoService = inject(CryptoService);
   private route = inject(ActivatedRoute);
   cryptoInfo: CryptoInformation = {} as CryptoInformation;
-
+  transactionsHistory: CryptoTransactionHistory[] = [];
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       const cryptoId = params['cryptoId'];
       this.cryptoService.getCryptoAssetById(cryptoId).subscribe(response => {
         this.cryptoInfo = response.data.cryptoInformation;
+        this.transactionsHistory = response.data.transactions;
       })
     })
   }
