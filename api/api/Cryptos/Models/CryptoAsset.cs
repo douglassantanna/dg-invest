@@ -6,7 +6,18 @@ public class CryptoAsset
     public int Id { get; private set; }
     public string CryptoCurrency { get; private set; } = string.Empty;
     public decimal Balance { get; private set; }
-    public decimal AveragePrice { get; private set; }
+    private decimal _averagePrice;
+    public decimal AveragePrice
+    {
+        get
+        {
+            return _transactions.Select(t => t.Price).Average();
+        }
+        set
+        {
+            _averagePrice = value;
+        }
+    }
     public string Symbol { get; private set; } = string.Empty;
     public string CurrencyName { get; private set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
@@ -28,17 +39,12 @@ public class CryptoAsset
         Symbol = symbol;
         CreatedAt = DateTimeOffset.UtcNow;
         Balance = 0;
-        AveragePrice = 0;
         Deleted = false;
         CoinMarketCapId = coinMarketCapId;
     }
     public void Delete()
     {
         Deleted = true;
-    }
-    public decimal GetAveragePrice()
-    {
-        return _transactions.Select(t => t.Price).Average();
     }
     public void AddAddress(Address address)
     {
@@ -74,7 +80,7 @@ public class CryptoAsset
 
     public decimal GetPercentDifference(decimal currentPrice)
     {
-        decimal averagePrice = _transactions.Select(t => t.Price).Average();
+        decimal averagePrice = AveragePrice;
         if (averagePrice == 0)
         {
             if (currentPrice > 0)
@@ -104,7 +110,7 @@ public class CryptoAsset
 
     internal decimal GetInvestmentGainLoss()
     {
-        var total = Balance * _transactions.Select(t => t.Price).Average();
+        var total = Balance * AveragePrice;
         return total;
     }
 }

@@ -40,7 +40,7 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
         var cryptoInfo = new ViewCryptoAssetDto(cryptoAsset.Id,
                                                 new ViewCryptoInformation(cryptoAsset.Symbol,
                                                                           currentPrice,
-                                                                          cryptoAsset.GetAveragePrice(),
+                                                                          cryptoAsset.AveragePrice,
                                                                           cryptoAsset.GetPercentDifference(currentPrice),
                                                                           cryptoAsset.Balance,
                                                                           cryptoAsset.TotalInvested,
