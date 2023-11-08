@@ -25,20 +25,22 @@ export interface CryptoTransactionHistory {
     PurchaseHistoryComponent,
   ],
   template: `
-  <div class="">
-    <div class="">
-      <app-my-crypto [cryptoInfo]="cryptoInfo" />
+  <div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-4">
+                <app-my-crypto [cryptoInfo]="cryptoInfo" />
+            </div>
+            <div class="mb-4">
+                <app-add-transaction />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-4">
+                <app-purchase-history [transactionsHistory]="transactionsHistory" />
+            </div>
+        </div>
     </div>
-    <div class="">
-      <app-purchase-history [transactionsHistory]="transactionsHistory" />
-    </div>
-    <!-- <div class="div3">
-      <mat-card>
-        <mat-card-content>
-          <app-purchase-history />
-        </mat-card-content>
-      </mat-card>
-    </div> -->
   </div>
   `,
   styles: [`

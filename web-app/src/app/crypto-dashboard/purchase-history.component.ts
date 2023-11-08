@@ -10,6 +10,7 @@ import { CryptoTransactionHistory } from './crypto-dashboard.component';
     CommonModule,
     FormsModule],
   template: `
+  <div class="g-3 border border-1 rounded">
     <header class="d-flex justify-content-between align-items-center">
       <h1>Purchase history</h1>
       <div class="form-group">
@@ -47,7 +48,7 @@ import { CryptoTransactionHistory } from './crypto-dashboard.component';
             </tr>
         </tbody>
     </table>
-
+  </div>
   `,
   styles: [`
   `]
