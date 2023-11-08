@@ -104,6 +104,7 @@ public class CryptoAsset
 
     internal decimal GetInvestmentGainLoss()
     {
-        return TotalInvested - Balance * AveragePrice;
+        var total = Balance * _transactions.Select(t => t.Price).Average();
+        return total;
     }
 }

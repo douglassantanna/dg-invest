@@ -1,11 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
 
 import { AddTransactionComponent } from './add-transaction.component';
 import { MyCryptoComponent } from './my-crypto.component';
 import { PurchaseHistoryComponent } from './purchase-history.component';
-import { CryptoService } from '../services/crypto.service';
+import { CryptoInformation, CryptoService } from '../services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
 
 @Component({
@@ -16,11 +15,11 @@ import { ActivatedRoute } from '@angular/router';
     AddTransactionComponent,
     MyCryptoComponent,
     PurchaseHistoryComponent,
-    MatCardModule],
+  ],
   template: `
   <div class="">
     <div class="">
-      <app-my-crypto />
+      <app-my-crypto [cryptoInfo]="cryptoInfo" />
 
 
     </div>
@@ -76,12 +75,13 @@ import { ActivatedRoute } from '@angular/router';
 export class CryptoDashboardComponent implements OnInit {
   private cryptoService = inject(CryptoService);
   private route = inject(ActivatedRoute);
+  cryptoInfo: CryptoInformation = {} as CryptoInformation;
 
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       const cryptoId = params['cryptoId'];
-      this.cryptoService.getCryptoAssetById(cryptoId).subscribe(data => {
-        console.log(data);
+      this.cryptoService.getCryptoAssetById(cryptoId).subscribe(response => {
+        this.cryptoInfo = response.data.cryptoInformation;
       })
     })
   }

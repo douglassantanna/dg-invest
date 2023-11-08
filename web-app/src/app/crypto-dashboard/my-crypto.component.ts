@@ -1,16 +1,18 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { CryptoInformation } from '../services/crypto.service';
+import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
 
 @Component({
   selector: 'app-my-crypto',
   standalone: true,
   imports: [
-    CommonModule],
+    CommonModule,
+    DecimalRoundPipe],
   template: `
   <div class="card">
     <div class="card-header">
-      {{ cryptoInfo.symbol }} Information
+      <strong>{{ cryptoInfo.symbol }}</strong> Information
     </div>
     <ul class="list-group list-group-flush">
       <li class="list-group-item d-flex justify-content-between">
@@ -23,7 +25,7 @@ import { CryptoInformation } from '../services/crypto.service';
       </li>
       <li class="list-group-item d-flex justify-content-between">
         <span>% Difference:</span>
-        <span>{{ cryptoInfo.percentDifference }}</span>
+        <span>{{ cryptoInfo.percentDifference | decimalRound }}</span>
       </li>
       <li class="list-group-item d-flex justify-content-between">
         <span>Balance:</span>

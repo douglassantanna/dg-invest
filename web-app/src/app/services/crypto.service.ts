@@ -13,7 +13,7 @@ export enum ETransactionType {
 }
 export interface ViewCryptoAssetDto {
   id: number;
-  cryptoInformation: ViewCryptoInformation;
+  cryptoInformation: CryptoInformation;
   transactions: ViewCryptoTransactionDto[];
   addresses: ViewAddressDto[];
 }
@@ -75,7 +75,7 @@ export interface Crypto {
 }
 
 export interface Response<T> {
-  data: T[];
+  data: any;
   isSuccess: boolean;
   message: string;
 }
