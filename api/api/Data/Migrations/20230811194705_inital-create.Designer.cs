@@ -9,7 +9,7 @@ using api.Data;
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
     [Migration("20230811194705_inital-create")]

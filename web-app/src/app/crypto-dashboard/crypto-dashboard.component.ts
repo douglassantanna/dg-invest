@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
+import { Component, OnInit, inject } from '@angular/core';
 
 import { AddTransactionComponent } from './add-transaction.component';
 import { MyCryptoComponent } from './my-crypto.component';
 import { PurchaseHistoryComponent } from './purchase-history.component';
+import { CryptoInformation, CryptoService } from '../services/crypto.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-crypto-dashboard',
@@ -14,22 +15,24 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
     AddTransactionComponent,
     MyCryptoComponent,
     PurchaseHistoryComponent,
-    MatCardModule],
+  ],
   template: `
-  <div class="grid-container">
-    <div class="div1">
-      <app-my-crypto />
+  <div class="">
+    <div class="">
+      <app-my-crypto [cryptoInfo]="cryptoInfo" />
+
+
     </div>
-    <div class="div2">
+    <!-- <div class="div2">
       <app-add-transaction/>
-    </div>
-    <div class="div3">
+    </div> -->
+    <!-- <div class="div3">
       <mat-card>
         <mat-card-content>
           <app-purchase-history />
         </mat-card-content>
       </mat-card>
-    </div>
+    </div> -->
   </div>
   `,
   styles: [`
@@ -69,6 +72,17 @@ import { PurchaseHistoryComponent } from './purchase-history.component';
       }
   `]
 })
-export class CryptoDashboardComponent {
+export class CryptoDashboardComponent implements OnInit {
+  private cryptoService = inject(CryptoService);
+  private route = inject(ActivatedRoute);
+  cryptoInfo: CryptoInformation = {} as CryptoInformation;
 
+  ngOnInit(): void {
+    this.route.params.subscribe(params => {
+      const cryptoId = params['cryptoId'];
+      this.cryptoService.getCryptoAssetById(cryptoId).subscribe(response => {
+        this.cryptoInfo = response.data.cryptoInformation;
+      })
+    })
+  }
 }

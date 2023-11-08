@@ -9,11 +9,11 @@ using api.Data;
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20230821211057_adding_field_apiKey_to_users_table")]
-    partial class adding_field_apiKey_to_users_table
+    [Migration("20230817200952_changing_table_name")]
+    partial class changing_table_name
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -51,9 +51,6 @@ namespace api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Symbol")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
@@ -75,12 +72,6 @@ namespace api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
-                    b.Property<int?>("CryptoAssetId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("ExchangeName")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
@@ -97,36 +88,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CryptoAssetId");
-
                     b.ToTable("CryptoTransactions");
-                });
-
-            modelBuilder.Entity("api.Cryptos.Models.Address", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("AddressName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AddressValue")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CryptoAssetId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CryptoAssetId");
-
-                    b.ToTable("Address");
                 });
 
             modelBuilder.Entity("api.SpotSolar.Models.Proposal", b =>
@@ -178,60 +140,6 @@ namespace api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Proposals");
-                });
-
-            modelBuilder.Entity("api.Users.Models.User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("ApiKey")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("FirstName")
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("LastName")
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("Password")
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
-                {
-                    b.HasOne("api.Models.Cryptos.CryptoAsset", null)
-                        .WithMany("Transactions")
-                        .HasForeignKey("CryptoAssetId");
-                });
-
-            modelBuilder.Entity("api.Cryptos.Models.Address", b =>
-                {
-                    b.HasOne("api.Models.Cryptos.CryptoAsset", "CryptoAsset")
-                        .WithMany("Addresses")
-                        .HasForeignKey("CryptoAssetId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CryptoAsset");
                 });
 
             modelBuilder.Entity("api.SpotSolar.Models.Proposal", b =>
@@ -325,13 +233,6 @@ namespace api.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("Products");
-                });
-
-            modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
-                {
-                    b.Navigation("Addresses");
-
-                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

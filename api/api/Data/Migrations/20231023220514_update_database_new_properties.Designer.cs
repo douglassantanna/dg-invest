@@ -9,7 +9,7 @@ using api.Data;
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
     [Migration("20231023220514_update_database_new_properties")]

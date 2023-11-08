@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     /// <inheritdoc />
     public partial class added_new_property_CoinMarketCapId_to_CryptoAsset : Migration

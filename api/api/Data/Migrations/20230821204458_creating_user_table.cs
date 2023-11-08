@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace api.Migrations
+namespace api.Data.Migrations
 {
     public partial class creating_user_table : Migration
     {
