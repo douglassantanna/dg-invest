@@ -25,6 +25,14 @@ export interface ViewCryptoTransactionDto {
   exchangeName: string;
   transactionType: ETransactionType;
 }
+export interface AddTransactionCommand {
+  amount: number;
+  price: number;
+  purchaseDate: Date;
+  exchangeName: string;
+  transactionType: ETransactionType;
+  cryptoAssetId: number;
+}
 
 export interface ViewAddressDto {
   id: number;
@@ -115,5 +123,9 @@ export class CryptoService {
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/create`, command)
+  }
+
+  addTransaction(command: AddTransactionCommand) {
+    return this.http.post<Response<any>>(`${url}/add-transaction`, command)
   }
 }

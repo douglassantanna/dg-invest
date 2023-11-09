@@ -32,7 +32,7 @@ export interface CryptoTransactionHistory {
                 <app-my-crypto [cryptoInfo]="cryptoInfo" />
             </div>
             <div class="mb-4">
-                <app-add-transaction />
+                <app-add-transaction [cryptoAssetId]="cryptoAssetId"/>
             </div>
         </div>
         <div class="col-md-6">
@@ -83,12 +83,13 @@ export interface CryptoTransactionHistory {
 export class CryptoDashboardComponent implements OnInit {
   private cryptoService = inject(CryptoService);
   private route = inject(ActivatedRoute);
+  cryptoAssetId = 0;
   cryptoInfo: CryptoInformation = {} as CryptoInformation;
   transactionsHistory: CryptoTransactionHistory[] = [];
   ngOnInit(): void {
     this.route.params.subscribe(params => {
-      const cryptoId = params['cryptoId'];
-      this.cryptoService.getCryptoAssetById(cryptoId).subscribe(response => {
+      this.cryptoAssetId = params['cryptoId'];
+      this.cryptoService.getCryptoAssetById(this.cryptoAssetId).subscribe(response => {
         this.cryptoInfo = response.data.cryptoInformation;
         this.transactionsHistory = response.data.transactions;
       })
