@@ -23,6 +23,14 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
         RuleFor(x => x.CryptoAssetId).GreaterThan(0);
         RuleFor(x => x.ExchangeName).NotEmpty();
         RuleFor(x => x.TransactionType).IsInEnum();
+        RuleFor(x => x.PurchaseDate)
+            .NotEmpty().WithMessage("Purchase date can't be empty")
+            .Must(BeInPastOrPresent)
+            .WithMessage("Purchase date must be in the present or in the past");
+    }
+    private bool BeInPastOrPresent(DateTimeOffset purchaseDate)
+    {
+        return purchaseDate <= DateTime.Now;
     }
 }
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>

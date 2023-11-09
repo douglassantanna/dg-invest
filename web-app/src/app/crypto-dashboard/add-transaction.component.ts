@@ -82,12 +82,14 @@ export class AddTransactionComponent {
     this.cryptoService.addTransaction(command).subscribe({
       next: (response) => {
         console.log(response);
+        this.toastService.showSuccess("Transaction added successfully");
+        this.transactionForm.reset();
 
       },
       error: (err) => {
-        console.log(err);
+        console.log(err.error.data);
 
-        this.toastService.showError(err);
+        this.toastService.showError(err.error.data);
       }
     });
   }
