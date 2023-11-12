@@ -2,8 +2,11 @@ using System.Reflection;
 using api.Authentication;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
+using api.Cryptos.Repositories;
 using api.Data;
+using api.Data.Repositories;
 using api.Interfaces;
+using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
 builder.Services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
+
+builder.Services.AddScoped<IBaseRepository<CryptoAsset>, CryptoAssetRepository>();
+builder.Services.AddScoped<IBaseRepository<CryptoTransaction>, CryptoTransactionRepository>();
+
 builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.AddDbContext<DataContext>(options =>

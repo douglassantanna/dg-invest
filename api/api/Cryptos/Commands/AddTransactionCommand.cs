@@ -1,10 +1,9 @@
-using api.Data;
+using api.Data.Repositories;
 using api.Models.Cryptos;
 using api.Shared;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
 public record AddTransactionCommand(decimal Amount,
@@ -35,11 +34,14 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
 }
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
-    private readonly DataContext _context;
+    private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
+    private readonly IBaseRepository<CryptoTransaction> _cryptoTransactionRepository;
 
-    public AddTransactionCommandHandler(DataContext context)
+    public AddTransactionCommandHandler(IBaseRepository<CryptoAsset> cryptoAssetRepository,
+                                        IBaseRepository<CryptoTransaction> cryptoTransactionRepository)
     {
-        _context = context;
+        _cryptoAssetRepository = cryptoAssetRepository;
+        _cryptoTransactionRepository = cryptoTransactionRepository;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
@@ -48,7 +50,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         if (!validationResult.IsValid)
             return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
 
-        var cryptoAsset = await _context.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefaultAsync(cancellationToken);
+        var cryptoAsset = _cryptoAssetRepository.GetById(request.CryptoAssetId);
         if (cryptoAsset == null)
             return new Response("Crypto asset not found", false);
 
@@ -60,8 +62,8 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
 
         cryptoAsset.AddTransaction(transaction);
 
-        await _context.CryptoTransactions.AddAsync(transaction, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        _cryptoTransactionRepository.Add(transaction);
+        await _cryptoTransactionRepository.UpdateAsync(transaction);
 
         return new Response("ok", true, transaction.Id);
     }
