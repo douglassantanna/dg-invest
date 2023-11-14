@@ -7,11 +7,11 @@ using MediatR;
 
 namespace api.Cryptos.Commands;
 public record AddTransactionCommand(decimal Amount,
-                                       decimal Price,
-                                       DateTimeOffset PurchaseDate,
-                                       string ExchangeName,
-                                       ETransactionType TransactionType,
-                                       int CryptoAssetId) : IRequest<Response>;
+                                    decimal Price,
+                                    DateTimeOffset PurchaseDate,
+                                    string ExchangeName,
+                                    ETransactionType TransactionType,
+                                    int CryptoAssetId) : IRequest<Response>;
 
 public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCommand>
 {
@@ -35,20 +35,20 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
     private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
-    private readonly IBaseRepository<CryptoTransaction> _cryptoTransactionRepository;
 
-    public AddTransactionCommandHandler(IBaseRepository<CryptoAsset> cryptoAssetRepository,
-                                        IBaseRepository<CryptoTransaction> cryptoTransactionRepository)
+    public AddTransactionCommandHandler(IBaseRepository<CryptoAsset> cryptoAssetRepository)
     {
         _cryptoAssetRepository = cryptoAssetRepository;
-        _cryptoTransactionRepository = cryptoTransactionRepository;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
     {
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
-            return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+        {
+            var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+            return new Response("Validation failed", false, errors);
+        }
 
         var cryptoAsset = _cryptoAssetRepository.GetById(request.CryptoAssetId);
         if (cryptoAsset == null)
@@ -62,8 +62,8 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
 
         cryptoAsset.AddTransaction(transaction);
 
-        _cryptoTransactionRepository.Add(transaction);
-        await _cryptoTransactionRepository.UpdateAsync(transaction);
+        _cryptoAssetRepository.Add(cryptoAsset);
+        await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
 
         return new Response("ok", true, transaction.Id);
     }
