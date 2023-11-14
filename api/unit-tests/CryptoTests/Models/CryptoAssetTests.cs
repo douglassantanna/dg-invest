@@ -1,4 +1,5 @@
 using System.Transactions;
+using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 using api.Models.Cryptos;
 using FluentAssertions;
@@ -35,7 +36,7 @@ public class CryptoAssetTests
         var cryptoAsset = _validCryptoAsset;
 
         // Act
-        List<CryptoTransaction> transactions = new List<CryptoTransaction>
+        List<CryptoTransaction> transactions = new()
         {
             new(amount: 1,
                 price: price1,
@@ -56,5 +57,22 @@ public class CryptoAssetTests
 
         // Assert
         cryptoAsset.TotalInvested.Should().Be(expectedTotalCost);
+    }
+    [Fact]
+    public void CryptoAsset_WhenAddedSellTransactionsWithZeroTotalAmount_ShouldThrowException()
+    {
+        // Arrange
+        var cryptoAsset = _validCryptoAsset;
+        CryptoTransaction transaction = new(amount: 1,
+                                            price: 10,
+                                            purchaseDate: DateTimeOffset.Parse("2023-10-10"),
+                                            exchangeName: "Binance",
+                                            transactionType: ETransactionType.Sell);
+
+        // Act
+        var result = () => cryptoAsset.AddTransaction(transaction);
+
+        // Assert
+        result.Should().Throw<CryptoAssetException>();
     }
 }

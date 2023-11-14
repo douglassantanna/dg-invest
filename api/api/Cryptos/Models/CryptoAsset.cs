@@ -1,3 +1,4 @@
+using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 
 namespace api.Models.Cryptos;
@@ -74,9 +75,19 @@ public class CryptoAsset
     }
     public void SubtractBalance(decimal amount)
     {
-        if (amount > 0.0m)
-            Balance -= amount;
+        if (amount <= 0.0m)
+        {
+            throw new CryptoAssetException("Amount must be greater than 0");
+        }
+
+        if (Balance < amount)
+        {
+            throw new CryptoAssetException("Insufficient funds");
+        }
+
+        Balance -= amount;
     }
+
 
     public decimal GetPercentDifference(decimal currentPrice)
     {
