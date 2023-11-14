@@ -9,6 +9,7 @@ public class AddTransactionTests
 {
     private readonly AddTransactionCommand _validCommand;
     private readonly Mock<IBaseRepository<CryptoAsset>> _cryptoAssetRepositoryMock;
+    private readonly CryptoAsset _validCryptoAsset;
 
     public AddTransactionTests()
     {
@@ -20,6 +21,7 @@ public class AddTransactionTests
                                                 CryptoAssetId: 1);
 
         _cryptoAssetRepositoryMock = new Mock<IBaseRepository<CryptoAsset>>();
+        _validCryptoAsset = new CryptoAsset("BTC", "USD", "BTC", 1);
     }
 
     [Fact]
@@ -55,7 +57,7 @@ public class AddTransactionTests
         result.Errors.Should().Contain(x => x.PropertyName == "PurchaseDate");
     }
     [Fact]
-    public async void AddTransactionCommand_WhenCryptoAssetIsNull_ShouldReturnFalse()
+    public async void AddTransactionCommandHandler_WhenCryptoAssetIsNull_ShouldReturnFalse()
     {
         // Arrange
         var command = _validCommand;
@@ -67,5 +69,22 @@ public class AddTransactionTests
 
         // Assert
         result.IsSuccess.Should().BeFalse();
+    }
+    [Fact]
+    public async void AddTransactionCommandHandler_WhenCryptoAssetIsFound_ShouldReturnTrue()
+    {
+        // Arrange
+        var command = _validCommand;
+        _cryptoAssetRepositoryMock.Setup(x => x.GetById(It.IsAny<int>())).Returns(_validCryptoAsset);
+        _cryptoAssetRepositoryMock.Setup(x => x.UpdateAsync(_validCryptoAsset));
+
+        // Act
+        var handler = new AddTransactionCommandHandler(_cryptoAssetRepositoryMock.Object);
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        CryptoAsset? cryptoAsset = result.Data as CryptoAsset;
+        cryptoAsset?.Transactions.Should().NotBeEmpty();
     }
 }

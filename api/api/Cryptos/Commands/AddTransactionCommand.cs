@@ -65,7 +65,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         _cryptoAssetRepository.Add(cryptoAsset);
         await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
 
-        return new Response("ok", true, transaction.Id);
+        return new Response("ok", true, cryptoAsset);
     }
 
     private async Task<ValidationResult> ValidateRequestAsync(AddTransactionCommand request)
