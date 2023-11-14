@@ -75,4 +75,23 @@ public class CryptoAssetTests
         // Assert
         result.Should().Throw<CryptoAssetException>();
     }
+    [Fact]
+    public void CryptoAsset_WhenAddedSellTransactions_AmountShouldBeDeductedFromBalance()
+    {
+        // Arrange
+        var cryptoAsset = _validCryptoAsset;
+        CryptoTransaction transaction = new(amount: 1,
+                                            price: 10,
+                                            purchaseDate: DateTimeOffset.Parse("2023-10-10"),
+                                            exchangeName: "Binance",
+                                            transactionType: ETransactionType.Sell);
+
+        // Act
+        cryptoAsset.AddBalance(1); // need to add some balance first, so it can be deducted
+        cryptoAsset.AddTransaction(transaction);
+
+
+        // Assert
+        cryptoAsset.Balance.Should().Be(0);
+    }
 }

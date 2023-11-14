@@ -75,7 +75,6 @@ public class CryptoAsset
             throw;
         }
     }
-
     public void AddBalance(decimal amount)
     {
         if (amount > 0.0m)
@@ -95,8 +94,6 @@ public class CryptoAsset
 
         Balance -= amount;
     }
-
-
     public decimal GetPercentDifference(decimal currentPrice)
     {
         decimal averagePrice = AveragePrice;
@@ -126,7 +123,6 @@ public class CryptoAsset
     {
         return Balance * currentPrice;
     }
-
     internal decimal GetInvestmentGainLoss()
     {
         var total = Balance * AveragePrice;
