@@ -1,3 +1,4 @@
+using api.Cryptos.Exceptions;
 using api.Data.Repositories;
 using api.Models.Cryptos;
 using api.Shared;
@@ -60,7 +61,14 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                 request.ExchangeName,
                                                 request.TransactionType);
 
-        cryptoAsset.AddTransaction(transaction);
+        try
+        {
+            cryptoAsset.AddTransaction(transaction);
+        }
+        catch (CryptoAssetException ex)
+        {
+            return new Response(ex.Message, false);
+        }
 
         _cryptoAssetRepository.Add(cryptoAsset);
         await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
