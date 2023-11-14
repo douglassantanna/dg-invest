@@ -53,19 +53,27 @@ public class CryptoAsset
     }
     public void AddTransaction(CryptoTransaction transaction)
     {
-        if (transaction.TransactionType == ETransactionType.Buy)
+        try
         {
-            AddBalance(transaction.Amount);
-            TotalInvested += transaction.Price;
-        }
-        else if (transaction.TransactionType == ETransactionType.Sell)
-        {
-            SubtractBalance(transaction.Amount);
-            TotalInvested -= transaction.Price;
-        }
+            if (transaction.TransactionType == ETransactionType.Buy)
+            {
+                AddBalance(transaction.Amount);
+                TotalInvested += transaction.Price;
+            }
+            else if (transaction.TransactionType == ETransactionType.Sell)
+            {
+                SubtractBalance(transaction.Amount);
+                TotalInvested -= transaction.Price;
+            }
 
-        if (transaction.Amount > 0.0m)
-            _transactions.Add(transaction);
+            if (transaction.Amount > 0.0m)
+                _transactions.Add(transaction);
+        }
+        catch (CryptoAssetException ex)
+        {
+            Console.WriteLine(ex.Message);
+            throw;
+        }
     }
 
     public void AddBalance(decimal amount)
