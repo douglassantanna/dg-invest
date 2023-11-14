@@ -55,12 +55,12 @@ public class CryptoAsset
         if (transaction.TransactionType == ETransactionType.Buy)
         {
             AddBalance(transaction.Amount);
-            TotalInvested += transaction.Amount;
+            TotalInvested += transaction.Price;
         }
         else if (transaction.TransactionType == ETransactionType.Sell)
         {
             SubtractBalance(transaction.Amount);
-            TotalInvested -= transaction.Amount;
+            TotalInvested -= transaction.Price;
         }
 
         if (transaction.Amount > 0.0m)
