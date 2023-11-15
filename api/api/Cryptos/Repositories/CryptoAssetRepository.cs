@@ -14,7 +14,7 @@ public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
 
     public void Add(CryptoAsset entity)
     {
-        throw new NotImplementedException();
+        _context.CryptoAssets.Add(entity);
     }
 
     public void Delete(int id)
@@ -24,7 +24,7 @@ public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
 
     public IEnumerable<CryptoAsset> GetAll()
     {
-        throw new NotImplementedException();
+        return _context.CryptoAssets;
     }
 
     public CryptoAsset? GetById(int id) => _context.CryptoAssets.Where(x => x.Id == id).FirstOrDefault();

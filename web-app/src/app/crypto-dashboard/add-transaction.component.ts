@@ -76,8 +76,6 @@ export class AddTransactionComponent {
     } as AddTransactionCommand;
 
     console.log("command", command);
-    console.log("transactionForm", this.transactionForm.value);
-
 
     this.cryptoService.addTransaction(command).subscribe({
       next: (response) => {
@@ -95,13 +93,6 @@ export class AddTransactionComponent {
   }
 
   mapTransactionType(value: number): ETransactionType {
-    switch (value) {
-      case 1:
-        return ETransactionType.Buy;
-      case 2:
-        return ETransactionType.Sell;
-      default:
-        return ETransactionType.Buy;
-    }
+    return value == 1 ? ETransactionType.Buy : ETransactionType.Sell;
   }
 }

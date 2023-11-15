@@ -1,4 +1,3 @@
-using System.Transactions;
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 using api.Models.Cryptos;
