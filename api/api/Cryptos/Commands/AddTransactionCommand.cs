@@ -1,18 +1,18 @@
-using api.Data;
+using api.Cryptos.Exceptions;
+using api.Data.Repositories;
 using api.Models.Cryptos;
 using api.Shared;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
 public record AddTransactionCommand(decimal Amount,
-                                       decimal Price,
-                                       DateTimeOffset PurchaseDate,
-                                       string ExchangeName,
-                                       ETransactionType TransactionType,
-                                       int CryptoAssetId) : IRequest<Response>;
+                                    decimal Price,
+                                    DateTimeOffset PurchaseDate,
+                                    string ExchangeName,
+                                    ETransactionType TransactionType,
+                                    int CryptoAssetId) : IRequest<Response>;
 
 public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCommand>
 {
@@ -23,24 +23,35 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
         RuleFor(x => x.CryptoAssetId).GreaterThan(0);
         RuleFor(x => x.ExchangeName).NotEmpty();
         RuleFor(x => x.TransactionType).IsInEnum();
+        RuleFor(x => x.PurchaseDate)
+            .NotEmpty().WithMessage("Purchase date can't be empty")
+            .Must(BeInPastOrPresent)
+            .WithMessage("Purchase date must be in the present or in the past");
+    }
+    private bool BeInPastOrPresent(DateTimeOffset purchaseDate)
+    {
+        return purchaseDate <= DateTime.Now;
     }
 }
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
-    private readonly DataContext _context;
+    private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
 
-    public AddTransactionCommandHandler(DataContext context)
+    public AddTransactionCommandHandler(IBaseRepository<CryptoAsset> cryptoAssetRepository)
     {
-        _context = context;
+        _cryptoAssetRepository = cryptoAssetRepository;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
     {
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
-            return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+        {
+            var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+            return new Response("Validation failed", false, errors);
+        }
 
-        var cryptoAsset = await _context.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefaultAsync(cancellationToken);
+        var cryptoAsset = _cryptoAssetRepository.GetById(request.CryptoAssetId);
         if (cryptoAsset == null)
             return new Response("Crypto asset not found", false);
 
@@ -50,12 +61,19 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                 request.ExchangeName,
                                                 request.TransactionType);
 
-        cryptoAsset.AddTransaction(transaction);
+        try
+        {
+            cryptoAsset.AddTransaction(transaction);
+        }
+        catch (CryptoAssetException ex)
+        {
+            return new Response(ex.Message, false);
+        }
 
-        await _context.CryptoTransactions.AddAsync(transaction, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        _cryptoAssetRepository.Add(cryptoAsset);
+        await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
 
-        return new Response("ok", true, transaction.Id);
+        return new Response("ok", true, cryptoAsset);
     }
 
     private async Task<ValidationResult> ValidateRequestAsync(AddTransactionCommand request)

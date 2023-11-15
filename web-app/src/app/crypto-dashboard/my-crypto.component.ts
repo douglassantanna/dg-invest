@@ -10,7 +10,7 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
     CommonModule,
     DecimalRoundPipe],
   template: `
-  <div class="card">
+  <div class="card g-3 border border-1 rounded">
     <div class="card-header">
       <strong>{{ cryptoInfo.symbol }}</strong> Information
     </div>

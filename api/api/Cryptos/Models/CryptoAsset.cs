@@ -1,3 +1,4 @@
+using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 
 namespace api.Models.Cryptos;
@@ -52,21 +53,28 @@ public class CryptoAsset
     }
     public void AddTransaction(CryptoTransaction transaction)
     {
-        if (transaction.TransactionType == ETransactionType.Buy)
+        try
         {
-            AddBalance(transaction.Amount);
-            TotalInvested += transaction.Amount;
-        }
-        else if (transaction.TransactionType == ETransactionType.Sell)
-        {
-            SubtractBalance(transaction.Amount);
-            TotalInvested -= transaction.Amount;
-        }
+            if (transaction.TransactionType == ETransactionType.Buy)
+            {
+                AddBalance(transaction.Amount);
+                TotalInvested += transaction.Price;
+            }
+            else if (transaction.TransactionType == ETransactionType.Sell)
+            {
+                SubtractBalance(transaction.Amount);
+                TotalInvested -= transaction.Price;
+            }
 
-        if (transaction.Amount > 0.0m)
-            _transactions.Add(transaction);
+            if (transaction.Amount > 0.0m)
+                _transactions.Add(transaction);
+        }
+        catch (CryptoAssetException ex)
+        {
+            Console.WriteLine(ex.Message);
+            throw;
+        }
     }
-
     public void AddBalance(decimal amount)
     {
         if (amount > 0.0m)
@@ -74,10 +82,18 @@ public class CryptoAsset
     }
     public void SubtractBalance(decimal amount)
     {
-        if (amount > 0.0m)
-            Balance -= amount;
-    }
+        if (amount <= 0.0m)
+        {
+            throw new CryptoAssetException("Amount must be greater than 0");
+        }
 
+        if (Balance < amount)
+        {
+            throw new CryptoAssetException("Insufficient funds");
+        }
+
+        Balance -= amount;
+    }
     public decimal GetPercentDifference(decimal currentPrice)
     {
         decimal averagePrice = AveragePrice;
@@ -107,7 +123,6 @@ public class CryptoAsset
     {
         return Balance * currentPrice;
     }
-
     internal decimal GetInvestmentGainLoss()
     {
         var total = Balance * AveragePrice;
