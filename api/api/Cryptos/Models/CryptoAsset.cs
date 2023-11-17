@@ -12,7 +12,7 @@ public class CryptoAsset
     {
         get
         {
-            return _transactions.Select(t => t.Price).Average();
+            return GetAveragePrice();
         }
         set
         {
@@ -127,5 +127,17 @@ public class CryptoAsset
     {
         var total = Balance * AveragePrice;
         return total;
+    }
+    private decimal GetAveragePrice()
+    {
+        decimal averagePrice = _transactions
+                                .Where(t => t.TransactionType == ETransactionType.Buy)
+                                .Select(t => t.Price)
+                                .Average(); ;
+        if (Balance == 0)
+        {
+            return 0;
+        }
+        return averagePrice;
     }
 }
