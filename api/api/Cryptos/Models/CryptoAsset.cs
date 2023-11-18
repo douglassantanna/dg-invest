@@ -96,24 +96,13 @@ public class CryptoAsset
     }
     public decimal GetPercentDifference(decimal currentPrice)
     {
-        decimal averagePrice = GetAveragePrice();
-        if (averagePrice == 0)
+        if (Balance == 0)
         {
-            if (currentPrice > 0)
-            {
-                return decimal.MaxValue;
-            }
-            else if (currentPrice < 0)
-            {
-                return decimal.MinValue;
-            }
-            else
-            {
-                return 0;
-            }
+            return 0;
         }
         else
         {
+            decimal averagePrice = GetAveragePrice();
             decimal difference = currentPrice - averagePrice;
             decimal percentDifference = (difference / averagePrice) * 100;
             return percentDifference;
