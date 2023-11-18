@@ -32,6 +32,11 @@ public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
         throw new NotImplementedException();
     }
 
+    public Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task UpdateAsync(CryptoTransaction entity)
     {
         _context.CryptoTransactions.Update(entity);
