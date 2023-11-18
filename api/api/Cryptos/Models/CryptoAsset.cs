@@ -96,7 +96,7 @@ public class CryptoAsset
     }
     public decimal GetPercentDifference(decimal currentPrice)
     {
-        decimal averagePrice = AveragePrice;
+        decimal averagePrice = GetAveragePrice();
         if (averagePrice == 0)
         {
             if (currentPrice > 0)
