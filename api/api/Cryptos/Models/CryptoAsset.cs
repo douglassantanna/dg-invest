@@ -58,7 +58,7 @@ public class CryptoAsset
             if (transaction.TransactionType == ETransactionType.Buy)
             {
                 AddBalance(transaction.Amount);
-                TotalInvested += transaction.Price;
+                TotalInvested += transaction.Price * transaction.Amount;
             }
             else if (transaction.TransactionType == ETransactionType.Sell)
             {
@@ -67,14 +67,7 @@ public class CryptoAsset
 
                 if (Balance == 0)
                 {
-                    var ativeBuyTransactions = _transactions.Where(x => x.Enabled).ToList();
-                    if (ativeBuyTransactions.Any())
-                    {
-                        foreach (var item in ativeBuyTransactions)
-                        {
-                            item.Disable();
-                        }
-                    }
+                    DisableActiveBuyTransactions();
                 }
             }
 
@@ -124,9 +117,13 @@ public class CryptoAsset
     {
         return Balance * currentPrice;
     }
-    internal decimal GetInvestmentGainLoss()
+    internal decimal GetInvestmentGainLoss(decimal currentPrice)
     {
-        var total = Balance * AveragePrice;
+        if (Balance == 0)
+        {
+            return 0;
+        }
+        var total = CurrentWorth(currentPrice) - TotalInvested;
         return total;
     }
     private decimal GetAveragePrice()
@@ -147,5 +144,16 @@ public class CryptoAsset
             return averagePrice;
         }
         return 0;
+    }
+    private void DisableActiveBuyTransactions()
+    {
+        var ativeBuyTransactions = _transactions.Where(x => x.Enabled).ToList();
+        if (ativeBuyTransactions.Any())
+        {
+            foreach (var item in ativeBuyTransactions)
+            {
+                item.Disable();
+            }
+        }
     }
 }

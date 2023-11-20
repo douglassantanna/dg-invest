@@ -41,7 +41,7 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
                                                                           cryptoAsset.Balance,
                                                                           cryptoAsset.TotalInvested,
                                                                           cryptoAsset.CurrentWorth(currentPrice),
-                                                                          cryptoAsset.GetInvestmentGainLoss(),
+                                                                          cryptoAsset.GetInvestmentGainLoss(currentPrice),
                                                                           cryptoAsset.CoinMarketCapId),
                                                 cryptoAsset.Transactions.Select(t => new ViewCryptoTransactionDto(t.Amount,
                                                                                                                   t.Price,
