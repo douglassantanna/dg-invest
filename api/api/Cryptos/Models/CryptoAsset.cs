@@ -70,9 +70,7 @@ public class CryptoAsset
                     DisableActiveBuyTransactions();
                 }
             }
-
-            if (transaction.Amount > 0.0m)
-                _transactions.Add(transaction);
+            _transactions.Add(transaction);
         }
         catch (CryptoAssetException ex)
         {
