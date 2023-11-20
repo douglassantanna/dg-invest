@@ -131,14 +131,21 @@ public class CryptoAsset
     }
     private decimal GetAveragePrice()
     {
-        decimal averagePrice = _transactions
+        var enableTransactions = _transactions
                                 .Where(t => t.TransactionType == ETransactionType.Buy)
+                                .Where(t => t.Enabled == true)
                                 .Select(t => t.Price)
-                                .Average(); ;
-        if (Balance == 0)
+                                .ToList();
+
+        if (enableTransactions.Any())
         {
-            return 0;
+            decimal averagePrice = enableTransactions.Average();
+            if (Balance == 0)
+            {
+                return 0;
+            }
+            return averagePrice;
         }
-        return averagePrice;
+        return 0;
     }
 }
