@@ -52,7 +52,7 @@ public class CryptoController : ControllerBase
     }
 
     [HttpGet("get-crypto-asset-by-id/{CryptoAssetId:int}")]
-    public async Task<ActionResult> GetCryptoAssetById([FromRoute] GetCryptoAssetByIdCommand command)
+    public async Task<ActionResult> GetCryptoAssetById([FromRoute] GetCryptoAssetByIdCommandQuery command)
     {
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)

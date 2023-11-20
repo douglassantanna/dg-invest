@@ -27,6 +27,9 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
             .NotEmpty().WithMessage("Purchase date can't be empty")
             .Must(BeInPastOrPresent)
             .WithMessage("Purchase date must be in the present or in the past");
+
+        //add logic to check if the balance if zero before
+        //adding a sell transaction. if balance is zero, return error
     }
     private bool BeInPastOrPresent(DateTimeOffset purchaseDate)
     {

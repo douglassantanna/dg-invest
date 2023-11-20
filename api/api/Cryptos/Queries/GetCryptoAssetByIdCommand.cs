@@ -1,33 +1,29 @@
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
-using api.Data;
+using api.Data.Repositories;
+using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
-public record GetCryptoAssetByIdCommand(int CryptoAssetId) : IRequest<Response>;
-public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetByIdCommand, Response>
+public record GetCryptoAssetByIdCommandQuery(int CryptoAssetId) : IRequest<Response>;
+public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAssetByIdCommandQuery, Response>
 {
-    private readonly DataContext _context;
+    private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
     private readonly ICoinMarketCapService _coinMarketCapService;
 
-    public GetCryptoAssetByIdCommandHandler(
-        DataContext context,
-        ICoinMarketCapService coinMarketCapService)
+    public GetCryptoAssetByIdCommandQueryHandler(
+        ICoinMarketCapService coinMarketCapService,
+        IBaseRepository<CryptoAsset> cryptoAssetRepository)
     {
-        _context = context;
         _coinMarketCapService = coinMarketCapService;
+        _cryptoAssetRepository = cryptoAssetRepository;
     }
 
-    public async Task<Response> Handle(GetCryptoAssetByIdCommand request, CancellationToken cancellationToken)
+    public async Task<Response> Handle(GetCryptoAssetByIdCommandQuery request, CancellationToken cancellationToken)
     {
-        var cryptoAsset = await _context.CryptoAssets
-                                        .Include(x => x.Transactions)
-                                        .Include(x => x.Addresses)
-                                        .Where(x => x.Id == request.CryptoAssetId && !x.Deleted)
-                                        .FirstOrDefaultAsync(cancellationToken);
+        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId, cancellationToken);
         if (cryptoAsset is null)
         {
             return new Response("Crypto asset not found", false);
@@ -45,7 +41,7 @@ public class GetCryptoAssetByIdCommandHandler : IRequestHandler<GetCryptoAssetBy
                                                                           cryptoAsset.Balance,
                                                                           cryptoAsset.TotalInvested,
                                                                           cryptoAsset.CurrentWorth(currentPrice),
-                                                                          cryptoAsset.GetInvestmentGainLoss(),
+                                                                          cryptoAsset.GetInvestmentGainLoss(currentPrice),
                                                                           cryptoAsset.CoinMarketCapId),
                                                 cryptoAsset.Transactions.Select(t => new ViewCryptoTransactionDto(t.Amount,
                                                                                                                   t.Price,

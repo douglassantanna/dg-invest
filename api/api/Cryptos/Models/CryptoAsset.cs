@@ -12,7 +12,7 @@ public class CryptoAsset
     {
         get
         {
-            return _transactions.Select(t => t.Price).Average();
+            return GetAveragePrice();
         }
         set
         {
@@ -58,16 +58,19 @@ public class CryptoAsset
             if (transaction.TransactionType == ETransactionType.Buy)
             {
                 AddBalance(transaction.Amount);
-                TotalInvested += transaction.Price;
+                TotalInvested += transaction.Price * transaction.Amount;
             }
             else if (transaction.TransactionType == ETransactionType.Sell)
             {
                 SubtractBalance(transaction.Amount);
                 TotalInvested -= transaction.Price;
-            }
 
-            if (transaction.Amount > 0.0m)
-                _transactions.Add(transaction);
+                if (Balance == 0)
+                {
+                    DisableActiveBuyTransactions();
+                }
+            }
+            _transactions.Add(transaction);
         }
         catch (CryptoAssetException ex)
         {
@@ -96,24 +99,13 @@ public class CryptoAsset
     }
     public decimal GetPercentDifference(decimal currentPrice)
     {
-        decimal averagePrice = AveragePrice;
-        if (averagePrice == 0)
+        if (Balance == 0)
         {
-            if (currentPrice > 0)
-            {
-                return decimal.MaxValue;
-            }
-            else if (currentPrice < 0)
-            {
-                return decimal.MinValue;
-            }
-            else
-            {
-                return 0;
-            }
+            return 0;
         }
         else
         {
+            decimal averagePrice = GetAveragePrice();
             decimal difference = currentPrice - averagePrice;
             decimal percentDifference = (difference / averagePrice) * 100;
             return percentDifference;
@@ -123,9 +115,43 @@ public class CryptoAsset
     {
         return Balance * currentPrice;
     }
-    internal decimal GetInvestmentGainLoss()
+    internal decimal GetInvestmentGainLoss(decimal currentPrice)
     {
-        var total = Balance * AveragePrice;
+        if (Balance == 0)
+        {
+            return 0;
+        }
+        var total = CurrentWorth(currentPrice) - TotalInvested;
         return total;
+    }
+    private decimal GetAveragePrice()
+    {
+        var enableTransactions = _transactions
+                                .Where(t => t.TransactionType == ETransactionType.Buy)
+                                .Where(t => t.Enabled == true)
+                                .Select(t => t.Price)
+                                .ToList();
+
+        if (enableTransactions.Any())
+        {
+            decimal averagePrice = enableTransactions.Average();
+            if (Balance == 0)
+            {
+                return 0;
+            }
+            return averagePrice;
+        }
+        return 0;
+    }
+    private void DisableActiveBuyTransactions()
+    {
+        var ativeBuyTransactions = _transactions.Where(x => x.Enabled).ToList();
+        if (ativeBuyTransactions.Any())
+        {
+            foreach (var item in ativeBuyTransactions)
+            {
+                item.Disable();
+            }
+        }
     }
 }
