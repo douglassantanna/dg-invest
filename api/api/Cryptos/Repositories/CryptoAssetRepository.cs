@@ -28,7 +28,10 @@ public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
         return _context.CryptoAssets;
     }
 
-    public CryptoAsset? GetById(int id) => _context.CryptoAssets.Where(x => x.Id == id).FirstOrDefault();
+    public CryptoAsset? GetById(int id) => _context.CryptoAssets
+                                                    .Include(x => x.Transactions)
+                                                    .Where(x => x.Id == id)
+                                                    .FirstOrDefault();
 
     public Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken)
     {

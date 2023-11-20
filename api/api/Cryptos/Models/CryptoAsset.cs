@@ -64,6 +64,18 @@ public class CryptoAsset
             {
                 SubtractBalance(transaction.Amount);
                 TotalInvested -= transaction.Price;
+
+                if (Balance == 0)
+                {
+                    var ativeBuyTransactions = _transactions.Where(x => x.Enabled).ToList();
+                    if (ativeBuyTransactions.Any())
+                    {
+                        foreach (var item in ativeBuyTransactions)
+                        {
+                            item.Disable();
+                        }
+                    }
+                }
             }
 
             if (transaction.Amount > 0.0m)
