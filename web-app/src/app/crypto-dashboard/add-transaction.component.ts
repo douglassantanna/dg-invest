@@ -15,7 +15,7 @@ export interface MyDate {
     FormsModule,
     ReactiveFormsModule],
   template: `
-    <form class="row g-3 border border-1 rounded" [formGroup]="transactionForm" (ngSubmit)="save()">
+    <form class="row border border-1 rounded" [formGroup]="transactionForm" (ngSubmit)="save()">
       <div class="col-md-6">
         <label for="transactionType" class="form-label">Transaction Type</label>
         <select class="form-select" id="transactionType" name="transactionType" formControlName="transactionType">
@@ -35,7 +35,7 @@ export interface MyDate {
         <label for="exchangeName" class="form-label">Exchange Name</label>
         <input type="text" class="form-control" id="exchangeName" name="exchangeName" formControlName="exchangeName">
       </div>
-      <div class="col-md-6">
+      <div class="col">
           <label for="purchaseDate" class="form-label">Date of Purchase</label>
           <input type="date" class="form-control" id="purchaseDate" name="purchaseDate" formControlName="purchaseDate">
       </div>

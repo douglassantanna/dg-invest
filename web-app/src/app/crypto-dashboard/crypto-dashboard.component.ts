@@ -26,20 +26,43 @@ export interface CryptoTransactionHistory {
   ],
   template: `
   <div class="container">
+    <h1>
+      <strong>{{ cryptoInfo.symbol }}</strong> Information
+    </h1>
     <div class="row">
-        <div class="col-md-6">
-            <div class="mb-4">
-                <app-my-crypto [cryptoInfo]="cryptoInfo" />
-            </div>
-            <div class="mb-4">
-                <app-add-transaction [cryptoAssetId]="cryptoAssetId"/>
-            </div>
+      <div class="col">
+        <app-my-crypto title="My Average Price" [value]="cryptoInfo.myAveragePrice"/>
+      </div>
+
+      <div class="col">
+        <app-my-crypto title="Balance" [value]="cryptoInfo.balance"/>
+      </div>
+
+      <div class="col">
+        <app-my-crypto title="Invested amount" [value]="cryptoInfo.investedAmount"/>
+      </div>
+
+      <div class="col">
+        <app-my-crypto title="Current worth" [value]="cryptoInfo.currentWorth"/>
+      </div>
+
+      <div class="col">
+        <app-my-crypto title="Investment Gain/Loss" [value]="cryptoInfo.investmentGainLoss" [percentDifference]="cryptoInfo.percentDifference"/>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="mb-4">
+          <app-add-transaction [cryptoAssetId]="cryptoAssetId"/>
         </div>
-        <div class="col-md-6">
-            <div class="mb-4">
-                <app-purchase-history [transactionsHistory]="transactionsHistory" />
-            </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="mb-4">
+          <app-purchase-history [transactionsHistory]="transactionsHistory" />
         </div>
+      </div>
     </div>
   </div>
   `,

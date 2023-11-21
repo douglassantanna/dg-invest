@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { CryptoInformation } from '../services/crypto.service';
 import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
 
 @Component({
@@ -10,46 +9,25 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
     CommonModule,
     DecimalRoundPipe],
   template: `
-  <div class="card g-3 border border-1 rounded">
-    <div class="card-header">
-      <strong>{{ cryptoInfo.symbol }}</strong> Information
+    <div class="card bg-light text-dark border border-1 rounded">
+      <div class="card-body">
+        <h4 class="card-title">{{ title }}</h4>
+        <div class="d-flex justify-content-between align-items-center">
+          <ng-container *ngIf="title !== 'Balance'; else balance">
+            <span class="price-text" style="font-size: 30px; color: purple;">{{ value | currency:'USD':'symbol':'1.2-2'}}</span>
+          </ng-container>
+          <ng-template #balance>
+            <span class="price-text" style="font-size: 30px; color: purple;">{{ value }}</span>
+          </ng-template>
+          <span *ngIf="percentDifference" class="percent-difference bg-success text-white px-2">{{ percentDifference | decimalRound }}</span>
+        </div>
+      </div>
     </div>
-    <ul class="list-group list-group-flush">
-      <li class="list-group-item d-flex justify-content-between">
-        <span>Price per Unit:</span>
-        <span>{{ cryptoInfo.pricePerUnit | currency:'USD':'symbol':'1.2-2' }}</span>
-      </li>
-      <li class="list-group-item d-flex justify-content-between">
-        <span>My Average Price:</span>
-        <span>{{ cryptoInfo.myAveragePrice | currency:'USD':'symbol':'1.2-2' }}</span>
-      </li>
-      <li class="list-group-item d-flex justify-content-between">
-        <span>% Difference:</span>
-        <span>{{ cryptoInfo.percentDifference | decimalRound }}</span>
-      </li>
-      <li class="list-group-item d-flex justify-content-between">
-        <span>Balance:</span>
-        <span>{{ cryptoInfo.balance }}</span>
-      </li>
-      <li class="list-group-item d-flex justify-content-between">
-        <span>Invested Amount:</span>
-        <span>{{ cryptoInfo.investedAmount | currency:'USD':'symbol':'1.2-2' }}</span>
-      </li>
-      <li class="list-group-item d-flex justify-content-between">
-        <span>Current Worth:</span>
-        <span>{{ cryptoInfo.currentWorth | currency:'USD':'symbol':'1.2-2' }}</span>
-      </li>
-      <li class="list-group-item d-flex justify-content-between bg-primary text-white">
-        <span>Investment Gain/Loss:</span>
-        <span>{{ cryptoInfo.investmentGainLoss | currency:'USD':'symbol':'1.2-2' }}</span>
-      </li>
-    </ul>
-  </div>
   `,
   styles: [``]
 })
 export class MyCryptoComponent {
-  @Input() cryptoInfo: CryptoInformation = {} as CryptoInformation;
-  myCrypto = 'Bitcoin';
-  myCurrency = 'U$';
+  @Input() title: string = '';
+  @Input() value: string | number = '';
+  @Input() percentDifference: number = 0;
 }
