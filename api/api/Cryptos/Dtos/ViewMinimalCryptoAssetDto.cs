@@ -10,6 +10,7 @@ public record ViewMinimalCryptoAssetDto(int Id,
 
 public record ViewCryptoAssetDto(int Id,
                                  ViewCryptoInformation CryptoInformation,
+                                 List<CryptoAssetData> CryptoAssetData,
                                  IReadOnlyCollection<ViewCryptoTransactionDto> Transactions,
                                  IReadOnlyCollection<ViewAddressDto> Addresses);
 
@@ -24,11 +25,6 @@ public record ViewAddressDto(int Id,
                              string AddressValue);
 
 public record ViewCryptoInformation(string Symbol,
-                                    decimal PricePerUnit,
-                                    decimal MyAveragePrice,
-                                    decimal PercentDifference,
-                                    decimal Balance,
-                                    decimal InvestedAmount,
-                                    decimal CurrentWorth,
-                                    decimal InvestmentGainLoss,
                                     int CoinMarketCapId);
+
+public record CryptoAssetData(string Title, decimal Value, decimal? Percent = null);

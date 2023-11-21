@@ -11,8 +11,14 @@ export enum ETransactionType {
   Buy = 1,
   Sell = 2
 }
+export interface CryptoAssetData {
+  title: string;
+  value: number;
+  percent: number | null;
+}
 export interface ViewCryptoAssetDto {
   id: number;
+  cryptoAssetData: CryptoAssetData[];
   cryptoInformation: CryptoInformation;
   transactions: ViewCryptoTransactionDto[];
   addresses: ViewAddressDto[];
@@ -54,16 +60,7 @@ export interface ViewCryptoInformation {
 
 export interface CryptoInformation {
   symbol: string;
-  pricePerUnit: number;
-  myAveragePrice: number;
-  percentDifference: number;
-  balance: number;
-  totalInUSD: number;
-  investedAmount: number;
-  currentWorth: number;
-  investmentGainLoss: number;
 }
-
 
 export interface ViewMinimalCryptoAssetDto {
   id: number;

@@ -11,7 +11,7 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
   template: `
     <div class="card bg-light text-dark border border-1 rounded">
       <div class="card-body">
-        <h4 class="card-title">{{ title }}</h4>
+        <h4 class="card-title text-nowrap">{{ title }}</h4>
         <div class="d-flex justify-content-between align-items-center">
           <ng-container *ngIf="title !== 'Balance'; else balance">
             <span class="price-text" style="font-size: 30px; color: purple;">{{ value | currency:'USD':'symbol':'1.2-2'}}</span>
@@ -29,5 +29,5 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
 export class MyCryptoComponent {
   @Input() title: string = '';
   @Input() value: string | number = '';
-  @Input() percentDifference: number = 0;
+  @Input() percentDifference: number | null = 0;
 }
