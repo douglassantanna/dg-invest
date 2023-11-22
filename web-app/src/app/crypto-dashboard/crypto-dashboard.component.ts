@@ -27,7 +27,7 @@ export interface CryptoTransactionHistory {
   template: `
   <div class="container">
     <h1>
-      <strong>{{ cryptoInfo.symbol }}</strong> Information
+      <strong>{{ cryptoInfo.symbol | uppercase }}</strong> Information
     </h1>
     <div class="row" >
       <div class="col" *ngFor="let card of cryptoAssetData">
