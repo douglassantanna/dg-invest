@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, resolveForwardRef } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 
 import { AddTransactionComponent } from './add-transaction.component';
 import { MyCryptoComponent } from './my-crypto.component';
@@ -51,40 +51,6 @@ export interface CryptoTransactionHistory {
   </div>
   `,
   styles: [`
-    .grid-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 0.4fr 1.6fr;
-      gap: 10px 10px;
-      grid-template-areas:
-        "div1 div3"
-        "div2 div3";
-      padding:10px;
-    }
-    .div1 {
-      grid-area:div1;
-    }
-    .div2 {
-      grid-area:div2;
-    }
-    .div3 {
-      grid-area:div3;
-      max-height:600px;
-      overflow:auto;
-    }
-    @media (max-width: 640px) {
-        .grid-container {
-          grid-template-columns: 1fr;
-          grid-template-rows: 0.4fr;
-          grid-template-areas:
-          "div1"
-          "div2"
-          "div3";
-          justify-content: center;
-          align-items: center;
-          gap: 5px;
-        }
-      }
   `]
 })
 export class CryptoDashboardComponent implements OnInit {
@@ -97,12 +63,11 @@ export class CryptoDashboardComponent implements OnInit {
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       this.cryptoAssetId = params['cryptoId'];
-      this.cryptoService.getCryptoAssetById(this.cryptoAssetId).subscribe(response => {
-        console.log(response);
-        this.cryptoInfo = response.data.cryptoInformation;
-        this.transactionsHistory = response.data.transactions;
-        this.cryptoAssetData = response.data.cryptoAssetData;
-      })
+    })
+    this.cryptoService.getCryptoAssetById(this.cryptoAssetId).subscribe(response => {
+      this.cryptoInfo = response.data.cryptoInformation;
+      this.transactionsHistory = response.data.transactions;
+      this.cryptoAssetData = response.data.cryptoAssetData;
     })
   }
 }
