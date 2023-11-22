@@ -35,11 +35,12 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
 
         List<CryptoAssetData> cards = new()
         {
-            new CryptoAssetData("My Average Price", cryptoAsset.AveragePrice),
+            new CryptoAssetData("Current price", currentPrice),
+            new CryptoAssetData("Average price", cryptoAsset.AveragePrice),
             new CryptoAssetData("Balance", cryptoAsset.Balance),
             new CryptoAssetData("Invested amount", cryptoAsset.TotalInvested),
             new CryptoAssetData("Current worth", cryptoAsset.CurrentWorth(currentPrice)),
-            new CryptoAssetData("Investment Gain/Loss", cryptoAsset.GetInvestmentGainLoss(currentPrice), cryptoAsset.GetPercentDifference(currentPrice)),
+            new CryptoAssetData("Gain/Loss", cryptoAsset.GetInvestmentGainLoss(currentPrice), cryptoAsset.GetPercentDifference(currentPrice)),
         };
         var cryptoInfo = new ViewCryptoAssetDto(cryptoAsset.Id,
                                                 new ViewCryptoInformation(cryptoAsset.Symbol,
