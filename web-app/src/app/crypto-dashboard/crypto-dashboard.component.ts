@@ -8,6 +8,7 @@ import { CryptoAssetData, CryptoInformation, CryptoService, ETransactionType } f
 import { ActivatedRoute } from '@angular/router';
 
 export interface CryptoTransactionHistory {
+  id: number;
   amount: number;
   price: number;
   purchaseDate: number;

@@ -33,7 +33,7 @@ import { CryptoTransactionHistory } from './crypto-dashboard.component';
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let element of transactionsHistory">
+          <tr *ngFor="let element of transactionsHistory trackBy: transactionById">
             <td>{{ element.amount }}</td>
             <td>{{ element.price | currency: 'USD':'symbol':'1.2-2' }}</td>
             <td>
@@ -60,5 +60,8 @@ export class PurchaseHistoryComponent {
     '6 meses',
     '1 ano'
   ]
-  @Input() transactionsHistory: CryptoTransactionHistory[] = [];
+  @Input() transactionsHistory: Array<CryptoTransactionHistory> = [];
+  transactionById(index: number, transaction: CryptoTransactionHistory) {
+    return transaction.id;
+  }
 }
