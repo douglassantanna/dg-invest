@@ -9,7 +9,7 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
     CommonModule,
     DecimalRoundPipe],
   template: `
-    <div class="card bg-light text-dark border border-1 rounded">
+    <div class="card bg-light text-dark border border-1 rounded mb-3">
       <div class="card-body">
         <h4 class="card-title text-nowrap">{{ title }}</h4>
         <div class="d-flex justify-content-between align-items-center">
@@ -21,7 +21,7 @@ import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
           </ng-template>
           <span
             *ngIf="percentDifference"
-            class="px-2"
+            class="mr-2"
             [attr.data-status]="percentDifference < 0 ? 'negative' : 'positive'">
             {{ percentDifference | decimalRound }}%
           </span>
