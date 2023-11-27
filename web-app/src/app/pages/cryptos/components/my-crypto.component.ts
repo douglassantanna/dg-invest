@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { DecimalRoundPipe } from '../core/pipes/decimal-round.pipe';
+import { DecimalRoundPipe } from '../../../core/pipes/decimal-round.pipe';
 
 @Component({
   selector: 'app-my-crypto',
