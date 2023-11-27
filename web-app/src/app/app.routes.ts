@@ -4,7 +4,7 @@ import { CryptoDashboardComponent } from './crypto-dashboard/crypto-dashboard.co
 import { DashboardComponent } from './dashboard.component';
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './login.component';
-import { ProfileComponent } from './profile.component';
+import { ProfileComponent } from './pages/profile/profile.component';
 import { ViewCryptosComponent } from './portfolio/view-cryptos.component';
 
 export const routes: Routes = [
