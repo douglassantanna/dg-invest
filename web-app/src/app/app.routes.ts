@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { CreateCryptoComponent } from './portfolio/create-crypto.component';
 import { CryptoDashboardComponent } from './crypto-dashboard/crypto-dashboard.component';
-import { DashboardComponent } from './dashboard.component';
+import { DashboardComponent } from './layout/dashboard.component';
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './login.component';
 import { ProfileComponent } from './pages/profile/profile.component';
