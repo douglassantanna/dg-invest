@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 
 import { AddTransactionComponent } from './add-transaction.component';
-import { MyCryptoComponent } from '../components/my-crypto.component';
+import { DataCardComponent } from '../components/my-crypto.component';
 import { PurchaseHistoryComponent } from '../components/purchase-history.component';
 import { CryptoService } from '../../../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
@@ -16,7 +16,7 @@ import { CryptoInformation } from 'src/app/core/models/crypto-information';
   imports: [
     CommonModule,
     AddTransactionComponent,
-    MyCryptoComponent,
+    DataCardComponent,
     PurchaseHistoryComponent,
   ],
   template: `
@@ -26,7 +26,7 @@ import { CryptoInformation } from 'src/app/core/models/crypto-information';
     </h1>
     <div class="row" >
       <div class="col" *ngFor="let card of cryptoAssetData">
-        <app-my-crypto [title]="card.title" [value]="card.value" [percentDifference]="card.percent"/>
+        <app-data-card [title]="card.title" [value]="card.value" [percentDifference]="card.percent"/>
       </div>
     </div>
 

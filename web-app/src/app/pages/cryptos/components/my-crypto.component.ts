@@ -3,7 +3,7 @@ import { Component, Input } from '@angular/core';
 import { DecimalRoundPipe } from '../../../core/pipes/decimal-round.pipe';
 
 @Component({
-  selector: 'app-my-crypto',
+  selector: 'app-data-card',
   standalone: true,
   imports: [
     CommonModule,
@@ -41,7 +41,7 @@ import { DecimalRoundPipe } from '../../../core/pipes/decimal-round.pipe';
   }
   `]
 })
-export class MyCryptoComponent {
+export class DataCardComponent {
   @Input() title: string = '';
   @Input() value: string | number = '';
   @Input() percentDifference: number | null = 0;
