@@ -5,7 +5,7 @@ import { DashboardComponent } from './layout/dashboard.component';
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login.component';
 import { ProfileComponent } from './pages/profile/profile.component';
-import { ViewCryptosComponent } from './portfolio/view-cryptos.component';
+import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos.component';
 
 export const routes: Routes = [
   {

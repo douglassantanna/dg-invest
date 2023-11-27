@@ -2,9 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
-import { CreateCryptoComponent } from '../pages/cryptos/containers/create-crypto.component';
-import { CryptoCardComponent } from '../pages/cryptos/components/crypto-card.component';
-import { CryptoService, ViewMinimalCryptoAssetDto } from '../core/services/crypto.service';
+import { CreateCryptoComponent } from './create-crypto.component';
+import { CryptoCardComponent } from '../components/crypto-card.component';
+import { CryptoService, ViewMinimalCryptoAssetDto } from '../../../core/services/crypto.service';
 import { Observable, Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-view-cryptos',
