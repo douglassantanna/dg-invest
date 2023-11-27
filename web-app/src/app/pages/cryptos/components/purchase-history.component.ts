@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
 
 @Component({
-  selector: 'app-purchase-history',
+  selector: 'app-transaction-table',
   standalone: true,
   imports: [
     CommonModule,
@@ -51,7 +51,7 @@ import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction
   styles: [`
   `]
 })
-export class PurchaseHistoryComponent {
+export class TransactionTableComponent {
   dateOptions: any[] = [
     '1 dia',
     '7 dias',

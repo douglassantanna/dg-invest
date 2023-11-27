@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 
 import { AddTransactionComponent } from './add-transaction.component';
 import { DataCardComponent } from '../components/my-crypto.component';
-import { PurchaseHistoryComponent } from '../components/purchase-history.component';
+import { TransactionTableComponent } from '../components/purchase-history.component';
 import { CryptoService } from '../../../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
@@ -17,7 +17,7 @@ import { CryptoInformation } from 'src/app/core/models/crypto-information';
     CommonModule,
     AddTransactionComponent,
     DataCardComponent,
-    PurchaseHistoryComponent,
+    TransactionTableComponent,
   ],
   template: `
   <div class="container">
@@ -39,7 +39,7 @@ import { CryptoInformation } from 'src/app/core/models/crypto-information';
 
       <div class="col-md-6">
         <div class="m-2">
-          <app-purchase-history [transactionsHistory]="transactionsHistory" />
+          <app-transaction-table [transactionsHistory]="transactionsHistory" />
         </div>
       </div>
     </div>
