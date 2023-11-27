@@ -2,14 +2,7 @@ import { Component, TemplateRef } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { ToastService } from '../core/services/toast.service';
 import { NgbToastModule } from '@ng-bootstrap/ng-bootstrap';
-
-export interface ToastInfo {
-  header: string;
-  body: string;
-  delay?: number;
-  classname: string;
-  textOrTpl: TemplateRef<any> | null;
-}
+import { ToastInfo } from '../core/models/toast-info';
 
 @Component({
   selector: 'app-toast',

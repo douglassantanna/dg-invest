@@ -4,17 +4,11 @@ import { Component, OnInit, inject } from '@angular/core';
 import { AddTransactionComponent } from './add-transaction.component';
 import { MyCryptoComponent } from '../components/my-crypto.component';
 import { PurchaseHistoryComponent } from '../components/purchase-history.component';
-import { CryptoAssetData, CryptoInformation, CryptoService, ETransactionType } from '../../../core/services/crypto.service';
+import { CryptoService } from '../../../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
-
-export interface CryptoTransactionHistory {
-  id: number;
-  amount: number;
-  price: number;
-  purchaseDate: number;
-  exchangeName: string;
-  transactionType: ETransactionType;
-}
+import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
+import { CryptoAssetData } from 'src/app/core/models/crypto-asset-data';
+import { CryptoInformation } from 'src/app/core/models/crypto-information';
 
 @Component({
   selector: 'app-crypto-dashboard',

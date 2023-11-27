@@ -3,15 +3,10 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Crypto, CryptoService } from '../../../core/services/crypto.service';
+import { CryptoService } from '../../../core/services/crypto.service';
 import { ToastService } from '../../../core/services/toast.service';
-
-
-export interface CreateCryptoAssetCommand {
-  crypto: string
-  currency: string;
-  coinMarketCapId: number;
-}
+import { CreateCryptoAssetCommand } from 'src/app/core/models/create-crypto-asset-command';
+import { Crypto } from 'src/app/core/models/crypto';
 
 @Component({
   selector: 'app-create-crypto',

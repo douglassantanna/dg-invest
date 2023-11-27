@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CryptoTransactionHistory } from '../containers/crypto-dashboard.component';
+import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
 
 @Component({
   selector: 'app-purchase-history',

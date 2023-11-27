@@ -4,8 +4,9 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { CreateCryptoComponent } from './create-crypto.component';
 import { CryptoCardComponent } from '../components/crypto-card.component';
-import { CryptoService, ViewMinimalCryptoAssetDto } from '../../../core/services/crypto.service';
+import { CryptoService } from '../../../core/services/crypto.service';
 import { Observable, Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs';
+import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-crypto-asset-dto';
 @Component({
   selector: 'app-view-cryptos',
   standalone: true,

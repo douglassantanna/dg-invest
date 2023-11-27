@@ -3,94 +3,20 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
-import { CreateCryptoAssetCommand } from '../../pages/cryptos/containers/create-crypto.component';
-import { ToastService } from './toast.service';
+import { AddTransactionCommand } from '../models/add-transaction-command';
+import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
+import { ViewCryptoAssetDto } from '../models/view-crypto-asset-dto';
+import { ViewMinimalCryptoAssetDto } from '../models/view-minimal-crypto-asset-dto';
+import { Response } from '../models/response';
 
 const url = `${environment.apiUrl}/Crypto`;
-export enum ETransactionType {
-  Buy = 1,
-  Sell = 2
-}
-export interface CryptoAssetData {
-  title: string;
-  value: number;
-  percent: number | null;
-}
-export interface ViewCryptoAssetDto {
-  id: number;
-  cryptoAssetData: CryptoAssetData[];
-  cryptoInformation: CryptoInformation;
-  transactions: ViewCryptoTransactionDto[];
-  addresses: ViewAddressDto[];
-}
-
-export interface ViewCryptoTransactionDto {
-  amount: number;
-  price: number;
-  purchaseDate: Date;
-  exchangeName: string;
-  transactionType: ETransactionType;
-}
-export interface AddTransactionCommand {
-  amount: number;
-  price: number;
-  purchaseDate: Date;
-  exchangeName: string;
-  transactionType: ETransactionType;
-  cryptoAssetId: number;
-}
-
-export interface ViewAddressDto {
-  id: number;
-  addressName: string;
-  addressValue: string;
-}
-
-export interface ViewCryptoInformation {
-  symbol: string;
-  pricePerUnit: number;
-  myAveragePrice: number;
-  percentDifference: number;
-  balance: number;
-  investedAmount: number;
-  currentWorth: number;
-  investmentGainLoss: number;
-  coinMarketCapId: number;
-}
-
-export interface CryptoInformation {
-  symbol: string;
-}
-
-export interface ViewMinimalCryptoAssetDto {
-  id: number;
-  currencyName: string;
-  cryptoCurrency: string;
-  symbol: string;
-  currentPrice: number;
-  percentChange24h: number;
-}
-
-export interface Crypto {
-  id: number;
-  name: string;
-  symbol: string;
-  image: string;
-  coinMarketCapId: number;
-}
-
-export interface Response<T> {
-  data: any;
-  isSuccess: boolean;
-  message: string;
-}
 
 @Injectable({
   providedIn: 'root'
 })
 export class CryptoService {
 
-  constructor(private http: HttpClient, private toastService: ToastService) { }
+  constructor(private http: HttpClient) { }
 
   getCryptoAssets(
     page: number = 1,

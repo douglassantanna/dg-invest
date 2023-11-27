@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AddTransactionCommand, CryptoService, ETransactionType } from '../../../core/services/crypto.service';
+import {  CryptoService } from '../../../core/services/crypto.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
+import { ETransactionType } from 'src/app/core/models/etransaction-type';
 
 @Component({
   selector: 'app-add-transaction',
