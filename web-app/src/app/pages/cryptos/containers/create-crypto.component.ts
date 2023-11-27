@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Crypto, CryptoService } from '../core/services/crypto.service';
-import { ToastService } from '../core/services/toast.service';
+import { Crypto, CryptoService } from '../../../core/services/crypto.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 
 export interface CreateCryptoAssetCommand {
