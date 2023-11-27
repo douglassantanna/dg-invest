@@ -3,7 +3,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/services/auth.service';
 import { HeaderComponent } from './layout/header.component';
-import { ToastComponent } from './toast.component';
+import { ToastComponent } from './layout/toast.component';
 
 @Component({
   selector: 'app-root',

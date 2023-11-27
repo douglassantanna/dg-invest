@@ -1,5 +1,5 @@
 import { Injectable, TemplateRef } from '@angular/core';
-import { ToastInfo } from '../../toast.component';
+import { ToastInfo } from '../../layout/toast.component';
 
 
 @Injectable({
