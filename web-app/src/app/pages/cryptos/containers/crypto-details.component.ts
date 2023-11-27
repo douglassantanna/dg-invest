@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 
 import { AddTransactionComponent } from './add-transaction.component';
-import { DataCardComponent } from '../components/my-crypto.component';
-import { TransactionTableComponent } from '../components/purchase-history.component';
+import { DataCardComponent } from '../components/data-card.component';
+import { TransactionTableComponent } from '../components/transaction-table.component';
 import { CryptoService } from '../../../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
@@ -11,7 +11,7 @@ import { CryptoAssetData } from 'src/app/core/models/crypto-asset-data';
 import { CryptoInformation } from 'src/app/core/models/crypto-information';
 
 @Component({
-  selector: 'app-crypto-dashboard',
+  selector: 'app-crypto-details',
   standalone: true,
   imports: [
     CommonModule,
@@ -48,7 +48,7 @@ import { CryptoInformation } from 'src/app/core/models/crypto-information';
   styles: [`
   `]
 })
-export class CryptoDashboardComponent implements OnInit {
+export class CryptoDetailsComponent implements OnInit {
   private cryptoService = inject(CryptoService);
   private route = inject(ActivatedRoute);
   cryptoAssetId = 0;
