@@ -2,7 +2,7 @@ import { RouterModule } from '@angular/router';
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth.service';
-import { HeaderComponent } from './header.component';
+import { HeaderComponent } from './layout/header.component';
 import { ToastComponent } from './toast.component';
 
 @Component({

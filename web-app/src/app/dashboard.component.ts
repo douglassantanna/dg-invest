@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { Component } from '@angular/core';
 
-import { HeaderComponent } from './header.component';
+import { HeaderComponent } from './layout/header.component';
 
 @Component({
   selector: 'app-root',
