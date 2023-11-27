@@ -1,9 +1,9 @@
-import { Pagination } from './../models/pagination';
+import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
-import { CreateCryptoAssetCommand } from '../portfolio/create-crypto.component';
+import { CreateCryptoAssetCommand } from '../../portfolio/create-crypto.component';
 import { ToastService } from './toast.service';
 
 const url = `${environment.apiUrl}/Crypto`;

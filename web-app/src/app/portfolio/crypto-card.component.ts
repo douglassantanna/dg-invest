@@ -1,6 +1,6 @@
 import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ViewMinimalCryptoAssetDto } from '../services/crypto.service';
+import { ViewMinimalCryptoAssetDto } from '../core/services/crypto.service';
 import { DecimalRoundPipe } from '../pipes/decimal-round.pipe';
 import { Router } from '@angular/router';
 

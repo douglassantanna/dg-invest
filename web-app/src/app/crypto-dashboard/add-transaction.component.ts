@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AddTransactionCommand, CryptoService, ETransactionType } from '../services/crypto.service';
-import { ToastService } from '../services/toast.service';
+import { AddTransactionCommand, CryptoService, ETransactionType } from '../core/services/crypto.service';
+import { ToastService } from '../core/services/toast.service';
 
 @Component({
   selector: 'app-add-transaction',
@@ -42,7 +42,7 @@ import { ToastService } from '../services/toast.service';
           <label for="purchaseDate" class="form-label">Date of Purchase</label>
           <input type="date" class="form-control" id="purchaseDate" name="purchaseDate" formControlName="purchaseDate">
       </div>
-      
+
       <div class="col-12">
         <button type="submit" class="btn btn-primary">Save</button>
       </div>

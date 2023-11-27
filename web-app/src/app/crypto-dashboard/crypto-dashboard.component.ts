@@ -4,7 +4,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { AddTransactionComponent } from './add-transaction.component';
 import { MyCryptoComponent } from './my-crypto.component';
 import { PurchaseHistoryComponent } from './purchase-history.component';
-import { CryptoAssetData, CryptoInformation, CryptoService, ETransactionType } from '../services/crypto.service';
+import { CryptoAssetData, CryptoInformation, CryptoService, ETransactionType } from '../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
 
 export interface CryptoTransactionHistory {

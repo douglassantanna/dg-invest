@@ -4,7 +4,7 @@ import {
   HttpHandlerFn
 } from '@angular/common/http';
 import { catchError } from 'rxjs';
-import { AuthService } from '../../services/auth.service';
+import { AuthService } from '../services/auth.service';
 
 export function InvalidTokenInterceptor(req: HttpRequest<unknown>,
   next: HttpHandlerFn) {

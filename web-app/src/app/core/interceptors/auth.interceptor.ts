@@ -3,7 +3,7 @@ import {
   HttpRequest,
   HttpHandlerFn
 } from '@angular/common/http';
-import { AuthService } from '../../services/auth.service';
+import { AuthService } from '../services/auth.service';
 
 export function AuthorizationInterceptor(req: HttpRequest<unknown>,
   next: HttpHandlerFn) {
