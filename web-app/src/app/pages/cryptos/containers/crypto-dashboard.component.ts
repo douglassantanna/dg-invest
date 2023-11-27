@@ -1,10 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 
-import { AddTransactionComponent } from '../pages/cryptos/containers/add-transaction.component';
-import { MyCryptoComponent } from '../pages/cryptos/components/my-crypto.component';
-import { PurchaseHistoryComponent } from '../pages/cryptos/components/purchase-history.component';
-import { CryptoAssetData, CryptoInformation, CryptoService, ETransactionType } from '../core/services/crypto.service';
+import { AddTransactionComponent } from './add-transaction.component';
+import { MyCryptoComponent } from '../components/my-crypto.component';
+import { PurchaseHistoryComponent } from '../components/purchase-history.component';
+import { CryptoAssetData, CryptoInformation, CryptoService, ETransactionType } from '../../../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
 
 export interface CryptoTransactionHistory {
