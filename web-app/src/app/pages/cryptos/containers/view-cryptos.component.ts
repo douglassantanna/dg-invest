@@ -18,7 +18,7 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
     ReactiveFormsModule],
   template: `
     <main class="container">
-      <div class="row mt-2">
+      <div class="row mt-2 pb-2">
         <div class="col-md-6">
           <h1>Portfolio</h1>
         </div>

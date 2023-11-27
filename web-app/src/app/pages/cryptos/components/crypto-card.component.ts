@@ -9,7 +9,7 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
   standalone: true,
   imports: [CommonModule, DecimalRoundPipe],
   template: `
-  <div class="card shadow p-3 mb-5 bg-white rounded">
+  <div class="card shadow mb-3 bg-white rounded">
     <div class="card-body">
       <h2 class="card-title">{{ crypto.symbol | uppercase }}</h2>
       <p class="card-text">Price: {{ crypto.currentPrice | currency:'USD' }}</p>
