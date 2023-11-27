@@ -17,7 +17,7 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
     CreateCryptoComponent,
     ReactiveFormsModule],
   template: `
-    <main class="main-container">
+    <main class="container">
       <header class="d-flex justify-content-between align-items-center">
         <h1>Portfolio</h1>
         <div>
@@ -34,7 +34,12 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
           </div>
         </div>
       </div>
-      <app-crypto-card [cryptos]="cryptos" />
+
+      <div class="row" >
+        <div class="col-md-4" *ngFor="let crypto of cryptos">
+          <app-crypto-card [crypto]="crypto" />
+        </div>
+      </div>
     </main>
   `,
   styles: [`

@@ -9,8 +9,8 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
   standalone: true,
   imports: [CommonModule, DecimalRoundPipe],
   template: `
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-      <div class="col" *ngFor="let crypto of cryptos">
+
+
         <div class="card shadow p-3 mb-5 bg-white rounded">
           <div class="card-body">
             <h2 class="card-title">{{ crypto.symbol | uppercase }}</h2>
@@ -23,12 +23,12 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
             <a (click)="cryptoDashboard(crypto.id)" class="btn btn-primary">See details</a>
           </div>
         </div>
-      </div>
-    </div>
+
+
   `,
 })
 export class CryptoCardComponent {
-  @Input() cryptos: ViewMinimalCryptoAssetDto[] = [];
+  @Input() crypto!: ViewMinimalCryptoAssetDto;
 
   private router = inject(Router);
 
