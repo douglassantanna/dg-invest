@@ -1,12 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AddTransactionCommand, CryptoService, ETransactionType } from '../services/crypto.service';
-import { ToastService } from '../services/toast.service';
-export interface MyDate {
-  year: number;
-  month: number;
-}
+import {  CryptoService } from '../../../core/services/crypto.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
+import { ETransactionType } from 'src/app/core/models/etransaction-type';
+
 @Component({
   selector: 'app-add-transaction',
   standalone: true,
@@ -15,7 +14,9 @@ export interface MyDate {
     FormsModule,
     ReactiveFormsModule],
   template: `
-    <form class="row g-3 border border-1 rounded" [formGroup]="transactionForm" (ngSubmit)="save()">
+    <form class="row border border-1 rounded" [formGroup]="transactionForm" (ngSubmit)="save()">
+      <h1>Add transaction</h1>
+
       <div class="col-md-6">
         <label for="transactionType" class="form-label">Transaction Type</label>
         <select class="form-select" id="transactionType" name="transactionType" formControlName="transactionType">
@@ -23,22 +24,27 @@ export interface MyDate {
           <option [value]="2">Sell</option>
         </select>
       </div>
+
       <div class="col-md-6">
           <label for="amount" class="form-label">Amount</label>
           <input type="number" class="form-control" id="amount" name="amount" formControlName="amount">
       </div>
+
       <div class="col-md-6">
           <label for="pricePerUnit" class="form-label">Price per Unit</label>
           <input type="number" class="form-control" id="pricePerUnit" name="pricePerUnit" formControlName="price">
       </div>
+
       <div class="col-md-6">
         <label for="exchangeName" class="form-label">Exchange Name</label>
         <input type="text" class="form-control" id="exchangeName" name="exchangeName" formControlName="exchangeName">
       </div>
-      <div class="col-md-6">
+
+      <div class="col">
           <label for="purchaseDate" class="form-label">Date of Purchase</label>
           <input type="date" class="form-control" id="purchaseDate" name="purchaseDate" formControlName="purchaseDate">
       </div>
+
       <div class="col-12">
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
@@ -75,18 +81,12 @@ export class AddTransactionComponent {
       cryptoAssetId: this.cryptoAssetId
     } as AddTransactionCommand;
 
-    console.log("command", command);
-
     this.cryptoService.addTransaction(command).subscribe({
       next: (response) => {
-        console.log(response);
         this.toastService.showSuccess("Transaction added successfully");
         this.transactionForm.reset();
-
       },
       error: (err) => {
-        console.log(err.error.data);
-
         this.toastService.showError(err.error.data);
       }
     });

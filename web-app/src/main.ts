@@ -12,8 +12,8 @@ import { provideRouter } from '@angular/router';
 import { AppComponent } from './app/app.component';
 import { environment } from './environments/environment.development';
 import { routes } from './app/app.routes';
-import { AuthorizationInterceptor } from './app/interceptors/auth.interceptor';
-import { InvalidTokenInterceptor } from './app/interceptors/invalid-token.interceptor';
+import { AuthorizationInterceptor } from './app/core/interceptors/auth.interceptor';
+import { InvalidTokenInterceptor } from './app/core/interceptors/invalid-token.interceptor';
 
 if (environment.production) {
   enableProdMode();

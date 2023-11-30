@@ -33,17 +33,21 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
 
         var currentPrice = GetCryptoCurrentPriceById(cryptoAsset.CoinMarketCapId, cmpResponse);
 
+        List<CryptoAssetData> cards = new()
+        {
+            new CryptoAssetData("Current price", currentPrice),
+            new CryptoAssetData("Average price", cryptoAsset.AveragePrice),
+            new CryptoAssetData("Balance", cryptoAsset.Balance),
+            new CryptoAssetData("Invested amount", cryptoAsset.TotalInvested),
+            new CryptoAssetData("Current worth", cryptoAsset.CurrentWorth(currentPrice)),
+            new CryptoAssetData("Gain/Loss", cryptoAsset.GetInvestmentGainLoss(currentPrice), cryptoAsset.GetPercentDifference(currentPrice)),
+        };
         var cryptoInfo = new ViewCryptoAssetDto(cryptoAsset.Id,
                                                 new ViewCryptoInformation(cryptoAsset.Symbol,
-                                                                          currentPrice,
-                                                                          cryptoAsset.AveragePrice,
-                                                                          cryptoAsset.GetPercentDifference(currentPrice),
-                                                                          cryptoAsset.Balance,
-                                                                          cryptoAsset.TotalInvested,
-                                                                          cryptoAsset.CurrentWorth(currentPrice),
-                                                                          cryptoAsset.GetInvestmentGainLoss(currentPrice),
                                                                           cryptoAsset.CoinMarketCapId),
-                                                cryptoAsset.Transactions.Select(t => new ViewCryptoTransactionDto(t.Amount,
+                                                cards,
+                                                cryptoAsset.Transactions.Select(t => new ViewCryptoTransactionDto(t.Id,
+                                                                                                                  t.Amount,
                                                                                                                   t.Price,
                                                                                                                   t.PurchaseDate,
                                                                                                                   t.ExchangeName,

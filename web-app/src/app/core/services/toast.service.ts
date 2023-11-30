@@ -1,6 +1,5 @@
 import { Injectable, TemplateRef } from '@angular/core';
-import { ToastInfo } from '../toast.component';
-
+import { ToastInfo } from '../models/toast-info';
 
 @Injectable({
   providedIn: 'root'

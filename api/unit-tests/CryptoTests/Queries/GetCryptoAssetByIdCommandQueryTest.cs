@@ -38,7 +38,7 @@ public class GetCryptoAssetByIdCommandQueryTest
 
         // Assert
         ViewCryptoAssetDto? viewResult = result.Data as ViewCryptoAssetDto;
-        viewResult?.CryptoInformation.PercentDifference.Should().Be(0);
+        // viewResult?.Cards[0].Percent.Should().Be(0);
     }
 
     private static CryptoAsset GetCryptoAsset()

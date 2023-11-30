@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
-import { CreateCryptoComponent } from './portfolio/create-crypto.component';
-import { CryptoDashboardComponent } from './crypto-dashboard/crypto-dashboard.component';
-import { DashboardComponent } from './dashboard.component';
-import { authGuard } from './guards/auth.guard';
-import { LoginComponent } from './login.component';
-import { ProfileComponent } from './profile.component';
-import { ViewCryptosComponent } from './portfolio/view-cryptos.component';
+import { CreateCryptoComponent } from './pages/cryptos/containers/create-crypto.component';
+import { CryptoDetailsComponent } from './pages/cryptos/containers/crypto-details.component';
+import { DashboardComponent } from './layout/dashboard.component';
+import { authGuard } from './core/guards/auth.guard';
+import { LoginComponent } from './pages/auth/login.component';
+import { ProfileComponent } from './pages/profile/profile.component';
+import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos.component';
 
 export const routes: Routes = [
   {
@@ -31,7 +31,7 @@ export const routes: Routes = [
   {
     path: "crypto-dashboard/:cryptoId",
     canActivate: [authGuard],
-    component: CryptoDashboardComponent,
+    component: CryptoDetailsComponent,
   },
   {
     path: "login",

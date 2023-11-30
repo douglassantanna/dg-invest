@@ -6,44 +6,10 @@ import jwt_decode from 'jwt-decode';
 import { environment } from 'src/environments/environment.development';
 import { LoginFormModel } from '../models/login.form-models';
 import { local_storage_token } from 'src/environments/environment.development';
+import { CustomRespose } from '../models/custom-response';
+import { UserDecode } from '../models/user-decode';
 
 const url = `${environment.apiUrl}/Authentication`;
-
-export interface IUserDecode {
-  fullName: string;
-  email: string;
-  role: string;
-  nameid: string;
-}
-
-export interface LoginCommand {
-  email: string;
-  password: string;
-}
-
-export interface CustomRespose {
-  message: string;
-  isSuccess: boolean;
-  data: any;
-}
-
-export interface AuthState {
-  userId: number | null;
-  access_token: string | null;
-  token_type: string | null;
-  expires_at: string | null;
-  name: string | null;
-  role: string | null;
-}
-
-export const initialState: AuthState = {
-  userId: null,
-  access_token: null,
-  token_type: null,
-  expires_at: null,
-  name: null,
-  role: null,
-};
 
 @Injectable({
   providedIn: 'root'
@@ -51,7 +17,7 @@ export const initialState: AuthState = {
 export class AuthService {
   isLoggedIn$ = new BehaviorSubject<boolean>(false);
   isLoggedIn = this.isLoggedIn$.asObservable();
-  private _user = new BehaviorSubject<IUserDecode>(
+  private _user = new BehaviorSubject<UserDecode>(
     this.decodePayloadJWT()
   );
   user = this._user.asObservable();
