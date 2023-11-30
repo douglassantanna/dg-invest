@@ -14,7 +14,7 @@ import { ETransactionType } from 'src/app/core/models/etransaction-type';
     FormsModule,
     ReactiveFormsModule],
   template: `
-    <form class="row border border-1 rounded" [formGroup]="transactionForm" (ngSubmit)="save()">
+    <form class="row border border-1 rounded pt-2 pb-2" [formGroup]="transactionForm" (ngSubmit)="save()">
       <h1>Add transaction</h1>
 
       <div class="col-md-6">
@@ -45,7 +45,7 @@ import { ETransactionType } from 'src/app/core/models/etransaction-type';
           <input type="date" class="form-control" id="purchaseDate" name="purchaseDate" formControlName="purchaseDate">
       </div>
 
-      <div class="col-12">
+      <div class="col-12 mt-2 mb-2">
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
     </form>
