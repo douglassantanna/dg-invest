@@ -1,13 +1,16 @@
 import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
 import { ViewCryptoAssetDto } from '../models/view-crypto-asset-dto';
 import { ViewMinimalCryptoAssetDto } from '../models/view-minimal-crypto-asset-dto';
 import { Response } from '../models/response';
+import { CryptoAssetData } from '../models/crypto-asset-data';
+import { CryptoInformation } from '../models/crypto-information';
+import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -15,6 +18,10 @@ const url = `${environment.apiUrl}/Crypto`;
   providedIn: 'root'
 })
 export class CryptoService {
+
+  private _cryptoAssetData: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
+  private _cryptoInformation: BehaviorSubject<CryptoInformation[]> = new BehaviorSubject<CryptoInformation[]>([]);
+  private _transactions: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
 
   constructor(private http: HttpClient) { }
 
@@ -41,7 +48,14 @@ export class CryptoService {
   }
 
   getCryptoAssetById(id: number): Observable<Response<ViewCryptoAssetDto>> {
-    return this.http.get<Response<ViewCryptoAssetDto>>(`${url}/get-crypto-asset-by-id/${id}`)
+    return this.http.get<Response<ViewCryptoAssetDto>>(`${url}/get-crypto-asset-by-id/${id}`).pipe(
+      map((response: Response<Crypto>) => {
+        this._cryptoAssetData.next(response.data.cryptoAssetData);
+        this._cryptoInformation.next(response.data.cryptoInformation);
+        this._transactions.next(response.data.transactions);
+        return response;
+      })
+    )
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
@@ -49,6 +63,28 @@ export class CryptoService {
   }
 
   addTransaction(command: AddTransactionCommand) {
-    return this.http.post<Response<any>>(`${url}/add-transaction`, command)
+    return this.http.post<Response<any>>(`${url}/add-transaction`, command).pipe(
+      tap((response: Response<any>) => {
+        if (response.isSuccess) {
+          this._transactions.next([...this._transactions.value, this.convertTransactionCommandToDto(command)]);
+        }
+      })
+    )
+  }
+
+  private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {
+    const transaction = {
+      amount: command.amount,
+      price: command.price,
+      purchaseDate: command.purchaseDate,
+      exchangeName: command.exchangeName,
+      transactionType: command.transactionType,
+    } as CryptoTransactionHistory;
+
+    return transaction;
+  }
+
+  get transactions$(): Observable<CryptoTransactionHistory[]> {
+    return this._transactions.asObservable();
   }
 }

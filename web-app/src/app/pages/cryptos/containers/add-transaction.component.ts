@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import {  CryptoService } from '../../../core/services/crypto.service';
+import { CryptoService } from '../../../core/services/crypto.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
 import { ETransactionType } from 'src/app/core/models/etransaction-type';
@@ -92,7 +92,7 @@ export class AddTransactionComponent {
     });
   }
 
-  mapTransactionType(value: number): ETransactionType {
+  private mapTransactionType(value: number): ETransactionType {
     return value == 1 ? ETransactionType.Buy : ETransactionType.Sell;
   }
 }
