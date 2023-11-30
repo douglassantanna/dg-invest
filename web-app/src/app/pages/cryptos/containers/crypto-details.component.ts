@@ -26,7 +26,7 @@ import { BehaviorSubject } from 'rxjs';
       <strong>{{ cryptoInfo.symbol | uppercase }}</strong> Information
     </h1>
     <div class="row" >
-      <div class="col" *ngFor="let card of cryptoAssetData">
+      <div class="col" *ngFor="let card of cryptoAssetData$ | async; trackBy: cardValue">
         <app-data-card [title]="card.title" [value]="card.value" [percentDifference]="card.percent"/>
       </div>
     </div>
@@ -57,22 +57,28 @@ export class CryptoDetailsComponent implements OnInit {
 
   transactions$: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
 
-  cryptoAssetData: CryptoAssetData[] = [];
+  cryptoAssetData$: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
+
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       this.cryptoAssetId = params['cryptoId'];
     })
+
     this.cryptoService.getCryptoAssetById(this.cryptoAssetId).subscribe(response => {
       this.cryptoInfo = response.data.cryptoInformation;
-      // this.transactionsHistory = response.data.transactions;
-      this.cryptoAssetData = response.data.cryptoAssetData;
     })
 
-    this.cryptoService.transactions$.subscribe(transactions => {
+    this.cryptoService.cryptoAssetData$.subscribe((responsee: CryptoAssetData[]) => {
+      this.cryptoAssetData$.next(responsee);
+    });
 
-      console.log(transactions)
+    this.cryptoService.transactions$.subscribe(transactions => {
       this.transactions$.next(transactions);
     })
 
+  }
+
+  cardValue(index: number, dataValue: CryptoAssetData) {
+    return dataValue.value;
   }
 }

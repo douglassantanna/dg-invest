@@ -1,7 +1,7 @@
 import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, of, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
@@ -73,6 +73,21 @@ export class CryptoService {
         if (response.isSuccess) {
           this._transactions.next([...this._transactions.value, this.convertTransactionCommandToDto(command)]);
         }
+      }),
+      switchMap((response: Response<any>) => {
+        // Only fetch updated crypto data if the transaction is added successfully
+        if (response.isSuccess) {
+          return this.getCryptoDataById(command.cryptoAssetId);
+        } else {
+          // If the transaction addition fails, return an observable with the existing crypto data
+          return of(this._cryptoAssetData.value);
+        }
+      }),
+      tap((updatedCryptoData: any) => {
+        if (updatedCryptoData) {
+          this._cryptoAssetData.next(updatedCryptoData);
+        }
+        // Update _cryptoAssetData with the new crypto data (either fetched or existing)
       })
     )
   }
@@ -91,5 +106,9 @@ export class CryptoService {
 
   get transactions$(): Observable<CryptoTransactionHistory[]> {
     return this._transactions.asObservable();
+  }
+
+  get cryptoAssetData$(): Observable<CryptoAssetData[]> {
+    return this._cryptoAssetData.asObservable();
   }
 }
