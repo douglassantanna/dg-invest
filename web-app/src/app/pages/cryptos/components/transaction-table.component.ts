@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
+import { BehaviorSubject } from 'rxjs';
 
 @Component({
   selector: 'app-transaction-table',
@@ -33,7 +34,7 @@ import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let element of transactionsHistory trackBy: transactionById">
+          <tr *ngFor="let element of transactions | async trackBy: transactionById">
             <td>{{ element.amount }}</td>
             <td>{{ element.price | currency: 'USD':'symbol':'1.2-2' }}</td>
             <td>
@@ -60,7 +61,7 @@ export class TransactionTableComponent {
     '6 meses',
     '1 ano'
   ]
-  @Input() transactionsHistory: Array<CryptoTransactionHistory> = [];
+  @Input() transactions: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
   transactionById(index: number, transaction: CryptoTransactionHistory) {
     return transaction.id;
   }
