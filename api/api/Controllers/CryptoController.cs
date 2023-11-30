@@ -60,6 +60,15 @@ public class CryptoController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("get-crypto-data-by-id/{CryptoAssetId:int}")]
+    public async Task<ActionResult> GetCryptoDataById([FromRoute] GetCryptoDataByIdQuery command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+            return NotFound(result);
+        return Ok(result);
+    }
+
     [HttpGet("get-cryptos")]
     public async Task<ActionResult> GetCryptos([FromRoute] GetCryptosCommand command)
     {

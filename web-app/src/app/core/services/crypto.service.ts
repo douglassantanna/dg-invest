@@ -11,6 +11,7 @@ import { Response } from '../models/response';
 import { CryptoAssetData } from '../models/crypto-asset-data';
 import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
+import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -56,6 +57,10 @@ export class CryptoService {
         return response;
       })
     )
+  }
+
+  getCryptoDataById(id: number): Observable<Response<ViewCryptoDataDto>> {
+    return this.http.get<Response<ViewCryptoDataDto>>(`${url}/get-crypto-data-by-id/${id}`)
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
