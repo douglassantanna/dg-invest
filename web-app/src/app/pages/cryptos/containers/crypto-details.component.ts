@@ -62,11 +62,11 @@ export class CryptoDetailsComponent implements OnInit {
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       this.cryptoAssetId = params['cryptoId'];
-    })
+    });
 
     this.cryptoService.getCryptoAssetById(this.cryptoAssetId).subscribe(response => {
       this.cryptoInfo = response.data.cryptoInformation;
-    })
+    });
 
     this.cryptoService.cryptoAssetData$.subscribe((responsee: CryptoAssetData[]) => {
       this.cryptoAssetData$.next(responsee);
@@ -74,8 +74,7 @@ export class CryptoDetailsComponent implements OnInit {
 
     this.cryptoService.transactions$.subscribe(transactions => {
       this.transactions$.next(transactions);
-    })
-
+    });
   }
 
   cardValue(index: number, dataValue: CryptoAssetData) {

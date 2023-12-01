@@ -59,7 +59,7 @@ export class CryptoService {
     )
   }
 
-  getCryptoDataById(id: number): Observable<Response<ViewCryptoDataDto>> {
+  private getCryptoDataById(id: number): Observable<Response<ViewCryptoDataDto>> {
     return this.http.get<Response<ViewCryptoDataDto>>(`${url}/get-crypto-data-by-id/${id}`)
   }
 
@@ -75,19 +75,16 @@ export class CryptoService {
         }
       }),
       switchMap((response: Response<any>) => {
-        // Only fetch updated crypto data if the transaction is added successfully
         if (response.isSuccess) {
           return this.getCryptoDataById(command.cryptoAssetId);
         } else {
-          // If the transaction addition fails, return an observable with the existing crypto data
           return of(this._cryptoAssetData.value);
         }
       }),
-      tap((updatedCryptoData: any) => {
-        if (updatedCryptoData) {
-          this._cryptoAssetData.next(updatedCryptoData);
+      tap((updatedCryptoData: CryptoAssetData[] | Response<ViewCryptoDataDto>) => {
+        if (!Array.isArray(updatedCryptoData)) {
+          this._cryptoAssetData.next(updatedCryptoData.data.cryptoAssetData);
         }
-        // Update _cryptoAssetData with the new crypto data (either fetched or existing)
       })
     )
   }
