@@ -50,11 +50,10 @@ export class CryptoService {
 
   getCryptoAssetById(id: number): Observable<Response<ViewCryptoAssetDto>> {
     return this.http.get<Response<ViewCryptoAssetDto>>(`${url}/get-crypto-asset-by-id/${id}`).pipe(
-      map((response: Response<Crypto>) => {
+      tap((response: Response<Crypto>) => {
         this._cryptoAssetData.next(response.data.cryptoAssetData);
         this._cryptoInformation.next(response.data.cryptoInformation);
         this._transactions.next(response.data.transactions);
-        return response;
       })
     )
   }
