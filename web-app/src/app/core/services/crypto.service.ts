@@ -1,7 +1,7 @@
 import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, of, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
@@ -11,6 +11,7 @@ import { Response } from '../models/response';
 import { CryptoAssetData } from '../models/crypto-asset-data';
 import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
+import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -49,13 +50,16 @@ export class CryptoService {
 
   getCryptoAssetById(id: number): Observable<Response<ViewCryptoAssetDto>> {
     return this.http.get<Response<ViewCryptoAssetDto>>(`${url}/get-crypto-asset-by-id/${id}`).pipe(
-      map((response: Response<Crypto>) => {
+      tap((response: Response<Crypto>) => {
         this._cryptoAssetData.next(response.data.cryptoAssetData);
         this._cryptoInformation.next(response.data.cryptoInformation);
         this._transactions.next(response.data.transactions);
-        return response;
       })
     )
+  }
+
+  private getCryptoDataById(id: number): Observable<Response<ViewCryptoDataDto>> {
+    return this.http.get<Response<ViewCryptoDataDto>>(`${url}/get-crypto-data-by-id/${id}`)
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
@@ -67,6 +71,18 @@ export class CryptoService {
       tap((response: Response<any>) => {
         if (response.isSuccess) {
           this._transactions.next([...this._transactions.value, this.convertTransactionCommandToDto(command)]);
+        }
+      }),
+      switchMap((response: Response<any>) => {
+        if (response.isSuccess) {
+          return this.getCryptoDataById(command.cryptoAssetId);
+        } else {
+          return of(this._cryptoAssetData.value);
+        }
+      }),
+      tap((updatedCryptoData: CryptoAssetData[] | Response<ViewCryptoDataDto>) => {
+        if (!Array.isArray(updatedCryptoData)) {
+          this._cryptoAssetData.next(updatedCryptoData.data.cryptoAssetData);
         }
       })
     )
@@ -86,5 +102,9 @@ export class CryptoService {
 
   get transactions$(): Observable<CryptoTransactionHistory[]> {
     return this._transactions.asObservable();
+  }
+
+  get cryptoAssetData$(): Observable<CryptoAssetData[]> {
+    return this._cryptoAssetData.asObservable();
   }
 }

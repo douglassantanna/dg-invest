@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
 import { AddTransactionComponent } from './add-transaction.component';
 import { DataCardComponent } from '../components/data-card.component';
@@ -9,7 +9,7 @@ import { ActivatedRoute } from '@angular/router';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
 import { CryptoAssetData } from 'src/app/core/models/crypto-asset-data';
 import { CryptoInformation } from 'src/app/core/models/crypto-information';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-crypto-details',
@@ -26,7 +26,7 @@ import { BehaviorSubject } from 'rxjs';
       <strong>{{ cryptoInfo.symbol | uppercase }}</strong> Information
     </h1>
     <div class="row" >
-      <div class="col" *ngFor="let card of cryptoAssetData">
+      <div class="col" *ngFor="let card of cryptoAssetData$ | async; trackBy: cardValue">
         <app-data-card [title]="card.title" [value]="card.value" [percentDifference]="card.percent"/>
       </div>
     </div>
@@ -49,30 +49,49 @@ import { BehaviorSubject } from 'rxjs';
   styles: [`
   `]
 })
-export class CryptoDetailsComponent implements OnInit {
+export class CryptoDetailsComponent implements OnInit, OnDestroy {
+
   private cryptoService = inject(CryptoService);
   private route = inject(ActivatedRoute);
   cryptoAssetId = 0;
   cryptoInfo: CryptoInformation = {} as CryptoInformation;
 
+  private unsubscribe$ = new Subject<void>();
+
   transactions$: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
 
-  cryptoAssetData: CryptoAssetData[] = [];
+  cryptoAssetData$: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
+
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       this.cryptoAssetId = params['cryptoId'];
-    })
-    this.cryptoService.getCryptoAssetById(this.cryptoAssetId).subscribe(response => {
-      this.cryptoInfo = response.data.cryptoInformation;
-      // this.transactionsHistory = response.data.transactions;
-      this.cryptoAssetData = response.data.cryptoAssetData;
-    })
+    });
 
-    this.cryptoService.transactions$.subscribe(transactions => {
+    this.cryptoService.getCryptoAssetById(this.cryptoAssetId)
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe(response => {
+        this.cryptoInfo = response.data.cryptoInformation;
+      });
 
-      console.log(transactions)
-      this.transactions$.next(transactions);
-    })
+    this.cryptoService.cryptoAssetData$
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe((responsee: CryptoAssetData[]) => {
+        this.cryptoAssetData$.next(responsee);
+      });
 
+    this.cryptoService.transactions$
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe(transactions => {
+        this.transactions$.next(transactions);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribe$.next();
+    this.unsubscribe$.complete();
+  }
+
+  cardValue(index: number, dataValue: CryptoAssetData) {
+    return dataValue.value;
   }
 }

@@ -14,6 +14,8 @@ public record ViewCryptoAssetDto(int Id,
                                  IReadOnlyCollection<ViewCryptoTransactionDto> Transactions,
                                  IReadOnlyCollection<ViewAddressDto> Addresses);
 
+public record ViewCryptoDataDto(int Id, List<CryptoAssetData> CryptoAssetData);
+
 public record ViewCryptoTransactionDto(int Id,
                                        decimal Amount,
                                        decimal Price,

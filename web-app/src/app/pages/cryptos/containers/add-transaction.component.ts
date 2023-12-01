@@ -81,15 +81,16 @@ export class AddTransactionComponent {
       cryptoAssetId: this.cryptoAssetId
     } as AddTransactionCommand;
 
-    this.cryptoService.addTransaction(command).subscribe({
-      next: (response) => {
-        this.toastService.showSuccess("Transaction added successfully");
-        this.transactionForm.reset();
-      },
-      error: (err) => {
-        this.toastService.showError(err.error.data);
-      }
-    });
+    this.cryptoService.addTransaction(command)
+      .subscribe({
+        next: (response) => {
+          this.toastService.showSuccess("Transaction added successfully");
+          this.transactionForm.reset();
+        },
+        error: (err) => {
+          this.toastService.showError(err.error.data);
+        }
+      });
   }
 
   private mapTransactionType(value: number): ETransactionType {
