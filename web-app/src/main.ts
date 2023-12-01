@@ -14,6 +14,7 @@ import { environment } from './environments/environment.development';
 import { routes } from './app/app.routes';
 import { AuthorizationInterceptor } from './app/core/interceptors/auth.interceptor';
 import { InvalidTokenInterceptor } from './app/core/interceptors/invalid-token.interceptor';
+import { loadingInterceptor } from './app/core/interceptors/loading.interceptor';
 
 if (environment.production) {
   enableProdMode();
@@ -25,7 +26,8 @@ bootstrapApplication(AppComponent, {
       withInterceptors(
         [
           AuthorizationInterceptor,
-          InvalidTokenInterceptor
+          InvalidTokenInterceptor,
+          loadingInterceptor
         ],)
     ),
     provideRouter(routes),
