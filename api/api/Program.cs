@@ -2,6 +2,7 @@ using System.Reflection;
 using api.Authentication;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
+using api.Cryptos.Models;
 using api.Cryptos.Repositories;
 using api.Data;
 using api.Data.Repositories;
@@ -18,6 +19,7 @@ builder.Services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
 
 builder.Services.AddScoped<IBaseRepository<CryptoAsset>, CryptoAssetRepository>();
 builder.Services.AddScoped<IBaseRepository<CryptoTransaction>, CryptoTransactionRepository>();
+builder.Services.AddScoped<IBaseRepository<Crypto>, CryptoRepository>();
 
 builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());

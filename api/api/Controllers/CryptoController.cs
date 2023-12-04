@@ -70,7 +70,7 @@ public class CryptoController : ControllerBase
     }
 
     [HttpGet("get-cryptos")]
-    public async Task<ActionResult> GetCryptos([FromRoute] GetCryptosCommand command)
+    public async Task<ActionResult> GetCryptos([FromRoute] GetCryptosCommandQuery command)
     {
         var result = await _mediator.Send(command);
         return Ok(result);
