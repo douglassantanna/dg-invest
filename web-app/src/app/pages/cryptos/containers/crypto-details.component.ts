@@ -27,7 +27,7 @@ import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
     </h1>
     <div class="row" >
       <div class="col" *ngFor="let card of cryptoAssetData$ | async; trackBy: cardValue">
-        <app-data-card [title]="card.title" [value]="card.value" [percentDifference]="card.percent"/>
+        <app-data-card [title]="card.title" [value]="card.value" [percentDifference]="card.percent ? card.percent : 0"/>
       </div>
     </div>
 
