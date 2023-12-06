@@ -29,4 +29,16 @@ public class CryptoTransaction
     {
         Enabled = false;
     }
+    public decimal GetPercentDifference(decimal currentPrice)
+    {
+        if (Price == 0)
+        {
+            return 0;
+        }
+        else
+        {
+            decimal percentDifference = ((currentPrice - Price) / Price) * 100;
+            return percentDifference;
+        }
+    }
 }

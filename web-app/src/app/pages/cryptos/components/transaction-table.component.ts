@@ -40,7 +40,11 @@ import { PercentDifferenceComponent } from './percent-difference.component';
           <tr *ngFor="let element of transactions | async trackBy: transactionById">
             <td>{{ element.amount }}</td>
             <td>{{ element.price | currency: 'USD':'symbol':'1.2-2' }}</td>
-            <td><app-percent-difference *ngIf="element.transactionType === 1" [percentDifference]="12"/></td>
+            <td>
+              <app-percent-difference
+                *ngIf="element.transactionType === 1"
+                [percentDifference]="element.percentDifference"/>
+            </td>
             <td>
               <span *ngIf="element.transactionType === 1">🛒 Buy</span>
               <span *ngIf="element.transactionType === 2">💰 Sell</span>

@@ -21,7 +21,8 @@ public record ViewCryptoTransactionDto(int Id,
                                        decimal Price,
                                        DateTimeOffset PurchaseDate,
                                        string ExchangeName,
-                                       ETransactionType TransactionType);
+                                       ETransactionType TransactionType,
+                                       decimal PercentDifference);
 
 public record ViewAddressDto(int Id,
                              string AddressName,
