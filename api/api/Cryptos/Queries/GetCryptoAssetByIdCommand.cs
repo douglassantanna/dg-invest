@@ -51,7 +51,8 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
                                                                                                                   t.Price,
                                                                                                                   t.PurchaseDate,
                                                                                                                   t.ExchangeName,
-                                                                                                                  t.TransactionType)).ToList(),
+                                                                                                                  t.TransactionType,
+                                                                                                                  t.GetPercentDifference(currentPrice))).ToList(),
                                                 cryptoAsset.Addresses.Select(a => new ViewAddressDto(a.Id,
                                                                                                      a.AddressName,
                                                                                                      a.AddressValue)).ToList());

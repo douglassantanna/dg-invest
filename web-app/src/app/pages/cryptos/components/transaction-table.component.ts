@@ -3,13 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
 import { BehaviorSubject } from 'rxjs';
+import { PercentDifferenceComponent } from './percent-difference.component';
 
 @Component({
   selector: 'app-transaction-table',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule],
+    FormsModule,
+    PercentDifferenceComponent],
   template: `
   <div class="border border-1 rounded">
     <header class="d-flex justify-content-between align-items-center p-2">
@@ -28,6 +30,7 @@ import { BehaviorSubject } from 'rxjs';
           <tr>
             <th>Amount</th>
             <th>Price Unit</th>
+            <th>%</th>
             <th>Transaction</th>
             <th>Date</th>
             <th>Exchange</th>
@@ -37,6 +40,11 @@ import { BehaviorSubject } from 'rxjs';
           <tr *ngFor="let element of transactions | async trackBy: transactionById">
             <td>{{ element.amount }}</td>
             <td>{{ element.price | currency: 'USD':'symbol':'1.2-2' }}</td>
+            <td>
+              <app-percent-difference
+                *ngIf="element.transactionType === 1"
+                [percentDifference]="element.percentDifference"/>
+            </td>
             <td>
               <span *ngIf="element.transactionType === 1">🛒 Buy</span>
               <span *ngIf="element.transactionType === 2">💰 Sell</span>

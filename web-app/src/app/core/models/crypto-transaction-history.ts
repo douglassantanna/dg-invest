@@ -7,4 +7,5 @@ export interface CryptoTransactionHistory {
   purchaseDate: Date;
   exchangeName: string;
   transactionType: ETransactionType;
+  percentDifference: number;
 }
