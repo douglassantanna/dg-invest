@@ -1,13 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { DecimalRoundPipe } from '../../../core/pipes/decimal-round.pipe';
+import { PercentDifferenceComponent } from './percent-difference.component';
 
 @Component({
   selector: 'app-data-card',
   standalone: true,
   imports: [
     CommonModule,
-    DecimalRoundPipe],
+    DecimalRoundPipe,
+    PercentDifferenceComponent],
   template: `
     <div class="card bg-light text-dark border border-1 rounded mb-3">
       <div class="card-body">
@@ -19,12 +21,7 @@ import { DecimalRoundPipe } from '../../../core/pipes/decimal-round.pipe';
           <ng-template #balance>
             <span class="price-text" style="font-size: 22px; color: purple;">{{ value }}</span>
           </ng-template>
-          <span
-            *ngIf="percentDifference"
-            class="mr-2"
-            [attr.data-status]="percentDifference < 0 ? 'negative' : 'positive'">
-            {{ percentDifference | decimalRound }}%
-          </span>
+          <app-percent-difference *ngIf="percentDifference" [percentDifference]="percentDifference" />
         </div>
       </div>
     </div>
@@ -33,16 +30,10 @@ import { DecimalRoundPipe } from '../../../core/pipes/decimal-round.pipe';
   span {
     color: white;
   }
-  span[data-status="negative"] {
-  background-color: red;
-  }
-  span[data-status="positive"] {
-    background-color: green;
-  }
   `]
 })
 export class DataCardComponent {
   @Input() title: string = '';
   @Input() value: string | number = '';
-  @Input() percentDifference: number | null = 0;
+  @Input() percentDifference: number = 0;
 }
