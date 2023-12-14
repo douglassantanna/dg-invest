@@ -20,22 +20,22 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
     CryptoFilterComponent],
   template: `
     <main class="container">
-      <div class="row mt-2 pb-2">
-        <div class="col-md-6">
-          <h1>Portfolio</h1>
+
+    <div class="d-flex justify-content-between align-items-center p-2">
+      <div>
+        <h1>Portfolio</h1>
+      </div>
+
+      <div class="d-flex gap-2">
+        <div>
+          <app-crypto-filter (searchControlEvent)="search($event)"></app-crypto-filter>
         </div>
 
-        <div class="col-md-6">
-          <div class="row">
-            <div class="col">
-              <app-crypto-filter (searchControlEvent)="search($event)"></app-crypto-filter>
-            </div>
-            <div class="col-auto">
-              <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-            </div>
-          </div>
+        <div>
+          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
         </div>
       </div>
+    </div>
 
       <div class="row">
         <div *ngIf="cryptos$ | async as cryptos; else loading">
@@ -53,7 +53,6 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
     </main>
   `,
   styles: [`
-
   `]
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
