@@ -53,31 +53,21 @@ public class CryptoAsset
     }
     public void AddTransaction(CryptoTransaction transaction)
     {
-        try
+        switch (transaction.TransactionType)
         {
-            if (transaction.TransactionType == ETransactionType.Buy)
-            {
-                AddBalance(transaction.Amount);
-                TotalInvested += transaction.Price * transaction.Amount;
-            }
-            else if (transaction.TransactionType == ETransactionType.Sell)
-            {
-                SubtractBalance(transaction.Amount);
-                TotalInvested -= transaction.Price;
+            case ETransactionType.Buy:
+                HandleBuyTransaction(transaction);
+                break;
+            case ETransactionType.Sell:
+                HandleSellTransaction(transaction);
+                break;
+            default:
+                throw new CryptoAssetException("Invalid transaction type");
+        }
 
-                if (Balance == 0)
-                {
-                    DisableActiveBuyTransactions();
-                }
-            }
-            _transactions.Add(transaction);
-        }
-        catch (CryptoAssetException ex)
-        {
-            Console.WriteLine(ex.Message);
-            throw;
-        }
+        _transactions.Add(transaction);
     }
+
     public void AddBalance(decimal amount)
     {
         if (amount > 0.0m)
@@ -153,5 +143,24 @@ public class CryptoAsset
                 item.Disable();
             }
         }
+    }
+    private void HandleBuyTransaction(CryptoTransaction transaction)
+    {
+        AddBalance(transaction.Amount);
+        TotalInvested += transaction.Price * transaction.Amount;
+    }
+
+    private void HandleSellTransaction(CryptoTransaction transaction)
+    {
+        SubtractBalance(transaction.Amount);
+
+        if (Balance == 0)
+        {
+            TotalInvested = 0;
+            DisableActiveBuyTransactions();
+            return;
+        }
+
+        TotalInvested -= transaction.Amount * transaction.Price;
     }
 }
