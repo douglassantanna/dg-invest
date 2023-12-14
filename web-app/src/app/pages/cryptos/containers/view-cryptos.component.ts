@@ -77,7 +77,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   loadCryptoAssets(
     page: number = 1,
-    pageSize: number = 10,
+    pageSize: number = 20,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC"
   ) {
@@ -93,7 +93,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       debounceTime(300),
       distinctUntilChanged(),
       switchMap((value) => {
-        return this.cryptoService.getCryptoAssets(1, 10, value);
+        return this.cryptoService.getCryptoAssets(1, 20, value);
       }),
       takeUntil(this.unsubscribe$)
     ).subscribe((searchResults) => {

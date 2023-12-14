@@ -28,7 +28,7 @@ export class CryptoService {
 
   getCryptoAssets(
     page: number = 1,
-    pageSize: number = 10,
+    pageSize: number = 20,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC"): Observable<Pagination<ViewMinimalCryptoAssetDto>> {
     let params = new HttpParams()
