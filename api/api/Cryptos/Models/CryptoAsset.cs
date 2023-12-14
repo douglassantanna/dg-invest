@@ -63,11 +63,15 @@ public class CryptoAsset
             else if (transaction.TransactionType == ETransactionType.Sell)
             {
                 SubtractBalance(transaction.Amount);
-                TotalInvested -= transaction.Price;
 
                 if (Balance == 0)
                 {
+                    TotalInvested = 0;
                     DisableActiveBuyTransactions();
+                }
+                else
+                {
+                    TotalInvested -= transaction.Price;
                 }
             }
             _transactions.Add(transaction);
