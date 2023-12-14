@@ -21,17 +21,17 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
   template: `
     <main class="container">
 
-    <div class="d-flex justify-content-between align-items-center p-2">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center p-2">
       <div>
         <h1>Portfolio</h1>
       </div>
 
-      <div class="d-flex gap-2">
-        <div>
+      <div class="d-flex flex-column flex-md-row gap-2">
+        <div class="order-md-1">
           <app-crypto-filter (searchControlEvent)="search($event)"></app-crypto-filter>
         </div>
 
-        <div>
+        <div class="order-md-2">
           <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
         </div>
       </div>
