@@ -5,8 +5,9 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CreateCryptoComponent } from './create-crypto.component';
 import { CryptoCardComponent } from '../components/crypto-card.component';
 import { CryptoService } from '../../../core/services/crypto.service';
-import { BehaviorSubject, Observable, Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
 import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-crypto-asset-dto';
+import { CryptoFilterComponent } from '../components/crypto-filter.component';
 @Component({
   selector: 'app-view-cryptos',
   standalone: true,
@@ -15,7 +16,8 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
     FormsModule,
     CryptoCardComponent,
     CreateCryptoComponent,
-    ReactiveFormsModule],
+    ReactiveFormsModule,
+    CryptoFilterComponent],
   template: `
     <main class="container">
       <div class="row mt-2 pb-2">
@@ -26,10 +28,7 @@ import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-cryp
         <div class="col-md-6">
           <div class="row">
             <div class="col">
-              <input class="form-control" placeholder="Search by name.." aria-label="Search" type="text" [formControl]="searchControl">
-              <span *ngIf="cryptos$.value.length === 0" class="text-danger">
-                No assets found. Add some. 🧳
-              </span>
+              <app-crypto-filter (searchControlEvent)="search($event)"></app-crypto-filter>
             </div>
             <div class="col-auto">
               <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
@@ -72,7 +71,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCryptoAssets();
-    this.search();
   }
 
   loadCryptoAssets(
@@ -88,16 +86,12 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       });
   }
 
-  private search() {
-    this.searchControl.valueChanges.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap((value) => {
-        return this.cryptoService.getCryptoAssets(1, 10, value);
-      }),
-      takeUntil(this.unsubscribe$)
-    ).subscribe((searchResults) => {
-      this.cryptos$.next(searchResults.items);
-    });
+  search(input: any) {
+    this.cryptoService.getCryptoAssets(1, 10, input)
+      .pipe(
+        takeUntil(this.unsubscribe$)
+      ).subscribe((searchResults) => {
+        this.cryptos$.next(searchResults.items);
+      });
   }
 }
