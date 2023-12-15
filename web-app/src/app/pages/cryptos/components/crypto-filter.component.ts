@@ -13,9 +13,9 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
   <div class="row d-flex align-items-center">
     <div class="col-sm-7">
       <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" id="gridCheck">
+        <input class="form-check-input" type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
         <label class="form-check-label" for="gridCheck">
-          Hidde zero balance cryptos
+          Hide zero balance cryptos
         </label>
       </div>
     </div>
@@ -27,7 +27,9 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 })
 export class CryptoFilterComponent implements OnDestroy {
   @Output() searchControlEvent = new EventEmitter<string>();
+  @Output() hideZeroBalanceControlEvent = new EventEmitter<string>();
   searchControl: FormControl = new FormControl();
+  showZeroBalance: FormControl = new FormControl();
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   constructor() {
@@ -39,6 +41,14 @@ export class CryptoFilterComponent implements OnDestroy {
       .subscribe(value => {
         this.searchControlEvent.emit(value);
       });
+
+    this.showZeroBalance.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+      ).subscribe(value => {
+        this.hideZeroBalanceControlEvent.next(value);
+      })
   }
 
   ngOnDestroy() {
