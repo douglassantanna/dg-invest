@@ -5,9 +5,10 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CreateCryptoComponent } from './create-crypto.component';
 import { CryptoCardComponent } from '../components/crypto-card.component';
 import { CryptoService } from '../../../core/services/crypto.service';
-import { BehaviorSubject, Observable, Subject, fromEvent, takeUntil } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
 import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-crypto-asset-dto';
 import { CryptoFilterComponent } from '../components/crypto-filter.component';
+import { ScreenSizeService } from 'src/app/core/services/screen-size.service';
 @Component({
   selector: 'app-view-cryptos',
   standalone: true,
@@ -28,18 +29,17 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
                justify-content-between
                align-items-md-center
                pb-2">
-        <div *ngIf="screenWidth$ | async as width;">
-          <h1 *ngIf="width >= 768">Portfolio</h1>
+        <div>
+          <h1 *ngIf="screenSizeService.getActualScreenSize >= screenSizeService.screenSize">Portfolio</h1>
         </div>
 
-        <ng-container *ngIf="screenWidth$ | async as width;">
+        <ng-container *ngIf="screenSizeService.getActualScreenSize < screenSizeService.screenSize">
           <div
             class="d-flex
                   flex-md-row
                   justify-content-between
                   align-items-md-center
-                  pt-2"
-            *ngIf="width < 768">
+                  pt-2">
             <div>
               <h1>Portfolio</h1>
             </div>
@@ -55,8 +55,8 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
             <app-crypto-filter (searchControlEvent)="search($event)"></app-crypto-filter>
           </div>
 
-          <ng-container *ngIf="screenWidth$ | async as width;">
-            <div class="order-md-2" *ngIf="width >= 768">
+          <ng-container *ngIf="screenSizeService.getActualScreenSize >= screenSizeService.screenSize">
+            <div class="order-md-2">
               <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
             </div>
           </ng-container>
@@ -85,14 +85,13 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
   private unsubscribe$: Subject<void> = new Subject<void>();
+  screenSizeService = inject(ScreenSizeService);
 
   cryptos$: BehaviorSubject<ViewMinimalCryptoAssetDto[]> = new BehaviorSubject<ViewMinimalCryptoAssetDto[]>([]);
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
-  screenWidth$ = new BehaviorSubject<number>(window.innerWidth);
-  isLargerScreen!: boolean;
+
   constructor() {
-    this.getUserScreenSize();
   }
 
   ngOnDestroy() {
@@ -123,17 +122,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
         takeUntil(this.unsubscribe$)
       ).subscribe((searchResults) => {
         this.cryptos$.next(searchResults.items);
-      });
-  }
-
-  private getUserScreenSize() {
-    fromEvent(window, 'resize')
-      .pipe(
-        takeUntil(this.unsubscribe$))
-      .subscribe(() => {
-        this.isLargerScreen = window.innerWidth >= 768;
-
-        this.screenWidth$.next(window.innerWidth);
       });
   }
 }

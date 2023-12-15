@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, fromEvent, takeUntil } from 'rxjs';
+import { BehaviorSubject, fromEvent } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -11,8 +11,12 @@ export class ScreenSizeService {
     this.getUserScreenSize();
   }
 
-  get screenSize(): number {
+  get getActualScreenSize(): number {
     return this.screenWidth$.value;
+  }
+
+  get screenSize(): number {
+    return 768;
   }
 
   private getUserScreenSize() {
