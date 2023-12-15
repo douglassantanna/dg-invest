@@ -14,6 +14,8 @@ public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoA
     public string? CurrencyName { get; set; } = string.Empty;
     public string? SortColumn { get; set; } = string.Empty;
     public string? SortOrder { get; set; } = "ASC";
+    public bool HideZeroBalance { get; set; } = false;
+
     public int Page { get; set; } = 1;
     public int PageSize { get; set; }
 }
@@ -34,7 +36,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     {
         IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets;
 
-        int maxPageSize = 20;
+        int maxPageSize = 50;
 
         if (request.PageSize > maxPageSize)
         {
@@ -51,6 +53,11 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         {
             request.CurrencyName = request.CurrencyName?.ToLower().Trim();
             cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CurrencyName.ToLower().Contains(request.CurrencyName));
+        }
+
+        if (request.HideZeroBalance)
+        {
+            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.Balance > 0);
         }
 
         if (request.SortOrder?.ToUpper() == "DESC")

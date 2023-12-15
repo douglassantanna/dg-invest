@@ -52,7 +52,10 @@ import { ScreenSizeService } from 'src/app/core/services/screen-size.service';
 
         <div class="d-flex flex-column flex-md-row gap-2">
           <div class="order-md-1">
-            <app-crypto-filter (searchControlEvent)="search($event)"></app-crypto-filter>
+            <app-crypto-filter
+              (searchControlEvent)="search($event, hideZeroBalance)"
+              (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)">
+            </app-crypto-filter>
           </div>
 
           <ng-container *ngIf="screenSizeService.getActualScreenSize >= screenSizeService.screenSize">
@@ -90,7 +93,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   cryptos$: BehaviorSubject<ViewMinimalCryptoAssetDto[]> = new BehaviorSubject<ViewMinimalCryptoAssetDto[]>([]);
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
-
+  hideZeroBalance!: boolean;
   constructor() {
   }
 
@@ -105,19 +108,20 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   loadCryptoAssets(
     page: number = 1,
-    pageSize: number = 10,
+    pageSize: number = 50,
     cryptoCurrency: string = "",
-    sortOrder: string = "ASC"
+    sortOrder: string = "ASC",
+    hideZeroBalance = false
   ) {
-    this.cryptoService.getCryptoAssets(page, pageSize, cryptoCurrency, sortOrder)
+    this.cryptoService.getCryptoAssets(page, pageSize, cryptoCurrency, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe(cryptos => {
         this.cryptos$.next(cryptos.items);
       });
   }
 
-  search(input: any) {
-    this.cryptoService.getCryptoAssets(1, 10, input)
+  search(input: string, hideZeroBalance: boolean) {
+    this.cryptoService.getCryptoAssets(1, 50, input, "ASC", hideZeroBalance)
       .pipe(
         takeUntil(this.unsubscribe$)
       ).subscribe((searchResults) => {

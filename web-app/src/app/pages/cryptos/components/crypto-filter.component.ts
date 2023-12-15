@@ -27,7 +27,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 })
 export class CryptoFilterComponent implements OnDestroy {
   @Output() searchControlEvent = new EventEmitter<string>();
-  @Output() hideZeroBalanceControlEvent = new EventEmitter<string>();
+  @Output() hideZeroBalanceControlEvent = new EventEmitter<boolean>(false);
   searchControl: FormControl = new FormControl();
   showZeroBalance: FormControl = new FormControl();
   private unsubscribe$: Subject<void> = new Subject<void>();
