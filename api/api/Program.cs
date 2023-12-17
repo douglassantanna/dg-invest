@@ -8,6 +8,7 @@ using api.Data;
 using api.Data.Repositories;
 using api.Interfaces;
 using api.Models.Cryptos;
+using api.RateLimiterPolicies;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,8 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddTokenService(builder.Configuration);
 
+builder.Services.AddRateLimiter();
+
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -62,6 +65,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.MapControllers();
 
