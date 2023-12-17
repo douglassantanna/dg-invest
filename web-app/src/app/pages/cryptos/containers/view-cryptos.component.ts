@@ -54,7 +54,8 @@ import { ScreenSizeService } from 'src/app/core/services/screen-size.service';
           <div class="order-md-1">
             <app-crypto-filter
               (searchControlEvent)="search($event, hideZeroBalance)"
-              (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)">
+              (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
+              [setBalanceStatus]="setBalanceStatus">
             </app-crypto-filter>
           </div>
 
@@ -93,7 +94,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   cryptos$: BehaviorSubject<ViewMinimalCryptoAssetDto[]> = new BehaviorSubject<ViewMinimalCryptoAssetDto[]>([]);
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
-  hideZeroBalance!: boolean;
+  hideZeroBalance: boolean = false;;
   constructor() {
   }
 
@@ -124,8 +125,16 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.cryptoService.getCryptoAssets(1, 50, input, "ASC", hideZeroBalance)
       .pipe(
         takeUntil(this.unsubscribe$)
-      ).subscribe((searchResults) => {
-        this.cryptos$.next(searchResults.items);
+      ).subscribe({
+        next: (cryptos) => {
+          this.cryptos$.next(cryptos.items);
+        },
+        error: (err) => {
+          this.setBalanceStatus(false);
+        },
       });
+  }
+  setBalanceStatus(value: boolean): void {
+    this.hideZeroBalance = value;
   }
 }

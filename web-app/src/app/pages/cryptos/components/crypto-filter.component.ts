@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnDestroy, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
@@ -30,6 +30,7 @@ export class CryptoFilterComponent implements OnDestroy {
   @Output() hideZeroBalanceControlEvent = new EventEmitter<boolean>(false);
   searchControl: FormControl = new FormControl();
   showZeroBalance: FormControl = new FormControl();
+  @Input() setBalanceStatus = (value: boolean) => this.showZeroBalance.setValue(value);
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   constructor() {
