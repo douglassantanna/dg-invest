@@ -1,7 +1,7 @@
 import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
@@ -28,14 +28,16 @@ export class CryptoService {
 
   getCryptoAssets(
     page: number = 1,
-    pageSize: number = 10,
+    pageSize: number = 50,
     cryptoCurrency: string = "",
-    sortOrder: string = "ASC"): Observable<Pagination<ViewMinimalCryptoAssetDto>> {
+    sortOrder: string = "ASC",
+    hideZeroBalance: boolean): Observable<Pagination<ViewMinimalCryptoAssetDto>> {
     let params = new HttpParams()
       .append("page", page)
       .append("pageSize", pageSize)
       .append("cryptoCurrency", cryptoCurrency)
       .append("sortOrder", sortOrder)
+      .append("hideZeroBalance", hideZeroBalance);
 
     return this.http.get<Pagination<ViewMinimalCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
