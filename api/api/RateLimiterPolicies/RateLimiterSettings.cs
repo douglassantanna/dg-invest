@@ -1,6 +1,6 @@
 namespace api.RateLimiterPolicies;
 public class RateLimiterSettings
 {
-    public int RequestsPermitLimit { get; set; }
-    public int WindowLimitInMinutes { get; set; }
+    public string RequestsPermitLimit { get; set; } = string.Empty;
+    public string WindowLimitInMinutes { get; set; } = string.Empty;
 }
