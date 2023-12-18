@@ -1,9 +1,11 @@
 using api.Cryptos.Commands;
 using api.Cryptos.Queries;
+using api.RateLimiterPolicies;
 using api.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace api.Controllers;
 
@@ -51,6 +53,7 @@ public class CryptoController : ControllerBase
         return Ok(result);
     }
 
+    [EnableRateLimiting(RateLimiterPoliciesExtensions.DefaultPolicy)]
     [HttpGet("get-crypto-asset-by-id/{CryptoAssetId:int}")]
     public async Task<ActionResult> GetCryptoAssetById([FromRoute] GetCryptoAssetByIdCommandQuery command)
     {
