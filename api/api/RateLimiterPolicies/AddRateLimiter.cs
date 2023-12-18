@@ -12,12 +12,12 @@ public static class RateLimiterPoliciesExtensions
 
         if (!int.TryParse(settings.RequestsPermitLimit, out var permitLimit))
         {
-            permitLimit = 32;
+            permitLimit = 320;
         }
 
         if (!int.TryParse(settings.WindowLimitInMinutes, out var windowLimitInMinutes))
         {
-            windowLimitInMinutes = 14;
+            windowLimitInMinutes = 1440;
         }
 
         services.AddRateLimiter(options =>
