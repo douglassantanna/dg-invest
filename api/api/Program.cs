@@ -42,7 +42,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddTokenService(builder.Configuration);
 
-builder.Services.AddRateLimiter();
+builder.Services.AddCustomRateLimiter();
 
 builder.Services.AddControllers();
 
