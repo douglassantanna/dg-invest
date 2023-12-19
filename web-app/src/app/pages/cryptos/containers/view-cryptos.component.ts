@@ -21,51 +21,23 @@ import { ScreenSizeService } from 'src/app/core/services/screen-size.service';
     CryptoFilterComponent],
   template: `
     <main class="container">
-
-      <div
-        class="d-flex
-               flex-column
-               flex-md-row
-               justify-content-between
-               align-items-md-center
-               pb-2">
-        <div>
-          <h1 *ngIf="screenSizeService.getActualScreenSize >= screenSizeService.screenSize">Portfolio</h1>
+      <header>
+        <div class="coll-1">
+          <h1>Portfolio</h1>
         </div>
 
-        <ng-container *ngIf="screenSizeService.getActualScreenSize < screenSizeService.screenSize">
-          <div
-            class="d-flex
-                  flex-md-row
-                  justify-content-between
-                  align-items-md-center
-                  pt-2">
-            <div>
-              <h1>Portfolio</h1>
-            </div>
-
-            <div class="order-md-2">
-              <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-            </div>
-          </div>
-        </ng-container>
-
-        <div class="d-flex flex-column flex-md-row gap-2">
-          <div class="order-md-1">
-            <app-crypto-filter
-              (searchControlEvent)="search($event, hideZeroBalance)"
-              (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
-              [setBalanceStatus]="setBalanceStatus">
-            </app-crypto-filter>
-          </div>
-
-          <ng-container *ngIf="screenSizeService.getActualScreenSize >= screenSizeService.screenSize">
-            <div class="order-md-2">
-              <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-            </div>
-          </ng-container>
+        <div class="coll-2">
+          <app-crypto-filter
+            (searchControlEvent)="search($event, hideZeroBalance)"
+            (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
+            [setBalanceStatus]="setBalanceStatus">
+          </app-crypto-filter>
         </div>
-      </div>
+
+        <div class="coll-3">
+          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+        </div>
+      </header>
 
       <div class="row">
         <div *ngIf="cryptos$ | async as cryptos; else loading">
@@ -84,7 +56,26 @@ import { ScreenSizeService } from 'src/app/core/services/screen-size.service';
     </main>
   `,
   styles: [`
-  `]
+    header {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .coll-1,
+    .coll-2,
+    .coll-3 {
+      padding: 5px 0px 5px 5px;
+    }
+    .coll-1{ width: 50%; }
+    .coll-2{ width: 40%; }
+    .coll-3{ width: 10%; display: flex; justify-content: flex-end;}
+
+    @media screen and (max-width: 768px) {
+      .coll-1{ width: 70%; justify-content: space-between; order: 1;}
+      .coll-2{ flex: 1; width: 100%; order: 3; }
+      .coll-3{ width: 30%; order: 2; display: flex; justify-content: flex-end; }
+      }
+`]
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
