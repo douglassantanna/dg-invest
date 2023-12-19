@@ -8,7 +8,7 @@ import { CryptoService } from '../../../core/services/crypto.service';
 import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
 import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-crypto-asset-dto';
 import { CryptoFilterComponent } from '../components/crypto-filter.component';
-import { ScreenSizeService } from 'src/app/core/services/screen-size.service';
+
 @Component({
   selector: 'app-view-cryptos',
   standalone: true,
@@ -80,7 +80,6 @@ import { ScreenSizeService } from 'src/app/core/services/screen-size.service';
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
   private unsubscribe$: Subject<void> = new Subject<void>();
-  screenSizeService = inject(ScreenSizeService);
 
   cryptos$: BehaviorSubject<ViewMinimalCryptoAssetDto[]> = new BehaviorSubject<ViewMinimalCryptoAssetDto[]>([]);
   searchControl: FormControl = new FormControl();
