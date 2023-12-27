@@ -5,7 +5,7 @@ using api.Cryptos.Models;
 using api.Cryptos.Queries;
 using api.Data.Repositories;
 using api.Models.Cryptos;
-using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace unit_tests.CryptoTests.Queries;
@@ -13,11 +13,13 @@ public class GetCryptoAssetByIdCommandQueryTest
 {
     private readonly Mock<IBaseRepository<CryptoAsset>> _cryptoAssetRepositoryMock;
     private readonly Mock<ICoinMarketCapService> _coinMarketCapServiceMock;
+    private readonly Mock<ILogger<GetCryptoAssetByIdCommandQueryHandler>> _loggerMock;
 
     public GetCryptoAssetByIdCommandQueryTest()
     {
         _cryptoAssetRepositoryMock = new Mock<IBaseRepository<CryptoAsset>>();
         _coinMarketCapServiceMock = new Mock<ICoinMarketCapService>();
+        _loggerMock = new Mock<ILogger<GetCryptoAssetByIdCommandQueryHandler>>();
     }
 
     [Fact]
@@ -31,7 +33,9 @@ public class GetCryptoAssetByIdCommandQueryTest
         _coinMarketCapServiceMock.Setup(x => x.GetQuotesByIds(new[] { It.IsAny<string>() }))
                              .ReturnsAsync(It.IsAny<GetQuoteResponse>());
 
-        var handler = new GetCryptoAssetByIdCommandQueryHandler(_coinMarketCapServiceMock.Object, _cryptoAssetRepositoryMock.Object);
+        var handler = new GetCryptoAssetByIdCommandQueryHandler(_coinMarketCapServiceMock.Object,
+                                                                _cryptoAssetRepositoryMock.Object,
+                                                                _loggerMock.Object);
         // Act
 
         var result = await handler.Handle(command, CancellationToken.None);

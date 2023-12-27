@@ -10,4 +10,5 @@ public interface IBaseRepository<T>
     Task UpdateAsync(T entity);
     void Delete(int id);
     Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken);
+    Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId, CancellationToken cancellationToken);
 }

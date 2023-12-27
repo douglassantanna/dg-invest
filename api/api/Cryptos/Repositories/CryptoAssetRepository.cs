@@ -28,6 +28,10 @@ public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
         return _context.CryptoAssets;
     }
 
+    public async Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId,
+                                                      CancellationToken cancellationToken)
+    => await _context.CryptoAssets.AnyAsync(x => x.CoinMarketCapId == coinMarketCapId, cancellationToken: cancellationToken);
+
     public CryptoAsset? GetById(int id) => _context.CryptoAssets
                                                     .Include(x => x.Transactions)
                                                     .Where(x => x.Id == id)

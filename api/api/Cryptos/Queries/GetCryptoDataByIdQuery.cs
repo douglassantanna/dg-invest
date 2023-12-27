@@ -4,6 +4,7 @@ using api.Cryptos.Dtos;
 using api.Data.Repositories;
 using api.Models.Cryptos;
 using api.Shared;
+using Flurl.Http;
 using MediatR;
 
 namespace api.Cryptos.Queries;
@@ -13,23 +14,37 @@ public class GetCryptoDataByIdHandler : IRequestHandler<GetCryptoDataByIdQuery, 
 {
     private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
     private readonly ICoinMarketCapService _coinMarketCapService;
+    private readonly ILogger<GetCryptoDataByIdHandler> _logger;
 
     public GetCryptoDataByIdHandler(
     ICoinMarketCapService coinMarketCapService,
-    IBaseRepository<CryptoAsset> cryptoAssetRepository)
+    IBaseRepository<CryptoAsset> cryptoAssetRepository,
+    ILogger<GetCryptoDataByIdHandler> logger)
     {
         _coinMarketCapService = coinMarketCapService;
         _cryptoAssetRepository = cryptoAssetRepository;
+        _logger = logger;
     }
     public async Task<Response> Handle(GetCryptoDataByIdQuery request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("GetCryptoDataByIdQuery. Retrieving GetCryptoDataById: {0}", request.CryptoAssetId);
         var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId, cancellationToken);
         if (cryptoAsset is null)
         {
+            _logger.LogError("GetCryptoDataByIdQuery. CryptoAsset not found: {0}", request.CryptoAssetId);
             return new Response("Crypto asset not found", false);
         }
 
-        var cmpResponse = await _coinMarketCapService.GetQuotesByIds(new[] { cryptoAsset.CoinMarketCapId.ToString() });
+        GetQuoteResponse cmpResponse;
+        try
+        {
+            cmpResponse = await _coinMarketCapService.GetQuotesByIds(new[] { cryptoAsset.CoinMarketCapId.ToString() });
+        }
+        catch (FlurlHttpException ex)
+        {
+            _logger.LogError("GetCryptoDataByIdQuery. Error retrieving CoinMarketCap data for CryptoAsset: {0}", request.CryptoAssetId);
+            return new Response($"Error retrieving CoinMarketCap data for this crypto asset. Error: {ex.Message}", false);
+        }
 
         var currentPrice = GetCryptoCurrentPriceById(cryptoAsset.CoinMarketCapId, cmpResponse);
 
@@ -45,6 +60,7 @@ public class GetCryptoDataByIdHandler : IRequestHandler<GetCryptoDataByIdQuery, 
 
         var cryptoInfo = new ViewCryptoDataDto(cryptoAsset.Id, cards);
 
+        _logger.LogInformation("GetCryptoDataByIdQuery. Retrieved GetCryptoDataById: {0}", request.CryptoAssetId);
         return new Response("", true, cryptoInfo);
     }
 

@@ -2,10 +2,9 @@ using System.Text;
 using api.Models.Cryptos;
 using FluentValidation;
 using FluentValidation.Results;
-using api.Data;
 using api.Shared;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
+using api.Data.Repositories;
 
 namespace api.Cryptos.Commands;
 public record CreateCryptoAssetCommand(string Crypto, string Currency, int CoinMarketCapId) : IRequest<Response>;
@@ -21,25 +20,34 @@ public class CreateCryptoAssetCommandValidator : AbstractValidator<CreateCryptoA
 }
 public class CreateCryptoAssetCommandHandler : IRequestHandler<CreateCryptoAssetCommand, Response>
 {
-    private readonly DataContext _context;
+    private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
+
     private readonly ILogger<CreateCryptoAssetCommandHandler> _logger;
 
     public CreateCryptoAssetCommandHandler(
-        DataContext context,
-        ILogger<CreateCryptoAssetCommandHandler> logger)
+        ILogger<CreateCryptoAssetCommandHandler> logger,
+        IBaseRepository<CryptoAsset> cryptoAssetRepository)
     {
-        _context = context;
         _logger = logger;
+        _cryptoAssetRepository = cryptoAssetRepository;
     }
 
     public async Task<Response> Handle(CreateCryptoAssetCommand request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("CreateCryptoAssetCommandHandler");
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
-            return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
+        {
+            var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+            _logger.LogInformation("CreateCryptoAssetCommandHandler. Validation failed: {0}", errors);
+            return new Response("Validation failed", false, errors);
+        }
 
-        if (await CryptoAssetExists(request))
+        if (await CryptoAssetExists(request, cancellationToken))
+        {
+            _logger.LogInformation("CreateCryptoAssetCommandHandler. Asset already exists: {0}", request.CoinMarketCapId);
             return new Response("Asset already exists", false);
+        }
 
         var stringBuilder = new StringBuilder();
         stringBuilder.Append(request.Crypto);
@@ -51,16 +59,15 @@ public class CreateCryptoAssetCommandHandler : IRequestHandler<CreateCryptoAsset
                                           cryptoAssetName,
                                           request.CoinMarketCapId);
 
-        _context.CryptoAssets.Add(cryptoAsset);
-        await _context.SaveChangesAsync();
+        _cryptoAssetRepository.Add(cryptoAsset);
+        await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
 
         return new Response("ok", true, cryptoAsset.Id);
     }
 
-    private async Task<bool> CryptoAssetExists(CreateCryptoAssetCommand request)
-    {
-        return await _context.CryptoAssets.AnyAsync(x => x.CoinMarketCapId == request.CoinMarketCapId);
-    }
+    private async Task<bool> CryptoAssetExists(CreateCryptoAssetCommand request,
+                                               CancellationToken cancellationToken)
+    => await _cryptoAssetRepository.GetByCoinMarketCapIdAsync(request.CoinMarketCapId, cancellationToken);
 
     private async Task<ValidationResult> ValidateRequestAsync(CreateCryptoAssetCommand request)
     {

@@ -15,7 +15,6 @@ public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoA
     public string? SortColumn { get; set; } = string.Empty;
     public string? SortOrder { get; set; } = "ASC";
     public bool HideZeroBalance { get; set; } = false;
-
     public int Page { get; set; } = 1;
     public int PageSize { get; set; }
 }
@@ -23,17 +22,21 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
 {
     private readonly DataContext _context;
     private readonly ICoinMarketCapService _coinMarketCapService;
+    private readonly ILogger<ListCryptoAssetsQueryCommandHandler> _logger;
 
 
     public ListCryptoAssetsQueryCommandHandler(DataContext context,
-                                               ICoinMarketCapService coinMarketCapService)
+                                               ICoinMarketCapService coinMarketCapService,
+                                               ILogger<ListCryptoAssetsQueryCommandHandler> logger)
     {
         _context = context;
         _coinMarketCapService = coinMarketCapService;
+        _logger = logger;
     }
 
     public async Task<PageList<ViewMinimalCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
         IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets;
 
         int maxPageSize = 50;
@@ -86,8 +89,9 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
                                                                                     request.Page,
                                                                                     request.PageSize);
-        return pagedCollection;
 
+        _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets completed.");
+        return pagedCollection;
     }
 
     private async Task<GetQuoteResponse> GetCryptosFromcoinMarketCap(IQueryable<CryptoAsset> cryptoAssetQuery)
