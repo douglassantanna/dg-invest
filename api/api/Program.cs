@@ -12,6 +12,7 @@ using api.RateLimiterPolicies;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,10 @@ builder.Services.AddCors(options =>
                   .AllowAnyMethod();
         });
 });
+
+builder.Host.UseSerilog((context, config) =>
+    config
+    .ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddTokenService(builder.Configuration);
 

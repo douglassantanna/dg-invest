@@ -4,6 +4,7 @@ using api.Cryptos.Dtos;
 using api.Data.Repositories;
 using api.Models.Cryptos;
 using api.Shared;
+using Flurl.Http;
 using MediatR;
 
 namespace api.Cryptos.Queries;
@@ -12,24 +13,38 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
 {
     private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
     private readonly ICoinMarketCapService _coinMarketCapService;
+    private readonly ILogger<GetCryptoAssetByIdCommandQueryHandler> _logger;
 
     public GetCryptoAssetByIdCommandQueryHandler(
         ICoinMarketCapService coinMarketCapService,
-        IBaseRepository<CryptoAsset> cryptoAssetRepository)
+        IBaseRepository<CryptoAsset> cryptoAssetRepository,
+        ILogger<GetCryptoAssetByIdCommandQueryHandler> logger)
     {
         _coinMarketCapService = coinMarketCapService;
         _cryptoAssetRepository = cryptoAssetRepository;
+        _logger = logger;
     }
 
     public async Task<Response> Handle(GetCryptoAssetByIdCommandQuery request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("GetCryptoAssetByIdCommandQuery. Retrieving CryptoAssetId: {0}", request.CryptoAssetId);
         var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId, cancellationToken);
         if (cryptoAsset is null)
         {
+            _logger.LogInformation("GetCryptoAssetByIdCommandQuery. CryptoAssetId: {0} not found", request.CryptoAssetId);
             return new Response("Crypto asset not found", false);
         }
 
-        var cmpResponse = await _coinMarketCapService.GetQuotesByIds(new[] { cryptoAsset.CoinMarketCapId.ToString() });
+        GetQuoteResponse cmpResponse;
+        try
+        {
+            cmpResponse = await _coinMarketCapService.GetQuotesByIds(new[] { cryptoAsset.CoinMarketCapId.ToString() });
+        }
+        catch (FlurlHttpException ex)
+        {
+            _logger.LogError(ex, "GetCryptoAssetByIdCommandQuery. Error getting quotes for CryptoAssetId: {0}", request.CryptoAssetId);
+            return new Response($"Error getting quotes for this crypto asset. Error: {ex.Message}", false);
+        }
 
         var currentPrice = GetCryptoCurrentPriceById(cryptoAsset.CoinMarketCapId, cmpResponse);
 
@@ -57,6 +72,7 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
                                                                                                      a.AddressName,
                                                                                                      a.AddressValue)).ToList());
 
+        _logger.LogInformation("GetCryptoAssetByIdCommandQuery. Retrieved CryptoAssetId: {0}", request.CryptoAssetId);
         return new Response("", true, cryptoInfo);
     }
     private static decimal GetCryptoCurrentPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse)

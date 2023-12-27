@@ -39,24 +39,33 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
     private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
+    private readonly ILogger<AddTransactionCommandHandler> _logger;
 
-    public AddTransactionCommandHandler(IBaseRepository<CryptoAsset> cryptoAssetRepository)
+    public AddTransactionCommandHandler(IBaseRepository<CryptoAsset> cryptoAssetRepository,
+                                        ILogger<AddTransactionCommandHandler> logger)
     {
         _cryptoAssetRepository = cryptoAssetRepository;
+        _logger = logger;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("AddTransactionCommandHandler for CryptoAssetId: {0}", request.CryptoAssetId);
+
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+            _logger.LogInformation("AddTransactionCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
         var cryptoAsset = _cryptoAssetRepository.GetById(request.CryptoAssetId);
         if (cryptoAsset == null)
+        {
+            _logger.LogInformation("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
             return new Response("Crypto asset not found", false);
+        }
 
         var transaction = new CryptoTransaction(request.Amount,
                                                 request.Price,
@@ -70,12 +79,14 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
         catch (CryptoAssetException ex)
         {
+            _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", ex.Message);
             return new Response(ex.Message, false);
         }
 
         _cryptoAssetRepository.Add(cryptoAsset);
         await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
 
+        _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
         return new Response("ok", true, cryptoAsset);
     }
 

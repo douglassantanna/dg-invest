@@ -7,9 +7,12 @@ public class CoinMarketCapService : ICoinMarketCapService
 {
     private readonly string quotesLatestEndpoint = "v2/cryptocurrency/quotes/latest";
     private readonly CoinMarketCapSettings _coinMarketCapSettings;
-    public CoinMarketCapService(IOptions<CoinMarketCapSettings> coinMarketCapSettings)
+    private readonly ILogger<CoinMarketCapService> _logger;
+    public CoinMarketCapService(IOptions<CoinMarketCapSettings> coinMarketCapSettings,
+                                ILogger<CoinMarketCapService> logger)
     {
         _coinMarketCapSettings = coinMarketCapSettings.Value;
+        _logger = logger;
     }
     public async Task<GetQuoteResponse> GetQuoteBySymbol(string symbol)
     {
@@ -25,10 +28,9 @@ public class CoinMarketCapService : ICoinMarketCapService
         }
         catch (FlurlHttpException ex)
         {
-            Console.WriteLine(ex.Message);
+            _logger.LogError(ex, "GetQuoteBySymbol. Error trying to call CoinMarketCap. Error: {0}", ex.Message);
             throw;
         }
-
     }
 
     public async Task<GetQuoteResponse> GetQuotesByIds(string[] ids)
@@ -48,7 +50,7 @@ public class CoinMarketCapService : ICoinMarketCapService
         }
         catch (FlurlHttpException ex)
         {
-            Console.WriteLine(ex.Message);
+            _logger.LogError(ex, "GetQuotesByIds. Error trying to call CoinMarketCap. Error: {0}", ex.Message);
             throw;
         }
     }

@@ -27,6 +27,11 @@ public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
         throw new NotImplementedException();
     }
 
+    public Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
     public CryptoTransaction? GetById(int id)
     {
         throw new NotImplementedException();
