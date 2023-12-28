@@ -1,7 +1,7 @@
 import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, of, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
@@ -12,6 +12,7 @@ import { CryptoAssetData } from '../models/crypto-asset-data';
 import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
+import { ToastService } from './toast.service';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -24,7 +25,7 @@ export class CryptoService {
   private _cryptoInformation: BehaviorSubject<CryptoInformation[]> = new BehaviorSubject<CryptoInformation[]>([]);
   private _transactions: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private toastService: ToastService) { }
 
   getCryptoAssets(
     page: number = 1,
@@ -41,12 +42,23 @@ export class CryptoService {
 
     return this.http.get<Pagination<ViewMinimalCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
-    });
+    }).pipe(
+      catchError(error => {
+        if (error.error.message)
+          this.toastService.showError(error.error.message);
+        return of();
+      })
+    );
   }
 
   getCryptos(): Observable<Response<Crypto>> {
     return this.http.get<Response<Crypto>>(`${url}/get-cryptos`).pipe(
-      tap()
+      tap(),
+      catchError(error => {
+        if (error.error.message)
+          this.toastService.showError(error.error.message);
+        return of();
+      })
     );
   }
 
@@ -56,16 +68,34 @@ export class CryptoService {
         this._cryptoAssetData.next(response.data.cryptoAssetData);
         this._cryptoInformation.next(response.data.cryptoInformation);
         this._transactions.next(response.data.transactions);
+      }),
+      catchError(error => {
+        if (error.error.message)
+          this.toastService.showError(error.error.message);
+        return of();
       })
-    )
+    );
   }
 
   private getCryptoDataById(id: number): Observable<Response<ViewCryptoDataDto>> {
     return this.http.get<Response<ViewCryptoDataDto>>(`${url}/get-crypto-data-by-id/${id}`)
+      .pipe(
+        catchError(error => {
+          if (error.error.message)
+            this.toastService.showError(error.error.message);
+          return of();
+        })
+      );
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/create`, command)
+    return this.http.post<Response<any>>(`${url}/create`, command).pipe(
+      catchError(error => {
+        if (error.error.message)
+          this.toastService.showError(error.error.message);
+        return of();
+      })
+    );
   }
 
   addTransaction(command: AddTransactionCommand) {
@@ -86,8 +116,13 @@ export class CryptoService {
         if (!Array.isArray(updatedCryptoData)) {
           this._cryptoAssetData.next(updatedCryptoData.data.cryptoAssetData);
         }
+      }),
+      catchError(error => {
+        if (error.error.message)
+          this.toastService.showError(error.error.message);
+        return of();
       })
-    )
+    );
   }
 
   private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {

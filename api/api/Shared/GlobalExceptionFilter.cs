@@ -13,7 +13,7 @@ public class GlobalExceptionFilter : IExceptionFilter
     {
         _logger.LogError(context.Exception, "An unhandled exception occurred.");
 
-        var result = new ObjectResult(new { message = "An error occurred." })
+        var result = new ObjectResult(new { message = "An error occurred of type 500 occurred. Please contact the support." })
         {
             StatusCode = 500,
         };
