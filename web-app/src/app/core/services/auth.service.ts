@@ -56,10 +56,6 @@ export class AuthService {
     return this.http.post<CustomRespose>(`${url}/login`, credentials).pipe(
       tap((response: CustomRespose) => {
         this.setToken(response.data.token);
-      }),
-      catchError((error: any) => {
-        this.toastService.showError(error.error.message);
-        return EMPTY;
       })
     );
   }
