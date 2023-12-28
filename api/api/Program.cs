@@ -49,7 +49,10 @@ builder.Services.AddTokenService(builder.Configuration);
 
 builder.Services.AddCustomRateLimiter(builder.Configuration);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(opt =>
+{
+    opt.Filters.Add<GlobalExceptionFilter>();
+});
 
 builder.Services.AddEndpointsApiExplorer();
 
