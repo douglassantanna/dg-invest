@@ -106,8 +106,10 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   ) {
     this.cryptoService.getCryptoAssets(page, pageSize, cryptoCurrency, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
-      .subscribe(cryptos => {
-        this.cryptos$.next(cryptos.items);
+      .subscribe({
+        next: (cryptos) => {
+          this.cryptos$.next(cryptos.items);
+        }
       });
   }
 

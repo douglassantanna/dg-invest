@@ -1,13 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, EMPTY, Observable, catchError, tap } from 'rxjs';
 import jwt_decode from 'jwt-decode';
 import { environment } from 'src/environments/environment.development';
 import { LoginFormModel } from '../models/login.form-models';
 import { local_storage_token } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
 import { UserDecode } from '../models/user-decode';
+import { ToastService } from './toast.service';
 
 const url = `${environment.apiUrl}/Authentication`;
 
@@ -24,7 +25,8 @@ export class AuthService {
 
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService
   ) {
     if (this.token)
       this.isLoggedIn$.next(true);
