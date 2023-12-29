@@ -1,0 +1,25 @@
+<div class="container">
+  <header>
+    <h1>Users</h1>
+  </header>
+  <div class="table-responsive border border-1 rounded">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Email confirmed</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let element of users">
+          <td>{{ element.name }}</td>
+          <td>{{ element.email }}</td>
+          <td>{{ element.emailConfirmed == true ? '👍' : '👎' }}</td>
+          <td>{{ element.role == 1 ? 'Admin' : 'User' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
