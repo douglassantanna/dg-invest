@@ -1,10 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CreateUserComponent } from '../create-user/create-user.component';
 
 @Component({
   selector: 'app-view-users',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    CreateUserComponent],
   templateUrl: './view-users.component.html',
   styleUrls: ['./view-users.component.scss']
 })

@@ -1,0 +1,36 @@
+<ng-template #content let-modal>
+  <div class="modal-header">
+    <h2 class="modal-title" id="modal-basic-title">{{ title }}</h2>
+    <button type="button" class="btn-close" aria-label="Close" (click)="closeModal(modal)"></button>
+  </div>
+  <div class="modal-body">
+    <form>
+      <div class="mb-3">
+        <label for="formGroupExampleInput" class="form-label">Full name</label>
+        <input type="text" class="form-control" id="formGroupExampleInput">
+      </div>
+      <div class="mb-3">
+        <label for="exampleFormControlInput1" class="form-label">Email address</label>
+        <input type="email" class="form-control" id="exampleFormControlInput1">
+      </div>
+      <div class="mb-3">
+        <label for="exampleFormControlInput1" class="form-label">Role</label>
+        <select class="form-select" aria-label="Role selector" [(ngModel)]="roleId" name="selectedValue" required>
+          <option *ngFor="let role of roles" [value]="role.id">
+            {{ role.name }}
+          </option>
+        </select>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="createCryptoAsset(roleId, modal)"
+      [disabled]="roleId < 1">Save
+      <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    </button>
+  </div>
+</ng-template>
+
+<button type="button" class="btn btn-primary" (click)="open(content)">
+  Add user
+</button>
