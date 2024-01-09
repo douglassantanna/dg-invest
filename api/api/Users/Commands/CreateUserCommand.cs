@@ -9,8 +9,6 @@ using MediatR;
 namespace api.Users.Commands;
 public record CreateUserCommand(string FullName,
                                 string Email,
-                                string Password,
-                                string ConfirmPassword,
                                 Role Role) : IRequest<Response>;
 
 public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
@@ -29,16 +27,6 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
             .EmailAddress().WithMessage("E-mail can't be empty.")
             .Length(0, 255).WithMessage("E-mail must contain 0 to 255 characters.")
             .Must(BeUniqueEmail).WithMessage("Email already exists.");
-
-        RuleFor(x => x.Password)
-            .NotNull().WithMessage("Password can't be null.")
-            .NotEmpty().WithMessage("Password can't be empty.")
-            .Length(4, 10).WithMessage("Password must contain 4 to 8 characters.");
-
-        RuleFor(x => x.ConfirmPassword)
-            .NotNull().WithMessage("ConfirmPassword can't be null.")
-            .NotEmpty().Length(4, 10).WithMessage("Confirm Password can't be empty.")
-            .Equal(x => x.Password).WithMessage("Passwords don't match.");
 
         RuleFor(x => x.Role)
         .IsInEnum().WithMessage("Role can't be null.");
@@ -69,16 +57,17 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         if (!validationResult.IsValid)
             return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
 
+        var randomPassword = _passwordHelper.RandomPassword();
         var user = new User
         {
             FullName = request.FullName,
             Email = request.Email,
-            Password = _passwordHelper.EncryptPassword(request.Password),
+            Password = _passwordHelper.EncryptPassword(randomPassword),
             Role = request.Role
         };
 
         _context.Users.Add(user);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
         return new Response("User created successfully", true);
     }
 

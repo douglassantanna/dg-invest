@@ -17,11 +17,8 @@ POST {{url}}/create
 Content-Type: application/json
 
 {
-    "firstName":"Davi",
-    "lastName":"Craici",
-    "email":"davi@test.com",
-    "password":"123test",
-    "confirmPassword":"123test",
+    "fullName":"Davison",
+    "email":"davison@test.com",
     "role":2
 }
 
