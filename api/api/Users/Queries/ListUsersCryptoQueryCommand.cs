@@ -8,7 +8,7 @@ using MediatR;
 namespace api.Cryptos.Queries;
 public class ListUsersQueryCommand : IRequest<PageList<UserDto>>
 {
-    public string? FirstName { get; set; } = string.Empty;
+    public string? FullName { get; set; } = string.Empty;
     public string? Email { get; set; } = string.Empty;
     public string? SortColumn { get; set; } = string.Empty;
     public string? SortOrder { get; set; } = "ASC";
@@ -35,10 +35,10 @@ public class ListUsersQueryCommandHandler : IRequestHandler<ListUsersQueryComman
             request.PageSize = maxPageSize;
         }
 
-        if (!string.IsNullOrEmpty(request.FirstName))
+        if (!string.IsNullOrEmpty(request.FullName))
         {
-            request.FirstName = request.FirstName?.ToLower().Trim();
-            userQuery = userQuery.Where(x => x.FirstName.ToLower().Contains(request.FirstName));
+            request.FullName = request.FullName?.ToLower().Trim();
+            userQuery = userQuery.Where(x => x.FullName.ToLower().Contains(request.FullName));
         }
 
         if (!string.IsNullOrEmpty(request.Email))
@@ -57,8 +57,7 @@ public class ListUsersQueryCommandHandler : IRequestHandler<ListUsersQueryComman
         }
 
         var collection = userQuery.Select(x => new UserDto(x.Id,
-                                                           x.FirstName,
-                                                           x.LastName,
+                                                           x.FullName,
                                                            x.Email,
                                                            x.Role));
 
@@ -74,7 +73,7 @@ public class ListUsersQueryCommandHandler : IRequestHandler<ListUsersQueryComman
         return request.SortColumn?.ToLower() switch
         {
             "email" => user => user.Email,
-            "first_name" => user => user.FirstName,
+            "first_name" => user => user.FullName,
             "role" => user => user.Role,
             _ => user => user.Id
         };

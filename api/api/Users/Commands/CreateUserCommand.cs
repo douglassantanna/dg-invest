@@ -7,8 +7,7 @@ using api.Users.Models;
 using MediatR;
 
 namespace api.Users.Commands;
-public record CreateUserCommand(string FirstName,
-                                string LastName,
+public record CreateUserCommand(string FullName,
                                 string Email,
                                 string Password,
                                 string ConfirmPassword,
@@ -21,14 +20,9 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
     {
         _context = context;
 
-        RuleFor(x => x.FirstName)
-            .NotNull().WithMessage("FirstName can't be null.")
-            .NotEmpty().WithMessage("FirstName can't be empty.")
-            .Length(0, 255).WithMessage("Name must contain 0 to 255 characters.");
-
-        RuleFor(x => x.LastName)
-            .NotNull().WithMessage("LastName can't be null.")
-            .NotEmpty().WithMessage("LastName can't be empty.")
+        RuleFor(x => x.FullName)
+            .NotNull().WithMessage("FullName can't be null.")
+            .NotEmpty().WithMessage("FullName can't be empty.")
             .Length(0, 255).WithMessage("Name must contain 0 to 255 characters.");
 
         RuleFor(x => x.Email)
@@ -77,8 +71,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
 
         var user = new User
         {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
+            FullName = request.FullName,
             Email = request.Email,
             Password = _passwordHelper.EncryptPassword(request.Password),
             Role = request.Role
