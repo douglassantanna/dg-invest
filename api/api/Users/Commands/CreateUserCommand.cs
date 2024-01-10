@@ -5,6 +5,7 @@ using api.Interfaces;
 using api.Shared;
 using api.Users.Models;
 using MediatR;
+using api.Users.Events;
 
 namespace api.Users.Commands;
 public record CreateUserCommand(string FullName,
@@ -42,13 +43,17 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
 {
     private readonly DataContext _context;
     private readonly IPasswordHelper _passwordHelper;
+    private readonly IPublisher _publisher;
+
 
     public CreateUserCommandHandler(
         DataContext context,
-        IPasswordHelper passwordHelper)
+        IPasswordHelper passwordHelper,
+        IPublisher publisher)
     {
         _context = context;
         _passwordHelper = passwordHelper;
+        _publisher = publisher;
     }
 
     public async Task<Response> Handle(CreateUserCommand request, CancellationToken cancellationToken)
@@ -68,6 +73,8 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync(cancellationToken);
+        await _publisher.Publish(new NewUserCreatedCommand(user, randomPassword), cancellationToken);
+
         return new Response("User created successfully", true);
     }
 
