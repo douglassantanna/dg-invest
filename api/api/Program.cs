@@ -1,5 +1,7 @@
 using System.Reflection;
 using api.Authentication;
+using api.AzureStorage;
+using api.AzureStorage.Queue;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Models;
@@ -18,12 +20,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
 builder.Services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
+builder.Services.AddScoped<IQueueService, QueueService>();
 
 builder.Services.AddScoped<IBaseRepository<CryptoAsset>, CryptoAssetRepository>();
 builder.Services.AddScoped<IBaseRepository<CryptoTransaction>, CryptoTransactionRepository>();
 builder.Services.AddScoped<IBaseRepository<Crypto>, CryptoRepository>();
 
 builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));
+builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSection(nameof(AzureStorageSettings)));
+
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.AddDbContext<DataContext>(options =>
 {
