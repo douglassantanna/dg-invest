@@ -75,7 +75,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         await _context.SaveChangesAsync(cancellationToken);
         await _publisher.Publish(new NewUserCreatedCommand(user, randomPassword), cancellationToken);
 
-        return new Response("User created successfully", true);
+        return new Response("User created successfully. An email was sent to it.", true);
     }
 
     private async Task<ValidationResult> ValidateRequestAsync(CreateUserCommand request, DataContext dataContext)

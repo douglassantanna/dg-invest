@@ -29,9 +29,9 @@ public class NewUserCreatedCommandHandler : INotificationHandler<NewUserCreatedC
 
             _logger.LogInformation("Welcome email sent.");
         }
-        catch
+        catch (Exception ex)
         {
-            _logger.LogError("Failed to send welcome email to {0}", notification.User.Email);
+            _logger.LogError(ex, "Failed to send welcome email to {0}", notification.User.Email);
         }
     }
 }
