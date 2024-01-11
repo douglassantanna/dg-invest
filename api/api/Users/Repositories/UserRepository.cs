@@ -1,20 +1,22 @@
 using api.Data;
 using api.Data.Repositories;
 using api.Models.Cryptos;
+using api.Users.Models;
 
-namespace api.Cryptos.Repositories;
-public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
+namespace api.Users.Repositories;
+public class UserRepository : IBaseRepository<User>
 {
     private readonly DataContext _context;
 
-    public CryptoTransactionRepository(DataContext context)
+    public UserRepository(DataContext context)
     {
         _context = context;
     }
 
-    public void Add(CryptoTransaction entity)
+    public void Add(User entity)
     {
-        throw new NotImplementedException();
+        _context.Users.Add(entity);
+        _context.SaveChanges();
     }
 
     public void Delete(int id)
@@ -22,7 +24,7 @@ public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
         throw new NotImplementedException();
     }
 
-    public IEnumerable<CryptoTransaction> GetAll()
+    public IEnumerable<User> GetAll()
     {
         throw new NotImplementedException();
     }
@@ -32,7 +34,7 @@ public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
         throw new NotImplementedException();
     }
 
-    public CryptoTransaction? GetById(int id)
+    public User? GetById(int id)
     {
         throw new NotImplementedException();
     }
@@ -44,12 +46,11 @@ public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
 
     public bool IsUnique(string data)
     {
-        throw new NotImplementedException();
+        return _context.Users.Any(x => x.Email == data);
     }
 
-    public async Task UpdateAsync(CryptoTransaction entity)
+    public Task UpdateAsync(User entity)
     {
-        _context.CryptoTransactions.Update(entity);
-        await _context.SaveChangesAsync();
+        throw new NotImplementedException();
     }
 }

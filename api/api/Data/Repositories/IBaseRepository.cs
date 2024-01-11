@@ -9,6 +9,7 @@ public interface IBaseRepository<T>
     void Add(T entity);
     Task UpdateAsync(T entity);
     void Delete(int id);
+    bool IsUnique(string data);
     Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken);
     Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId, CancellationToken cancellationToken);
 }

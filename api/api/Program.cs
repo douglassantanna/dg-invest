@@ -12,6 +12,8 @@ using api.Interfaces;
 using api.Models.Cryptos;
 using api.RateLimiterPolicies;
 using api.Shared;
+using api.Users.Models;
+using api.Users.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -25,6 +27,7 @@ builder.Services.AddScoped<IQueueService, QueueService>();
 builder.Services.AddScoped<IBaseRepository<CryptoAsset>, CryptoAssetRepository>();
 builder.Services.AddScoped<IBaseRepository<CryptoTransaction>, CryptoTransactionRepository>();
 builder.Services.AddScoped<IBaseRepository<Crypto>, CryptoRepository>();
+builder.Services.AddScoped<IBaseRepository<User>, UserRepository>();
 
 builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));
 builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSection(nameof(AzureStorageSettings)));
