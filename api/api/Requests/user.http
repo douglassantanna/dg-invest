@@ -24,7 +24,7 @@ Content-Type: application/json
 
 ###
 
-GET {{url}}/list-users?page=1&pageSize=5
+GET {{url}}/list-users?page=1&pageSize=10
 
 ###
 GET {{url}}/get-user-by-id/2

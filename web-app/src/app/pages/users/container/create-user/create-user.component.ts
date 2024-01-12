@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -28,6 +28,8 @@ export class CreateUserComponent {
     email: ['', [Validators.email]],
     role: [0],
   });
+  @Output() userCreated = new EventEmitter<CreateUserCommand>();
+
 
   constructor(
     private modalService: NgbModal,
@@ -63,6 +65,9 @@ export class CreateUserComponent {
       .subscribe({
         next: () => {
           modalRef.close();
+          this.userCreated.emit(command);
+          this.userCreated.complete();
+          this.toastService.showSuccess('User added successfully');
         },
         error: (err) => {
           this.toastService.showError(err.error.message);

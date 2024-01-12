@@ -2,7 +2,7 @@
   <header>
     <h1>Users</h1>
 
-    <app-create-user />
+    <app-create-user (userCreated)="addUserToTable($event)" />
   </header>
   <div class="table-responsive border border-1 rounded">
     <table class="table">
@@ -10,15 +10,15 @@
         <tr>
           <th>Name</th>
           <th>Email</th>
-          <th>Email confirmed</th>
+          <!-- <th>Email confirmed</th> -->
           <th>Role</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let element of users">
-          <td>{{ element.name }}</td>
+        <tr *ngFor="let element of users$ | async">
+          <td>{{ element.fullName }}</td>
           <td>{{ element.email }}</td>
-          <td>{{ element.emailConfirmed == true ? '👍' : '👎' }}</td>
+          <!-- <td>{{ element.emailConfirmed == true ? '👍' : '👎' }}</td> -->
           <td>{{ element.role == 1 ? 'Admin' : 'User' }}</td>
         </tr>
       </tbody>
