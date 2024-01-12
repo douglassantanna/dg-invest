@@ -34,7 +34,7 @@
     </form>
   </div>
   <div class="modal-footer">
-    <button type="button" class="btn btn-primary" (click)="createCryptoAsset(roleId, modal)"
+    <button type="button" class="btn btn-primary" (click)="createCryptoAsset(modal)"
       [disabled]="!createUserForm.valid">Save
       <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
     </button>
