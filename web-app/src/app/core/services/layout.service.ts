@@ -18,6 +18,12 @@ export class LayoutService {
       roles: ['admin', 'manager', 'user'],
     },
     {
+      label: 'Users',
+      path: 'users',
+      icon: 'people',
+      roles: ['admin'],
+    },
+    {
       label: 'Sign out',
       path: 'signout',
       roles: ['admin', 'user'],

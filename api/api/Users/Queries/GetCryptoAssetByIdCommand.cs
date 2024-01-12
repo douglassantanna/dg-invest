@@ -20,8 +20,7 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
         var user = await _context.Users
                                         .Where(x => x.Id == request.UserId)
                                         .Select(x => new UserDto(x.Id,
-                                                                 x.FirstName,
-                                                                 x.LastName,
+                                                                 x.FullName,
                                                                  x.Email,
                                                                  x.Role))
                                         .FirstOrDefaultAsync(cancellationToken);

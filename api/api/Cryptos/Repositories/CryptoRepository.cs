@@ -42,6 +42,11 @@ public class CryptoRepository : IBaseRepository<Crypto>
         throw new NotImplementedException();
     }
 
+    public bool IsUnique(string data)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task UpdateAsync(Crypto entity)
     {
         _context.Cryptos.Update(entity);

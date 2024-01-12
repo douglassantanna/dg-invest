@@ -6,6 +6,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos.component';
+import { ViewUsersComponent } from './pages/users/container/view-users/view-users.component';
 
 export const routes: Routes = [
   {
@@ -41,5 +42,10 @@ export const routes: Routes = [
     path: "profile",
     canActivate: [authGuard],
     component: ProfileComponent,
+  },
+  {
+    path: "users",
+    canActivate: [authGuard],
+    component: ViewUsersComponent,
   },
 ];

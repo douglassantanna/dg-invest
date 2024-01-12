@@ -46,6 +46,11 @@ public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
                        .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public bool IsUnique(string data)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task UpdateAsync(CryptoAsset entity)
     {
         _context.CryptoAssets.Update(entity);

@@ -7,8 +7,7 @@ using MediatR;
 using System.Net;
 
 namespace api.Users.Commands;
-public record UpdateUserCommand(string FirstName,
-                                string LastName,
+public record UpdateUserCommand(string FullName,
                                 string Email,
                                 Role Role,
                                 int UserId,
@@ -21,14 +20,9 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
     {
         _context = context;
 
-        RuleFor(x => x.FirstName)
-            .NotNull().WithMessage("FirstName can't be null.")
-            .NotEmpty().WithMessage("FirstName can't be empty.")
-            .Length(0, 255).WithMessage("Name must contain 0 to 255 characters.");
-
-        RuleFor(x => x.LastName)
-            .NotNull().WithMessage("LastName can't be null.")
-            .NotEmpty().WithMessage("LastName can't be empty.")
+        RuleFor(x => x.FullName)
+            .NotNull().WithMessage("FullName can't be null.")
+            .NotEmpty().WithMessage("FullName can't be empty.")
             .Length(0, 255).WithMessage("Name must contain 0 to 255 characters.");
 
         RuleFor(x => x.Email)
@@ -73,8 +67,7 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Respo
         if (user == null)
             return new Response("User not found", false, new { HttpStatusCode = HttpStatusCode.NotFound });
 
-        user.FirstName = request.FirstName;
-        user.LastName = request.LastName;
+        user.FullName = request.FullName;
         user.Email = request.Email;
         user.Role = request.Role;
 
