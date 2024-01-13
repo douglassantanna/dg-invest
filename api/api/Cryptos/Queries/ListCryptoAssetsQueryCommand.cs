@@ -80,11 +80,15 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         }
 
         var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
-                                                                                    x.CurrencyName,
-                                                                                    x.CryptoCurrency,
                                                                                     x.Symbol,
                                                                                     GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse),
-                                                                                    GetPercentageChange24hById(x.CoinMarketCapId, cmpResponse)));
+                                                                                    x.AveragePrice,
+                                                                                    x.GetPercentDifference(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    0,// x.Balance,
+                                                                                    0,// x.TotalInvested,
+                                                                                    0,// x.CurrentWorth(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    0,// x.GetInvestmentGainLoss(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    x.CoinMarketCapId));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
                                                                                     request.Page,

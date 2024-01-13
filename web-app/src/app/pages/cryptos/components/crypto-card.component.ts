@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-crypto-asset-dto';
 import { PercentDifferenceComponent } from './percent-difference.component';
+import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 
 @Component({
   selector: 'app-crypto-card',
@@ -12,9 +13,9 @@ import { PercentDifferenceComponent } from './percent-difference.component';
   <div class="card shadow mb-3 bg-white rounded">
     <div class="card-body">
       <h2 class="card-title">{{ crypto.symbol | uppercase }}</h2>
-      <p class="card-text">Price: {{ crypto.currentPrice | currency:'USD' }}</p>
-      <p class="card-text">Percent Change 24h:
-        <app-percent-difference [percentDifference]="crypto.percentChange24h" />
+      <p class="card-text">Price: {{ crypto.pricePerUnit | currency:'USD' }}</p>
+      <p class="card-text">Gain/Loss:
+        <app-percent-difference [percentDifference]="crypto.percentDifference" />
       </p>
       <a (click)="cryptoDashboard(crypto.id)" class="btn btn-primary">See details</a>
     </div>
@@ -22,7 +23,7 @@ import { PercentDifferenceComponent } from './percent-difference.component';
   `,
 })
 export class CryptoCardComponent {
-  @Input() crypto!: ViewMinimalCryptoAssetDto;
+  @Input() crypto!: ViewCryptoInformation;
 
   private router = inject(Router);
 

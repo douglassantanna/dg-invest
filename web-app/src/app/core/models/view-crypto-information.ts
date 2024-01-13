@@ -8,4 +8,5 @@ export interface ViewCryptoInformation {
   currentWorth: number;
   investmentGainLoss: number;
   coinMarketCapId: number;
+  id: number;
 }

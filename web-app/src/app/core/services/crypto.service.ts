@@ -13,6 +13,7 @@ import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
+import { ViewCryptoInformation } from '../models/view-crypto-information';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -32,7 +33,7 @@ export class CryptoService {
     pageSize: number = 50,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC",
-    hideZeroBalance: boolean): Observable<Pagination<ViewMinimalCryptoAssetDto>> {
+    hideZeroBalance: boolean): Observable<Pagination<ViewCryptoInformation>> {
     let params = new HttpParams()
       .append("page", page)
       .append("pageSize", pageSize)
@@ -40,7 +41,7 @@ export class CryptoService {
       .append("sortOrder", sortOrder)
       .append("hideZeroBalance", hideZeroBalance);
 
-    return this.http.get<Pagination<ViewMinimalCryptoAssetDto>>(`${url}/list-assets`, {
+    return this.http.get<Pagination<ViewCryptoInformation>>(`${url}/list-assets`, {
       params: params
     }).pipe(
       catchError(error => {

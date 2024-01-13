@@ -1,0 +1,42 @@
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Unit Price</th>
+        <th>Average price</th>
+        <th>Invested amount</th>
+        <th>Current worth</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let element of cryptos">
+        <td>{{ element.symbol | uppercase }}</td>
+        <td>{{ element.pricePerUnit | currency: 'USD':'symbol':'1.2-2' }}</td>
+        <td>
+          <div style="display: flex; flex-direction: column;">
+            <span>
+              {{ element.myAveragePrice}}
+            </span>
+            <span style="color: grey;">
+              {{ element.balance}}
+            </span>
+          </div>
+        </td> <!-- avaragePrice -->
+        <td>7</td> <!-- investedAmount -->
+        <td>
+          <div style="display: flex; flex-direction: column;">
+            <span>
+              {{ element.currentWorth }}
+            </span>
+            <span style="color: grey;">
+              <app-percent-difference [percentDifference]="element.investmentGainLoss" />
+            </span>
+          </div>
+        </td> <!-- currentWorth -->
+        <td> <a (click)="cryptoDashboard(element.id)" class="btn btn-primary">See details</a></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
