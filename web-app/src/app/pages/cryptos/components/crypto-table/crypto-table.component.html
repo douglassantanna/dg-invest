@@ -17,18 +17,18 @@
         <td>
           <div style="display: flex; flex-direction: column;">
             <span>
-              {{ element.myAveragePrice}}
+              {{ element.averagePrice | currency: 'USD':'symbol':'1.2-2' }}
             </span>
-            <span style="color: grey;">
-              {{ element.balance}}
+            <span style="color: grey;" *ngIf="element.balance">
+              {{ element.balance }} qty
             </span>
           </div>
         </td> <!-- avaragePrice -->
-        <td>7</td> <!-- investedAmount -->
+        <td>{{ element.investedAmount | currency: 'USD':'symbol':'1.2-2' }}</td> <!-- investedAmount -->
         <td>
           <div style="display: flex; flex-direction: column;">
             <span>
-              {{ element.currentWorth }}
+              {{ element.currentWorth | currency: 'USD':'symbol':'1.2-2' }}
             </span>
             <span style="color: grey;">
               <app-percent-difference [percentDifference]="element.investmentGainLoss" />

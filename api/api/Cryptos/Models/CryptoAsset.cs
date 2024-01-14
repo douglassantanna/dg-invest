@@ -89,13 +89,14 @@ public class CryptoAsset
     }
     public decimal GetPercentDifference(decimal currentPrice)
     {
-        if (Balance == 0)
+        decimal averagePrice = GetAveragePrice();
+
+        if (averagePrice == 0 || Balance == 0)
         {
             return 0;
         }
         else
         {
-            decimal averagePrice = GetAveragePrice();
             decimal difference = currentPrice - averagePrice;
             decimal percentDifference = (difference / averagePrice) * 100;
             return percentDifference;

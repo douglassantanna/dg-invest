@@ -6,6 +6,7 @@ using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
 public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoAssetDto>>
@@ -37,7 +38,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     public async Task<PageList<ViewMinimalCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
-        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets;
+        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets.Include(x => x.Transactions);
 
         int maxPageSize = 50;
 
@@ -83,11 +84,10 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
                                                                                     x.Symbol,
                                                                                     GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse),
                                                                                     x.AveragePrice,
-                                                                                    x.GetPercentDifference(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
-                                                                                    0,// x.Balance,
-                                                                                    0,// x.TotalInvested,
-                                                                                    0,// x.CurrentWorth(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
-                                                                                    0,// x.GetInvestmentGainLoss(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    x.Balance,
+                                                                                    x.TotalInvested,
+                                                                                    x.CurrentWorth(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    x.GetInvestmentGainLoss(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
                                                                                     x.CoinMarketCapId));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,

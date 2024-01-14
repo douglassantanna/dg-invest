@@ -1,8 +1,7 @@
 export interface ViewCryptoInformation {
   symbol: string;
   pricePerUnit: number;
-  myAveragePrice: number;
-  percentDifference: number;
+  averagePrice: number;
   balance: number;
   investedAmount: number;
   currentWorth: number;

@@ -15,7 +15,7 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
       <h2 class="card-title">{{ crypto.symbol | uppercase }}</h2>
       <p class="card-text">Price: {{ crypto.pricePerUnit | currency:'USD' }}</p>
       <p class="card-text">Gain/Loss:
-        <app-percent-difference [percentDifference]="crypto.percentDifference" />
+        <app-percent-difference [percentDifference]="crypto.investmentGainLoss" />
       </p>
       <a (click)="cryptoDashboard(crypto.id)" class="btn btn-primary">See details</a>
     </div>

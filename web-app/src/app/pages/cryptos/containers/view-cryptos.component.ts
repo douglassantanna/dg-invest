@@ -117,6 +117,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (cryptos) => {
           this.cryptos$.next(cryptos.items);
+          console.log(this.cryptos$.value)
         }
       });
   }
