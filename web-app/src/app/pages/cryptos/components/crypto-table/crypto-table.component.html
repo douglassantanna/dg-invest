@@ -1,10 +1,9 @@
 <div class="table-responsive">
-  <table class="table">
+  <table class="table border border-secondary rounded">
     <thead>
       <tr>
         <th>Name</th>
         <th>Unit Price</th>
-        <th>Average price</th>
         <th>Invested amount</th>
         <th>Current worth</th>
         <th>Action</th>
@@ -13,11 +12,10 @@
     <tbody>
       <tr *ngFor="let element of cryptos">
         <td>{{ element.symbol | uppercase }}</td>
-        <td>{{ element.pricePerUnit | currency: 'USD':'symbol':'1.2-2' }}</td>
         <td>
           <div style="display: flex; flex-direction: column;">
             <span>
-              {{ element.averagePrice | currency: 'USD':'symbol':'1.2-2' }}
+              {{ element.pricePerUnit | currency: 'USD':'symbol':'1.2-2' }}
             </span>
             <span style="color: grey;" *ngIf="element.balance">
               {{ element.balance }} qty

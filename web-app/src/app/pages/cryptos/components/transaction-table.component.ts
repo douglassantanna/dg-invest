@@ -25,7 +25,7 @@ import { PercentDifferenceComponent } from './percent-difference.component';
     </header>
 
     <div class="table-responsive">
-      <table class="table">
+      <table class="table table-bordered">
         <thead>
           <tr>
             <th>Amount</th>

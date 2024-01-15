@@ -31,6 +31,7 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
 
         <div class="coll-2">
           <app-crypto-filter
+            (viewDataTableEvent)="displayDataTableView($event)"
             (searchControlEvent)="search($event, hideZeroBalance)"
             (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
             [setBalanceStatus]="setBalanceStatus">
@@ -44,12 +45,14 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
 
       <div class="row">
         <div *ngIf="cryptos$ | async as cryptos; else loading">
-          <div class="row">
-            <div class="col-md-4" *ngFor="let crypto of cryptos">
-              <app-crypto-card [crypto]="crypto" />
+          <ng-template #cardView>
+            <div class="row">
+              <div class="col-md-4" *ngFor="let crypto of cryptos">
+                <app-crypto-card [crypto]="crypto" />
+              </div>
             </div>
-          </div>
-          <div class="row">
+          </ng-template>
+          <div class="row" *ngIf="displayDataTable;else cardView">
             <div class="col-md-12">
               <app-crypto-table [cryptos]="cryptos" [hideZeroBalance]="hideZeroBalance" />
             </div>
@@ -92,7 +95,8 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   cryptos$: BehaviorSubject<ViewCryptoInformation[]> = new BehaviorSubject<ViewCryptoInformation[]>([]);
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
-  hideZeroBalance: boolean = false;;
+  hideZeroBalance: boolean = false;
+  displayDataTable: boolean = true;
   constructor() {
   }
 
@@ -117,9 +121,12 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (cryptos) => {
           this.cryptos$.next(cryptos.items);
-          console.log(this.cryptos$.value)
         }
       });
+  }
+
+  displayDataTableView(event: any) {
+    this.displayDataTable = event;
   }
 
   search(input: string, hideZeroBalance: boolean) {

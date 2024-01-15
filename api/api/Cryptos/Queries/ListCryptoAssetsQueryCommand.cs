@@ -83,7 +83,6 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.Symbol,
                                                                                     GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse),
-                                                                                    x.AveragePrice,
                                                                                     x.Balance,
                                                                                     x.TotalInvested,
                                                                                     x.CurrentWorth(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),

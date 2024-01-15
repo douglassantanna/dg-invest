@@ -4,7 +4,6 @@ namespace api.Cryptos.Dtos;
 public record ViewMinimalCryptoAssetDto(int Id,
                                         string Symbol,
                                         decimal PricePerUnit,
-                                        decimal AveragePrice,
                                         decimal Balance,
                                         decimal InvestedAmount,
                                         decimal CurrentWorth,
