@@ -8,6 +8,8 @@ import { CryptoService } from '../../../core/services/crypto.service';
 import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
 import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-crypto-asset-dto';
 import { CryptoFilterComponent } from '../components/crypto-filter.component';
+import { CryptoTableComponent } from '../components/crypto-table/crypto-table.component';
+import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -18,7 +20,8 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
     CryptoCardComponent,
     CreateCryptoComponent,
     ReactiveFormsModule,
-    CryptoFilterComponent],
+    CryptoFilterComponent,
+    CryptoTableComponent],
   template: `
     <main class="container">
       <header>
@@ -28,6 +31,7 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
 
         <div class="coll-2">
           <app-crypto-filter
+            (viewDataTableEvent)="displayDataTableView($event)"
             (searchControlEvent)="search($event, hideZeroBalance)"
             (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
             [setBalanceStatus]="setBalanceStatus">
@@ -41,9 +45,16 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
 
       <div class="row">
         <div *ngIf="cryptos$ | async as cryptos; else loading">
-          <div class="row">
-            <div class="col-md-4" *ngFor="let crypto of cryptos">
-              <app-crypto-card [crypto]="crypto" />
+          <ng-template #cardView>
+            <div class="row">
+              <div class="col-md-4" *ngFor="let crypto of cryptos">
+                <app-crypto-card [crypto]="crypto" />
+              </div>
+            </div>
+          </ng-template>
+          <div class="row" *ngIf="displayDataTable;else cardView">
+            <div class="col-md-12">
+              <app-crypto-table [cryptos]="cryptos" [hideZeroBalance]="hideZeroBalance" />
             </div>
           </div>
         </div>
@@ -81,10 +92,11 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
   private unsubscribe$: Subject<void> = new Subject<void>();
 
-  cryptos$: BehaviorSubject<ViewMinimalCryptoAssetDto[]> = new BehaviorSubject<ViewMinimalCryptoAssetDto[]>([]);
+  cryptos$: BehaviorSubject<ViewCryptoInformation[]> = new BehaviorSubject<ViewCryptoInformation[]>([]);
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
-  hideZeroBalance: boolean = false;;
+  hideZeroBalance: boolean = false;
+  displayDataTable: boolean = true;
   constructor() {
   }
 
@@ -111,6 +123,10 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.cryptos$.next(cryptos.items);
         }
       });
+  }
+
+  displayDataTableView(event: any) {
+    this.displayDataTable = event;
   }
 
   search(input: string, hideZeroBalance: boolean) {

@@ -2,11 +2,13 @@ using api.Models.Cryptos;
 
 namespace api.Cryptos.Dtos;
 public record ViewMinimalCryptoAssetDto(int Id,
-                                        string CurrencyName,
-                                        string CryptoCurrency,
                                         string Symbol,
-                                        decimal CurrentPrice,
-                                        decimal PercentChange24h);
+                                        decimal PricePerUnit,
+                                        decimal Balance,
+                                        decimal InvestedAmount,
+                                        decimal CurrentWorth,
+                                        decimal InvestmentGainLoss,
+                                        int CoinMarketCapId);
 
 public record ViewCryptoAssetDto(int Id,
                                  ViewCryptoInformation CryptoInformation,
