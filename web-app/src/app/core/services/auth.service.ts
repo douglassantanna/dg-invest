@@ -33,7 +33,7 @@ export class AuthService {
     this.user = this._user.asObservable();
     this.user.subscribe(user => {
       if (user) {
-        this.localStorageService.set(local_storage_token, user.nameid);
+        this.localStorageService.setToken(user.nameid);
       }
     });
   }
@@ -42,12 +42,12 @@ export class AuthService {
     return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
   }
 
-  get token(): any {
-    return this.localStorageService.get(local_storage_token);
+  get token(): string | null {
+    return this.localStorageService.getToken();
   }
 
   private setToken(token: any) {
-    this.localStorageService.set(local_storage_token, token as string);
+    this.localStorageService.setToken(token as string);
     this._user.next(this.decodePayloadJWT());
     this.isLoggedIn$.next(true);
   }
@@ -70,7 +70,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(local_storage_token);
+    this.localStorageService.removeToken();
     this.isLoggedIn$.next(false);
     this.router.navigateByUrl('login');
   }
