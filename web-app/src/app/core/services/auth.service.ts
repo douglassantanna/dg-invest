@@ -1,14 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, EMPTY, Observable, catchError, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
 import jwt_decode from 'jwt-decode';
 import { environment } from 'src/environments/environment.development';
 import { LoginFormModel } from '../models/login.form-models';
 import { local_storage_token } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
 import { UserDecode } from '../models/user-decode';
-import { ToastService } from './toast.service';
+import { LocalStorageService } from './local-storage.service';
 
 const url = `${environment.apiUrl}/Authentication`;
 
@@ -26,14 +26,14 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private router: Router,
-    private toastService: ToastService
+    private localStorageService: LocalStorageService
   ) {
     if (this.token)
       this.isLoggedIn$.next(true);
     this.user = this._user.asObservable();
     this.user.subscribe(user => {
       if (user) {
-        localStorage.setItem(local_storage_token, user.nameid);
+        this.localStorageService.set(local_storage_token, user.nameid);
       }
     });
   }
@@ -43,11 +43,11 @@ export class AuthService {
   }
 
   get token(): any {
-    return localStorage.getItem(local_storage_token);
+    return this.localStorageService.get(local_storage_token);
   }
 
   private setToken(token: any) {
-    localStorage.setItem(local_storage_token, token as string);
+    this.localStorageService.set(local_storage_token, token as string);
     this._user.next(this.decodePayloadJWT());
     this.isLoggedIn$.next(true);
   }
