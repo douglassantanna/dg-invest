@@ -21,8 +21,8 @@ export class AuthService {
   private _user = new BehaviorSubject<UserDecode>(
     this.decodePayloadJWT()
   );
-  user = this._user.asObservable();
 
+  user = this._user.asObservable();
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -30,17 +30,29 @@ export class AuthService {
   ) {
     if (this.token)
       this.isLoggedIn$.next(true);
-    this.user = this._user.asObservable();
-    this.user.subscribe(user => {
-      if (user) {
-        this.localStorageService.setToken(user.nameid);
-      }
-    });
   }
 
-  get role(): string | null {
-    return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
+  // get role(): string | null {
+  //   return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
+  // }
+
+  get userId(): string | null {
+    try {
+      const token = this.localStorageService.getToken();
+      const decodedToken = jwt_decode(token as string) as { nameid: string };
+
+      if (decodedToken) {
+        return decodedToken.nameid;
+      }
+
+    } catch (error) {
+      console.error('Error decoding token:', error);
+    }
+
+    return null;
   }
+
+
 
   get token(): string | null {
     return this.localStorageService.getToken();
