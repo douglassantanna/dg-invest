@@ -6,10 +6,11 @@ import { CreateCryptoComponent } from './create-crypto.component';
 import { CryptoCardComponent } from '../components/crypto-card.component';
 import { CryptoService } from '../../../core/services/crypto.service';
 import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
-import { ViewMinimalCryptoAssetDto } from 'src/app/core/models/view-minimal-crypto-asset-dto';
 import { CryptoFilterComponent } from '../components/crypto-filter.component';
 import { CryptoTableComponent } from '../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
+import { LocalStorageService } from 'src/app/core/services/local-storage.service';
+import { DataViewEnum } from 'src/app/core/models/app-config';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -90,6 +91,7 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
+  private localStorageService = inject(LocalStorageService);
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   cryptos$: BehaviorSubject<ViewCryptoInformation[]> = new BehaviorSubject<ViewCryptoInformation[]>([]);
@@ -97,8 +99,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
   displayDataTable: boolean = true;
-  constructor() {
-  }
 
   ngOnDestroy() {
     this.unsubscribe$.next();
@@ -107,6 +107,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCryptoAssets();
+    this.displayDataTable = this.localStorageService.getDataViewType() == DataViewEnum.Table;
   }
 
   loadCryptoAssets(
@@ -125,8 +126,9 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       });
   }
 
-  displayDataTableView(event: any) {
+  displayDataTableView(event: boolean) {
     this.displayDataTable = event;
+    this.localStorageService.setDataViewType(event == true ? DataViewEnum.Table : DataViewEnum.Card);
   }
 
   search(input: string, hideZeroBalance: boolean) {

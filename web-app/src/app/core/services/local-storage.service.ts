@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { local_storage_token } from 'src/environments/environment.development';
-import { AppConfig } from '../models/app-config';
+import { AppConfig, DataViewEnum } from '../models/app-config';
 
 @Injectable({
   providedIn: 'root'
@@ -45,5 +45,16 @@ export class LocalStorageService {
       this.set(local_storage_token, JSON.stringify(this.appConfig));
       return;
     }
+  }
+
+  setDataViewType(viewType: DataViewEnum) {
+    this.appConfig.viewType = viewType;
+    this.set(local_storage_token, JSON.stringify(this.appConfig));
+  }
+
+  getDataViewType(): DataViewEnum {
+    const storedConfig = this.get(local_storage_token);
+    this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
+    return this.appConfig.viewType;
   }
 }

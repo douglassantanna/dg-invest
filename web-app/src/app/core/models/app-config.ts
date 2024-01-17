@@ -1,9 +1,9 @@
 export interface AppConfig {
   jwtToken: string | null,
   hideZeroBalance: boolean,
-  viewType: DataView
+  viewType: DataViewEnum
 }
-export enum DataView {
+export enum DataViewEnum {
   Table = 1,
   Card = 2
 }
