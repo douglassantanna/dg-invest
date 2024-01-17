@@ -10,7 +10,6 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
 import { CryptoTableComponent } from '../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
-import { DataViewEnum } from 'src/app/core/models/app-config';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -107,7 +106,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCryptoAssets();
-    this.displayDataTable = this.localStorageService.getDataViewType() == DataViewEnum.Table;
+    this.displayDataTable = this.localStorageService.getDataViewType();
   }
 
   loadCryptoAssets(
@@ -115,7 +114,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     pageSize: number = 50,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC",
-    hideZeroBalance = false
+    hideZeroBalance = this.localStorageService.getHideZeroBalance()
   ) {
     this.cryptoService.getCryptoAssets(page, pageSize, cryptoCurrency, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
@@ -128,10 +127,11 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   displayDataTableView(event: boolean) {
     this.displayDataTable = event;
-    this.localStorageService.setDataViewType(event == true ? DataViewEnum.Table : DataViewEnum.Card);
+    this.localStorageService.setDataViewType(event);
   }
 
   search(input: string, hideZeroBalance: boolean) {
+    this.localStorageService.setHideZeroBalance(hideZeroBalance);
     this.cryptoService.getCryptoAssets(1, 50, input, "ASC", hideZeroBalance)
       .pipe(
         takeUntil(this.unsubscribe$)

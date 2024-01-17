@@ -2,7 +2,6 @@ import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core
 import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
-import { DataViewEnum } from 'src/app/core/models/app-config';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
 
 @Component({
@@ -54,7 +53,8 @@ export class CryptoFilterComponent implements OnDestroy {
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   constructor(localStorageService: LocalStorageService) {
-    this.tableView = localStorageService.getDataViewType() == DataViewEnum.Table;
+    this.tableView = localStorageService.getDataViewType();
+    this.showZeroBalance.setValue(localStorageService.getHideZeroBalance());
 
     this.searchControl.valueChanges
       .pipe(
@@ -78,7 +78,7 @@ export class CryptoFilterComponent implements OnDestroy {
         debounceTime(300),
         distinctUntilChanged(),
       ).subscribe(value => {
-        this.viewDataTableEvent.next(value);
+        this.viewDataTableEvent.next(value == 1 ? true : false);
       });
   }
 
