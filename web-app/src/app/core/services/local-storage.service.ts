@@ -25,7 +25,7 @@ export class LocalStorageService {
   }
   getToken(): string | null {
     const storedConfig = this.get(local_storage_token);
-    this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
+    this.appConfig = storedConfig ? JSON.parse(storedConfig) : this.setToken("");
     return this.appConfig.jwtToken;
   }
   removeToken() {

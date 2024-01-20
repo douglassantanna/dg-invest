@@ -40,7 +40,7 @@ export class CryptoService {
     pageSize: number = 50,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC",
-    hideZeroBalance: boolean): Observable<Pagination<ViewCryptoInformation>> {
+    hideZeroBalance: boolean = false): Observable<Pagination<ViewCryptoInformation>> {
     let userId = this.authService.userId ?? '';
     let params = new HttpParams()
       .append("page", page)
