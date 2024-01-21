@@ -70,7 +70,7 @@ public class AddCryptoAssetToUserListCommandHandler : IRequestHandler<AddCryptoA
             _logger.LogInformation("AddCryptoAssetToUserListCommandHandler. Asset already exists: {0}", request.CoinMarketCapId);
             return new Response("Asset already exists on your lis!", false);
         }
-        await _userRepository.AddAsync(user);
+        await _userRepository.UpdateAsync(user);
 
         return new Response("ok", true, cryptoAsset.Id);
     }

@@ -1,5 +1,5 @@
 @url = http://localhost:5059/api/Crypto
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvYW9AdGVzdGUuY29tIiwibmFtZWlkIjoiMSIsInVuaXF1ZV9uYW1lIjoiSm9hbyIsInJvbGUiOiJVc2VyIiwibmJmIjoxNjk5NDc2MzE2LCJleHAiOjE2OTk1NjI3MTYsImlhdCI6MTY5OTQ3NjMxNiwiaXNzIjoiaHR0cDovL215LWxvY2FsLWhvc3QuY29tIn0.UU64ohvprwT7hGNTkX4jOdsKU0nprZ5QuITotlwkGrk
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRhdmlAdGVzdC5jb20iLCJuYW1laWQiOiIyIiwidW5pcXVlX25hbWUiOiJDcmFpY2kiLCJyb2xlIjoiVXNlciIsIm5iZiI6MTcwNTg2MjYwNiwiZXhwIjoxNzA1OTQ5MDA2LCJpYXQiOjE3MDU4NjI2MDYsImlzcyI6Imh0dHA6Ly9teS1sb2NhbC1ob3N0LmNvbSJ9.G-CIEveGLFzvSh3tujh8gcvXUmyZuf0PcQl7cYbCoco
 
 POST {{url}}/create
 Content-Type: application/json
@@ -34,4 +34,8 @@ Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/get-crypto-asset-by-id/1
+Authorization: Bearer {{token}}
+
+###
+GET {{url}}/test
 Authorization: Bearer {{token}}

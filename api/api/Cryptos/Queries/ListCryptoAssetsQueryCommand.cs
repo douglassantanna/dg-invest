@@ -6,7 +6,6 @@ using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
 public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoAssetDto>>
@@ -119,16 +118,6 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         }
         return 0;
     }
-    private static decimal GetPercentageChange24hById(int coinMarketCapId, GetQuoteResponse cmpResponse)
-    {
-        var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
-        if (coin.Value != null)
-        {
-            return coin.Value.Quote.USD.Percent_change_24h;
-        }
-        return 0;
-    }
-
     private static Expression<Func<CryptoAsset, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)
     {
         return request.SortColumn?.ToLower() switch

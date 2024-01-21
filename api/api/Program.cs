@@ -4,15 +4,12 @@ using api.AzureStorage;
 using api.AzureStorage.Queue;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
-using api.Cryptos.Models;
 using api.Cryptos.Repositories;
 using api.Data;
 using api.Data.Repositories;
 using api.Interfaces;
-using api.Models.Cryptos;
 using api.RateLimiterPolicies;
 using api.Shared;
-using api.Users.Models;
 using api.Users.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -28,8 +25,6 @@ builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICryptoRepository, CryptoRepository>();
 builder.Services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
-
-// builder.Services.AddScoped<IBaseRepository<CryptoTransaction>, CryptoTransactionRepository>();
 
 builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));
 builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSection(nameof(AzureStorageSettings)));

@@ -1,5 +1,4 @@
-using api.Cryptos.Models;
-using api.Data.Repositories;
+using api.Cryptos.Repositories;
 using api.Shared;
 using MediatR;
 
@@ -7,10 +6,10 @@ namespace api.Cryptos.Queries;
 public record GetCryptosCommandQuery() : IRequest<Response>;
 public class GetCryptosCommandQueryHandler : IRequestHandler<GetCryptosCommandQuery, Response>
 {
-    private readonly IBaseRepository<Crypto> _cryptoRepository;
+    private readonly ICryptoRepository _cryptoRepository;
     private readonly ILogger<GetCryptosCommandQueryHandler> _logger;
 
-    public GetCryptosCommandQueryHandler(IBaseRepository<Crypto> cryptoRepository,
+    public GetCryptosCommandQueryHandler(ICryptoRepository cryptoRepository,
                                          ILogger<GetCryptosCommandQueryHandler> logger)
     {
         _cryptoRepository = cryptoRepository;

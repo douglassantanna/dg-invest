@@ -29,7 +29,7 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
           <h1>Portfolio</h1>
         </div>
 
-        <ng-container *ngIf="emptyCriptoArray">
+        <ng-container *ngIf="$emptyCryptoArray | async">
           <div class="coll-2">
             <app-crypto-filter
               (viewDataTableEvent)="displayDataTableView($event)"
@@ -47,7 +47,7 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
 
       <div class="row">
         <div *ngIf="cryptos$ | async as cryptos; else loading">
-          <ng-container *ngIf="!cryptos; else emptyCriptoList">
+          <ng-container *ngIf="cryptos?.length; else emptyCriptoList">
             <ng-template #cardView>
               <div class="row">
                 <div class="col-md-4" *ngFor="let crypto of cryptos">
@@ -109,7 +109,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
   displayDataTable: boolean = true;
-  emptyCriptoArray: boolean = false;
+  $emptyCryptoArray: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
 
   ngOnDestroy() {
     this.unsubscribe$.next();
@@ -133,7 +133,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (cryptos) => {
           this.cryptos$.next(cryptos.items);
-          this.emptyCriptoArray = cryptos.items.length > 0;
+          this.$emptyCryptoArray.next(cryptos.items.length > 0);
         }
       });
   }
