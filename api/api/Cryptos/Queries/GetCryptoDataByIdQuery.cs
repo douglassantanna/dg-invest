@@ -1,8 +1,7 @@
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
-using api.Data.Repositories;
-using api.Models.Cryptos;
+using api.Cryptos.Repositories;
 using api.Shared;
 using Flurl.Http;
 using MediatR;
@@ -12,13 +11,13 @@ namespace api.Cryptos.Queries;
 public record GetCryptoDataByIdQuery(int CryptoAssetId) : IRequest<Response>;
 public class GetCryptoDataByIdHandler : IRequestHandler<GetCryptoDataByIdQuery, Response>
 {
-    private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
+    private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ILogger<GetCryptoDataByIdHandler> _logger;
 
     public GetCryptoDataByIdHandler(
     ICoinMarketCapService coinMarketCapService,
-    IBaseRepository<CryptoAsset> cryptoAssetRepository,
+    ICryptoAssetRepository cryptoAssetRepository,
     ILogger<GetCryptoDataByIdHandler> logger)
     {
         _coinMarketCapService = coinMarketCapService;
@@ -28,7 +27,7 @@ public class GetCryptoDataByIdHandler : IRequestHandler<GetCryptoDataByIdQuery, 
     public async Task<Response> Handle(GetCryptoDataByIdQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("GetCryptoDataByIdQuery. Retrieving GetCryptoDataById: {0}", request.CryptoAssetId);
-        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId, cancellationToken);
+        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId);
         if (cryptoAsset is null)
         {
             _logger.LogError("GetCryptoDataByIdQuery. CryptoAsset not found: {0}", request.CryptoAssetId);

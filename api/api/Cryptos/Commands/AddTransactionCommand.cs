@@ -1,5 +1,5 @@
 using api.Cryptos.Exceptions;
-using api.Data.Repositories;
+using api.Cryptos.Repositories;
 using api.Models.Cryptos;
 using api.Shared;
 using FluentValidation;
@@ -38,10 +38,10 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
 }
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
-    private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
+    private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ILogger<AddTransactionCommandHandler> _logger;
 
-    public AddTransactionCommandHandler(IBaseRepository<CryptoAsset> cryptoAssetRepository,
+    public AddTransactionCommandHandler(ICryptoAssetRepository cryptoAssetRepository,
                                         ILogger<AddTransactionCommandHandler> logger)
     {
         _cryptoAssetRepository = cryptoAssetRepository;
@@ -60,7 +60,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Validation failed", false, errors);
         }
 
-        var cryptoAsset = _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId);
+        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId);
         if (cryptoAsset == null)
         {
             _logger.LogInformation("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
@@ -83,7 +83,6 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response(ex.Message, false);
         }
 
-        _cryptoAssetRepository.Add(cryptoAsset);
         await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
 
         _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);

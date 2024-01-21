@@ -1,23 +1,23 @@
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
-using api.Data.Repositories;
-using api.Models.Cryptos;
+using api.Cryptos.Repositories;
 using api.Shared;
 using Flurl.Http;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
 public record GetCryptoAssetByIdCommandQuery(int CryptoAssetId) : IRequest<Response>;
 public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAssetByIdCommandQuery, Response>
 {
-    private readonly IBaseRepository<CryptoAsset> _cryptoAssetRepository;
+    private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ILogger<GetCryptoAssetByIdCommandQueryHandler> _logger;
 
     public GetCryptoAssetByIdCommandQueryHandler(
         ICoinMarketCapService coinMarketCapService,
-        IBaseRepository<CryptoAsset> cryptoAssetRepository,
+        ICryptoAssetRepository cryptoAssetRepository,
         ILogger<GetCryptoAssetByIdCommandQueryHandler> logger)
     {
         _coinMarketCapService = coinMarketCapService;
@@ -28,7 +28,8 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
     public async Task<Response> Handle(GetCryptoAssetByIdCommandQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("GetCryptoAssetByIdCommandQuery. Retrieving CryptoAssetId: {0}", request.CryptoAssetId);
-        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId, cancellationToken);
+        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId,
+                                                                    x => x.Include(q => q.Transactions));
         if (cryptoAsset is null)
         {
             _logger.LogInformation("GetCryptoAssetByIdCommandQuery. CryptoAssetId: {0} not found", request.CryptoAssetId);
