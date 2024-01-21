@@ -14,16 +14,11 @@ namespace api.Controllers;
 [Route("api/[controller]")]
 public class CryptoController : ControllerBase
 {
-
     private readonly IMediator _mediator;
-
-    public CryptoController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
+    public CryptoController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost("create")]
-    public async Task<ActionResult<Response>> Create([FromBody] CreateCryptoAssetCommand command)
+    public async Task<ActionResult<Response>> Create([FromBody] AddCryptoAssetToUserListCommand command)
     {
 
         var result = await _mediator.Send(command);

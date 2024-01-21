@@ -6,7 +6,6 @@ using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
 public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoAssetDto>>
@@ -18,14 +17,13 @@ public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoA
     public bool HideZeroBalance { get; set; } = false;
     public int Page { get; set; } = 1;
     public int PageSize { get; set; }
+    public int UserId { get; set; }
 }
 public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAssetsQueryCommand, PageList<ViewMinimalCryptoAssetDto>>
 {
     private readonly DataContext _context;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ILogger<ListCryptoAssetsQueryCommandHandler> _logger;
-
-
     public ListCryptoAssetsQueryCommandHandler(DataContext context,
                                                ICoinMarketCapService coinMarketCapService,
                                                ILogger<ListCryptoAssetsQueryCommandHandler> logger)
@@ -38,7 +36,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     public async Task<PageList<ViewMinimalCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
-        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets.Include(x => x.Transactions);
+        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets;
 
         int maxPageSize = 50;
 
@@ -71,6 +69,11 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         else
         {
             cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
+        }
+
+        if (request.UserId > 0)
+        {
+            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.UserId == request.UserId);
         }
 
         GetQuoteResponse cmpResponse = null;
@@ -115,16 +118,6 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         }
         return 0;
     }
-    private static decimal GetPercentageChange24hById(int coinMarketCapId, GetQuoteResponse cmpResponse)
-    {
-        var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
-        if (coin.Value != null)
-        {
-            return coin.Value.Quote.USD.Percent_change_24h;
-        }
-        return 0;
-    }
-
     private static Expression<Func<CryptoAsset, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)
     {
         return request.SortColumn?.ToLower() switch

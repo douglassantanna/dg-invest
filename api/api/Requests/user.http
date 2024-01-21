@@ -1,7 +1,8 @@
 @url = http://localhost:5059/api/User
-
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvYW9AdGVzdGUuY29tIiwibmFtZWlkIjoiMSIsInVuaXF1ZV9uYW1lIjoiR29tZXMiLCJyb2xlIjoiVXNlciIsIm5iZiI6MTcwNTc5MDU4MywiZXhwIjoxNzA1ODc2OTgzLCJpYXQiOjE3MDU3OTA1ODMsImlzcyI6Imh0dHA6Ly9teS1sb2NhbC1ob3N0LmNvbSJ9.kVmkV4vy0nttSx1vezFPvqP3i_mzZBKu2PhaxKt3tHU
 PUT {{url}}/update-user
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "firstName" : "Joao",
@@ -15,6 +16,7 @@ Content-Type: application/json
 ###
 POST {{url}}/create
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "fullName":"Davison",
@@ -25,6 +27,8 @@ Content-Type: application/json
 ###
 
 GET {{url}}/list-users?page=1&pageSize=10
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/get-user-by-id/2
+Authorization: Bearer {{token}}

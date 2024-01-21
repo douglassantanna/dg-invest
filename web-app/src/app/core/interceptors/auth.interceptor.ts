@@ -3,14 +3,15 @@ import {
   HttpRequest,
   HttpHandlerFn
 } from '@angular/common/http';
-import { AuthService } from '../services/auth.service';
+import { LocalStorageService } from '../services/local-storage.service';
 
 export function AuthorizationInterceptor(req: HttpRequest<unknown>,
   next: HttpHandlerFn) {
-  const authService = inject(AuthService);
+  const localStorageService = inject(LocalStorageService);
+  const token = localStorageService.getToken();
   const clonedRequest = req.clone({
     setHeaders: {
-      Authorization: `Bearer ${authService.token}`
+      Authorization: `Bearer ${token}`
     }
   });
   return next(clonedRequest)

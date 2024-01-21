@@ -14,6 +14,7 @@ import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
 import { ViewCryptoInformation } from '../models/view-crypto-information';
+import { AuthService } from './auth.service';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -25,21 +26,29 @@ export class CryptoService {
   private _cryptoAssetData: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
   private _cryptoInformation: BehaviorSubject<CryptoInformation[]> = new BehaviorSubject<CryptoInformation[]>([]);
   private _transactions: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
+  private _userId: BehaviorSubject<number> = new BehaviorSubject<number>(0);
 
-  constructor(private http: HttpClient, private toastService: ToastService) { }
+  constructor(
+    private http: HttpClient,
+    private toastService: ToastService,
+    private authService: AuthService) {
+
+  }
 
   getCryptoAssets(
     page: number = 1,
     pageSize: number = 50,
     cryptoCurrency: string = "",
     sortOrder: string = "ASC",
-    hideZeroBalance: boolean): Observable<Pagination<ViewCryptoInformation>> {
+    hideZeroBalance: boolean = false): Observable<Pagination<ViewCryptoInformation>> {
+    let userId = this.authService.userId ?? '';
     let params = new HttpParams()
       .append("page", page)
       .append("pageSize", pageSize)
       .append("cryptoCurrency", cryptoCurrency)
       .append("sortOrder", sortOrder)
-      .append("hideZeroBalance", hideZeroBalance);
+      .append("hideZeroBalance", hideZeroBalance)
+      .append("userId", userId)
 
     return this.http.get<Pagination<ViewCryptoInformation>>(`${url}/list-assets`, {
       params: params

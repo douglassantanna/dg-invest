@@ -1,14 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, EMPTY, Observable, catchError, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
 import jwt_decode from 'jwt-decode';
 import { environment } from 'src/environments/environment.development';
 import { LoginFormModel } from '../models/login.form-models';
 import { local_storage_token } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
 import { UserDecode } from '../models/user-decode';
-import { ToastService } from './toast.service';
+import { LocalStorageService } from './local-storage.service';
 
 const url = `${environment.apiUrl}/Authentication`;
 
@@ -21,33 +21,45 @@ export class AuthService {
   private _user = new BehaviorSubject<UserDecode>(
     this.decodePayloadJWT()
   );
-  user = this._user.asObservable();
 
+  user = this._user.asObservable();
   constructor(
     private http: HttpClient,
     private router: Router,
-    private toastService: ToastService
+    private localStorageService: LocalStorageService
   ) {
     if (this.token)
       this.isLoggedIn$.next(true);
-    this.user = this._user.asObservable();
-    this.user.subscribe(user => {
-      if (user) {
-        localStorage.setItem(local_storage_token, user.nameid);
+  }
+
+  // get role(): string | null {
+  //   return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
+  // }
+
+  get userId(): string | null {
+    try {
+      const token = this.localStorageService.getToken();
+      const decodedToken = jwt_decode(token as string) as { nameid: string };
+
+      if (decodedToken) {
+        return decodedToken.nameid;
       }
-    });
+
+    } catch (error) {
+      console.error('Error decoding token:', error);
+    }
+
+    return null;
   }
 
-  get role(): string | null {
-    return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
-  }
 
-  get token(): any {
-    return localStorage.getItem(local_storage_token);
+
+  get token(): string | null {
+    return this.localStorageService.getToken();
   }
 
   private setToken(token: any) {
-    localStorage.setItem(local_storage_token, token as string);
+    this.localStorageService.setToken(token as string);
     this._user.next(this.decodePayloadJWT());
     this.isLoggedIn$.next(true);
   }
@@ -70,7 +82,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(local_storage_token);
+    this.localStorageService.removeToken();
     this.isLoggedIn$.next(false);
     this.router.navigateByUrl('login');
   }

@@ -3,7 +3,7 @@ using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
 using api.Cryptos.Models;
 using api.Cryptos.Queries;
-using api.Data.Repositories;
+using api.Cryptos.Repositories;
 using api.Models.Cryptos;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -11,13 +11,13 @@ using Moq;
 namespace unit_tests.CryptoTests.Queries;
 public class GetCryptoAssetByIdCommandQueryTest
 {
-    private readonly Mock<IBaseRepository<CryptoAsset>> _cryptoAssetRepositoryMock;
+    private readonly Mock<ICryptoAssetRepository> _cryptoAssetRepositoryMock;
     private readonly Mock<ICoinMarketCapService> _coinMarketCapServiceMock;
     private readonly Mock<ILogger<GetCryptoAssetByIdCommandQueryHandler>> _loggerMock;
 
     public GetCryptoAssetByIdCommandQueryTest()
     {
-        _cryptoAssetRepositoryMock = new Mock<IBaseRepository<CryptoAsset>>();
+        _cryptoAssetRepositoryMock = new Mock<ICryptoAssetRepository>();
         _coinMarketCapServiceMock = new Mock<ICoinMarketCapService>();
         _loggerMock = new Mock<ILogger<GetCryptoAssetByIdCommandQueryHandler>>();
     }
@@ -27,7 +27,7 @@ public class GetCryptoAssetByIdCommandQueryTest
     {
         // Arrange
         var command = new GetCryptoAssetByIdCommandQuery(CryptoAssetId: 1);
-        _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), CancellationToken.None))
+        _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), null))
                                   .ReturnsAsync(GetCryptoAsset());
 
         _coinMarketCapServiceMock.Setup(x => x.GetQuotesByIds(new[] { It.IsAny<string>() }))

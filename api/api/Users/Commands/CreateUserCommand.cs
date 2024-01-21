@@ -5,7 +5,7 @@ using api.Shared;
 using api.Users.Models;
 using MediatR;
 using api.Users.Events;
-using api.Data.Repositories;
+using api.Users.Repositories;
 
 namespace api.Users.Commands;
 public record CreateUserCommand(string FullName,
@@ -33,12 +33,12 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
 {
     private readonly IPasswordHelper _passwordHelper;
     private readonly IPublisher _publisher;
-    private readonly IBaseRepository<User> _userRepository;
+    private readonly IUserRepository _userRepository;
 
     public CreateUserCommandHandler(
         IPasswordHelper passwordHelper,
         IPublisher publisher,
-        IBaseRepository<User> userRepository)
+        IUserRepository userRepository)
     {
         _passwordHelper = passwordHelper;
         _publisher = publisher;
@@ -55,15 +55,13 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
             return new Response("Email already exists", false);
 
         var randomPassword = _passwordHelper.RandomPassword();
-        var user = new User
-        {
-            FullName = request.FullName,
-            Email = request.Email,
-            Password = _passwordHelper.EncryptPassword(randomPassword),
-            Role = request.Role
-        };
 
-        _userRepository.Add(user);
+        var user = new User(request.FullName,
+                            request.Email,
+                            _passwordHelper.EncryptPassword(randomPassword),
+                            request.Role);
+
+        _userRepository.AddAsync(user);
 
         await _publisher.Publish(new NewUserCreatedCommand(user, randomPassword), cancellationToken);
 

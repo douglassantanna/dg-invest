@@ -1,55 +1,36 @@
+using System.Linq.Expressions;
 using api.Cryptos.Models;
 using api.Data;
 using api.Data.Repositories;
-using api.Models.Cryptos;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace api.Cryptos.Repositories;
-public class CryptoRepository : IBaseRepository<Crypto>
+public interface ICryptoRepository
 {
-    private readonly DataContext _context;
-
-    public CryptoRepository(DataContext context)
+    Task AddAsync(Crypto entity);
+    Task UpdateAsync(Crypto entity);
+    IEnumerable<Crypto> GetAll(
+        Expression<Func<Crypto, bool>> filter = null,
+        Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null);
+    Task<Crypto?> GetByIdAsync(
+        int id,
+        Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null);
+}
+public class CryptoRepository : ICryptoRepository
+{
+    private readonly DataContext _dataContext;
+    private readonly IBaseRepository<Crypto> _baseRepository;
+    public CryptoRepository(IBaseRepository<Crypto> baseRepository, DataContext dataContext)
     {
-        _context = context;
+        _baseRepository = baseRepository;
+        _dataContext = dataContext;
     }
 
-    public void Add(Crypto entity)
+    public async Task AddAsync(Crypto entity) => await _baseRepository.AddAsync(entity);
+    public IEnumerable<Crypto> GetAll(Expression<Func<Crypto, bool>> filter = null, Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null)
     {
-        _context.Cryptos.Add(entity);
+        return _dataContext.Cryptos.OrderByDescending(x => x.Name);
     }
-
-    public void Delete(int id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IEnumerable<Crypto> GetAll()
-    {
-        return _context.Cryptos.OrderByDescending(c => c.Name);
-    }
-
-    public Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Crypto? GetById(int id) => _context.Cryptos
-                                              .Where(x => x.Id == id)
-                                              .FirstOrDefault();
-
-    public Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool IsUnique(string data)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task UpdateAsync(Crypto entity)
-    {
-        _context.Cryptos.Update(entity);
-        await _context.SaveChangesAsync();
-    }
+    public async Task<Crypto?> GetByIdAsync(int id, Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null) => await _baseRepository.GetByIdAsync(id, include);
+    public async Task UpdateAsync(Crypto entity) => await _baseRepository.UpdateAsync(entity);
 }

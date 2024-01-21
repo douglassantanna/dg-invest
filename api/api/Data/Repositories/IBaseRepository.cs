@@ -1,15 +1,13 @@
-
-using api.Models.Cryptos;
+using System.Linq.Expressions;
+using api.Shared;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace api.Data.Repositories;
-public interface IBaseRepository<T>
+public interface IBaseRepository<T> where T : Entity
 {
-    T? GetById(int id);
-    IEnumerable<T> GetAll();
-    void Add(T entity);
+    Task<T?> GetByIdAsync(int id, Func<IQueryable<T>, IIncludableQueryable<T, object>> include = null);
+    Task<IEnumerable<T>> GetAll(Expression<Func<T, bool>> filter = null, Func<IQueryable<T>, IIncludableQueryable<T, object>> include = null);
+    Task AddAsync(T entity);
     Task UpdateAsync(T entity);
-    void Delete(int id);
-    bool IsUnique(string data);
-    Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken);
-    Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId, CancellationToken cancellationToken);
+    void Delete(T entity);
 }
