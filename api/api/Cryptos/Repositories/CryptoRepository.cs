@@ -1,55 +1,26 @@
+using System.Linq.Expressions;
 using api.Cryptos.Models;
-using api.Data;
 using api.Data.Repositories;
-using api.Models.Cryptos;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace api.Cryptos.Repositories;
-public class CryptoRepository : IBaseRepository<Crypto>
+public interface ICryptoRepository
 {
-    private readonly DataContext _context;
-
-    public CryptoRepository(DataContext context)
-    {
-        _context = context;
-    }
-
-    public void AddAsync(Crypto entity)
-    {
-        _context.Cryptos.Add(entity);
-    }
-
-    public void Delete(int id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IEnumerable<Crypto> GetAll()
-    {
-        return _context.Cryptos.OrderByDescending(c => c.Name);
-    }
-
-    public Task<bool> IsCryptoAssetInUserListAsync(int coinMarketCapId, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Crypto? GetByIdAsync(int id) => _context.Cryptos
-                                              .Where(x => x.Id == id)
-                                              .FirstOrDefault();
-
-    public Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool IsUnique(string data)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task UpdateAsync(Crypto entity)
-    {
-        _context.Cryptos.Update(entity);
-        await _context.SaveChangesAsync();
-    }
+    Task AddAsync(Crypto entity);
+    Task UpdateAsync(Crypto entity);
+    Task<IEnumerable<Crypto>> GetAll(
+        Expression<Func<Crypto, bool>> filter = null,
+        Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null);
+    Task<Crypto?> GetByIdAsync(
+        int id,
+        Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null);
+}
+public class CryptoRepository : ICryptoRepository
+{
+    private readonly IBaseRepository<Crypto> _baseRepository;
+    public CryptoRepository(IBaseRepository<Crypto> baseRepository) => _baseRepository = baseRepository;
+    public async Task AddAsync(Crypto entity) => await _baseRepository.AddAsync(entity);
+    public async Task<IEnumerable<Crypto>> GetAll(Expression<Func<Crypto, bool>> filter = null, Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null) => await _baseRepository.GetAll(filter, include);
+    public async Task<Crypto?> GetByIdAsync(int id, Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null) => await _baseRepository.GetByIdAsync(id, include);
+    public async Task UpdateAsync(Crypto entity) => await _baseRepository.UpdateAsync(entity);
 }
