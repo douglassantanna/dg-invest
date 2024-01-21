@@ -1,7 +1,8 @@
 using System;
+using api.Shared;
 
 namespace api.Models.Cryptos;
-public class CryptoTransaction
+public class CryptoTransaction : Entity
 {
     public CryptoTransaction(decimal amount,
                              decimal price,
@@ -16,8 +17,6 @@ public class CryptoTransaction
         TransactionType = transactionType;
         Enabled = true;
     }
-
-    public int Id { get; private set; }
     public decimal Amount { get; private set; }
     public decimal Price { get; private set; }
     public DateTimeOffset PurchaseDate { get; private set; }

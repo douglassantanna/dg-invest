@@ -13,7 +13,7 @@ public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
         _context = context;
     }
 
-    public void Add(CryptoAsset entity)
+    public void AddAsync(CryptoAsset entity)
     {
         _context.CryptoAssets.Add(entity);
     }
@@ -28,11 +28,11 @@ public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
         return _context.CryptoAssets;
     }
 
-    public async Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId,
+    public async Task<bool> IsCryptoAssetInUserListAsync(int userId,
                                                       CancellationToken cancellationToken)
-    => await _context.CryptoAssets.AnyAsync(x => x.CoinMarketCapId == coinMarketCapId, cancellationToken: cancellationToken);
+    => await _context.CryptoAssets.AnyAsync(x => x.UserId == userId, cancellationToken: cancellationToken);
 
-    public CryptoAsset? GetById(int id) => _context.CryptoAssets
+    public CryptoAsset? GetByIdAsync(int id) => _context.CryptoAssets
                                                     .Include(x => x.Transactions)
                                                     .Where(x => x.Id == id)
                                                     .FirstOrDefault();

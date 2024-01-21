@@ -64,7 +64,7 @@ public class AddTransactionTests
     {
         // Arrange
         var command = _validCommand;
-        _cryptoAssetRepositoryMock.Setup(x => x.GetById(It.IsAny<int>())).Returns((CryptoAsset?)null);
+        _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>())).Returns((CryptoAsset?)null);
 
         // Act
         var handler = new AddTransactionCommandHandler(_cryptoAssetRepositoryMock.Object, _loggerMock.Object);
@@ -78,7 +78,7 @@ public class AddTransactionTests
     {
         // Arrange
         var command = _validCommand;
-        _cryptoAssetRepositoryMock.Setup(x => x.GetById(It.IsAny<int>())).Returns(_validCryptoAsset);
+        _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>())).Returns(_validCryptoAsset);
         _cryptoAssetRepositoryMock.Setup(x => x.UpdateAsync(_validCryptoAsset));
 
         // Act
@@ -95,7 +95,7 @@ public class AddTransactionTests
     {
         // Arrange
         var command = _validCommand;
-        _cryptoAssetRepositoryMock.Setup(x => x.GetById(It.IsAny<int>())).Returns(_validCryptoAsset);
+        _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>())).Returns(_validCryptoAsset);
         _cryptoAssetRepositoryMock.Setup(x => x.UpdateAsync(_validCryptoAsset));
 
         // Act

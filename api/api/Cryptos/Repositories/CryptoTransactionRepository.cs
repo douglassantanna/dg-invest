@@ -12,7 +12,7 @@ public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
         _context = context;
     }
 
-    public void Add(CryptoTransaction entity)
+    public void AddAsync(CryptoTransaction entity)
     {
         throw new NotImplementedException();
     }
@@ -27,12 +27,12 @@ public class CryptoTransactionRepository : IBaseRepository<CryptoTransaction>
         throw new NotImplementedException();
     }
 
-    public Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId, CancellationToken cancellationToken)
+    public Task<bool> IsCryptoAssetInUserListAsync(int coinMarketCapId, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public CryptoTransaction? GetById(int id)
+    public CryptoTransaction? GetByIdAsync(int id)
     {
         throw new NotImplementedException();
     }

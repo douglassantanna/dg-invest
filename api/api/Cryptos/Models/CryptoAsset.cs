@@ -1,13 +1,12 @@
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
+using api.Shared;
 using api.Users.Models;
 
 namespace api.Models.Cryptos;
-public class CryptoAsset
+public class CryptoAsset : Entity
 {
     public int UserId { get; private set; }
-    // public User User { get; private set; }
-    public int Id { get; private set; }
     public string CryptoCurrency { get; private set; } = string.Empty;
     public decimal Balance { get; private set; }
     private decimal _averagePrice;

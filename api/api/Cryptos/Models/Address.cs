@@ -1,9 +1,9 @@
 using api.Models.Cryptos;
+using api.Shared;
 
 namespace api.Cryptos.Models;
-public class Address
+public class Address : Entity
 {
-    public int Id { get; private set; }
     public string AddressName { get; private set; }
     public string AddressValue { get; private set; }
     public CryptoAsset CryptoAsset { get; private set; }

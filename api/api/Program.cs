@@ -24,10 +24,12 @@ builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
 builder.Services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
 builder.Services.AddScoped<IQueueService, QueueService>();
 
+builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 builder.Services.AddScoped<IBaseRepository<CryptoAsset>, CryptoAssetRepository>();
 builder.Services.AddScoped<IBaseRepository<CryptoTransaction>, CryptoTransactionRepository>();
 builder.Services.AddScoped<IBaseRepository<Crypto>, CryptoRepository>();
-builder.Services.AddScoped<IBaseRepository<User>, UserRepository>();
 
 builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));
 builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSection(nameof(AzureStorageSettings)));

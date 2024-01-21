@@ -60,7 +60,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Validation failed", false, errors);
         }
 
-        var cryptoAsset = _cryptoAssetRepository.GetById(request.CryptoAssetId);
+        var cryptoAsset = _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId);
         if (cryptoAsset == null)
         {
             _logger.LogInformation("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);

@@ -55,15 +55,13 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
             return new Response("Email already exists", false);
 
         var randomPassword = _passwordHelper.RandomPassword();
-        var user = new User
-        {
-            FullName = request.FullName,
-            Email = request.Email,
-            Password = _passwordHelper.EncryptPassword(randomPassword),
-            Role = request.Role
-        };
 
-        _userRepository.Add(user);
+        var user = new User(request.FullName,
+                            request.Email,
+                            _passwordHelper.EncryptPassword(randomPassword),
+                            request.Role);
+
+        _userRepository.AddAsync(user);
 
         await _publisher.Publish(new NewUserCreatedCommand(user, randomPassword), cancellationToken);
 

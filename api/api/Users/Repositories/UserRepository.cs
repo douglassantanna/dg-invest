@@ -1,56 +1,48 @@
+using System.Linq.Expressions;
 using api.Data;
 using api.Data.Repositories;
-using api.Models.Cryptos;
 using api.Users.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace api.Users.Repositories;
-public class UserRepository : IBaseRepository<User>
+
+public interface IUserRepository
 {
-    private readonly DataContext _context;
+    Task AddAsync(User entity);
+    Task UpdateAsync(User entity);
+    Task<IEnumerable<User>> GetAll(Expression<Func<User, bool>> filter = null,
+                                   Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null);
+    Task<bool> IsCryptoAssetInUserListAsync(int userId);
+    Task<User?> GetByIdAsync(int id, Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null);
+}
+public class UserRepository : IUserRepository
+{
+    private readonly IBaseRepository<User> _baseRepository;
+    private readonly DataContext _dataContext;
 
-    public UserRepository(DataContext context)
+    public UserRepository(
+        IBaseRepository<User> baseRepository,
+        DataContext dataContext)
     {
-        _context = context;
+        _baseRepository = baseRepository;
+        _dataContext = dataContext;
     }
 
-    public void Add(User entity)
-    {
-        _context.Users.Add(entity);
-        _context.SaveChanges();
-    }
+    public async Task AddAsync(User entity) => await _baseRepository.AddAsync(entity);
 
-    public void Delete(int id)
-    {
-        throw new NotImplementedException();
-    }
+    public async Task<IEnumerable<User>> GetAll(
+        Expression<Func<User, bool>> filter = null,
+        Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null)
+        => await _baseRepository.GetAll(filter, i => i.Include(x => x.CryptoAssets));
 
-    public IEnumerable<User> GetAll()
-    {
-        throw new NotImplementedException();
-    }
+    public async Task UpdateAsync(User entity) => await _baseRepository.UpdateAsync(entity);
 
-    public Task<bool> GetByCoinMarketCapIdAsync(int coinMarketCapId, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
+    public async Task<bool> IsCryptoAssetInUserListAsync(int userId)
+       => await _dataContext.CryptoAssets.AnyAsync(x => x.UserId == userId);
 
-    public User? GetById(int id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool IsUnique(string data)
-    {
-        return _context.Users.Any(x => x.Email == data);
-    }
-
-    public Task UpdateAsync(User entity)
-    {
-        throw new NotImplementedException();
-    }
+    public async Task<User?> GetByIdAsync(
+        int id,
+        Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null)
+        => await _baseRepository.GetByIdAsync(id, include);
 }

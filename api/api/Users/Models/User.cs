@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
 using api.Models.Cryptos;
+using api.Shared;
 
 namespace api.Users.Models;
-public class User
+public class User : Entity
 {
-    public int Id { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     [JsonIgnore]
@@ -12,6 +12,27 @@ public class User
     public Role Role { get; set; }
     public bool EmailConfirmed { get; set; } = false;
     private readonly List<CryptoAsset> _criptoAssets = new();
+
+    public User(string fullName,
+                string email,
+                string password,
+                Role role)
+    {
+        FullName = fullName;
+        Email = email;
+        Password = password;
+        Role = role;
+    }
+
     public IReadOnlyCollection<CryptoAsset> CryptoAssets => _criptoAssets;
-    // public ICollection<CryptoAsset> CryptoAssets2 { get; set; } = new List<CryptoAsset>();
+
+    internal void AddCryptoAsset(CryptoAsset cryptoAsset)
+    {
+        var cryptoAssetExists = _criptoAssets.Any(x => x.CoinMarketCapId == cryptoAsset.CoinMarketCapId);
+        if (cryptoAssetExists)
+        {
+            throw new Exception("Crypto asset already exists");
+        }
+        _criptoAssets.Add(cryptoAsset);
+    }
 }

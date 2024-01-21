@@ -7,6 +7,7 @@ import { CryptoService } from '../../../core/services/crypto.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CreateCryptoAssetCommand } from 'src/app/core/models/create-crypto-asset-command';
 import { Crypto } from 'src/app/core/models/crypto';
+import { AuthService } from 'src/app/core/services/auth.service';
 
 @Component({
   selector: 'app-create-crypto',
@@ -68,7 +69,8 @@ export class CreateCryptoComponent implements OnInit {
   constructor(
     private modalService: NgbModal,
     private cryptoService: CryptoService,
-    private toastService: ToastService) {
+    private toastService: ToastService,
+    private authService: AuthService) {
   }
   ngOnInit(): void {
     this.getCryptos();
@@ -82,10 +84,15 @@ export class CreateCryptoComponent implements OnInit {
       return;
     }
 
+    let userId = this.authService.userId;
+    if (!userId)
+      return;
+
     const command: CreateCryptoAssetCommand = {
       crypto: selectedCrypto.symbol,
       currency: 'USD',
       coinMarketCapId: selectedCrypto.coinMarketCapId,
+      userId: parseInt(userId)
     };
 
     this.cryptoService.createCryptoAsset(command)

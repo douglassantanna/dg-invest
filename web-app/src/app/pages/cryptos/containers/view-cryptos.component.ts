@@ -29,40 +29,51 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
           <h1>Portfolio</h1>
         </div>
 
-        <div class="coll-2">
-          <app-crypto-filter
-            (viewDataTableEvent)="displayDataTableView($event)"
-            (searchControlEvent)="search($event, hideZeroBalance)"
-            (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
-            [setBalanceStatus]="setBalanceStatus">
-          </app-crypto-filter>
-        </div>
+        <ng-container *ngIf="emptyCriptoArray">
+          <div class="coll-2">
+            <app-crypto-filter
+              (viewDataTableEvent)="displayDataTableView($event)"
+              (searchControlEvent)="search($event, hideZeroBalance)"
+              (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
+              [setBalanceStatus]="setBalanceStatus">
+            </app-crypto-filter>
+          </div>
 
-        <div class="coll-3">
-          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-        </div>
+          <div class="coll-3">
+            <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+          </div>
+        </ng-container>
       </header>
 
       <div class="row">
         <div *ngIf="cryptos$ | async as cryptos; else loading">
-          <ng-template #cardView>
-            <div class="row">
-              <div class="col-md-4" *ngFor="let crypto of cryptos">
-                <app-crypto-card [crypto]="crypto" />
+          <ng-container *ngIf="!cryptos; else emptyCriptoList">
+            <ng-template #cardView>
+              <div class="row">
+                <div class="col-md-4" *ngFor="let crypto of cryptos">
+                  <app-crypto-card [crypto]="crypto" />
+                </div>
+              </div>
+            </ng-template>
+            <div class="row" *ngIf="displayDataTable;else cardView">
+              <div class="col-md-12">
+                <app-crypto-table [cryptos]="cryptos" [hideZeroBalance]="hideZeroBalance" />
               </div>
             </div>
-          </ng-template>
-          <div class="row" *ngIf="displayDataTable;else cardView">
-            <div class="col-md-12">
-              <app-crypto-table [cryptos]="cryptos" [hideZeroBalance]="hideZeroBalance" />
-            </div>
-          </div>
+          </ng-container>
         </div>
 
         <ng-template #loading>
           <div class="text-center">Loading...</div>
         </ng-template>
       </div>
+
+      <ng-template #emptyCriptoList>
+        <div class="text-center">
+          <h2>No assets found 😥</h2>
+          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+        </div>
+      </ng-template>
 
     </main>
   `,
@@ -98,6 +109,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
   displayDataTable: boolean = true;
+  emptyCriptoArray: boolean = false;
 
   ngOnDestroy() {
     this.unsubscribe$.next();
@@ -121,6 +133,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (cryptos) => {
           this.cryptos$.next(cryptos.items);
+          this.emptyCriptoArray = cryptos.items.length > 0;
         }
       });
   }

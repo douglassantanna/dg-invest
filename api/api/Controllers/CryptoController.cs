@@ -23,7 +23,7 @@ public class CryptoController : ControllerBase
     }
 
     [HttpPost("create")]
-    public async Task<ActionResult<Response>> Create([FromBody] CreateCryptoAssetCommand command)
+    public async Task<ActionResult<Response>> Create([FromBody] AddCryptoAssetToUserListCommand command)
     {
 
         var result = await _mediator.Send(command);
