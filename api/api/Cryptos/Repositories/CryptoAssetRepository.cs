@@ -1,59 +1,65 @@
+using System.Linq.Expressions;
 using api.Data;
 using api.Data.Repositories;
 using api.Models.Cryptos;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace api.Cryptos.Repositories;
-public class CryptoAssetRepository : IBaseRepository<CryptoAsset>
+public interface ICryptoAssetRepository
 {
+    Task AddAsync(CryptoAsset entity);
+    Task UpdateAsync(CryptoAsset entity);
+    Task<IEnumerable<CryptoAsset>> GetAll(
+        Expression<Func<CryptoAsset, bool>> filter = null,
+        Func<IQueryable<CryptoAsset>, IIncludableQueryable<CryptoAsset, object>> include = null);
+    Task<CryptoAsset?> GetByIdAsync(
+        int id,
+        Func<IQueryable<CryptoAsset>, IIncludableQueryable<CryptoAsset, object>> include = null);
+}
+
+public class CryptoAssetRepository : ICryptoAssetRepository
+{
+    private readonly IBaseRepository<CryptoAsset> _baseRepository;
+
     private readonly DataContext _context;
 
-    public CryptoAssetRepository(DataContext context)
+    public CryptoAssetRepository(DataContext context,
+                                 IBaseRepository<CryptoAsset> baseRepository)
     {
         _context = context;
+        _baseRepository = baseRepository;
     }
 
-    public void AddAsync(CryptoAsset entity)
+    public async Task AddAsync(CryptoAsset entity)
     {
-        _context.CryptoAssets.Add(entity);
+        await _baseRepository.AddAsync(entity);
+    }
+    public async Task<IEnumerable<CryptoAsset>> GetAll(Expression<Func<CryptoAsset, bool>> filter = null, Func<IQueryable<CryptoAsset>, IIncludableQueryable<CryptoAsset, object>> include = null)
+    {
+        return await _baseRepository.GetAll(filter);
     }
 
-    public void Delete(int id)
+    // public CryptoAsset? GetByIdAsync(int id) => _context.CryptoAssets
+    //                                                 .Include(x => x.Transactions)
+    //                                                 .Where(x => x.Id == id)
+    //                                                 .FirstOrDefault();
+
+    // public Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken)
+    // {
+    //     return _context.CryptoAssets
+    //                    .Include(x => x.Transactions)
+    //                    .Include(x => x.Addresses)
+    //                    .Where(x => x.Id == cryptoAssetId && !x.Deleted)
+    //                    .FirstOrDefaultAsync(cancellationToken);
+    // }
+
+    public async Task<CryptoAsset?> GetByIdAsync(int id, Func<IQueryable<CryptoAsset>, IIncludableQueryable<CryptoAsset, object>> include = null)
     {
-        throw new NotImplementedException();
-    }
-
-    public IEnumerable<CryptoAsset> GetAll()
-    {
-        return _context.CryptoAssets;
-    }
-
-    public async Task<bool> IsCryptoAssetInUserListAsync(int userId,
-                                                      CancellationToken cancellationToken)
-    => await _context.CryptoAssets.AnyAsync(x => x.UserId == userId, cancellationToken: cancellationToken);
-
-    public CryptoAsset? GetByIdAsync(int id) => _context.CryptoAssets
-                                                    .Include(x => x.Transactions)
-                                                    .Where(x => x.Id == id)
-                                                    .FirstOrDefault();
-
-    public Task<CryptoAsset?> GetByIdAsync(int cryptoAssetId, CancellationToken cancellationToken)
-    {
-        return _context.CryptoAssets
-                       .Include(x => x.Transactions)
-                       .Include(x => x.Addresses)
-                       .Where(x => x.Id == cryptoAssetId && !x.Deleted)
-                       .FirstOrDefaultAsync(cancellationToken);
-    }
-
-    public bool IsUnique(string data)
-    {
-        throw new NotImplementedException();
+        return await _baseRepository.GetByIdAsync(id, include);
     }
 
     public async Task UpdateAsync(CryptoAsset entity)
     {
-        _context.CryptoAssets.Update(entity);
-        await _context.SaveChangesAsync();
+        await _baseRepository.UpdateAsync(entity);
     }
 }
