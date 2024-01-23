@@ -4,7 +4,7 @@
 name: Build and deploy ASP.Net Core app to Azure Web App - dg-api
 env:
   AZURE_WEBAPP_NAME: dg-api
-  AZURE_WEBAPP_PACKAGE_PATH: "api/api.csproj"
+  AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
   SOLUTION: "api/dg-invest.api.sln"
   
 on:
