@@ -15,6 +15,7 @@ import { routes } from './app/app.routes';
 import { AuthorizationInterceptor } from './app/core/interceptors/auth.interceptor';
 import { InvalidTokenInterceptor } from './app/core/interceptors/invalid-token.interceptor';
 import { loadingInterceptor } from './app/core/interceptors/loading.interceptor';
+import { HashLocationStrategy, LocationStrategy } from '@angular/common';
 
 if (environment.production) {
   enableProdMode();
@@ -22,6 +23,7 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
   providers: [
+    Location, { provide: LocationStrategy, useClass: HashLocationStrategy },
     provideHttpClient(
       withInterceptors(
         [
