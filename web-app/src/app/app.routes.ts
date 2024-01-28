@@ -7,6 +7,7 @@ import { LoginComponent } from './pages/auth/login.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos.component';
 import { ViewUsersComponent } from './pages/users/container/view-users/view-users.component';
+import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   {
@@ -45,7 +46,7 @@ export const routes: Routes = [
   },
   {
     path: "users",
-    canActivate: [authGuard],
+    canActivate: [authGuard, roleGuard],
     component: ViewUsersComponent,
   },
 ];
