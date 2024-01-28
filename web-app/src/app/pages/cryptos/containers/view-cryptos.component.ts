@@ -1,3 +1,4 @@
+import { Crypto } from './../../../core/models/crypto';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -26,7 +27,7 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
     <main class="container">
       <header>
         <div class="coll-1">
-          <h1>Portfolio</h1>
+          <h1>Cryptos</h1>
         </div>
 
         <ng-container *ngIf="$emptyCryptoArray | async">
