@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { CreateCryptoComponent } from './pages/cryptos/containers/create-crypto.component';
 import { CryptoDetailsComponent } from './pages/cryptos/containers/crypto-details.component';
-import { DashboardComponent } from './layout/dashboard.component';
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login.component';
 import { ProfileComponent } from './pages/profile/profile.component';
@@ -14,11 +13,6 @@ export const routes: Routes = [
     path: "",
     pathMatch: "full",
     redirectTo: "login",
-  },
-  {
-    path: "dashboard",
-    canActivate: [authGuard],
-    component: DashboardComponent,
   },
   {
     path: "cryptos",
