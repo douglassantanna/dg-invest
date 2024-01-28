@@ -32,9 +32,20 @@ export class AuthService {
       this.isLoggedIn$.next(true);
   }
 
-  // get role(): string | null {
-  //   return this.decodePayloadJWT() ? this.decodePayloadJWT().role : null;
-  // }
+  get role(): string | null {
+    try {
+      const token = this.localStorageService.getToken();
+      const decodedToken = jwt_decode(token as string) as { role: string };
+
+      if (decodedToken) {
+        return decodedToken.role.toLowerCase();
+      }
+
+    } catch (error) {
+      console.error('Error decoding token:', error);
+    }
+    return null;
+  }
 
   get userId(): string | null {
     try {
@@ -51,9 +62,6 @@ export class AuthService {
 
     return null;
   }
-
-
-
   get token(): string | null {
     return this.localStorageService.getToken();
   }

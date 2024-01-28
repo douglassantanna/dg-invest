@@ -1,21 +1,16 @@
 import { Injectable } from '@angular/core';
+import { NavItems } from '../models/nav-items';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LayoutService {
-  navItems = [
-    {
-      label: 'DG Invest',
-      path: '',
-      icon: 'savings',
-      roles: ['admin', 'manager', 'user'],
-    },
+  navItems: NavItems[] = [
     {
       label: 'Cryptos',
       path: 'cryptos',
       icon: 'currency_bitcoin',
-      roles: ['admin', 'manager', 'user'],
+      roles: ['admin', 'user'],
     },
     {
       label: 'Users',
@@ -26,9 +21,8 @@ export class LayoutService {
     {
       label: 'Sign out',
       path: 'signout',
+      icon: 'signout',
       roles: ['admin', 'user'],
     }
-  ]
-    ;
-  constructor() { }
+  ];
 }

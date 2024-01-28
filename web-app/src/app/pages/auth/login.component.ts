@@ -68,7 +68,7 @@ export class LoginComponent {
     this.authService.login(this.loginForm.value).subscribe({
       next: (value) => {
         this.loading = false;
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/cryptos']);
       },
       error: (err) => {
         this.loading = false;

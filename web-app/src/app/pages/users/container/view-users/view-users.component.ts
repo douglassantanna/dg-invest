@@ -6,7 +6,6 @@ import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import { ViewUserDto } from 'src/app/core/models/view-user-dto';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { Pagination } from 'src/app/core/models/pagination';
-import { Role } from 'src/app/core/models/create-user';
 
 @Component({
   selector: 'app-view-users',
@@ -18,7 +17,6 @@ import { Role } from 'src/app/core/models/create-user';
   styleUrls: ['./view-users.component.scss']
 })
 export class ViewUsersComponent implements OnInit, OnDestroy {
-  adminRole = Role.Admin;
   users$: BehaviorSubject<ViewUserDto[]> = new BehaviorSubject<ViewUserDto[]>([]);
   private unsubscribe$: Subject<void> = new Subject<void>();
 
