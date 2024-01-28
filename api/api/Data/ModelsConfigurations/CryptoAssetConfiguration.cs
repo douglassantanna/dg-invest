@@ -8,6 +8,7 @@ public class CryptoAssetConfiguration : IEntityTypeConfiguration<CryptoAsset>
 {
     public void Configure(EntityTypeBuilder<CryptoAsset> builder)
     {
+        builder.Property(x => x.Id).HasColumnType("INTEGER").ValueGeneratedOnAdd();
         builder.Property(x => x.Symbol).HasColumnType("varchar").HasMaxLength(255);
         builder.Property(x => x.CurrencyName).HasColumnType("varchar").HasMaxLength(255);
         builder.Property(x => x.CryptoCurrency).HasColumnType("varchar").HasMaxLength(255);
