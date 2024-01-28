@@ -3,7 +3,7 @@
 
 name: Web Api
 env:
-  AZURE_WEBAPP_NAME: dg-api
+  AZURE_WEBAPP_NAME: dg-api-w
   AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
   SOLUTION: "api/dg-invest.api.sln"
 
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: "dg-api"
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: "Production"
           package: .
           publish-profile: ${{ secrets.AZURE_WEB_API_SECRET_DG_API_W }}
