@@ -62,9 +62,6 @@ export class AuthService {
 
     return null;
   }
-
-
-
   get token(): string | null {
     return this.localStorageService.getToken();
   }

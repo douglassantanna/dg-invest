@@ -14,7 +14,7 @@ import { AuthService } from '../core/services/auth.service';
   template: `
     <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">DG</a>
+        <a class="navbar-brand">DG</a>
         <button class="navbar-toggler" type="button" (click)="toggleMenu()" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
