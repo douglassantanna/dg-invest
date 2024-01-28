@@ -6,7 +6,7 @@ env:
   AZURE_WEBAPP_NAME: dg-api
   AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
   SOLUTION: "api/dg-invest.api.sln"
-  
+
 on:
   push:
     branches:
@@ -23,7 +23,7 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '7.x'
+          dotnet-version: "7.x"
           include-prerelease: true
 
       - name: Build with dotnet
@@ -42,20 +42,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: 'Production'
+      name: "Production"
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
           name: .net-app
-      
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'dg-api'
-          slot-name: 'Production'
+          app-name: "dg-api"
+          slot-name: "Production"
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E38D702CAD264EA69F1EF8AF5730597E }}
+          publish-profile: ${{ secrets.AZURE_WEB_API_SECRET_DG_API }}
