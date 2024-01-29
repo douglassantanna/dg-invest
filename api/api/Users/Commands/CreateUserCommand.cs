@@ -61,7 +61,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
                             _passwordHelper.EncryptPassword(randomPassword),
                             request.Role);
 
-        _userRepository.AddAsync(user);
+        await _userRepository.AddAsync(user);
 
         await _publisher.Publish(new NewUserCreatedCommand(user, randomPassword), cancellationToken);
 
