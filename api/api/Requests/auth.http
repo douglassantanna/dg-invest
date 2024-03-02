@@ -1,9 +1,9 @@
-@url = http://localhost:5059/api/Authentication
+@url = https://dg-api-w.azurewebsites.net/api/Authentication
 
 POST {{url}}/login
 Content-Type: application/json
 
 {
-    "email":"joao@teste.com",
+    "email":"douglbb1@gmail.com",
     "password":"123tes"
 }

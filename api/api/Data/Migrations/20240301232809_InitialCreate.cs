@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace api.Migrations
 {
     /// <inheritdoc />
-    public partial class sqlitemigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,11 +16,11 @@ namespace api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    Symbol = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    Image = table.Column<string>(type: "varchar", maxLength: 1000, nullable: false),
-                    CoinMarketCapId = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    Symbol = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    Image = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: false),
+                    CoinMarketCapId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,12 +32,12 @@ namespace api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FullName = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    Email = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    Password = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    Role = table.Column<int>(type: "INTEGER", nullable: false),
-                    EmailConfirmed = table.Column<bool>(type: "INTEGER", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FullName = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    Email = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    Password = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    Role = table.Column<int>(type: "int", nullable: false),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -49,17 +49,17 @@ namespace api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CryptoCurrency = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    Balance = table.Column<decimal>(type: "TEXT", precision: 18, scale: 8, nullable: false),
-                    AveragePrice = table.Column<decimal>(type: "TEXT", precision: 18, scale: 8, nullable: false),
-                    Symbol = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    CurrencyName = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
-                    Deleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CoinMarketCapId = table.Column<int>(type: "INTEGER", nullable: false),
-                    TotalInvested = table.Column<decimal>(type: "TEXT", precision: 18, scale: 8, nullable: false)
+                    CryptoCurrency = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    Balance = table.Column<decimal>(type: "decimal(18,8)", precision: 18, scale: 8, nullable: false),
+                    AveragePrice = table.Column<decimal>(type: "decimal(18,8)", precision: 18, scale: 8, nullable: false),
+                    Symbol = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    CurrencyName = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    Deleted = table.Column<bool>(type: "bit", nullable: false),
+                    CoinMarketCapId = table.Column<int>(type: "int", nullable: false),
+                    TotalInvested = table.Column<decimal>(type: "decimal(18,8)", precision: 18, scale: 8, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -76,12 +76,12 @@ namespace api.Migrations
                 name: "Address",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    AddressName = table.Column<string>(type: "TEXT", nullable: false),
-                    AddressValue = table.Column<string>(type: "TEXT", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AddressName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AddressValue = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CryptoAssetId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Deleted = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Deleted = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -99,13 +99,13 @@ namespace api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Amount = table.Column<decimal>(type: "TEXT", precision: 18, scale: 8, nullable: false),
-                    Price = table.Column<decimal>(type: "TEXT", precision: 18, scale: 8, nullable: false),
-                    PurchaseDate = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
-                    ExchangeName = table.Column<string>(type: "varchar", maxLength: 255, nullable: false),
-                    TransactionType = table.Column<int>(type: "INTEGER", nullable: false),
-                    Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Amount = table.Column<decimal>(type: "decimal(18,8)", precision: 18, scale: 8, nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,8)", precision: 18, scale: 8, nullable: false),
+                    PurchaseDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    ExchangeName = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: false),
+                    TransactionType = table.Column<int>(type: "int", nullable: false),
+                    Enabled = table.Column<bool>(type: "bit", nullable: false),
                     CryptoAssetId = table.Column<int>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
