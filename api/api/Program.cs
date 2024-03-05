@@ -71,6 +71,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+DatabaseManagementService.MigrationInitialization(app);
+
 app.UseCors("Policy");
 
 app.UseHttpsRedirection();
