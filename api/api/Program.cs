@@ -32,7 +32,7 @@ builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSectio
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.AddDbContext<DataContext>(options =>
 {
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
 builder.Services.AddCors(options =>
@@ -70,6 +70,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+DatabaseManagementService.MigrationInitialization(app);
 
 app.UseCors("Policy");
 

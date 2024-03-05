@@ -1,4 +1,4 @@
-@url = https://dg-api.azurewebsites.net/api
+@url = http://localhost:5059/api/user
 @token = 
 PUT {{url}}/update-user
 Content-Type: application/json
@@ -19,8 +19,8 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-    "fullName":"Douglas Sant'Anna",
-    "email":"douglbb1@gmail.com",
+    "fullName":"Theo Giz",
+    "email":"theo@gmail.com",
     "role":1
 }
 
