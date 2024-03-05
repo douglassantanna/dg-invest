@@ -1,4 +1,3 @@
-@url = http://localhost:5059/api/user
 @token = 
 PUT {{url}}/update-user
 Content-Type: application/json

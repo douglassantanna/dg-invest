@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://127.0.0.1:8000/api',
+  apiUrl: 'https://dg-api-w.azurewebsites.net/api',
 };
+export const local_storage_token = 'dg-invest-token';
