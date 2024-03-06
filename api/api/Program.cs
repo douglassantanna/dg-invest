@@ -32,7 +32,8 @@ builder.Services.Configure<AzureStorageSettings>(builder.Configuration.GetSectio
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.AddDbContext<DataContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+    x => x.EnableRetryOnFailure());
 });
 
 builder.Services.AddCors(options =>
