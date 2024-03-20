@@ -12,42 +12,51 @@ import { ToastService } from '../../core/services/toast.service';
     CommonModule,
     ReactiveFormsModule],
   template: `
-    <div class="container">
-    <div class="row justify-content-center align-items-center min-vh-100">
-      <div class="col-md-6">
-        <form (ngSubmit)="login()" class="p-4 border rounded shadow" [formGroup]="loginForm">
-          <h2 class="mb-4 text-center">DG Invest</h2>
-          <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input required formControlName="email" type="email" id="email" class="form-control" placeholder="Enter your email">
-            <div style="color: red;" *ngIf="emailFormControl?.hasError('email') && !emailFormControl?.hasError('required')">
-              Please enter a valid email address.
-            </div>
+  <div class="flex items-center justify-center h-screen">
+    <div class="w-full p-6 bg-white rounded-md shadow-md ring-2 ring-gray-800/50 sm:max-w-md">
+      <h1 class="text-3xl font-semibold text-center text-gray-700 mb-4">DG Invest</h1>
+      <form (ngSubmit)="login()" class="space-y-4" [formGroup]="loginForm">
+        <div>
+          <label for="email" class="block text-sm text-gray-600 font-semibold">Email</label>
+          <input required formControlName="email" type="email" id="email"
+          class="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-blue-500"
+          placeholder="Enter your email">
+          <div class="text-red-500 text-sm" *ngIf="emailFormControl?.hasError('email') && !emailFormControl?.hasError('required')">
+            Please enter a valid email address.
           </div>
-          <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input required formControlName="password" type="password" class="form-control" placeholder="Enter your password">
-            <div style="color: red;" *ngIf="passwordFormControl?.hasError('minlength')">
-              Minimun password length is 4 characters.
-            </div>
+        </div>
+        <div>
+          <label for="password" class="block text-sm text-gray-600 font-semibold">Password</label>
+          <input required formControlName="password" type="password"
+          class="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-blue-500"
+          placeholder="Enter your password">
+          <div class="text-red-500 text-sm" *ngIf="passwordFormControl?.hasError('minlength')">
+            Minimun password length is 4 characters.
           </div>
-          <div class="text-center">
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="loading || loginForm.invalid"
-              [ngStyle]="{'cursor': loading ? 'not-allowed' : 'pointer'}"
-              >{{loading ? 'Loading...' : 'Login'}}</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <div>
+          <button
+            *ngIf="!loading;else load"
+            type="submit"
+            class="btn btn-block btn-accent"
+            [disabled]="loading || loginForm.invalid"
+            [ngStyle]="{'cursor': loading ? 'not-allowed' : 'pointer'}"
+            >Login
+          </button>
+            <ng-template #load>
+              <button
+              type="button"
+              class="btn btn-block btn-accent"
+              [disabled]="true"
+              >
+              <span class="pl-2 loading loading-spinner loading-sm"></span>
+              </button>
+            </ng-template>
+        </div>
+      </form>
     </div>
   </div>
   `,
-  styles: [
-    `
-    `
-  ]
 })
 export class LoginComponent {
   authService = inject(AuthService);
