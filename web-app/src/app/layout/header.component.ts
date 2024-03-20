@@ -13,19 +13,9 @@ import { NavItems } from '../core/models/nav-items';
     CommonModule,
     RouterModule],
   template: `
-    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
-      <div class="container-fluid">
-        <a class="navbar-brand">DG</a>
-        <button class="navbar-toggler" type="button" (click)="toggleMenu()" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" [ngClass]="{'collapse': isCollapsed}" id="navbarNavAltMarkup">
-          <div class="navbar-nav" *ngFor="let item of navItems">
-            <a class="nav-link" aria-current="page" [routerLink]="item.path" (click)="logout(item)">{{ item.label }}</a>
-          </div>
-        </div>
-      </div>
-    </nav>
+    <div class="navbar bg-base-100">
+      <button class="btn btn-primary text-xl">DG</button>
+    </div>
   `,
 })
 export class HeaderComponent {
