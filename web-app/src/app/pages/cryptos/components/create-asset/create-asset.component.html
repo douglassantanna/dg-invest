@@ -1,0 +1,27 @@
+<ng-template #content let-modal>
+  <div class="modal-header">
+    <h2 class="modal-title" id="modal-basic-title">New crypto asset</h2>
+    <button type="button" class="btn-close" aria-label="Close" (click)="closeModal(modal)"></button>
+  </div>
+  <div class="modal-body">
+    <form>
+      <div class="mb-3">
+        <select class="form-select" aria-label="Crypto selector" [(ngModel)]="selectedCoinMarketCapId"
+          name="selectedValue" required>
+          <option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId">
+            {{ crypto.symbol }}
+          </option>
+        </select>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <app-button [text]="'Save'" [loading]="!loading" [disabled]="selectedCoinMarketCapId < 1"
+      (submit)="createCryptoAsset(selectedCoinMarketCapId, modal)"></app-button>
+  </div>
+</ng-template>
+
+<app-button [loading]="true" [text]="'Add asset'" (submit)="open(content)"></app-button>
+
+<style>
+</style>

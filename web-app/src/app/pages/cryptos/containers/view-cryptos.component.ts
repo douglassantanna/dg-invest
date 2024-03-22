@@ -2,13 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
-import { CreateCryptoComponent } from './create-crypto.component';
 import { CryptoService } from '../../../core/services/crypto.service';
 import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../components/crypto-filter/crypto-filter.component';
 import { CryptoTableComponent } from '../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
+import { CreateAssetComponent } from '../components/create-asset/create-asset.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -16,10 +16,10 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
   imports: [
     CommonModule,
     FormsModule,
-    CreateCryptoComponent,
     ReactiveFormsModule,
     CryptoFilterComponent,
-    CryptoTableComponent],
+    CryptoTableComponent,
+    CreateAssetComponent],
   template: `
     <main class="container">
       <header>
@@ -37,7 +37,7 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
           </div>
 
           <div class="coll-3">
-            <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+            <app-create-asset (cryptoCreated)="loadCryptoAssets()"></app-create-asset>
           </div>
         </ng-container>
       </header>
@@ -61,7 +61,7 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
       <ng-template #emptyCriptoList>
         <div class="text-center">
           <h2>No assets found 😥</h2>
-          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+          <app-create-asset (cryptoCreated)="loadCryptoAssets()"></app-create-asset>
         </div>
       </ng-template>
 
