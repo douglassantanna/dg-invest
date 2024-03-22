@@ -1,27 +1,33 @@
-<ng-template #content let-modal>
-  <div class="modal-header">
-    <h2 class="modal-title" id="modal-basic-title">New crypto asset</h2>
-    <button type="button" class="btn-close" aria-label="Close" (click)="closeModal(modal)"></button>
-  </div>
-  <div class="modal-body">
-    <form>
-      <div class="mb-3">
-        <select class="form-select" aria-label="Crypto selector" [(ngModel)]="selectedCoinMarketCapId"
-          name="selectedValue" required>
-          <option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId">
-            {{ crypto.symbol }}
-          </option>
-        </select>
-      </div>
-    </form>
-  </div>
-  <div class="modal-footer">
-    <app-button [text]="'Save'" [loading]="!loading" [disabled]="selectedCoinMarketCapId < 1"
-      (submit)="createCryptoAsset(selectedCoinMarketCapId, modal)"></app-button>
-  </div>
-</ng-template>
-
-<app-button [loading]="true" [text]="'Add asset'" (submit)="open(content)"></app-button>
+<div class="dialog">
+  <header>
+    <h2 class="">New crypto asset</h2>
+    <button type="button" class="btn-close" aria-label="Close" (click)="closeModal()"></button>
+  </header>
+  <form>
+    <mat-form-field appearance="outline">
+      <mat-label>Select a cryptocurrency</mat-label>
+      <mat-select [(ngModel)]="selectedCoinMarketCapId" name="select">
+        <mat-option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId">
+          {{ crypto.symbol }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </form>
+  <app-button style="margin-top: 10px;" [text]="'Save'" [loading]="!loading" [disabled]="selectedCoinMarketCapId < 1"
+    (click)="createCryptoAsset(selectedCoinMarketCapId)"></app-button>
+</div>
 
 <style>
+  .dialog {
+    padding: 10px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
 </style>

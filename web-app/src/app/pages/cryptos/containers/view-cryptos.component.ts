@@ -9,6 +9,8 @@ import { CryptoTableComponent } from '../components/crypto-table/crypto-table.co
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
 import { CreateAssetComponent } from '../components/create-asset/create-asset.component';
+import { ButtonComponent } from 'src/app/layout/button/button.component';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -19,7 +21,8 @@ import { CreateAssetComponent } from '../components/create-asset/create-asset.co
     ReactiveFormsModule,
     CryptoFilterComponent,
     CryptoTableComponent,
-    CreateAssetComponent],
+    CreateAssetComponent,
+    ButtonComponent],
   template: `
     <main class="container">
       <header>
@@ -61,7 +64,7 @@ import { CreateAssetComponent } from '../components/create-asset/create-asset.co
       <ng-template #emptyCriptoList>
         <div class="text-center">
           <h2>No assets found 😥</h2>
-          <app-create-asset (cryptoCreated)="loadCryptoAssets()"></app-create-asset>
+          <app-button [loading]="true" [text]="'Add asset'" (submit)="openModal()"></app-button>
         </div>
       </ng-template>
 
@@ -91,6 +94,7 @@ import { CreateAssetComponent } from '../components/create-asset/create-asset.co
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
+  private dialog = inject(MatDialog);
   private localStorageService = inject(LocalStorageService);
   private unsubscribe$: Subject<void> = new Subject<void>();
 
@@ -126,10 +130,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       });
   }
 
-  displayDataTableView(event: boolean) {
-    this.localStorageService.setDataViewType(event);
-  }
-
   search(input: string, hideZeroBalance: boolean) {
     this.localStorageService.setHideZeroBalance(hideZeroBalance);
     this.cryptoService.getCryptoAssets(1, 50, input, "ASC", hideZeroBalance)
@@ -146,5 +146,11 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
   setBalanceStatus(value: boolean): void {
     this.hideZeroBalance = value;
+  }
+
+  openModal() {
+    const dialogRef = this.dialog.open(CreateAssetComponent, {
+      width: '350px'
+    });
   }
 }
