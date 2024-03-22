@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { CreateCryptoComponent } from './pages/cryptos/containers/create-crypto.component';
 import { CryptoDetailsComponent } from './pages/cryptos/containers/crypto-details.component';
 import { authGuard } from './core/guards/auth.guard';
-import { LoginComponent } from './pages/auth/login.component';
+import { LoginComponent } from './pages/auth/login/login.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos.component';
 import { ViewUsersComponent } from './pages/users/container/view-users/view-users.component';
