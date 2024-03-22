@@ -13,9 +13,13 @@ import { NavItems } from '../core/models/nav-items';
     CommonModule,
     RouterModule],
   template: `
-    <div class="navbar bg-base-100">
-      <button class="btn btn-primary text-xl">DG</button>
-    </div>
+  <nav class="flex items-center justify-between bg-gray-800 text-white px-4 py-2">
+    <a routerLink="/" class="text-xl font-bold">Your App Name</a>
+    <ul class="flex space-x-4">
+      <li><a routerLink="/about" class="hover:text-gray-400">About</a></li>
+      <li><a routerLink="/contact" class="hover:text-gray-400">Contact</a></li>
+      </ul>
+  </nav>
   `,
 })
 export class HeaderComponent {
