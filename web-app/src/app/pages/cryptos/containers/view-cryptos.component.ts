@@ -1,10 +1,8 @@
-import { Crypto } from './../../../core/models/crypto';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { CreateCryptoComponent } from './create-crypto.component';
-import { CryptoCardComponent } from '../components/crypto-card.component';
 import { CryptoService } from '../../../core/services/crypto.service';
 import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../components/crypto-filter/crypto-filter.component';
@@ -18,7 +16,6 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
   imports: [
     CommonModule,
     FormsModule,
-    CryptoCardComponent,
     CreateCryptoComponent,
     ReactiveFormsModule,
     CryptoFilterComponent,
@@ -33,7 +30,6 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
         <ng-container *ngIf="$emptyCryptoArray | async">
           <div class="coll-2">
             <app-crypto-filter
-              (viewDataTableEvent)="displayDataTableView($event)"
               (searchControlEvent)="search($event, hideZeroBalance)"
               (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
               [setBalanceStatus]="setBalanceStatus">
@@ -49,14 +45,7 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
       <div class="row">
         <div *ngIf="cryptos$ | async as cryptos; else loading">
           <ng-container *ngIf="cryptos?.length; else emptyCriptoList">
-            <ng-template #cardView>
-              <div class="row">
-                <div class="col-md-4" *ngFor="let crypto of cryptos">
-                  <app-crypto-card [crypto]="crypto" />
-                </div>
-              </div>
-            </ng-template>
-            <div class="row" *ngIf="displayDataTable;else cardView">
+            <div class="row">
               <div class="col-md-12">
                 <app-crypto-table [cryptos]="cryptos" [hideZeroBalance]="hideZeroBalance" />
               </div>
@@ -109,7 +98,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
-  displayDataTable: boolean = true;
   $emptyCryptoArray: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
 
   ngOnDestroy() {
@@ -119,7 +107,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCryptoAssets();
-    this.displayDataTable = this.localStorageService.getDataViewType();
   }
 
   loadCryptoAssets(
@@ -140,7 +127,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
 
   displayDataTableView(event: boolean) {
-    this.displayDataTable = event;
     this.localStorageService.setDataViewType(event);
   }
 

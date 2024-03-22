@@ -15,17 +15,13 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
 export class CryptoFilterComponent implements OnDestroy {
   @Output() searchControlEvent = new EventEmitter<string>();
   @Output() hideZeroBalanceControlEvent = new EventEmitter<boolean>(false);
-  @Output() viewDataTableEvent = new EventEmitter<boolean>(true);
   searchControl: FormControl = new FormControl();
   showZeroBalance: FormControl = new FormControl();
-  viewDataTable: FormControl = new FormControl(true);
-  tableView!: boolean;
   @Input() setBalanceStatus = (value: boolean) => this.showZeroBalance.setValue(value);
 
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   constructor(localStorageService: LocalStorageService) {
-    this.tableView = localStorageService.getDataViewType();
     this.showZeroBalance.setValue(localStorageService.getHideZeroBalance());
 
     this.searchControl.valueChanges
@@ -43,14 +39,6 @@ export class CryptoFilterComponent implements OnDestroy {
         distinctUntilChanged(),
       ).subscribe(value => {
         this.hideZeroBalanceControlEvent.next(value);
-      });
-
-    this.viewDataTable.valueChanges
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-      ).subscribe(value => {
-        this.viewDataTableEvent.next(value == 1 ? true : false);
       });
   }
 
