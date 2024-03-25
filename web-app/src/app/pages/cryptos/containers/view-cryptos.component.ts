@@ -40,7 +40,7 @@ import { MatDialog } from '@angular/material/dialog';
           </div>
 
           <div class="coll-3">
-            <app-create-asset (cryptoCreated)="loadCryptoAssets()"></app-create-asset>
+            <app-button [loading]="true" [text]="'Add asset'" (submit)="openModal()"></app-button>
           </div>
         </ng-container>
       </header>
