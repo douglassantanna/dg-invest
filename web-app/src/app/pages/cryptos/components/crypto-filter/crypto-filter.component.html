@@ -1,9 +1,9 @@
 <div class="row-container">
   <div class="first-container">
-    <select name="sort" class="sort-select" disabled>
+    <select name="sort" disabled>
       <option value="">Sort by..</option>
     </select>
-    <div>
+    <div class="gridCheck">
       <input type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
       <label for="gridCheck">
         Hide zero balance
@@ -26,14 +26,28 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0px 0px 10px 0px;
+    padding-bottom: 10px;
+    flex-wrap: nowrap;
+    gap: 10px;
   }
 
-  .sort-select {
+  select {
     width: 50%;
+  }
+
+  .gridCheck {
+    width: 100%;
+    display: flex;
+    gap: 5px;
   }
 
   .search {
     width: 100%;
+  }
+
+  @media screen and (max-width: 768px) {
+    .first-container {
+      flex-wrap: wrap;
+    }
   }
 </style>
