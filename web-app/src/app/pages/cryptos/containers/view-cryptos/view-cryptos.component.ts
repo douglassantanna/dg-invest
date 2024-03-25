@@ -35,7 +35,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
-  $emptyCryptoArray: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  emptyCryptoList!: boolean;
 
   ngOnDestroy() {
     this.unsubscribe$.next();
@@ -58,7 +58,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (cryptos) => {
           this.cryptos$.next(cryptos.items);
-          this.$emptyCryptoArray.next(cryptos.items.length > 0);
+          this.emptyCryptoList = !cryptos.items.length;
         }
       });
   }
