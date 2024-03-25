@@ -3,13 +3,20 @@ import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
-
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 @Component({
   selector: 'app-crypto-filter',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule],
+    ReactiveFormsModule,
+    MatSelectModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSlideToggleModule],
   templateUrl: 'crypto-filter.component.html',
 })
 export class CryptoFilterComponent implements OnDestroy {

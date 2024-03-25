@@ -1,48 +1,41 @@
-<div class="row-container">
-  <div class="first-container">
-    <select name="sort" disabled>
-      <option value="">Sort by..</option>
-    </select>
-    <div class="gridCheck">
-      <input type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
-      <label for="gridCheck">
-        Hide zero balance
-      </label>
-    </div>
+<div class="first-container">
+
+  <mat-form-field appearance="outline" *ngIf="false">
+    <mat-label>Sort by..</mat-label>
+    <mat-select disabled>
+      <mat-option [value]=""></mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="gridCheck">
+    <mat-slide-toggle [formControl]="showZeroBalance" color="primary">
+      Hide zero balance
+    </mat-slide-toggle>
   </div>
-  <div class="search">
-    <input placeholder="Search by name.." aria-label="Search" type="text" [formControl]="searchControl">
-  </div>
+
+  <mat-form-field>
+    <mat-label>Search by name..</mat-label>
+    <input matInput aria-label="Search" type="text" [formControl]="searchControl">
+  </mat-form-field>
 </div>
 
 <style>
-  .row-container {
-    display: flex;
-    justify-content: flex-start;
-    flex-direction: column;
+  mat-form-field {
+    width: 100%;
   }
 
   .first-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 10px;
     flex-wrap: nowrap;
-    gap: 10px;
-  }
-
-  select {
-    width: 50%;
+    width: 100%;
   }
 
   .gridCheck {
     width: 100%;
     display: flex;
     gap: 5px;
-  }
-
-  .search {
-    width: 100%;
   }
 
   @media screen and (max-width: 768px) {

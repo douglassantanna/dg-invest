@@ -23,7 +23,7 @@ import { CommonModule } from '@angular/common';
     background-color: var(--primary-color);
     color: #fff;
     cursor: pointer;
-    width: 100%;
+    min-width: 105px;
     transition: background-color 0.3s;
   }
 
