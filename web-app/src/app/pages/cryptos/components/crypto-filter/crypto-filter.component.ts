@@ -7,6 +7,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatBottomSheetModule, MatBottomSheetRef } from '@angular/material/bottom-sheet';
 @Component({
   selector: 'app-crypto-filter',
   standalone: true,
@@ -16,15 +20,20 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
     MatSelectModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSlideToggleModule],
+    MatSlideToggleModule,
+    MatIconModule,
+    MatButtonModule,
+    MatExpansionModule,
+    MatBottomSheetModule],
   templateUrl: 'crypto-filter.component.html',
 })
 export class CryptoFilterComponent implements OnDestroy {
   @Output() searchControlEvent = new EventEmitter<string>();
   @Output() hideZeroBalanceControlEvent = new EventEmitter<boolean>(false);
+  @Input() setBalanceStatus = (value: boolean) => this.showZeroBalance.setValue(value);
+  showFilter: boolean = false;
   searchControl: FormControl = new FormControl();
   showZeroBalance: FormControl = new FormControl();
-  @Input() setBalanceStatus = (value: boolean) => this.showZeroBalance.setValue(value);
 
   private unsubscribe$: Subject<void> = new Subject<void>();
 

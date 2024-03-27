@@ -11,6 +11,9 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
 import { CreateAssetComponent } from '../../components/create-asset/create-asset.component';
 import { ButtonComponent } from 'src/app/layout/button/button.component';
 import { MatDialog } from '@angular/material/dialog';
+import { DividerComponent } from 'src/app/layout/divider/divider.component';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -22,7 +25,10 @@ import { MatDialog } from '@angular/material/dialog';
     CryptoFilterComponent,
     CryptoTableComponent,
     CreateAssetComponent,
-    ButtonComponent],
+    ButtonComponent,
+    DividerComponent,
+    MatButtonModule,
+    MatIconModule],
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
