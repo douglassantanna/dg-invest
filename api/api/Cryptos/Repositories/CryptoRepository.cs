@@ -29,7 +29,7 @@ public class CryptoRepository : ICryptoRepository
     public async Task AddAsync(Crypto entity) => await _baseRepository.AddAsync(entity);
     public IEnumerable<Crypto> GetAll(Expression<Func<Crypto, bool>> filter = null, Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null)
     {
-        return _dataContext.Cryptos.OrderByDescending(x => x.Name);
+        return _dataContext.Cryptos.OrderBy(x => x.Symbol);
     }
     public async Task<Crypto?> GetByIdAsync(int id, Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null) => await _baseRepository.GetByIdAsync(id, include);
     public async Task UpdateAsync(Crypto entity) => await _baseRepository.UpdateAsync(entity);
