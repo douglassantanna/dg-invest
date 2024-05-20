@@ -62,7 +62,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.Where(x => x.Balance > 0);
         }
 
-        if (request.SortOrder?.ToUpper() == "DESC")
+        if (request.SortOrder?.ToUpper() == "ASC")
         {
             cryptoAssetQuery = cryptoAssetQuery.OrderByDescending(GetSortProperty(request));
         }
