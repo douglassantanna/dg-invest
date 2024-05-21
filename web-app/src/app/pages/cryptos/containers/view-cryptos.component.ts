@@ -11,6 +11,7 @@ import { CryptoFilterComponent } from '../components/crypto-filter.component';
 import { CryptoTableComponent } from '../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
+import { PercentDifferenceComponent } from '../components/percent-difference.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -22,7 +23,8 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
     CreateCryptoComponent,
     ReactiveFormsModule,
     CryptoFilterComponent,
-    CryptoTableComponent],
+    CryptoTableComponent,
+    PercentDifferenceComponent],
   template: `
     <main class="container">
       <header>
@@ -33,20 +35,36 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
         <ng-container *ngIf="$emptyCryptoArray | async">
           <div class="coll-2">
             <app-crypto-filter
-              (viewDataTableEvent)="displayDataTableView($event)"
-              (searchControlEvent)="search($event, hideZeroBalance)"
-              (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
-              [setBalanceStatus]="setBalanceStatus">
-            </app-crypto-filter>
-          </div>
+            (viewDataTableEvent)="displayDataTableView($event)"
+            (searchControlEvent)="search($event, hideZeroBalance)"
+            (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
+            [setBalanceStatus]="setBalanceStatus">
+          </app-crypto-filter>
+        </div>
 
-          <div class="coll-3">
-            <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-          </div>
-        </ng-container>
-      </header>
+        <div class="coll-3">
+          <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+        </div>
+      </ng-container>
+    </header>
 
-      <div class="row">
+    <div class="row">
+      <div class="container mt-3">
+        <div class="row">
+          <div class="col-md-6">
+          <div class="alert alert-light">
+            <strong>Total Invested:</strong> {{ totalInvested | currency:'USD':'symbol':'1.2-2'}}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="alert alert-light">
+            <strong>Total Market Value:</strong> {{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
+            <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
+          </div>
+        </div>
+      </div>
+      </div>
+
         <div *ngIf="cryptos$ | async as cryptos; else loading">
           <ng-container *ngIf="cryptos?.length; else emptyCriptoList">
             <ng-template #cardView>
@@ -111,7 +129,9 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   hideZeroBalance: boolean = false;
   displayDataTable: boolean = true;
   $emptyCryptoArray: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-
+  totalInvested = 0;
+  totalMarketValue = 0;
+  investmentChangePercent = 0;
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
@@ -135,6 +155,9 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
         next: (cryptos) => {
           this.cryptos$.next(cryptos.items);
           this.$emptyCryptoArray.next(cryptos.items.length > 0);
+          this.totalInvested = this.sumTotalInvested(cryptos.items);
+          this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
+          this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);
         }
       });
   }
@@ -160,5 +183,25 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
   setBalanceStatus(value: boolean): void {
     this.hideZeroBalance = value;
+  }
+
+  private sumTotalInvested(cryptos: ViewCryptoInformation[]): number {
+    return cryptos.reduce((acc, cur) => acc + cur.investedAmount, 0);
+  }
+
+  private sumTotalMarketValue(cryptos: ViewCryptoInformation[]): number {
+    return cryptos.reduce((acc, cur) => acc + cur.currentWorth, 0);
+  }
+
+  private calculatePercentDifference(cryptos: ViewCryptoInformation[]): number {
+    const totalInvested = this.sumTotalInvested(cryptos);
+    const totalMarketValue = this.sumTotalMarketValue(cryptos);
+
+    if (totalInvested === 0) {
+      return 0;
+    }
+
+    const percentDifference = ((totalMarketValue - totalInvested) / totalInvested) * 100;
+    return percentDifference;
   }
 }
