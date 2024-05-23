@@ -175,6 +175,9 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (cryptos) => {
           this.cryptos$.next(cryptos.items);
+          this.totalInvested = this.sumTotalInvested(cryptos.items);
+          this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
+          this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);
         },
         error: (err) => {
           this.setBalanceStatus(false);
