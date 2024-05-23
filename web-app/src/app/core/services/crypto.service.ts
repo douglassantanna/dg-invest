@@ -87,17 +87,6 @@ export class CryptoService {
     );
   }
 
-  private getCryptoDataById(id: number): Observable<Response<ViewCryptoDataDto>> {
-    return this.http.get<Response<ViewCryptoDataDto>>(`${url}/get-crypto-data-by-id/${id}`)
-      .pipe(
-        catchError(error => {
-          if (error.error.message)
-            this.toastService.showError(error.error.message);
-          return of();
-        })
-      );
-  }
-
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/create`, command).pipe(
       catchError(error => {
