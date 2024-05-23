@@ -4,7 +4,8 @@ export interface ViewCryptoInformation {
   balance: number;
   investedAmount: number;
   currentWorth: number;
-  investmentGainLoss: number;
+  investmentGainLossValue: number;
+  investmentGainLossPercentage: number;
   coinMarketCapId: number;
   id: number;
 }

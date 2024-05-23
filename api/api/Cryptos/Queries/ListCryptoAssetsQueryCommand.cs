@@ -90,6 +90,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
                                                                                     x.TotalInvested,
                                                                                     x.CurrentWorth(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
                                                                                     x.GetInvestmentGainLossValue(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    x.GetInvestmentGainLossPercentage(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
                                                                                     x.CoinMarketCapId));
 
         var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,

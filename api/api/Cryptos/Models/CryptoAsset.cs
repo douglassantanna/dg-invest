@@ -117,6 +117,18 @@ public class CryptoAsset : Entity
         var total = CurrentWorth(currentPrice) - TotalInvested;
         return total;
     }
+    internal decimal GetInvestmentGainLossPercentage(decimal currentPrice)
+    {
+        if (Balance == 0)
+        {
+            return 0;
+        }
+        var currentWorth = CurrentWorth(currentPrice);
+        var gainOrLoss = currentWorth - TotalInvested;
+
+        var percentageDifference = (gainOrLoss / TotalInvested) * 100;
+        return percentageDifference;
+    }
     private decimal GetAveragePrice()
     {
         var enableTransactions = _transactions

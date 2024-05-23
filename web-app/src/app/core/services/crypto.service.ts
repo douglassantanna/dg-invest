@@ -117,7 +117,7 @@ export class CryptoService {
       }),
       switchMap((response: Response<any>) => {
         if (response.isSuccess) {
-          return this.getCryptoDataById(command.cryptoAssetId);
+          return this.getCryptoAssetById(command.cryptoAssetId);
         } else {
           return of(this._cryptoAssetData.value);
         }
