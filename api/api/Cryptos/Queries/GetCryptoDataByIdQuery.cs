@@ -54,7 +54,7 @@ public class GetCryptoDataByIdHandler : IRequestHandler<GetCryptoDataByIdQuery, 
             new CryptoAssetData("Balance", cryptoAsset.Balance),
             new CryptoAssetData("Invested amount", cryptoAsset.TotalInvested),
             new CryptoAssetData("Current worth", cryptoAsset.CurrentWorth(currentPrice)),
-            new CryptoAssetData("Gain/Loss", cryptoAsset.GetInvestmentGainLoss(currentPrice)),
+            new CryptoAssetData("Gain/Loss", cryptoAsset.GetInvestmentGainLossValue(currentPrice)),
         };
 
         var cryptoInfo = new ViewCryptoDataDto(cryptoAsset.Id, cards);
