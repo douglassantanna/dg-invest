@@ -1,4 +1,3 @@
-import { Crypto } from './../../../core/models/crypto';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
