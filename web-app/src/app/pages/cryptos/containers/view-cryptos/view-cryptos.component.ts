@@ -4,7 +4,7 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { CreateCryptoComponent } from '../create-crypto.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
-import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
+import { Observable, Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../../components/crypto-filter.component';
 import { CryptoTableComponent } from '../../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
@@ -34,7 +34,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
-  $emptyCryptoArray: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  isCryptoAssetListEmpty = signal(false);
   totalInvested = 0;
   totalMarketValue = 0;
   investmentChangePercent = 0;
@@ -59,7 +59,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (cryptos) => {
-          this.$emptyCryptoArray.next(cryptos.items.length > 0);
+          this.isCryptoAssetListEmpty.set(cryptos.items.length > 0);
           this.totalInvested = this.sumTotalInvested(cryptos.items);
           this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
           this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);

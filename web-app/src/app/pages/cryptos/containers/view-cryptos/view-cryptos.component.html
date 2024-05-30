@@ -4,7 +4,7 @@
       <h1>Cryptos</h1>
     </div>
 
-    <ng-container *ngIf="$emptyCryptoArray | async">
+    <ng-container *ngIf="isCryptoAssetListEmpty()">
       <div class="coll-2">
         <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
           (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)" [setBalanceStatus]="setBalanceStatus">
