@@ -38,7 +38,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalInvested = 0;
   totalMarketValue = 0;
   investmentChangePercent = 0;
-  cryptoChart = signal<any[]>([]);
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();

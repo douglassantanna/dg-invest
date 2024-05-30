@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, signal } from '@angular/core';
+import { Component, Input, OnInit, WritableSignal, signal } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
@@ -10,7 +10,7 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
   templateUrl: './pie-chart.component.html',
 })
 export class PieChartComponent implements OnInit {
-  @Input() cryptos = signal<any[]>([]);
+  @Input() cryptos: WritableSignal<any[]> = signal<any[]>([]);
   labels: string[] = [];
   positionValues: number[] = [];
   labelsSignal = signal<string[]>([]);
