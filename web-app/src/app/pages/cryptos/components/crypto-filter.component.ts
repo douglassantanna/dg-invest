@@ -12,20 +12,6 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
     ReactiveFormsModule],
   template: `
   <div class="row d-flex align-items-center">
-    <div class="col gap-3 d-flex align-items-center">
-      <div class="form-check">
-          <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault1" [value]="!tableView" [formControl]="viewDataTable">
-          <label class="form-check-label" for="flexRadioDefault1">
-            Card view
-          </label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" [value]="tableView" [formControl]="viewDataTable">
-        <label class="form-check-label" for="flexRadioDefault2">
-          Table view
-        </label>
-      </div>
-    </div>
     <div class="col">
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
@@ -43,17 +29,13 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
 export class CryptoFilterComponent implements OnDestroy {
   @Output() searchControlEvent = new EventEmitter<string>();
   @Output() hideZeroBalanceControlEvent = new EventEmitter<boolean>(false);
-  @Output() viewDataTableEvent = new EventEmitter<boolean>(true);
   searchControl: FormControl = new FormControl();
   showZeroBalance: FormControl = new FormControl();
-  viewDataTable: FormControl = new FormControl(true);
-  tableView!: boolean;
   @Input() setBalanceStatus = (value: boolean) => this.showZeroBalance.setValue(value);
 
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   constructor(localStorageService: LocalStorageService) {
-    this.tableView = localStorageService.getDataViewType();
     this.showZeroBalance.setValue(localStorageService.getHideZeroBalance());
 
     this.searchControl.valueChanges
@@ -71,14 +53,6 @@ export class CryptoFilterComponent implements OnDestroy {
         distinctUntilChanged(),
       ).subscribe(value => {
         this.hideZeroBalanceControlEvent.next(value);
-      });
-
-    this.viewDataTable.valueChanges
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-      ).subscribe(value => {
-        this.viewDataTableEvent.next(value == 1 ? true : false);
       });
   }
 
