@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { CreateCryptoComponent } from '../create-crypto.component';
-import { CryptoCardComponent } from '../../components/crypto-card.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { BehaviorSubject, Observable, Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../../components/crypto-filter.component';
@@ -19,7 +18,6 @@ import { PieChartComponent } from '../../components/pie-chart/pie-chart.componen
   imports: [
     CommonModule,
     FormsModule,
-    CryptoCardComponent,
     CreateCryptoComponent,
     ReactiveFormsModule,
     CryptoFilterComponent,
@@ -32,16 +30,15 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
   private localStorageService = inject(LocalStorageService);
   private unsubscribe$: Subject<void> = new Subject<void>();
-
-  cryptos$: BehaviorSubject<ViewCryptoInformation[]> = new BehaviorSubject<ViewCryptoInformation[]>([]);
+  cryptoAssetList = signal<ViewCryptoInformation[]>([]);
   searchControl: FormControl = new FormControl();
   results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
-  displayDataTable: boolean = true;
   $emptyCryptoArray: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   totalInvested = 0;
   totalMarketValue = 0;
   investmentChangePercent = 0;
+  cryptoChart = signal<any[]>([]);
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
@@ -49,7 +46,6 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCryptoAssets();
-    this.displayDataTable = this.localStorageService.getDataViewType();
   }
 
   loadCryptoAssets(
@@ -63,18 +59,13 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (cryptos) => {
-          this.cryptos$.next(cryptos.items);
           this.$emptyCryptoArray.next(cryptos.items.length > 0);
           this.totalInvested = this.sumTotalInvested(cryptos.items);
           this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
           this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);
+          this.cryptoAssetList.set(cryptos.items);
         }
       });
-  }
-
-  displayDataTableView(event: boolean) {
-    this.displayDataTable = event;
-    this.localStorageService.setDataViewType(event);
   }
 
   search(input: string, hideZeroBalance: boolean) {
@@ -84,7 +75,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
         takeUntil(this.unsubscribe$)
       ).subscribe({
         next: (cryptos) => {
-          this.cryptos$.next(cryptos.items);
+          this.cryptoAssetList.set(cryptos.items);
           this.totalInvested = this.sumTotalInvested(cryptos.items);
           this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
           this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);

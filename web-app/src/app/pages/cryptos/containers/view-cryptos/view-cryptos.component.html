@@ -6,8 +6,7 @@
 
     <ng-container *ngIf="$emptyCryptoArray | async">
       <div class="coll-2">
-        <app-crypto-filter (viewDataTableEvent)="displayDataTableView($event)"
-          (searchControlEvent)="search($event, hideZeroBalance)"
+        <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
           (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)" [setBalanceStatus]="setBalanceStatus">
         </app-crypto-filter>
       </div>
@@ -32,27 +31,16 @@
             <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
           </div>
         </div>
-        <div class="col-md-6">
-          <app-pie-chart />
-        </div>
+        <!-- <div class="col-md-6">
+          <app-pie-chart [cryptos]="cryptoChart" />
+        </div> -->
       </div>
     </div>
 
-    <div *ngIf="cryptos$ | async as cryptos; else loading">
-      <ng-container *ngIf="cryptos?.length; else emptyCriptoList">
-        <ng-template #cardView>
-          <div class="row">
-            <div class="col-md-4" *ngFor="let crypto of cryptos">
-              <app-crypto-card [crypto]="crypto" />
-            </div>
-          </div>
-        </ng-template>
-        <div class="row" *ngIf="displayDataTable;else cardView">
-          <div class="col-md-12">
-            <app-crypto-table [cryptos]="cryptos" [hideZeroBalance]="hideZeroBalance" />
-          </div>
-        </div>
-      </ng-container>
+    <div class="row">
+      <div class="col-md-12">
+        <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance" />
+      </div>
     </div>
 
     <ng-template #loading>
