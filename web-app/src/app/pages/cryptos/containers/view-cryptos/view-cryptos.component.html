@@ -4,17 +4,22 @@
       <h1>Cryptos</h1>
     </div>
 
-    <ng-container *ngIf="isCryptoAssetListEmpty()">
-      <div class="coll-2">
-        <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
-          (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)" [setBalanceStatus]="setBalanceStatus">
-        </app-crypto-filter>
-      </div>
+    @if(isCryptoAssetListEmpty()){
+    <div class="coll-2">
+      <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
+        (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)" [setBalanceStatus]="setBalanceStatus">
+      </app-crypto-filter>
+    </div>
 
-      <div class="coll-3">
-        <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-      </div>
-    </ng-container>
+    <div class="coll-3">
+      <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+    </div>
+    }@else {
+    <div class="text-center">
+      <h2>No assets found 😥</h2>
+      <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+    </div>
+    }
   </header>
 
   <div class="row">
@@ -31,9 +36,9 @@
             <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
           </div>
         </div>
-        <div class="col-md-6">
+        <!-- <div class="col-md-6">
           <app-pie-chart [cryptos]="cryptoAssetList()" />
-        </div>
+        </div> -->
       </div>
     </div>
 
@@ -47,13 +52,6 @@
       <div class="text-center">Loading...</div>
     </ng-template>
   </div>
-
-  <ng-template #emptyCriptoList>
-    <div class="text-center">
-      <h2>No assets found 😥</h2>
-      <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-    </div>
-  </ng-template>
 
 </main>
 
