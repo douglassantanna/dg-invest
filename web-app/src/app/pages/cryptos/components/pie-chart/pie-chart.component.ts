@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, WritableSignal, signal } from '@angular/core';
+import { Component, SimpleChanges, input } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
@@ -9,43 +9,55 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
   imports: [],
   templateUrl: './pie-chart.component.html',
 })
-export class PieChartComponent implements OnInit {
-  @Input() cryptos: WritableSignal<any[]> = signal<any[]>([]);
+export class PieChartComponent {
+  cryptos = input<ViewCryptoInformation[]>([]);
   labels: string[] = [];
   positionValues: number[] = [];
-  labelsSignal = signal<string[]>([]);
 
-  ngOnInit(): void {
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['cryptos']) {
+      const cryptos = changes['cryptos'].currentValue;
+      this.labels = cryptos.map((x: any) => x.symbol);
+      this.positionValues = cryptos.map((x: any) => x.currentWorth);
 
-    // const labels = this.cryptos.map((x) => x.symbol);
-    // this.labels = labels;
-    // this.labelsSignal.set(labels)
-    console.log('signal', this.labelsSignal())
+      const ctx = document.getElementById('chart') as HTMLCanvasElement;
 
-    // const amounts = this.cryptos.map((x => x.investedAmount));
-    // this.positionValues = amounts;
-    console.log('position values', this.positionValues);
-    console.log('labels', this.labels);
-
-    const ctx = document.getElementById('chart') as HTMLCanvasElement;
-    new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: this.labels,
-        datasets: [{
-          label: 'Position Value',
-          data: this.positionValues,
-          backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56'],
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false
+      if (Chart.getChart(ctx)) {
+        Chart.getChart(ctx)?.destroy();
       }
-    });
+
+      const numColors = this.labels.length;
+      const colors = this.generateColors(numColors);
+
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: this.labels,
+          datasets: [{
+            label: 'Position Value',
+            data: this.positionValues,
+            backgroundColor: colors,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
   }
 
-  // []
-  // {}
+  private generateColors(numColors: number) {
+    const colors = [];
+    for (let i = 0; i < numColors; i++) {
+      const r = Math.floor(Math.random() * 256);
+      const g = Math.floor(Math.random() * 256);
+      const b = Math.floor(Math.random() * 256);
+
+      const color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      colors.push(color);
+    }
+    return colors;
+  }
 }
