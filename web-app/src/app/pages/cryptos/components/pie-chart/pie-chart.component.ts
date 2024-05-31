@@ -19,7 +19,6 @@ export class PieChartComponent {
       const cryptos = changes['cryptos'].currentValue;
       this.labels = cryptos.map((x: any) => x.symbol);
       this.positionValues = cryptos.map((x: any) => x.currentWorth);
-
       const ctx = document.getElementById('chart') as HTMLCanvasElement;
 
       if (Chart.getChart(ctx)) {
@@ -41,8 +40,29 @@ export class PieChartComponent {
           }]
         },
         options: {
+          locale: "en-US",
           responsive: true,
-          maintainAspectRatio: false
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function (tooltipItem: any) {
+                  const rawValue = tooltipItem.raw;
+                  const value = parseFloat(rawValue);
+
+                  if (isNaN(value)) {
+                    return rawValue;
+                  }
+
+                  return `${value.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    minimumFractionDigits: 2
+                  })}`;
+                }
+              }
+            }
+          }
         }
       });
     }
