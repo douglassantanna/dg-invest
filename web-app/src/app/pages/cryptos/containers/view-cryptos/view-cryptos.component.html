@@ -24,22 +24,23 @@
 
   <div class="row">
     <div class="container mt-3">
-      <div class="row">
-        <div class="col-md-6">
-          <div class="alert alert-light">
-            <strong>Total Invested:</strong> {{ totalInvested | currency:'USD':'symbol':'1.2-2'}}
+      <div class="container mt-3">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="alert alert-light mb-2"> <strong>Total Invested:</strong> {{ totalInvested |
+              currency:'USD':'symbol':'1.2-2'}}
+            </div>
+            <div class="alert alert-light">
+              <strong>Total Market Value:</strong> {{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
+              <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
+            </div>
           </div>
-        </div>
-        <div class="col-md-6">
-          <div class="alert alert-light">
-            <strong>Total Market Value:</strong> {{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
-            <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
+          <div class="col-md-6">
+            <app-pie-chart [cryptos]="cryptoAssetList()" />
           </div>
-        </div>
-        <div class="col-md-6">
-          <app-pie-chart [cryptos]="cryptoAssetList()" />
         </div>
       </div>
+
     </div>
 
     <div class="row">
