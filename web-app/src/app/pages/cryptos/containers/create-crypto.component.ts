@@ -1,6 +1,6 @@
 import { BehaviorSubject, finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { CryptoService } from '../../../core/services/crypto.service';
@@ -59,7 +59,7 @@ import { AuthService } from 'src/app/core/services/auth.service';
   styles: [`
   `]
 })
-export class CreateCryptoComponent implements OnInit {
+export class CreateCryptoComponent {
   @Output() cryptoCreated = new EventEmitter();
   selectedCoinMarketCapId = 0;
   loading: boolean = false;
@@ -71,9 +71,6 @@ export class CreateCryptoComponent implements OnInit {
     private cryptoService: CryptoService,
     private toastService: ToastService,
     private authService: AuthService) {
-  }
-  ngOnInit(): void {
-    this.getCryptos();
   }
 
   createCryptoAsset(selectedCoinMarketCapId: number, modalRef: any): void {
@@ -117,6 +114,7 @@ export class CreateCryptoComponent implements OnInit {
   }
 
   open(content: any) {
+    this.getCryptos();
     this.modalService.open(content);
   }
 

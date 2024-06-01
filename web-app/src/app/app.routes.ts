@@ -4,7 +4,7 @@ import { CryptoDetailsComponent } from './pages/cryptos/containers/crypto-detail
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login.component';
 import { ProfileComponent } from './pages/profile/profile.component';
-import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos.component';
+import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos/view-cryptos.component';
 import { ViewUsersComponent } from './pages/users/container/view-users/view-users.component';
 import { roleGuard } from './core/guards/role.guard';
 
