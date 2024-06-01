@@ -2,7 +2,7 @@ import { Component, SimpleChanges, input } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
-
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 @Component({
   selector: 'app-pie-chart',
   standalone: true,
@@ -39,6 +39,7 @@ export class PieChartComponent {
             hoverOffset: 4
           }]
         },
+        plugins: [ChartDataLabels],
         options: {
           locale: "en-US",
           responsive: true,
@@ -60,6 +61,18 @@ export class PieChartComponent {
                     minimumFractionDigits: 2
                   })}`;
                 }
+              }
+            },
+            datalabels: {
+              align: 'center',
+              formatter: (value, context) => {
+                const dataPoints = context.chart.config.data.datasets[0].data;
+                function totalSum(total: any, datapoint: any) {
+                  return total + datapoint;
+                }
+                const totalValue = dataPoints.reduce(totalSum, 0);
+                const percentageValue = (value / totalValue * 100).toFixed(1);
+                return `${percentageValue}%`
               }
             }
           }
