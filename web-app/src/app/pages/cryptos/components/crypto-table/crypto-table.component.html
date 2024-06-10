@@ -2,11 +2,9 @@
   <table class="table border border-secondary rounded">
     <thead>
       <tr>
-        <th (click)="sortTable('name')">Name</th>
-        <th>Unit Price</th>
-        <th>Invested amount</th>
-        <th>Current worth</th>
-        <th>Action</th>
+        @for (item of tableHeaders; track $index) {
+        <th (click)="sortTable(item.value)"> {{ item.description }} </th>
+        }
       </tr>
     </thead>
     <tbody>

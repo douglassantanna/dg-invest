@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, inject, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PercentDifferenceComponent } from '../percent-difference.component';
 import { Router } from '@angular/router';
@@ -16,19 +16,23 @@ import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
   styleUrls: ['./crypto-table.component.scss']
 })
 export class CryptoTableComponent {
+  outputHeader = output<string>();
   @Input() cryptos: ViewCryptoInformation[] = [];
   @Input() hideZeroBalance: boolean = false;
-  avaragePrice = 5000;
-  balance = 5;
   router = inject(Router);
-  currentWorth = 7448;
-  gainLoss = 14;
+  tableHeaders: any[] = [
+    { value: 'symbol', description: 'Symbol' },
+    { value: 'unit_price', description: 'Unit Price' },
+    { value: 'invested_amount', description: 'Invested Amount' },
+    { value: 'current_worth', description: 'Current Worth' },
+    { value: 'action', description: 'Action' },
+  ]
   cryptoDashboard(cryptoID: number) {
     this.router.navigate(['/crypto-dashboard', cryptoID]);
   }
 
   sortTable(event: any) {
-    console.log(event);
+    if (event != 'action')
+      this.outputHeader.emit(event);
   }
-
 }

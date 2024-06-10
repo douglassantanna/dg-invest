@@ -88,7 +88,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.hideZeroBalance = value;
   }
 
-  sortTable(event: any) {
+  outputHeaderEvent(event: any) {
     console.log(event);
   }
 
