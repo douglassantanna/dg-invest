@@ -88,6 +88,10 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.hideZeroBalance = value;
   }
 
+  sortTable(event: any) {
+    console.log(event);
+  }
+
   private sumTotalInvested(cryptos: ViewCryptoInformation[]): number {
     return cryptos.reduce((acc, cur) => acc + cur.investedAmount, 0);
   }

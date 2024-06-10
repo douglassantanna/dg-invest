@@ -62,13 +62,13 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.Where(x => x.Balance > 0);
         }
 
-        if (request.SortOrder?.ToUpper() == "ASC")
+        if (request.SortOrder?.ToUpper() == "DESC")
         {
-            cryptoAssetQuery = cryptoAssetQuery.OrderByDescending(GetSortProperty(request));
+            cryptoAssetQuery = cryptoAssetQuery.OrderByDescending(x => x.Symbol);
         }
         else
         {
-            cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
+            cryptoAssetQuery = cryptoAssetQuery.OrderBy(x => x.Symbol);
         }
 
         if (request.UserId > 0)
@@ -118,15 +118,5 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             }
         }
         return 0;
-    }
-    private static Expression<Func<CryptoAsset, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)
-    {
-        return request.SortColumn?.ToLower() switch
-        {
-            "currency_name" => currency => currency.CurrencyName,
-            "crypto_name" => currency => currency.CryptoCurrency,
-            "balance" => currency => currency.Balance,
-            _ => currency => currency.Id
-        };
     }
 }

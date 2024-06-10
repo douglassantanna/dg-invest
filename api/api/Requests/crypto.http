@@ -1,5 +1,5 @@
 @url = http://localhost:5059/api/Crypto
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRhdmlAdGVzdC5jb20iLCJuYW1laWQiOiIyIiwidW5pcXVlX25hbWUiOiJDcmFpY2kiLCJyb2xlIjoiVXNlciIsIm5iZiI6MTcwNTg2MjYwNiwiZXhwIjoxNzA1OTQ5MDA2LCJpYXQiOjE3MDU4NjI2MDYsImlzcyI6Imh0dHA6Ly9teS1sb2NhbC1ob3N0LmNvbSJ9.G-CIEveGLFzvSh3tujh8gcvXUmyZuf0PcQl7cYbCoco
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRoZW9AZ21haWwuY29tIiwibmFtZWlkIjoiMSIsInVuaXF1ZV9uYW1lIjoiVGhlbyIsInJvbGUiOiJBZG1pbiIsIm5iZiI6MTcxNzg0NjAzNCwiZXhwIjoxNzE3OTMyNDM0LCJpYXQiOjE3MTc4NDYwMzQsImlzcyI6Imh0dHA6Ly9teS1sb2NhbC1ob3N0LmNvbSJ9.NgAjU-E11El8h8FvldKTnlFGG87cp4gVWaXf_T8fJSk
 
 POST {{url}}/create
 Content-Type: application/json
@@ -27,7 +27,7 @@ Authorization: Bearer {{token}}
 }
 
 ###
-GET {{url}}/list-assets?page=1&pageSize=10&cryptoCurrency=h
+GET {{url}}/list-assets?page=1&pageSize=10&sort_order=ASC
 Authorization: Bearer {{token}}
 # &cryptoCurrency=btc&sortColumn=link&page=1&pageSize=3&sortOrder=asc
 

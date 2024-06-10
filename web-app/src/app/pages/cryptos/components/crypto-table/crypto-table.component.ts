@@ -26,4 +26,9 @@ export class CryptoTableComponent {
   cryptoDashboard(cryptoID: number) {
     this.router.navigate(['/crypto-dashboard', cryptoID]);
   }
+
+  sortTable(event: any) {
+    console.log(event);
+  }
+
 }
