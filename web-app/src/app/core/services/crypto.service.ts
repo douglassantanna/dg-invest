@@ -38,14 +38,14 @@ export class CryptoService {
   getCryptoAssets(
     page: number = 1,
     pageSize: number = 50,
-    cryptoCurrency: string = "",
+    assetName: string = "",
     sortOrder: string = "ASC",
     hideZeroBalance: boolean = false): Observable<Pagination<ViewCryptoInformation>> {
     let userId = this.authService.userId ?? '';
     let params = new HttpParams()
       .append("page", page)
       .append("pageSize", pageSize)
-      .append("cryptoCurrency", cryptoCurrency)
+      .append("assetName", assetName)
       .append("sortOrder", sortOrder)
       .append("hideZeroBalance", hideZeroBalance)
       .append("userId", userId)

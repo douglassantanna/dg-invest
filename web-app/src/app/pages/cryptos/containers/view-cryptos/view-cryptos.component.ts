@@ -47,14 +47,8 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.loadCryptoAssets();
   }
 
-  loadCryptoAssets(
-    page: number = 1,
-    pageSize: number = 50,
-    cryptoCurrency: string = "",
-    sortOrder: string = "ASC",
-    hideZeroBalance = this.localStorageService.getHideZeroBalance()
-  ) {
-    this.cryptoService.getCryptoAssets(page, pageSize, cryptoCurrency, sortOrder, hideZeroBalance)
+  loadCryptoAssets(params: any) {
+    this.cryptoService.getCryptoAssets(params.page, params.pageSize, params.sortOrder, params.assetName, params.hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (cryptos) => {
@@ -89,7 +83,15 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
 
   outputHeaderEvent(event: any) {
-    console.log(event);
+    const params = {
+      page: 1,
+      pageSize: 50,
+      sortOrder: event,
+      assetName: '',
+      hideZeroBalance: this.localStorageService.getHideZeroBalance()
+    };
+
+    this.loadCryptoAssets(params);
   }
 
   private sumTotalInvested(cryptos: ViewCryptoInformation[]): number {
