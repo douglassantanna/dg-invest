@@ -48,10 +48,12 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
 
   loadCryptoAssets(params: any = {}) {
+    const sortByLocalStorage = this.localStorageService.getAssetListSortBy() ?? 'symbol';
+    const sortOrderLocalStorage = this.localStorageService.getAssetListSortOrder() ?? 'asc';
     const page = params.page ?? 1;
     const pageSize = params.pageSize ?? 50;
-    const sortBy = params.sortBy ?? 'symbol';
-    const sortOrder = params.sortOrder ?? 'asc';
+    const sortBy = params.sortBy ?? sortByLocalStorage;
+    const sortOrder = params.sortOrder ?? sortOrderLocalStorage;
     const assetName = params.assetName ?? '';
     const hideZeroBalance = params.hideZeroBalance ?? false;
 
@@ -64,6 +66,9 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
           this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);
           this.cryptoAssetList.set(cryptos.items);
+        },
+        error: (err) => {
+          this.updateLocalStorageSortOrder();
         }
       });
   }
@@ -91,9 +96,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
 
   outputHeaderEvent(event: string) {
-    const currentSortOrder = this.localStorageService.getAssetListSortOrder();
-    const newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-    this.localStorageService.setAssetListSortOrder(newSortOrder);
+    const newSortOrder = this.updateLocalStorageSortOrder();
 
     if (event === 'symbol' || event === 'invested_amount') {
       this.localStorageService.setAssetListSortBy(event);
@@ -112,6 +115,17 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   sortOrderOutput(): string {
     return this.localStorageService.getAssetListSortOrder() === 'asc' ? 'asc' : 'desc';
+  }
+
+  sortByOutput(): string {
+    return this.localStorageService.getAssetListSortBy();
+  }
+
+  private updateLocalStorageSortOrder(): string {
+    const currentSortOrder = this.localStorageService.getAssetListSortOrder();
+    const newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    this.localStorageService.setAssetListSortOrder(newSortOrder);
+    return newSortOrder;
   }
 
   private sumTotalInvested(cryptos: ViewCryptoInformation[]): number {

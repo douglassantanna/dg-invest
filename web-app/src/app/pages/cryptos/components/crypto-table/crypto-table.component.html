@@ -4,9 +4,9 @@
       <tr>
         @for (item of tableHeaders; track $index) {
         <th (click)="sortTable(item.value)"> {{ item.description }}
-          @if(isValidTableHeader(item.value)){
+          @if(isCurrentSortHeader(item.value)){
           <ng-container>
-            {{ defineSortHeaderArrow() }}
+            {{ getSortHeaderArrow() }}
           </ng-container>
           }
         </th>
