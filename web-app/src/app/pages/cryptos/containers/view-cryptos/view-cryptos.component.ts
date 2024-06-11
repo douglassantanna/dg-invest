@@ -91,15 +91,22 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
 
   outputHeaderEvent(event: string) {
+    const currentSortOrder = this.localStorageService.getAssetListSortOrder();
+    const newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    this.localStorageService.setAssetListSortOrder(newSortOrder);
+
+    if (event === 'symbol' || event === 'invested_amount') {
+      this.localStorageService.setAssetListSortBy(event);
+    }
+
     const params = {
       page: 1,
       pageSize: 50,
       assetName: '',
-      sortBy: event,
-      sortOrder: 'asc',
+      sortBy: this.localStorageService.getAssetListSortBy(),
+      sortOrder: newSortOrder,
       hideZeroBalance: this.localStorageService.getHideZeroBalance()
     };
-
     this.loadCryptoAssets(params);
   }
 
