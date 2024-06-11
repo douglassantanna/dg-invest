@@ -47,8 +47,15 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.loadCryptoAssets();
   }
 
-  loadCryptoAssets(params: any) {
-    this.cryptoService.getCryptoAssets(params.page, params.pageSize, params.sortOrder, params.assetName, params.hideZeroBalance)
+  loadCryptoAssets(params: any = {}) {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 50;
+    const sortBy = params.sortBy ?? 'symbol';
+    const sortOrder = params.sortOrder ?? 'asc';
+    const assetName = params.assetName ?? '';
+    const hideZeroBalance = params.hideZeroBalance ?? false;
+
+    this.cryptoService.getCryptoAssets(page, pageSize, assetName, sortBy, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (cryptos) => {
@@ -63,7 +70,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   search(input: string, hideZeroBalance: boolean) {
     this.localStorageService.setHideZeroBalance(hideZeroBalance);
-    this.cryptoService.getCryptoAssets(1, 50, input, "ASC", hideZeroBalance)
+    this.cryptoService.getCryptoAssets(1, 50, input, "symbol", "asc", hideZeroBalance)
       .pipe(
         takeUntil(this.unsubscribe$)
       ).subscribe({
@@ -78,16 +85,18 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
         },
       });
   }
+
   setBalanceStatus(value: boolean): void {
     this.hideZeroBalance = value;
   }
 
-  outputHeaderEvent(event: any) {
+  outputHeaderEvent(event: string) {
     const params = {
       page: 1,
       pageSize: 50,
-      sortOrder: event,
       assetName: '',
+      sortBy: event,
+      sortOrder: 'asc',
       hideZeroBalance: this.localStorageService.getHideZeroBalance()
     };
 

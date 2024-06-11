@@ -32,7 +32,7 @@ export class CryptoTableComponent {
   }
 
   sortTable(event: any) {
-    if (event != 'action')
+    if (event == 'symbol' || event == 'invested_amount')
       this.outputHeader.emit(event);
   }
 }
