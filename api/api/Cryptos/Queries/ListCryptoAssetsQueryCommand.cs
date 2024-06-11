@@ -10,10 +10,9 @@ using MediatR;
 namespace api.Cryptos.Queries;
 public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoAssetDto>>
 {
-    public string? CryptoCurrency { get; set; } = string.Empty;
-    public string? CurrencyName { get; set; } = string.Empty;
-    public string? SortColumn { get; set; } = string.Empty;
-    public string? SortOrder { get; set; } = "ASC";
+    public string? AssetName { get; set; } = string.Empty;
+    public string? SortBy { get; set; } = "symbol";
+    public string? SortOrder { get; set; } = "asc";
     public bool HideZeroBalance { get; set; } = false;
     public int Page { get; set; } = 1;
     public int PageSize { get; set; }
@@ -45,16 +44,10 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             request.PageSize = maxPageSize;
         }
 
-        if (!string.IsNullOrEmpty(request.CryptoCurrency))
+        if (!string.IsNullOrEmpty(request.AssetName))
         {
-            request.CryptoCurrency = request.CryptoCurrency?.ToLower().Trim();
-            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CryptoCurrency.ToLower().Contains(request.CryptoCurrency));
-        }
-
-        if (!string.IsNullOrEmpty(request.CurrencyName))
-        {
-            request.CurrencyName = request.CurrencyName?.ToLower().Trim();
-            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CurrencyName.ToLower().Contains(request.CurrencyName));
+            request.AssetName = request.AssetName?.ToLower().Trim();
+            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.CryptoCurrency.ToLower().Contains(request.AssetName));
         }
 
         if (request.HideZeroBalance)
@@ -62,13 +55,13 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cryptoAssetQuery = cryptoAssetQuery.Where(x => x.Balance > 0);
         }
 
-        if (request.SortOrder?.ToUpper() == "ASC")
+        if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
         {
-            cryptoAssetQuery = cryptoAssetQuery.OrderByDescending(GetSortProperty(request));
+            cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
         }
         else
         {
-            cryptoAssetQuery = cryptoAssetQuery.OrderBy(GetSortProperty(request));
+            cryptoAssetQuery = cryptoAssetQuery.OrderByDescending(GetSortProperty(request));
         }
 
         if (request.UserId > 0)
@@ -119,14 +112,15 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         }
         return 0;
     }
+
     private static Expression<Func<CryptoAsset, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)
     {
-        return request.SortColumn?.ToLower() switch
+        return request.SortBy?.ToLower() switch
         {
-            "currency_name" => currency => currency.CurrencyName,
-            "crypto_name" => currency => currency.CryptoCurrency,
-            "balance" => currency => currency.Balance,
-            _ => currency => currency.Id
+            "symbol" => currency => currency.Symbol,
+            "invested_amount" => currency => currency.TotalInvested,
+            // "current_worth" => currency => currency.CurrentWorth(),
+            _ => currency => currency.Symbol
         };
     }
 }

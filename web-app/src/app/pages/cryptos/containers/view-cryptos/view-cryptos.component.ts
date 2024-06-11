@@ -47,14 +47,17 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.loadCryptoAssets();
   }
 
-  loadCryptoAssets(
-    page: number = 1,
-    pageSize: number = 50,
-    cryptoCurrency: string = "",
-    sortOrder: string = "ASC",
-    hideZeroBalance = this.localStorageService.getHideZeroBalance()
-  ) {
-    this.cryptoService.getCryptoAssets(page, pageSize, cryptoCurrency, sortOrder, hideZeroBalance)
+  loadCryptoAssets(params: any = {}) {
+    const sortByLocalStorage = this.localStorageService.getAssetListSortBy() ?? 'symbol';
+    const sortOrderLocalStorage = this.localStorageService.getAssetListSortOrder() ?? 'asc';
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 50;
+    const sortBy = params.sortBy ?? sortByLocalStorage;
+    const sortOrder = params.sortOrder ?? sortOrderLocalStorage;
+    const assetName = params.assetName ?? '';
+    const hideZeroBalance = params.hideZeroBalance ?? false;
+
+    this.cryptoService.getCryptoAssets(page, pageSize, assetName, sortBy, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (cryptos) => {
@@ -63,13 +66,16 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
           this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);
           this.cryptoAssetList.set(cryptos.items);
+        },
+        error: (err) => {
+          this.updateLocalStorageSortOrder();
         }
       });
   }
 
   search(input: string, hideZeroBalance: boolean) {
     this.localStorageService.setHideZeroBalance(hideZeroBalance);
-    this.cryptoService.getCryptoAssets(1, 50, input, "ASC", hideZeroBalance)
+    this.cryptoService.getCryptoAssets(1, 50, input, "symbol", "asc", hideZeroBalance)
       .pipe(
         takeUntil(this.unsubscribe$)
       ).subscribe({
@@ -84,8 +90,42 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
         },
       });
   }
+
   setBalanceStatus(value: boolean): void {
     this.hideZeroBalance = value;
+  }
+
+  outputHeaderEvent(event: string) {
+    const newSortOrder = this.updateLocalStorageSortOrder();
+
+    if (event === 'symbol' || event === 'invested_amount') {
+      this.localStorageService.setAssetListSortBy(event);
+    }
+
+    const params = {
+      page: 1,
+      pageSize: 50,
+      assetName: '',
+      sortBy: this.localStorageService.getAssetListSortBy(),
+      sortOrder: newSortOrder,
+      hideZeroBalance: this.localStorageService.getHideZeroBalance()
+    };
+    this.loadCryptoAssets(params);
+  }
+
+  sortOrderOutput(): string {
+    return this.localStorageService.getAssetListSortOrder() === 'asc' ? 'asc' : 'desc';
+  }
+
+  sortByOutput(): string {
+    return this.localStorageService.getAssetListSortBy();
+  }
+
+  private updateLocalStorageSortOrder(): string {
+    const currentSortOrder = this.localStorageService.getAssetListSortOrder();
+    const newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    this.localStorageService.setAssetListSortOrder(newSortOrder);
+    return newSortOrder;
   }
 
   private sumTotalInvested(cryptos: ViewCryptoInformation[]): number {
