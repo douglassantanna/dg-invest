@@ -110,6 +110,10 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.loadCryptoAssets(params);
   }
 
+  sortOrderOutput(): string {
+    return this.localStorageService.getAssetListSortOrder() === 'asc' ? 'asc' : 'desc';
+  }
+
   private sumTotalInvested(cryptos: ViewCryptoInformation[]): number {
     return cryptos.reduce((acc, cur) => acc + cur.investedAmount, 0);
   }

@@ -3,7 +3,13 @@
     <thead>
       <tr>
         @for (item of tableHeaders; track $index) {
-        <th (click)="sortTable(item.value)"> {{ item.description }} </th>
+        <th (click)="sortTable(item.value)"> {{ item.description }}
+          @if(isValidTableHeader(item.value)){
+          <ng-container>
+            {{ defineSortHeaderArrow() }}
+          </ng-container>
+          }
+        </th>
         }
       </tr>
     </thead>

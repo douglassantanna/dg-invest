@@ -1,4 +1,4 @@
-import { Component, Input, inject, output } from '@angular/core';
+import { Component, Input, computed, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PercentDifferenceComponent } from '../percent-difference.component';
 import { Router } from '@angular/router';
@@ -16,6 +16,7 @@ import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
   styleUrls: ['./crypto-table.component.scss']
 })
 export class CryptoTableComponent {
+  sortOrder = input<string>('');
   outputHeader = output<string>();
   @Input() cryptos: ViewCryptoInformation[] = [];
   @Input() hideZeroBalance: boolean = false;
@@ -34,5 +35,12 @@ export class CryptoTableComponent {
   sortTable(event: any) {
     if (event == 'symbol' || event == 'invested_amount')
       this.outputHeader.emit(event);
+  }
+
+  defineSortHeaderArrow(): string {
+    return this.sortOrder() === 'asc' ? '⬆' : '⬇'
+  }
+  isValidTableHeader(value: string): boolean {
+    return value === 'symbol' || value === 'invested_amount';
   }
 }
