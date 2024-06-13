@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { LayoutService } from '../core/services/layout.service';
@@ -28,13 +28,13 @@ import { NavItems } from '../core/models/nav-items';
     </nav>
   `,
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   private layoutService = inject(LayoutService);
   authService = inject(AuthService);
   isCollapsed: boolean = true;
   navItems: NavItems[] = [];
 
-  constructor() {
+  ngOnInit(): void {
     this.shouldShowLink();
   }
 
@@ -50,5 +50,6 @@ export class HeaderComponent {
   shouldShowLink() {
     if (this.authService.role === 'user')
       this.navItems = this.layoutService.navItems.filter((item) => item.path === 'signout')
+    else this.navItems = this.layoutService.navItems;
   }
 }
