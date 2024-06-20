@@ -19,5 +19,5 @@ import { MatInputModule } from '@angular/material/input';
   templateUrl: './user-profile.component.html'
 })
 export class UserProfileComponent {
-
+  loading = true;
 }

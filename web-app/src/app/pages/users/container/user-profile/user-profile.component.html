@@ -16,7 +16,9 @@
             <input class="form-control" type="email" placeholder="Enter email">
           </div>
 
-          <button type="button" class="btn btn-primary w-100">Save User Information</button>
+          <button type="button" class="btn btn-primary w-100" [disabled]="loading">Save User Information
+            <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          </button>
         </section>
       </div>
 
@@ -38,7 +40,9 @@
             <input class="form-control" type="password" placeholder="Confirm new password">
           </div>
 
-          <button type="button" class="btn btn-secondary w-100">Change Password</button>
+          <button type="button" class="btn btn-secondary w-100" [disabled]="loading">Change Password
+            <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          </button>
         </section>
       </div>
     </div>
