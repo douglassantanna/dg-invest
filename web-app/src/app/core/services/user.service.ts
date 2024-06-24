@@ -29,6 +29,11 @@ export class UserService {
     );
   }
 
+  updateUserProfile(fullname: string, email: string): Observable<Response<any>> {
+    const command = { fullname, email };
+    return this.http.post<Response<any>>(`${url}/update-user-profile`, command);
+  }
+
   getUsers(
     page: number = 1,
     pageSize: number = 50,

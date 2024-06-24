@@ -7,6 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { UserDecode } from 'src/app/core/models/user-decode';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { ToastService } from 'src/app/core/services/toast.service';
+import { UserService } from 'src/app/core/services/user.service';
 
 @Component({
   selector: 'app-user-profile',
@@ -22,6 +24,8 @@ import { AuthService } from 'src/app/core/services/auth.service';
 })
 export class UserProfileComponent implements OnInit {
   private authService = inject(AuthService);
+  private userService = inject(UserService);
+  private toastService = inject(ToastService);
   loading = false;
   userFullname = '';
   userEmail = '';
@@ -34,7 +38,16 @@ export class UserProfileComponent implements OnInit {
   }
 
   updateUserProfile() {
-    console.log(this.userFullname)
-    console.log(this.userEmail)
+    this.loading = true;
+    this.userService.updateUserProfile(this.userFullname, this.userEmail).subscribe({
+      next: () => {
+        this.loading = false;
+        this.toastService.showSuccess('Your profile was updated successfully');
+      },
+      error: () => {
+        this.loading = false;
+        this.toastService.showError('There was an error updating your profile');
+      }
+    });
   }
 }
