@@ -8,15 +8,17 @@
           <h2 class="text-center">Personal Information</h2>
           <div class="mb-3">
             <label class="form-label">Full name</label>
-            <input class="form-control" type="text" placeholder="Enter full name">
+            <input name="fullName" class="form-control" type="text" placeholder="Enter full name"
+              [(ngModel)]="userFullname">
           </div>
 
           <div class="mb-3">
             <label class="form-label">E-mail</label>
-            <input class="form-control" type="email" placeholder="Enter email">
+            <input name="email" class="form-control" type="email" placeholder="Enter email" [(ngModel)]="userEmail">
           </div>
 
-          <button type="button" class="btn btn-primary w-100" [disabled]="loading">Save User Information
+          <button (click)="updateUserProfile()" type="button" class="btn btn-primary w-100" [disabled]="loading">Save
+            User Information
             <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           </button>
         </section>
