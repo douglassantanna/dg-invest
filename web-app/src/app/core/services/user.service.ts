@@ -29,8 +29,8 @@ export class UserService {
     );
   }
 
-  updateUserProfile(fullname: string, email: string): Observable<Response<any>> {
-    const command = { fullname, email };
+  updateUserProfile(fullname: string, email: string, userId: string): Observable<Response<any>> {
+    const command = { fullname, email, userId };
     return this.http.post<Response<any>>(`${url}/update-user-profile`, command);
   }
 

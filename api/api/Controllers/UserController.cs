@@ -22,13 +22,30 @@ public class UserController : ControllerBase
     [HttpPost("create")]
     public async Task<ActionResult<Response>> Create([FromBody] CreateUserCommand command)
     {
-
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {
             return BadRequest(result);
         }
         return Created("", result);
+    }
+    [HttpPost("update-user-profile")]
+    public async Task<ActionResult<Response>> UpdateUserProfile([FromBody] UpdateUserProfileCommand command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)
+            {
+                return httpStatusCode switch
+                {
+                    HttpStatusCode.NotFound => NotFound(result),
+                    HttpStatusCode.BadRequest => BadRequest(result),
+                    _ => BadRequest(result),
+                };
+            }
+        }
+        return Ok(result);
     }
 
     [HttpGet("list-users")]

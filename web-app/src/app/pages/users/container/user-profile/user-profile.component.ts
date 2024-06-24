@@ -29,7 +29,6 @@ export class UserProfileComponent implements OnInit {
   loading = false;
   userFullname = '';
   userEmail = '';
-
   ngOnInit(): void {
     if (this.authService.user) {
       this.userFullname = this.authService.user.unique_name;
@@ -38,16 +37,20 @@ export class UserProfileComponent implements OnInit {
   }
 
   updateUserProfile() {
-    this.loading = true;
-    this.userService.updateUserProfile(this.userFullname, this.userEmail).subscribe({
-      next: () => {
-        this.loading = false;
-        this.toastService.showSuccess('Your profile was updated successfully');
-      },
-      error: () => {
-        this.loading = false;
-        this.toastService.showError('There was an error updating your profile');
-      }
-    });
+    if (this.userEmail !== this.authService.user?.email
+      || this.userFullname !== this.authService.user.unique_name
+    ) {
+      this.loading = true;
+      this.userService.updateUserProfile(this.userFullname, this.userEmail, this.authService.user?.nameid!).subscribe({
+        next: () => {
+          this.loading = false;
+          this.toastService.showSuccess('Your profile was updated successfully');
+        },
+        error: () => {
+          this.loading = false;
+          this.toastService.showError('There was an error updating your profile');
+        }
+      });
+    }
   }
 }

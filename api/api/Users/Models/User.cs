@@ -35,4 +35,10 @@ public class User : Entity
         }
         _criptoAssets.Add(cryptoAsset);
     }
+
+    internal void Update(string fullname, string email)
+    {
+        FullName = fullname;
+        Email = email;
+    }
 }
