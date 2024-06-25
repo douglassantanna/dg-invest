@@ -36,7 +36,24 @@
           <div class="mb-3">
             <label class="form-label">New Password</label>
             <input class="form-control" type="password" placeholder="Enter new password" name="newPassword"
-              [(ngModel)]="updatePasswordModel().newPassword">
+              [(ngModel)]="updatePasswordModel().newPassword" (input)="passwordChecker()">
+            <div class="mt-2">
+              <p>
+                LowerCase {{ hasLowerCase() ? '✅' : '❌'}}
+              </p>
+              <p>
+                UpperCase {{ hasUpperCase() ? '✅' : '❌'}}
+              </p>
+              <p>
+                Numbers {{ hasNumbers() ? '✅' : '❌'}}
+              </p>
+              <p>
+                Special Chars {{ hasSpecialChars() ? '✅' : '❌'}}
+              </p>
+              <p>
+                Six Chars {{ hasSixChars() ? '✅' : '❌'}}
+              </p>
+            </div>
           </div>
 
           <div class="mb-3">
@@ -54,3 +71,37 @@
     </div>
   </form>
 </div>
+
+<style>
+  .weak {
+    background-color: red;
+  }
+
+  .medium {
+    background-color: yellow;
+  }
+
+  .strong {
+    background-color: orange;
+  }
+
+  .very-strong {
+    background-color: green;
+  }
+
+  .text-weak {
+    color: red;
+  }
+
+  .text-medium {
+    color: yellow;
+  }
+
+  .text-strong {
+    color: orange;
+  }
+
+  .text-very-strong {
+    color: green;
+  }
+</style>

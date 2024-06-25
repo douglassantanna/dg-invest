@@ -1,10 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -14,10 +10,6 @@ import { UserService } from 'src/app/core/services/user.service';
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
     FormsModule],
   templateUrl: './user-profile.component.html'
 })
@@ -33,7 +25,12 @@ export class UserProfileComponent implements OnInit {
     currentPassword: '',
     newPassword: '',
     confirmNewPassword: '',
-  })
+  });
+  hasUpperCase = signal<boolean>(false);
+  hasLowerCase = signal<boolean>(false);
+  hasNumbers = signal<boolean>(false);
+  hasSpecialChars = signal<boolean>(false);
+  hasSixChars = signal<boolean>(false);
   ngOnInit(): void {
     if (this.authService.user) {
       this.userFullname = this.authService.user.unique_name;
@@ -63,5 +60,14 @@ export class UserProfileComponent implements OnInit {
   updatePassword() {
     this.updatePasswordModel().userId = Number(this.authService.user?.nameid!);
     console.log(this.updatePasswordModel())
+  }
+
+  passwordChecker() {
+    const newPassword = this.updatePasswordModel().newPassword;
+    this.hasSixChars.set(newPassword.length >= 6);
+    this.hasUpperCase.set(/[A-Z]/.test(newPassword));
+    this.hasLowerCase.set(/[a-z]/.test(newPassword));
+    this.hasNumbers.set(/\d/.test(newPassword));
+    this.hasSpecialChars.set(/[!@#$%^&*(),.?":{}|<>]/.test(newPassword));
   }
 }
