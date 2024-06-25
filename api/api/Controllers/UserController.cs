@@ -29,6 +29,26 @@ public class UserController : ControllerBase
         }
         return Created("", result);
     }
+
+    [HttpPost("update-user-password")]
+    public async Task<ActionResult<Response>> UpdateUserPassword([FromBody] UpdateUserPasswordCommand command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)
+            {
+                return httpStatusCode switch
+                {
+                    HttpStatusCode.NotFound => NotFound(result),
+                    HttpStatusCode.BadRequest => BadRequest(result),
+                    _ => BadRequest(result),
+                };
+            }
+        }
+        return Ok(result);
+    }
+
     [HttpPost("update-user-profile")]
     public async Task<ActionResult<Response>> UpdateUserProfile([FromBody] UpdateUserProfileCommand command)
     {
