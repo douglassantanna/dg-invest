@@ -29,20 +29,24 @@
           <h2 class="text-center">Change Your Password</h2>
           <div class="mb-3">
             <label class="form-label">Current Password</label>
-            <input class="form-control" type="password" placeholder="Enter current password">
+            <input class="form-control" type="password" placeholder="Enter current password" name="currentPassword"
+              [(ngModel)]="updatePasswordModel().currentPassword">
           </div>
 
           <div class="mb-3">
             <label class="form-label">New Password</label>
-            <input class="form-control" type="password" placeholder="Enter new password">
+            <input class="form-control" type="password" placeholder="Enter new password" name="newPassword"
+              [(ngModel)]="updatePasswordModel().newPassword">
           </div>
 
           <div class="mb-3">
             <label class="form-label">Confirm New Password</label>
-            <input class="form-control" type="password" placeholder="Confirm new password">
+            <input class="form-control" type="password" placeholder="Confirm new password" name="confirmNewPassword"
+              [(ngModel)]="updatePasswordModel().confirmNewPassword">
           </div>
 
-          <button type="button" class="btn btn-secondary w-100" [disabled]="loading">Change Password
+          <button (click)="updatePassword()" type="button" class="btn btn-secondary w-100" [disabled]="loading">Change
+            Password
             <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           </button>
         </section>

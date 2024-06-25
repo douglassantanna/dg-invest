@@ -1,11 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { UserDecode } from 'src/app/core/models/user-decode';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { UserService } from 'src/app/core/services/user.service';
@@ -29,6 +28,12 @@ export class UserProfileComponent implements OnInit {
   loading = false;
   userFullname = '';
   userEmail = '';
+  updatePasswordModel = signal({
+    userId: 0,
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: '',
+  })
   ngOnInit(): void {
     if (this.authService.user) {
       this.userFullname = this.authService.user.unique_name;
@@ -53,5 +58,10 @@ export class UserProfileComponent implements OnInit {
         }
       });
     }
+  }
+
+  updatePassword() {
+    this.updatePasswordModel().userId = Number(this.authService.user?.nameid!);
+    console.log(this.updatePasswordModel())
   }
 }
