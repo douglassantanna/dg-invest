@@ -44,11 +44,12 @@ export class UserProfileComponent implements OnInit {
       this.userService.updateUserProfile(this.userFullname, this.userEmail, this.authService.user?.nameid!).subscribe({
         next: () => {
           this.loading = false;
-          this.toastService.showSuccess('Your profile was updated successfully');
+          this.toastService.showSuccess('Your profile was updated successfully. Please, log in again.');
+          this.authService.logout();
         },
         error: () => {
           this.loading = false;
-          this.toastService.showError('There was an error updating your profile');
+          this.toastService.showError('There was an error updating your profile.');
         }
       });
     }
