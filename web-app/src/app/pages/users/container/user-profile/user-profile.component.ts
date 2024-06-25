@@ -31,6 +31,7 @@ export class UserProfileComponent implements OnInit {
   hasNumbers = signal<boolean>(false);
   hasSpecialChars = signal<boolean>(false);
   hasSixChars = signal<boolean>(false);
+
   ngOnInit(): void {
     if (this.authService.user) {
       this.userFullname = this.authService.user.unique_name;
@@ -58,8 +59,29 @@ export class UserProfileComponent implements OnInit {
   }
 
   updatePassword() {
+    if (!this.updatePasswordModel().newPassword || !this.updatePasswordModel().confirmNewPassword) {
+      this.toastService.showError('Please, fill in the password and confirm password fields');
+      return;
+    }
+
+    this.loading = false;
     this.updatePasswordModel().userId = Number(this.authService.user?.nameid!);
-    console.log(this.updatePasswordModel())
+    this.userService.updateUserPassword(this.updatePasswordModel())
+      .subscribe({
+        next: () => {
+          this.loading = false;
+          this.toastService.showSuccess('Your password was updated successfully. Please, log in again.');
+          this.authService.logout();
+        },
+        error: () => {
+          this.loading = false;
+          this.toastService.showError('There was an error updating your password.');
+        }
+      })
+  }
+
+  arePasswordChecksTrue(): boolean {
+    return this.hasLowerCase() && this.hasNumbers() && this.hasSixChars() && this.hasSpecialChars() && this.hasUpperCase();
   }
 
   passwordChecker() {
