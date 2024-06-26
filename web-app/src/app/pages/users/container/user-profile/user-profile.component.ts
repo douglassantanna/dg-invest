@@ -64,6 +64,11 @@ export class UserProfileComponent implements OnInit {
       return;
     }
 
+    if (this.updatePasswordModel().newPassword !== this.updatePasswordModel().confirmNewPassword) {
+      this.toastService.showError('Password and confirm password dont match');
+      return;
+    }
+
     this.loading = false;
     this.updatePasswordModel().userId = Number(this.authService.user?.nameid!);
     this.userService.updateUserPassword(this.updatePasswordModel())
@@ -73,9 +78,12 @@ export class UserProfileComponent implements OnInit {
           this.toastService.showSuccess('Your password was updated successfully. Please, log in again.');
           this.authService.logout();
         },
-        error: () => {
+        error: (err) => {
+          const errorMessages = err.error.data.validationErrors;
+          errorMessages.forEach((element: any) => {
+            this.toastService.showError(element)
+          });
           this.loading = false;
-          this.toastService.showError('There was an error updating your password.');
         }
       })
   }

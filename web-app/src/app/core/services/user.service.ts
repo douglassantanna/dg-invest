@@ -18,8 +18,8 @@ export class UserService {
     private http: HttpClient,
     private toastService: ToastService) { }
 
-  updateUserPassword(arg0: { userId: number; currentPassword: string; newPassword: string; confirmNewPassword: string; }): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/update-user-password`, arg0);
+  updateUserPassword(arg: { userId: number; currentPassword: string; newPassword: string; confirmNewPassword: string; }): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/update-user-password`, arg);
   }
 
   createUser(command: CreateUserCommand) {

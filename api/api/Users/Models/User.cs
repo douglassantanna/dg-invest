@@ -41,4 +41,11 @@ public class User : Entity
         FullName = fullname;
         Email = email;
     }
+    internal void UpdatePassword(string newEncryptedPassword)
+    {
+        if (string.IsNullOrEmpty(newEncryptedPassword))
+            throw new ArgumentNullException(nameof(newEncryptedPassword), "New encrypted password cannot be null or empty.");
+
+        Password = newEncryptedPassword;
+    }
 }
