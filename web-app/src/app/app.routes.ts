@@ -3,9 +3,7 @@ import { CreateCryptoComponent } from './pages/cryptos/containers/create-crypto.
 import { CryptoDetailsComponent } from './pages/cryptos/containers/crypto-details.component';
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login.component';
-import { ProfileComponent } from './pages/profile/profile.component';
 import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos/view-cryptos.component';
-import { ViewUsersComponent } from './pages/users/container/view-users/view-users.component';
 import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
@@ -34,13 +32,13 @@ export const routes: Routes = [
     component: LoginComponent,
   },
   {
-    path: "profile",
+    path: "user-profile",
     canActivate: [authGuard],
-    component: ProfileComponent,
+    loadComponent: () => import('./pages/users/container/user-profile/user-profile.component').then((c) => c.UserProfileComponent),
   },
   {
     path: "users",
     canActivate: [authGuard, roleGuard],
-    component: ViewUsersComponent,
+    loadComponent: () => import('./pages/users/container/view-users/view-users.component').then((c) => c.ViewUsersComponent),
   },
 ];

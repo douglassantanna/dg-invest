@@ -1,5 +1,5 @@
 export interface UserDecode {
-  fullName: string;
+  unique_name: string;
   email: string;
   role: string;
   nameid: string;

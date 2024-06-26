@@ -22,7 +22,6 @@ export class AuthService {
     this.decodePayloadJWT()
   );
 
-  user = this._user.asObservable();
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -30,6 +29,12 @@ export class AuthService {
   ) {
     if (this.token)
       this.isLoggedIn$.next(true);
+  }
+
+  get user(): UserDecode | null {
+    const token = this.localStorageService.getToken();
+    const decodedUser = jwt_decode(token as string) as UserDecode;
+    return decodedUser ?? null;
   }
 
   get role(): string | null {

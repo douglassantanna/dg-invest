@@ -1,0 +1,68 @@
+<div class="container">
+  <h1 class="text-start">My Profile</h1>
+  <form>
+    <div class="row">
+
+      <div class="col-md-6 mb-4">
+        <section class="alert alert-light h-100">
+          <h2 class="text-center">Personal Information</h2>
+          <div class="mb-3">
+            <label class="form-label">Full name</label>
+            <input name="fullName" class="form-control" type="text" placeholder="Enter full name"
+              [(ngModel)]="userFullname">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">E-mail</label>
+            <input name="email" class="form-control" type="email" placeholder="Enter email" [(ngModel)]="userEmail">
+          </div>
+
+          <button (click)="updateUserProfile()" type="button" class="btn btn-primary w-100" [disabled]="loading">Save
+            User Information
+            <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          </button>
+        </section>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <section class="alert alert-light h-100">
+          <h2 class="text-center">Change Your Password</h2>
+          <div class="mb-3">
+            <label class="form-label">Current Password</label>
+            <input class="form-control" type="password" placeholder="Enter current password" name="currentPassword"
+              [(ngModel)]="updatePasswordModel().currentPassword">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">New Password</label>
+            <input class="form-control" type="password" placeholder="Enter new password" name="newPassword"
+              [(ngModel)]="updatePasswordModel().newPassword" (input)="passwordChecker()">
+            <div class="mt-2 alert alert-light">
+              <p> LowerCase {{ hasLowerCase() ? '✅' : '❌'}} </p>
+              <p> UpperCase {{ hasUpperCase() ? '✅' : '❌'}} </p>
+              <p> Numbers {{ hasNumbers() ? '✅' : '❌'}} </p>
+              <p> Special Chars {{ hasSpecialChars() ? '✅' : '❌'}} </p>
+              <p> Six Chars {{ hasSixChars() ? '✅' : '❌'}} </p>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Confirm New Password</label>
+            <input class="form-control" type="password" placeholder="Confirm new password" name="confirmNewPassword"
+              [(ngModel)]="updatePasswordModel().confirmNewPassword">
+            @if(updatePasswordModel().confirmNewPassword.length && updatePasswordModel().newPassword !==
+            updatePasswordModel().confirmNewPassword){
+            <p style="color: red;">Passwords don't match</p>
+            }
+          </div>
+
+          <button (click)="updatePassword()" type="button" class="btn btn-secondary w-100"
+            [disabled]="loading || !arePasswordChecksTrue()">Change
+            Password
+            <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          </button>
+        </section>
+      </div>
+    </div>
+  </form>
+</div>

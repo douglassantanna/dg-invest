@@ -35,4 +35,17 @@ public class User : Entity
         }
         _criptoAssets.Add(cryptoAsset);
     }
+
+    internal void Update(string fullname, string email)
+    {
+        FullName = fullname;
+        Email = email;
+    }
+    internal void UpdatePassword(string newEncryptedPassword)
+    {
+        if (string.IsNullOrEmpty(newEncryptedPassword))
+            throw new ArgumentNullException(nameof(newEncryptedPassword), "New encrypted password cannot be null or empty.");
+
+        Password = newEncryptedPassword;
+    }
 }
