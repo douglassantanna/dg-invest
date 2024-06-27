@@ -11,6 +11,7 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
 import { PercentDifferenceComponent } from '../../components/percent-difference.component';
 import { PieChartComponent } from '../../components/pie-chart/pie-chart.component';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -23,7 +24,8 @@ import { PieChartComponent } from '../../components/pie-chart/pie-chart.componen
     CryptoFilterComponent,
     CryptoTableComponent,
     PercentDifferenceComponent,
-    PieChartComponent],
+    PieChartComponent,
+    RouterModule],
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {

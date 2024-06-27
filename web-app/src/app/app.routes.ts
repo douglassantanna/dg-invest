@@ -5,6 +5,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login.component';
 import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos/view-cryptos.component';
 import { roleGuard } from './core/guards/role.guard';
+import { AccountComponent } from './pages/cryptos/containers/account/account.component';
 
 export const routes: Routes = [
   {
@@ -26,6 +27,11 @@ export const routes: Routes = [
     path: "crypto-dashboard/:cryptoId",
     canActivate: [authGuard],
     component: CryptoDetailsComponent,
+  },
+  {
+    path: "account",
+    canActivate: [authGuard],
+    component: AccountComponent,
   },
   {
     path: "login",

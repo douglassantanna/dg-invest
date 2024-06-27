@@ -30,9 +30,13 @@
             <div class="alert alert-light mb-2"> <strong>Total Invested:</strong> {{ totalInvested |
               currency:'USD':'symbol':'1.2-2'}}
             </div>
-            <div class="alert alert-light">
+            <div class="alert alert-light mb-2">
               <strong>Total Market Value:</strong> {{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
               <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
+            </div>
+            <div class="alert alert-light account">
+              <strong>Current Available Funds: $ 12345</strong>
+              <a routerLink="/account" class="btn btn-primary" aria-label="Check account details">Check account</a>
             </div>
           </div>
           <div class="col-md-6">
@@ -61,6 +65,12 @@
   header {
     display: flex;
     flex-wrap: wrap;
+  }
+
+  .account {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .coll-1,
