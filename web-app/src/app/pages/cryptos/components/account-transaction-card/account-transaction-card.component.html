@@ -1,0 +1,96 @@
+<div class="card-container">
+  @for (transaction of transactions(); track $index) {
+  <div class="card-list">
+    <img [src]="transaction.imageUrl" alt="Transaction Image" />
+    <div class="transaction-type">{{
+      getTransactionTypeLabel(transaction.transactionType)
+      }}
+      <div class="transaction-date">{{ transaction.date | date: 'dd/MM/y HH:mm' }}</div>
+    </div>
+    <div class="crypto-symbol">{{ transaction.cryptoSymbol | uppercase }}</div>
+    <div class="transaction-value" [ngClass]="{
+        'in': isIncoming(transaction.transactionType),
+        'out': isOutgoing(transaction.transactionType)
+      }">{{ getTransactionSign(transaction.transactionType) }}{{ transaction.transactionValue |
+      currency:'USD':'symbol':'1.2-2' }}</div>
+    <div class="crypto-data">
+      @if (transaction.cryptoAmount !== undefined) {
+      <span>Amount: {{ transaction.cryptoAmount }}</span>
+      <span>Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2'
+        }}</span>
+      }
+    </div>
+  </div>
+  }
+</div>
+
+<style>
+  .crypto-data {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .card-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .card-list {
+    overflow: auto;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    transition: 0.3s;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .card-list:hover {
+    background-color: aliceblue;
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .transaction-value.in {
+    color: green;
+  }
+
+  .transaction-value.out {
+    color: red;
+  }
+
+  .crypto-symbol {
+    width: 70px;
+  }
+
+  .card-list img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .transaction-type,
+  .transaction-value,
+  .transaction-date {
+    width: 150px;
+  }
+
+  .transaction-notes {
+    width: 250px;
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .crypto-data {
+      display: none;
+    }
+  }
+</style>

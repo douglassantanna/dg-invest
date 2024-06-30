@@ -22,6 +22,10 @@
       <app-crypto-filter [displayHideCryptoCheck]="false"
         (searchControlEvent)="searchTransactions($event)"></app-crypto-filter>
     </div>
+
+    <div class="transaction-list">
+      <app-account-transaction-card [transactions]="recentTransactions"></app-account-transaction-card>
+    </div>
   </section>
 </main>
 
