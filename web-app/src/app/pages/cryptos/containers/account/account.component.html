@@ -15,18 +15,38 @@
       </div>
     </div>
   </header>
+
+  <section class="recent-transactions">
+    <div class="recent-transactions-header">
+      <span>Recent Transactions</span>
+      <app-crypto-filter [displayHideCryptoCheck]="false"
+        (searchControlEvent)="searchTransactions($event)"></app-crypto-filter>
+    </div>
+  </section>
 </main>
 
 <style>
   main {
     display: flex;
+    flex-direction: column;
+    gap: 30px;
     padding: 10px 24px 10px 24px;
+  }
+
+  .recent-transactions-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+
+    span {
+      font-size: x-large;
+    }
   }
 
   header {
     display: flex;
     gap: 10px;
-    padding: 10px;
     width: 100%;
   }
 
@@ -74,6 +94,12 @@
       .card {
         justify-content: center;
         align-items: center;
+      }
+    }
+
+    .recent-transactions-header {
+      span {
+        font-size: large;
       }
     }
   }
