@@ -1,15 +1,17 @@
-import { Component, input } from '@angular/core';
+import { Component, Input, input } from '@angular/core';
 import { AccountTransaction, AccountTransactionType } from '../../containers/account/account.component';
-import { CommonModule } from '@angular/common';
+import { CommonModule, KeyValuePipe } from '@angular/common';
 
 @Component({
   selector: 'app-account-transaction-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, KeyValuePipe],
   templateUrl: './account-transaction-card.component.html',
   styleUrl: './account-transaction-card.component.scss'
 })
 export class AccountTransactionCardComponent {
+  objectKeys = Object.keys;
+  @Input() groupedTransactions: { [date: string]: AccountTransaction[] } = {}
   transactions = input<AccountTransaction[]>([]);
   AccountTransactionType = AccountTransactionType;
 
