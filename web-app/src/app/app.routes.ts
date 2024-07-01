@@ -7,6 +7,7 @@ import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos/vi
 import { roleGuard } from './core/guards/role.guard';
 import { AccountComponent } from './pages/cryptos/containers/account/account.component';
 import { DepositComponent } from './pages/cryptos/containers/deposit/deposit.component';
+import { WithdrawComponent } from './pages/cryptos/containers/withdraw/withdraw.component';
 
 export const routes: Routes = [
   {
@@ -38,6 +39,11 @@ export const routes: Routes = [
     path: "account/deposit",
     canActivate: [authGuard],
     component: DepositComponent,
+  },
+  {
+    path: "account/withdraw",
+    canActivate: [authGuard],
+    component: WithdrawComponent,
   },
   {
     path: "login",

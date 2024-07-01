@@ -1,0 +1,142 @@
+<main>
+  <form [formGroup]="withdrawForm" (ngSubmit)="onSubmit()">
+    <fieldset>
+      <legend>Withdraw</legend>
+
+      <div class="input">
+        <label for="amount">Amount</label>
+        <input type="number" id="amount" name="amount" aria-label="Amount" formControlName="amount">
+        @if (withdrawForm.get('amount')?.invalid && withdrawForm.get('amount')?.touched) {
+        Amount is required
+        }
+      </div>
+
+      <div class="input">
+        <label for="currency">Currency</label>
+        <select id="currency" formControlName="currency">
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="BRL">BRL</option>
+        </select>
+      </div>
+
+      <div class="input">
+        <label for="destination">Destination</label>
+        <input type="text" id="destination" name="destination" aria-label="Destination" formControlName="destination">
+        @if (withdrawForm.get('destination')?.invalid && withdrawForm.get('destination')?.touched) {
+        <p class="error">Destination is required</p>
+        }
+      </div>
+
+      <div class="input">
+        <label for="purchaseDate">Date</label>
+        <input type="date" id="purchaseDate" name="purchaseDate" aria-label="Purchase Date" formControlName="date">
+        @if (withdrawForm.get('date')?.invalid && withdrawForm.get('date')?.touched) {
+        <p class="error">Date is required</p>
+        }
+      </div>
+
+      <div class="input">
+        <label for="notes">Notes</label>
+        <input type="text" id="notes" name="notes" aria-label="Notes" formControlName="notes">
+      </div>
+
+      <div class="action">
+        <button class="withdraw-button" type="submit">Save</button>
+      </div>
+    </fieldset>
+  </form>
+</main>
+
+<style>
+  main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  form {
+    max-width: 400px;
+    width: 100%;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+  }
+
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  legend {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .input {
+    margin-bottom: 15px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  .error {
+    color: red;
+    font-size: 0.8em;
+    margin-top: 5px;
+  }
+
+  .action {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+
+  .withdraw-button {
+    border-radius: 5px;
+    width: 100%;
+    background-color: rgb(12, 109, 253);
+    color: white;
+    padding: 10px;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .withdraw-button:hover {
+    background-color: rgb(96, 138, 200);
+  }
+
+  .withdraw-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(96, 138, 200, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    form {
+      padding: 10px;
+    }
+
+    legend {
+      font-size: 20px;
+    }
+  }
+</style>
