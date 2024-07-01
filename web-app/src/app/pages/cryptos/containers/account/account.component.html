@@ -7,11 +7,15 @@
 
     <div class="actions">
       <div class="card">
-        <h2>Deposit</h2>
+        <a routerLink="/account/deposit" class="card-link">
+          <h2>Deposit</h2>
+        </a>
       </div>
 
       <div class="card">
-        <h2>Withdraw</h2>
+        <a routerLink="/account/deposit" class="card-link">
+          <h2>Withdraw</h2>
+        </a>
       </div>
     </div>
   </header>
@@ -67,6 +71,19 @@
 
   .card:has(h1) {
     min-width: 200px;
+  }
+
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+    text-decoration: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  .card-link:hover {
+    color: inherit;
   }
 
   .actions {

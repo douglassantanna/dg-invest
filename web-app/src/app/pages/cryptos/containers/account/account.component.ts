@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CryptoFilterComponent } from '../../components/crypto-filter.component';
 import { CommonModule } from '@angular/common';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
+import { RouterModule } from '@angular/router';
 export type AccountTransaction = {
   imageUrl: string;
   transactionType: AccountTransactionType;
@@ -26,7 +27,8 @@ export enum AccountTransactionType {
   imports: [
     CryptoFilterComponent,
     CommonModule,
-    AccountTransactionCardComponent
+    AccountTransactionCardComponent,
+    RouterModule
   ],
   templateUrl: './account.component.html',
 })
