@@ -3,6 +3,26 @@ using api.Shared;
 namespace api.Cryptos.Models;
 public class AccountTransaction : Entity
 {
+    public AccountTransaction(
+        DateTime date,
+        EAccountTransactionType transactionType,
+        decimal amount,
+        string? exchangeName,
+        string? currency,
+        string? destination,
+        string? notes,
+        decimal? cryptoCurrentPrice)
+    {
+        Date = date;
+        TransactionType = transactionType;
+        Amount = amount;
+        ExchangeName = exchangeName ?? string.Empty;
+        Currency = currency ?? string.Empty;
+        Destination = destination ?? string.Empty;
+        Notes = notes ?? string.Empty;
+        CryptoCurrentPrice = cryptoCurrentPrice ?? 0;
+    }
+
     public DateTime Date { get; private set; }
     public EAccountTransactionType TransactionType { get; private set; }
     public decimal Amount { get; private set; }
