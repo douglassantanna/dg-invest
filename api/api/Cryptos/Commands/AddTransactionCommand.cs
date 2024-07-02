@@ -1,10 +1,14 @@
 using api.Cryptos.Exceptions;
+using api.Cryptos.Models;
 using api.Cryptos.Repositories;
+using api.Cryptos.TransactionStrategies.Contracts;
 using api.Models.Cryptos;
 using api.Shared;
+using api.Users.Repositories;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
 public record AddTransactionCommand(decimal Amount,
@@ -40,12 +44,18 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
 {
     private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ILogger<AddTransactionCommandHandler> _logger;
+    private readonly ITransactionService _transactionService;
+    private readonly IUserRepository _userRepository;
 
     public AddTransactionCommandHandler(ICryptoAssetRepository cryptoAssetRepository,
-                                        ILogger<AddTransactionCommandHandler> logger)
+                                        ILogger<AddTransactionCommandHandler> logger,
+                                        ITransactionService transactionService,
+                                        IUserRepository userRepository)
     {
         _cryptoAssetRepository = cryptoAssetRepository;
         _logger = logger;
+        _transactionService = transactionService;
+        _userRepository = userRepository;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
@@ -67,15 +77,32 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Crypto asset not found", false);
         }
 
+        var user = await _userRepository.GetByIdAsync(1002,
+                                                      x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
+        if (user == null)
+        {
+            _logger.LogInformation("AddTransactionCommandHandler. User {0} not found.", 1002);
+            return new Response("User not found", false);
+        }
+
         var transaction = new CryptoTransaction(request.Amount,
                                                 request.Price,
                                                 request.PurchaseDate,
                                                 request.ExchangeName,
                                                 request.TransactionType);
-
         try
         {
             cryptoAsset.AddTransaction(transaction);
+            var AccountTransactionType = request.TransactionType == ETransactionType.Buy ? EAccountTransactionType.Out : EAccountTransactionType.In;
+            var date = new DateTime(request.PurchaseDate.Year, request.PurchaseDate.Month, request.PurchaseDate.Day);
+            _transactionService.ExecuteTransaction(user.Account, new AccountTransaction(date: date,
+                                                                                        transactionType: AccountTransactionType,
+                                                                                        amount: request.Amount,
+                                                                                        cryptoCurrentPrice: request.Price,
+                                                                                        exchangeName: request.ExchangeName,
+                                                                                        currency: string.Empty,
+                                                                                        destination: string.Empty,
+                                                                                        notes: string.Empty));
         }
         catch (CryptoAssetException ex)
         {
@@ -84,6 +111,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
 
         await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
+        await _userRepository.UpdateAsync(user);
 
         _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
         return new Response("ok", true, cryptoAsset);
