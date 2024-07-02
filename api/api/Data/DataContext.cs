@@ -15,6 +15,8 @@ public class DataContext : DbContext
     public DbSet<CryptoAsset> CryptoAssets { get; set; } = null!;
     public DbSet<Crypto> Cryptos { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Account> Accounts { get; set; } = null!;
+    public DbSet<AccountTransaction> AccountTransactions { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

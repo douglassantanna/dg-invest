@@ -1,7 +1,6 @@
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 using api.Shared;
-using api.Users.Models;
 
 namespace api.Models.Cryptos;
 public class CryptoAsset : Entity
