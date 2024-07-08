@@ -17,4 +17,8 @@ public class Account : Entity
     {
         Balance -= balance;
     }
+    internal void AddToBalance(decimal balance)
+    {
+        Balance += balance;
+    }
 }

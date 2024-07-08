@@ -1,4 +1,5 @@
 using api.Cryptos.Models;
+using api.Models.Cryptos;
 using api.Shared;
 
 namespace api.Cryptos.TransactionStrategies.Transactions;
@@ -6,7 +7,7 @@ public class BuyTransaction : ITransactionStrategy
 {
     public EAccountTransactionType TransactionType => EAccountTransactionType.Out;
 
-    public Response ExcecuteTransaction(Account account, AccountTransaction accountTransaction)
+    public Response ExcecuteTransaction(Account account, AccountTransaction accountTransaction, CryptoAsset? cryptoAsset = null)
     {
         var balance = accountTransaction.Amount * accountTransaction.CryptoCurrentPrice;
         if (account.Balance < balance)
@@ -17,6 +18,6 @@ public class BuyTransaction : ITransactionStrategy
         account.AddTransaction(accountTransaction);
         account.SubtractFromBalance(balance);
 
-        return new("Transaction excecuted successfuly", true);
+        return new("Transaction executed successfuly", true);
     }
 }

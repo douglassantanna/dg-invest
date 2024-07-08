@@ -92,7 +92,6 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                 request.TransactionType);
         try
         {
-            cryptoAsset.AddTransaction(transaction);
             var accountTransactionType = GetAccountTransactionType(request.TransactionType);
             var date = new DateTime(request.PurchaseDate.Year, request.PurchaseDate.Month, request.PurchaseDate.Day);
             var response = _transactionService.ExecuteTransaction(
@@ -104,8 +103,9 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                        exchangeName: request.ExchangeName,
                                        currency: string.Empty,
                                        destination: string.Empty,
-                                       notes: string.Empty)
-                );
+                                       notes: string.Empty),
+                cryptoAsset);
+            cryptoAsset.AddTransaction(transaction);
 
             if (!response.IsSuccess)
             {
@@ -119,8 +119,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response(ex.Message, false);
         }
 
-        await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
-        await _userRepository.UpdateAsync(user);
+        await Task.WhenAll(_cryptoAssetRepository.UpdateAsync(cryptoAsset), _userRepository.UpdateAsync(user));
 
         _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
         return new Response("ok", true, cryptoAsset);
