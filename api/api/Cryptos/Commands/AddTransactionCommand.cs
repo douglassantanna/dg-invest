@@ -16,7 +16,8 @@ public record AddTransactionCommand(decimal Amount,
                                     DateTimeOffset PurchaseDate,
                                     string ExchangeName,
                                     ETransactionType TransactionType,
-                                    int CryptoAssetId) : IRequest<Response>;
+                                    int CryptoAssetId,
+                                    int UserId) : IRequest<Response>;
 
 public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCommand>
 {
@@ -77,11 +78,11 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Crypto asset not found", false);
         }
 
-        var user = await _userRepository.GetByIdAsync(1002,
+        var user = await _userRepository.GetByIdAsync(request.UserId,
                                                       x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
         if (user == null)
         {
-            _logger.LogInformation("AddTransactionCommandHandler. User {0} not found.", 1002);
+            _logger.LogInformation("AddTransactionCommandHandler. User {0} not found.", request.UserId);
             return new Response("User not found", false);
         }
 

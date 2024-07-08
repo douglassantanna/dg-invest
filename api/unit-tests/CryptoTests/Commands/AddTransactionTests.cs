@@ -2,6 +2,7 @@ using api.Cryptos.Commands;
 using api.Cryptos.Repositories;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Models.Cryptos;
+using api.Users.Models;
 using api.Users.Repositories;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,8 @@ public class AddTransactionTests
                                                   PurchaseDate: DateTimeOffset.Parse("2023-10-09"),
                                                   ExchangeName: "Binance",
                                                   TransactionType: ETransactionType.Buy,
-                                                  CryptoAssetId: 1);
+                                                  CryptoAssetId: 1,
+                                                  UserId: 1);
 
         _cryptoAssetRepositoryMock = new Mock<ICryptoAssetRepository>();
         _userRepositoryMock = new Mock<IUserRepository>();
@@ -55,7 +57,8 @@ public class AddTransactionTests
                                                 PurchaseDate: DateTimeOffset.Parse("2050-10-09"),
                                                 ExchangeName: "Binance",
                                                 TransactionType: ETransactionType.Buy,
-                                                CryptoAssetId: 1);
+                                                CryptoAssetId: 1,
+                                                UserId: 1);
 
         // Act
         var validator = new AddTransactionCommandValidator();
