@@ -1,12 +1,13 @@
 <main>
-  <form [formGroup]="deposityForm" (ngSubmit)="onSubmit()">
+  <form [formGroup]="depositForm" (ngSubmit)="onSubmit()">
     <fieldset>
       <legend>Deposit</legend>
       <div class="input">
         <label for="transactionType">Type</label>
-        <select id="transactionType" name="transactionType" aria-label="Transaction Type" formControlName="type">
-          <option value="1">Fiat</option>
-          <option value="2">Crypto</option>
+        <select id="transactionType" name="transactionType" aria-label="Transaction Type"
+          formControlName="accountTransactionType">
+          <option [value]="depositType.DepositFiat">Fiat</option>
+          <option [value]="depositType.DepositCrypto">Crypto</option>
         </select>
       </div>
       <div class="input">
@@ -14,21 +15,43 @@
         <input type="number" id="amount" name="amount" aria-label="Amount" formControlName="amount">
       </div>
 
+      @if(accountTransactionType.value == depositType.DepositCrypto){
       <div class="input">
         <label for="pricePerUnit">Current Price</label>
         <input type="number" id="pricePerUnit" name="pricePerUnit" aria-label="Current Price"
           formControlName="currentPrice">
+        @if (currentPrice.hasError('required')) {
+        <div style="color: red;">
+          Required field.
+        </div>
+        }
       </div>
 
       <div class="input">
         <label for="exchangeName">Exchange Name</label>
-        <input type="text" id="exchangeName" name="exchangeName" aria-label="Exchange Name"
+        <input maxlength="255" type="text" id="exchangeName" name="exchangeName" aria-label="Exchange Name"
           formControlName="exchangeName">
+        @if (exchangeName.hasError('required')) {
+        <div style="color: red;">
+          Required field.
+        </div>
+        }
+        @if (exchangeName.hasError('maxLength')) {
+        <div style="color: red;">
+          Maximum of 255 characters allowed.
+        </div>
+        }
       </div>
+      }
 
       <div class="input">
         <label for="purchaseDate">Date</label>
         <input type="date" id="purchaseDate" name="purchaseDate" aria-label="Purchase Date" formControlName="date">
+        @if (date.hasError('required')) {
+        <div style="color: red;">
+          Required field.
+        </div>
+        }
       </div>
 
       <div class="action">
@@ -37,7 +60,6 @@
     </fieldset>
   </form>
 </main>
-
 
 <style>
   main {

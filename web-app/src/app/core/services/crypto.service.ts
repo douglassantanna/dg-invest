@@ -15,6 +15,7 @@ import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
 import { ViewCryptoInformation } from '../models/view-crypto-information';
 import { AuthService } from './auth.service';
+import { DepositFundCommand } from '../models/deposit-fund-command';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -124,6 +125,10 @@ export class CryptoService {
         return of();
       })
     );
+  }
+
+  depositFund(deposit: DepositFundCommand): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/deposit-fund`, deposit)
   }
 
   private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {

@@ -48,6 +48,24 @@ public class CryptoController : ControllerBase
         return CreatedAtAction(nameof(AddTransaction), result);
     }
 
+    [HttpPost("deposit-fund")]
+    public async Task<ActionResult<Response>> Depositfund([FromBody] DepositFundCommand command)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        var commandWithUserId = command with { UserId = userId };
+        var result = await _mediator.Send(commandWithUserId);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return CreatedAtAction(nameof(DepositFundCommand), result);
+    }
+
     [HttpGet("list-assets")]
     public async Task<ActionResult> ListCryptoAssets([FromQuery] ListCryptoAssetsQueryCommand command)
     {
