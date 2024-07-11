@@ -13,6 +13,7 @@ public record DepositFundCommand(EAccountTransactionType AccountTransactionType,
                                  DateTime Date,
                                  int UserId,
                                  decimal? CurrentPrice = null,
+                                 int? CryptoAssetId = null,
                                  string? ExchangeName = null) : IRequest<Response>;
 public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
 {
@@ -26,6 +27,11 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
                 .NotNull()
                 .GreaterThan(0)
                 .WithMessage("Crypto Current Price must be greater than zero");
+
+            RuleFor(x => x.CryptoAssetId)
+                .NotNull()
+                .GreaterThan(0)
+                .WithMessage("Crypto Asset Id must be greater than zero");
 
             RuleFor(x => x.ExchangeName)
                 .Length(1, 255)

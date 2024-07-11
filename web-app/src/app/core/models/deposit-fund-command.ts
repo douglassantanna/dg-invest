@@ -2,7 +2,7 @@ export interface DepositFundCommand {
   accountTransactionType: AccountTransactionType;
   amount: number;
   currentPrice: number;
-  cryptoAsset: string;
+  cryptoAssetId: string;
   exchangeName: string;
   date: string;
 }

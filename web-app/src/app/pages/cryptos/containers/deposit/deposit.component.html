@@ -17,10 +17,13 @@
 
       @if(accountTransactionType.value == depositType.DepositCrypto){
       <div class="input">
-        <label for="cryptoAsset">Crypto Asset</label>
-        <input type="number" id="cryptoAsset" name="cryptoAsset" aria-label="Crypto Asset"
-          formControlName="cryptoAsset">
-        @if (cryptoAsset.hasError('required')) {
+        <label for="cryptoAssetId">Crypto Asset</label>
+        <select id="cryptoAssetId" name="cryptoAssetId" aria-label="Crypto Asset" formControlName="cryptoAssetId">
+          @for (crypto of cryptoAssets(); track $index) {
+          <option [value]="crypto.id">{{ crypto.name }}</option>
+          }
+        </select>
+        @if (cryptoAssetId.hasError('required')) {
         <div style="color: red;">
           Required field.
         </div>
