@@ -26,6 +26,7 @@ export class DepositComponent implements OnInit {
       accountTransactionType: [this.depositType, Validators.minLength(1)],
       amount: ['', [Validators.min(0)]],
       currentPrice: [],
+      cryptoAsset: [],
       exchangeName: [],
       date: ['', [Validators.required]],
     });
@@ -45,6 +46,7 @@ export class DepositComponent implements OnInit {
       accountTransactionType: this.mapAccountDepositType(this.depositForm.value.accountTransactionType),
       currentPrice: this.depositForm.value.currentPrice ? parseFloat(this.depositForm.value.currentPrice) : 0,
       exchangeName: this.depositForm.value.exchangeName?.trim() || '',
+      cryptoAsset: this.depositForm.value.cryptoAsset?.trim() || '',
       date: this.depositForm.value.date,
     };
 
@@ -65,15 +67,19 @@ export class DepositComponent implements OnInit {
         if (value == this.depositType.DepositCrypto) {
           this.currentPrice.setValidators([Validators.required, Validators.min(0)]);
           this.exchangeName.setValidators([Validators.required, Validators.maxLength(255)]);
+          this.cryptoAsset.setValidators([Validators.required, Validators.maxLength(255)]);
         } else {
           this.currentPrice.setValue('');
           this.exchangeName.setValue('');
+          this.cryptoAsset.setValue('');
           this.currentPrice.clearValidators();
           this.exchangeName.clearValidators();
+          this.cryptoAsset.clearValidators();
         }
 
         this.currentPrice.updateValueAndValidity();
         this.exchangeName.updateValueAndValidity();
+        this.cryptoAsset.updateValueAndValidity();
       }
     )).subscribe();
   }
@@ -81,5 +87,6 @@ export class DepositComponent implements OnInit {
   get accountTransactionType() { return this.depositForm.get('accountTransactionType') as FormControl }
   get currentPrice() { return this.depositForm.get('currentPrice') as FormControl }
   get exchangeName() { return this.depositForm.get('exchangeName') as FormControl }
+  get cryptoAsset() { return this.depositForm.get('cryptoAsset') as FormControl }
   get date() { return this.depositForm.get('date') as FormControl }
 }

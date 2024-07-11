@@ -30,6 +30,8 @@ builder.Services.AddScoped<ICryptoRepository, CryptoRepository>();
 builder.Services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
 builder.Services.AddScoped<ITransactionStrategy, BuyTransaction>();
 builder.Services.AddScoped<ITransactionStrategy, SellTransaction>();
+builder.Services.AddScoped<ITransactionStrategy, FiatDepositTransaction>();
+builder.Services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 builder.Services.Configure<CoinMarketCapSettings>(builder.Configuration.GetSection(nameof(CoinMarketCapSettings)));

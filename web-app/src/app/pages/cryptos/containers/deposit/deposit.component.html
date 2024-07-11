@@ -17,6 +17,17 @@
 
       @if(accountTransactionType.value == depositType.DepositCrypto){
       <div class="input">
+        <label for="cryptoAsset">Crypto Asset</label>
+        <input type="number" id="cryptoAsset" name="cryptoAsset" aria-label="Crypto Asset"
+          formControlName="cryptoAsset">
+        @if (cryptoAsset.hasError('required')) {
+        <div style="color: red;">
+          Required field.
+        </div>
+        }
+      </div>
+
+      <div class="input">
         <label for="pricePerUnit">Current Price</label>
         <input type="number" id="pricePerUnit" name="pricePerUnit" aria-label="Current Price"
           formControlName="currentPrice">
