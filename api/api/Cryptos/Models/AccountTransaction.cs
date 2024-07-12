@@ -12,20 +12,33 @@ public class AccountTransaction : Entity
             DateTime date,
             EAccountTransactionType transactionType,
             decimal amount,
-            decimal? cryptoCurrentPrice,
-            string? exchangeName,
-            string? currency,
-            string? destination,
+            decimal cryptoCurrentPrice,
+            string exchangeName,
+            string currency,
+            string destination,
+            string notes,
+            int? cryptoAssetId)
+    {
+        Date = date;
+        TransactionType = transactionType;
+        Amount = amount;
+        ExchangeName = exchangeName;
+        Currency = currency;
+        Destination = destination;
+        Notes = notes;
+        CryptoCurrentPrice = cryptoCurrentPrice;
+        CryptoAssetId = cryptoAssetId;
+    }
+    public AccountTransaction(
+            DateTime date,
+            EAccountTransactionType transactionType,
+            decimal amount,
             string? notes)
     {
         Date = date;
         TransactionType = transactionType;
         Amount = amount;
-        ExchangeName = exchangeName ?? string.Empty;
-        Currency = currency ?? string.Empty;
-        Destination = destination ?? string.Empty;
         Notes = notes ?? string.Empty;
-        CryptoCurrentPrice = cryptoCurrentPrice ?? 0;
     }
 
     public DateTime Date { get; private set; }
@@ -36,4 +49,5 @@ public class AccountTransaction : Entity
     public string Destination { get; private set; } = string.Empty;
     public string Notes { get; private set; } = string.Empty;
     public decimal CryptoCurrentPrice { get; private set; }
+    public int? CryptoAssetId { get; private set; }
 }

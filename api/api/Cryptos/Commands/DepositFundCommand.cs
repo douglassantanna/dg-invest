@@ -1,4 +1,5 @@
 using api.Cryptos.Models;
+using api.Cryptos.Repositories;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Shared;
 using api.Users.Repositories;
@@ -47,15 +48,18 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
     private readonly IUserRepository _userRepository;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
+    private readonly ICryptoAssetRepository _cryptoAssetRepository;
 
     public DepositFundCommandHandler(
         IUserRepository userRepository,
         ILogger<DepositFundCommandHandler> logger,
-        ITransactionService transactionService)
+        ITransactionService transactionService,
+        ICryptoAssetRepository cryptoAssetRepository)
     {
         _userRepository = userRepository;
         _logger = logger;
         _transactionService = transactionService;
+        _cryptoAssetRepository = cryptoAssetRepository;
     }
 
     public async Task<Response> Handle(DepositFundCommand request, CancellationToken cancellationToken)
@@ -79,17 +83,34 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
 
         try
         {
-            var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day);
-            var response = _transactionService.ExecuteTransaction(
-               user.Account,
-               new AccountTransaction(date: date,
+            var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);
+            AccountTransaction newTransaction;
+            if (accountTransactionType == EAccountTransactionType.DepositCrypto)
+            {
+                var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId ?? 0);
+                if (cryptoAsset == null)
+                {
+                    _logger.LogInformation("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
+                    return new Response("Crypto asset not found", false);
+                }
+
+                newTransaction = new(date: date,
                                       transactionType: accountTransactionType,
                                       amount: request.Amount,
                                       cryptoCurrentPrice: request.CurrentPrice ?? 0,
                                       exchangeName: request.ExchangeName ?? string.Empty,
                                       currency: string.Empty,
                                       destination: string.Empty,
+                                      notes: string.Empty,
+                                      cryptoAssetId: 0);
+            }
+
+            var response = _transactionService.ExecuteTransaction(
+               user.Account,
+               newTransaction = new(date: date,
+                                      transactionType: accountTransactionType,
+                                      amount: request.Amount,
                                       notes: string.Empty));
 
             if (!response.IsSuccess)
