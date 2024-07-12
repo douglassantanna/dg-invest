@@ -63,7 +63,7 @@ public class CryptoController : ControllerBase
         {
             return BadRequest(result);
         }
-        return CreatedAtAction(nameof(DepositFundCommand), result);
+        return Created(nameof(DepositFundCommand), result);
     }
 
     [HttpGet("list-assets")]

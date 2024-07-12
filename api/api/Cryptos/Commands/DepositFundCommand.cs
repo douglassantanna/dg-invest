@@ -1,6 +1,6 @@
 using api.Cryptos.Models;
-using api.Cryptos.Repositories;
 using api.Cryptos.TransactionStrategies.Contracts;
+using api.Models.Cryptos;
 using api.Shared;
 using api.Users.Repositories;
 using FluentValidation;
@@ -48,18 +48,14 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
     private readonly IUserRepository _userRepository;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
-    private readonly ICryptoAssetRepository _cryptoAssetRepository;
-
     public DepositFundCommandHandler(
         IUserRepository userRepository,
         ILogger<DepositFundCommandHandler> logger,
-        ITransactionService transactionService,
-        ICryptoAssetRepository cryptoAssetRepository)
+        ITransactionService transactionService)
     {
         _userRepository = userRepository;
         _logger = logger;
         _transactionService = transactionService;
-        _cryptoAssetRepository = cryptoAssetRepository;
     }
 
     public async Task<Response> Handle(DepositFundCommand request, CancellationToken cancellationToken)
@@ -74,7 +70,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
+                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions).Include(x => x.CryptoAssets));
         if (user == null)
         {
             _logger.LogInformation("DepositFundCommandHandler. User {0} not found.", request.UserId);
@@ -85,50 +81,29 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         {
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day);
             var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);
-            AccountTransaction newTransaction;
-            if (accountTransactionType == EAccountTransactionType.DepositCrypto)
+            var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, user.CryptoAssets);
+            if (newAccountTransaction == null)
             {
-                var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId ?? 0);
-                if (cryptoAsset == null)
-                {
-                    _logger.LogInformation("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
-                    return new Response("Crypto asset not found", false);
-                }
-
-                newTransaction = new(date: date,
-                                      transactionType: accountTransactionType,
-                                      amount: request.Amount,
-                                      cryptoCurrentPrice: request.CurrentPrice ?? 0,
-                                      exchangeName: request.ExchangeName ?? string.Empty,
-                                      currency: string.Empty,
-                                      destination: string.Empty,
-                                      notes: string.Empty,
-                                      cryptoAssetId: 0);
+                return new Response("Crypto asset not found", false);
             }
 
-            var response = _transactionService.ExecuteTransaction(
-               user.Account,
-               newTransaction = new(date: date,
-                                      transactionType: accountTransactionType,
-                                      amount: request.Amount,
-                                      notes: string.Empty));
-
+            var response = _transactionService.ExecuteTransaction(user.Account, newAccountTransaction);
             if (!response.IsSuccess)
             {
                 _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
+
+            await _userRepository.UpdateAsync(user);
+
+            _logger.LogInformation("DepositFundCommandHandler. Deposit added for UserId: {0}", request.UserId);
+            return new Response("ok", true);
         }
         catch (Exception ex)
         {
             _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", ex.Message);
             return new Response(ex.Message, false);
         }
-
-        await _userRepository.UpdateAsync(user);
-
-        _logger.LogInformation("DepositFundCommandHandler. Deposit added for UserId: {0}", request.UserId);
-        return new Response("ok", true);
     }
     private EAccountTransactionType GetAccountTransactionType(EAccountTransactionType accountTransactionType)
     {
@@ -138,5 +113,52 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
     {
         var validation = new DepositFundCommandValidator();
         return await validation.ValidateAsync(request);
+    }
+    private AccountTransaction? CreateAccountTransaction(DepositFundCommand request,
+                                                                     DateTime date,
+                                                                     EAccountTransactionType accountTransactionType,
+                                                                     IReadOnlyCollection<CryptoAsset> cryptoAssets)
+    {
+        if (accountTransactionType == EAccountTransactionType.DepositCrypto)
+        {
+            var cryptoAsset = cryptoAssets.FirstOrDefault(c => c.Id == request.CryptoAssetId);
+            if (cryptoAsset == null)
+            {
+                _logger.LogInformation("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
+                return null;
+            }
+
+            var buyTransaction = new CryptoTransaction(
+                request.Amount,
+                request.CurrentPrice ?? 0,
+                request.Date,
+                request.ExchangeName ?? string.Empty,
+                ETransactionType.Buy
+            );
+
+            cryptoAsset.AddTransaction(buyTransaction);
+
+            return new AccountTransaction(
+                date: date,
+                transactionType: accountTransactionType,
+                amount: request.Amount,
+                cryptoCurrentPrice: request.CurrentPrice ?? 0,
+                exchangeName: request.ExchangeName ?? string.Empty,
+                currency: string.Empty,
+                destination: string.Empty,
+                notes: string.Empty,
+                cryptoAssetId: cryptoAsset.Id,
+                cryptoAsset: cryptoAsset
+            );
+        }
+        else
+        {
+            return new AccountTransaction(
+                date: date,
+                transactionType: accountTransactionType,
+                amount: request.Amount,
+                notes: string.Empty
+            );
+        }
     }
 }

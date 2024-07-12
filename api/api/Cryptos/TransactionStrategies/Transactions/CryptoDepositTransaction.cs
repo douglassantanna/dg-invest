@@ -9,7 +9,8 @@ public class CryptoDepositTransaction : ITransactionStrategy
 
     public Response ExcecuteTransaction(Account account, AccountTransaction accountTransaction, CryptoAsset? cryptoAsset = null)
     {
-        account.AddToBalance(accountTransaction.Amount);
+        var balance = accountTransaction.Amount * accountTransaction.CryptoCurrentPrice;
+        account.AddToBalance(balance);
         account.AddTransaction(accountTransaction);
         return new("Transaction executed successfuly", true);
     }

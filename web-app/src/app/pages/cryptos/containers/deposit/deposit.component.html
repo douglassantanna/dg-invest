@@ -20,7 +20,7 @@
         <label for="cryptoAssetId">Crypto Asset</label>
         <select id="cryptoAssetId" name="cryptoAssetId" aria-label="Crypto Asset" formControlName="cryptoAssetId">
           @for (crypto of cryptoAssets(); track $index) {
-          <option [value]="crypto.id">{{ crypto.name }}</option>
+          <option [value]="crypto.id">{{ crypto.symbol | uppercase }}</option>
           }
         </select>
         @if (cryptoAssetId.hasError('required')) {

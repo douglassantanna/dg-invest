@@ -1,3 +1,4 @@
+using api.Models.Cryptos;
 using api.Shared;
 
 namespace api.Cryptos.Models;
@@ -17,7 +18,8 @@ public class AccountTransaction : Entity
             string currency,
             string destination,
             string notes,
-            int? cryptoAssetId)
+            int? cryptoAssetId,
+            CryptoAsset? cryptoAsset)
     {
         Date = date;
         TransactionType = transactionType;
@@ -28,6 +30,7 @@ public class AccountTransaction : Entity
         Notes = notes;
         CryptoCurrentPrice = cryptoCurrentPrice;
         CryptoAssetId = cryptoAssetId;
+        CryptoAsset = cryptoAsset;
     }
     public AccountTransaction(
             DateTime date,
@@ -50,4 +53,5 @@ public class AccountTransaction : Entity
     public string Notes { get; private set; } = string.Empty;
     public decimal CryptoCurrentPrice { get; private set; }
     public int? CryptoAssetId { get; private set; }
+    public CryptoAsset? CryptoAsset { get; set; }
 }

@@ -4,14 +4,15 @@ import { DepositFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { AccountTransactionType } from '../account/account.component';
 import { ToastService } from 'src/app/core/services/toast.service';
-import { JsonPipe } from '@angular/common';
+import { JsonPipe, UpperCasePipe } from '@angular/common';
 import { Subject, takeUntil, tap } from 'rxjs';
 import { Crypto } from '../../../../core/models/crypto';
+import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 
 @Component({
   selector: 'app-deposit',
   standalone: true,
-  imports: [ReactiveFormsModule, JsonPipe],
+  imports: [ReactiveFormsModule, UpperCasePipe],
   templateUrl: './deposit.component.html',
   styleUrl: './deposit.component.scss'
 })
@@ -20,7 +21,7 @@ export class DepositComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
   private toastService = inject(ToastService);
   private subscription: Subject<void> = new Subject();
-  cryptoAssets = signal<Crypto[]>([]);
+  cryptoAssets = signal<ViewCryptoInformation[]>([]);
   depositType = AccountTransactionType;
   depositForm!: FormGroup;
   constructor() {
@@ -94,10 +95,10 @@ export class DepositComponent implements OnInit, OnDestroy {
   }
 
   private getCryptos() {
-    this.cryptoService.getCryptos()
+    this.cryptoService.getCryptoAssets()
       .pipe(takeUntil(this.subscription))
       .subscribe({
-        next: (response) => this.cryptoAssets.set(response.data),
+        next: (response) => this.cryptoAssets.set(response.items),
         error: (err) => console.log(err)
       });
   }

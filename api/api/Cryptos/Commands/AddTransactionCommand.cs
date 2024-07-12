@@ -95,18 +95,17 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         {
             var accountTransactionType = GetAccountTransactionType(request.TransactionType);
             var date = new DateTime(request.PurchaseDate.Year, request.PurchaseDate.Month, request.PurchaseDate.Day);
-            var response = _transactionService.ExecuteTransaction(
-                user.Account,
-                new AccountTransaction(date: date,
-                                       transactionType: accountTransactionType,
-                                       amount: request.Amount,
-                                       cryptoCurrentPrice: request.Price,
-                                       exchangeName: request.ExchangeName,
-                                       currency: string.Empty,
-                                       destination: string.Empty,
-                                       notes: string.Empty,
-                                       cryptoAssetId: cryptoAsset.Id),
-                cryptoAsset);
+            var response = _transactionService.ExecuteTransaction(user.Account,
+                                                                  new AccountTransaction(date: date,
+                                                                                         transactionType: accountTransactionType,
+                                                                                         amount: request.Amount,
+                                                                                         cryptoCurrentPrice: request.Price,
+                                                                                         exchangeName: request.ExchangeName,
+                                                                                         currency: string.Empty,
+                                                                                         destination: string.Empty,
+                                                                                         notes: string.Empty,
+                                                                                         cryptoAssetId: cryptoAsset.Id,
+                                                                                         cryptoAsset: cryptoAsset));
             cryptoAsset.AddTransaction(transaction);
 
             if (!response.IsSuccess)
@@ -114,17 +113,16 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                 _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
+            await Task.WhenAll(_cryptoAssetRepository.UpdateAsync(cryptoAsset), _userRepository.UpdateAsync(user));
+
+            _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
+            return new Response("ok", true, cryptoAsset);
         }
         catch (CryptoAssetException ex)
         {
             _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", ex.Message);
             return new Response(ex.Message, false);
         }
-
-        await Task.WhenAll(_cryptoAssetRepository.UpdateAsync(cryptoAsset), _userRepository.UpdateAsync(user));
-
-        _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
-        return new Response("ok", true, cryptoAsset);
     }
 
     private EAccountTransactionType GetAccountTransactionType(ETransactionType transactionType)
