@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CryptoFilterComponent } from '../../components/crypto-filter.component';
 import { CommonModule } from '@angular/common';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
 import { RouterModule } from '@angular/router';
+import { UserService } from 'src/app/core/services/user.service';
 export type AccountTransaction = {
   imageUrl: string;
   transactionType: AccountTransactionType;
@@ -32,7 +33,15 @@ export enum AccountTransactionType {
   ],
   templateUrl: './account.component.html',
 })
-export class AccountComponent {
+export class AccountComponent implements OnInit {
+  private userService = inject(UserService);
+
+  ngOnInit(): void {
+    this.userService.getUserById(1002).subscribe({
+      next: (result) => { console.log(result) },
+      error: (err) => { console.log(err) }
+    })
+  }
   recentTransactions: { [date: string]: AccountTransaction[] } = {
     "2024-06-25": [
       {

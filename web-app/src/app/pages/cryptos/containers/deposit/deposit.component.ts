@@ -54,7 +54,7 @@ export class DepositComponent implements OnInit, OnDestroy {
       accountTransactionType: this.mapAccountDepositType(this.depositForm.value.accountTransactionType),
       currentPrice: this.depositForm.value.currentPrice ? parseFloat(this.depositForm.value.currentPrice) : 0,
       exchangeName: this.depositForm.value.exchangeName?.trim() || '',
-      cryptoAssetId: this.depositForm.value.cryptoAssetId?.trim() || '',
+      cryptoAssetId: (this.depositForm.value.cryptoAssetId?.trim() || ''),
       date: this.depositForm.value.date,
     };
 

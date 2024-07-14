@@ -58,4 +58,8 @@ export class UserService {
       })
     );
   }
+
+  getUserById(userId: number): Observable<any> {
+    return this.http.get(`${url}/get-user-by-id/${userId}`);
+  }
 }

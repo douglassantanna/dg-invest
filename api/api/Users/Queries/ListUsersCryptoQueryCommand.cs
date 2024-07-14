@@ -59,7 +59,8 @@ public class ListUsersQueryCommandHandler : IRequestHandler<ListUsersQueryComman
         var collection = userQuery.Select(x => new UserDto(x.Id,
                                                            x.FullName,
                                                            x.Email,
-                                                           x.Role));
+                                                           x.Role,
+                                                           null));
 
         var pagedCollection = await PageList<UserDto>.CreateAsync(collection,
                                                                   request.Page,
