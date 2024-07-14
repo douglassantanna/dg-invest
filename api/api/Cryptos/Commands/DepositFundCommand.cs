@@ -7,6 +7,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 
 namespace api.Cryptos.Commands;
 public record DepositFundCommand(EAccountTransactionType AccountTransactionType,
@@ -14,7 +15,7 @@ public record DepositFundCommand(EAccountTransactionType AccountTransactionType,
                                  DateTime Date,
                                  int UserId,
                                  decimal? CurrentPrice = null,
-                                 int? CryptoAssetId = null,
+                                 string? CryptoAssetId = null,
                                  string? ExchangeName = null) : IRequest<Response>;
 public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
 {
@@ -31,7 +32,6 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
 
             RuleFor(x => x.CryptoAssetId)
                 .NotNull()
-                .GreaterThan(0)
                 .WithMessage("Crypto Asset Id must be greater than zero");
 
             RuleFor(x => x.ExchangeName)
@@ -70,7 +70,8 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions).Include(x => x.CryptoAssets));
+                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
+                                                          .Include(x => x.CryptoAssets).ThenInclude(x => x.Transactions));
         if (user == null)
         {
             _logger.LogInformation("DepositFundCommandHandler. User {0} not found.", request.UserId);
@@ -79,6 +80,9 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
 
         try
         {
+            if (user.Account == null)
+                user.CreateAccountIfNotExists();
+
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day);
             var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);
             var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, user.CryptoAssets);
@@ -87,7 +91,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 return new Response("Crypto asset not found", false);
             }
 
-            var response = _transactionService.ExecuteTransaction(user.Account, newAccountTransaction);
+            var response = _transactionService.ExecuteTransaction(user.Account!, newAccountTransaction);
             if (!response.IsSuccess)
             {
                 _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);
@@ -121,7 +125,8 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
     {
         if (accountTransactionType == EAccountTransactionType.DepositCrypto)
         {
-            var cryptoAsset = cryptoAssets.FirstOrDefault(c => c.Id == request.CryptoAssetId);
+            _ = int.TryParse(request.CryptoAssetId, out var cryptoId);
+            var cryptoAsset = cryptoAssets.FirstOrDefault(c => c.Id == cryptoId);
             if (cryptoAsset == null)
             {
                 _logger.LogInformation("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
