@@ -36,9 +36,15 @@
     @for (transaction of item.transactions; track $index) {
     <div class="card-list">
       <div class="symbol">
+        @if (transaction.cryptoSymbol) {
         <span>
           {{transaction.cryptoSymbol | cryptoSymbol }}
         </span>
+        }@else {
+        <span>
+          {{transaction.transactionType | transactionTypeLabel }}
+        </span>
+        }
       </div>
       <div class="transaction-type">{{ getTransactionTypeLabel(transaction.transactionType) }}
         <div class="crypto-symbol">{{ transaction.cryptoSymbol | uppercase }}</div>

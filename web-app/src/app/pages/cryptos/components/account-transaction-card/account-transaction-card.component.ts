@@ -1,3 +1,4 @@
+import { TransactionTypeLabelPipe } from './../../../../core/pipes/transaction-type-label.pipe';
 import { Component, Input, input } from '@angular/core';
 import { AccountTransaction, AccountTransactionType } from '../../containers/account/account.component';
 import { CommonModule, JsonPipe, KeyValuePipe } from '@angular/common';
@@ -7,7 +8,10 @@ import { CryptoSymbolPipe } from 'src/app/core/pipes/crypto-symbol.pipe';
 @Component({
   selector: 'app-account-transaction-card',
   standalone: true,
-  imports: [CommonModule, KeyValuePipe, CryptoSymbolPipe],
+  imports: [
+    CommonModule,
+    CryptoSymbolPipe,
+    TransactionTypeLabelPipe],
   templateUrl: './account-transaction-card.component.html',
   styleUrl: './account-transaction-card.component.scss'
 })
