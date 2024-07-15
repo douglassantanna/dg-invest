@@ -1,15 +1,45 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { CreateUserCommand } from '../models/create-user';
+import { CreateUserCommand, Role } from '../models/create-user';
 import { environment } from 'src/environments/environment.development';
 import { Observable, catchError, of } from 'rxjs';
 import { ToastService } from './toast.service';
 import { Response } from '../models/response';
 import { Pagination } from '../models/pagination';
 import { ViewUserDto } from '../models/view-user-dto';
+import { AccountTransactionType } from '../models/deposit-fund-command';
 
 const url = `${environment.apiUrl}/User`;
+export interface AccountTransactionDto {
+  date: Date;
+  transactionType: AccountTransactionType;
+  amount: number;
+  exchangeName: string;
+  currency: string;
+  destination: string;
+  notes: string;
+  cryptoCurrentPrice: number;
+  cryptoSymbol: string;
+}
 
+export interface GroupedAccountTransactionsDto {
+  date: Date;
+  transactions: AccountTransactionDto[];
+}
+
+export interface AccountDto {
+  id: number;
+  balance: number;
+  groupedAccountTransactions: GroupedAccountTransactionsDto[];
+}
+
+export interface UserDto {
+  id: number;
+  fullName: string;
+  email: string;
+  role: Role;
+  account?: AccountDto;
+}
 @Injectable({
   providedIn: 'root'
 })
@@ -59,7 +89,7 @@ export class UserService {
     );
   }
 
-  getUserById(userId: number): Observable<any> {
-    return this.http.get(`${url}/get-user-by-id/${userId}`);
+  getUserById(): Observable<any> {
+    return this.http.get<any>(`${url}/get-user-by-id`);
   }
 }

@@ -9,7 +9,7 @@ public record UserDto(
     Role Role,
     AccountDto? Account = null
 );
-public record AccountDto(int Id, decimal Balance, List<AccountTransactionDto> AccountTransactions);
+public record AccountDto(int Id, decimal Balance, List<GroupedAccountTransactionsDto> GroupedAccountTransactions);
 public record AccountTransactionDto(DateTime Date,
                                     EAccountTransactionType TransactionType,
                                     decimal Amount,
@@ -17,4 +17,8 @@ public record AccountTransactionDto(DateTime Date,
                                     string Currency,
                                     string Destination,
                                     string Notes,
-                                    decimal CryptoCurrentPrice);
+                                    decimal CryptoCurrentPrice,
+                                    string CryptoSymbol);
+
+public record GroupedAccountTransactionsDto(DateTime Date,
+                                            List<AccountTransactionDto> Transactions);

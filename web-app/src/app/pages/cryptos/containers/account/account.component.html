@@ -1,7 +1,7 @@
 <main>
   <header>
     <div class="card">
-      <h1>$ 99.100.200,00</h1>
+      <h1>{{ account().balance | currency:'USD':'symbol':'1.2-2' }}</h1>
       <h2>Balance</h2>
     </div>
 
@@ -28,7 +28,8 @@
     </div>
 
     <div class="transaction-list">
-      <app-account-transaction-card [groupedTransactions]="recentTransactions"></app-account-transaction-card>
+      <app-account-transaction-card [groupedTransactionsNew]="account().groupedAccountTransactions"
+        [groupedTransactions]="recentTransactions"></app-account-transaction-card>
     </div>
   </section>
 </main>

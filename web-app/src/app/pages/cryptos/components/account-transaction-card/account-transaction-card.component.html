@@ -29,7 +29,55 @@
   }
 </main>
 
+<main>
+  @for (item of groupedTransactionsNew(); track $index) {
+  <div class="card-container">
+    <div class="transaction-date">{{ item.date | date: 'EEEE, d MMMM, y' }}</div>
+    @for (transaction of item.transactions; track $index) {
+    <div class="card-list">
+      <div class="symbol">
+        <span>
+          {{transaction.cryptoSymbol | cryptoSymbol }}
+        </span>
+      </div>
+      <div class="transaction-type">{{ getTransactionTypeLabel(transaction.transactionType) }}
+        <div class="crypto-symbol">{{ transaction.cryptoSymbol | uppercase }}</div>
+      </div>
+      <div class="transaction-details">
+        <div class="transaction-value" [ngClass]="{
+          'in': isIncoming(transaction.transactionType),
+          'out': isOutgoing(transaction.transactionType)
+        }"> {{ getTransactionSign(transaction.transactionType) }}{{ transaction.amount |
+          currency:'USD':'symbol':'1.2-2' }}
+        </div>
+      </div>
+      <div class="crypto-data">
+        @if (transaction.amount !== undefined) {
+        <span>Amount: {{ transaction.amount }}</span>
+        <span>Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2'
+          }}</span>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  }
+</main>
+
 <style>
+  .symbol {
+    border-radius: 100%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    background-color: orangered;
+    color: white;
+    font-size: larger;
+  }
+
   .crypto-data {
     display: flex;
     flex-direction: column;

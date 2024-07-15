@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Claims;
 using api.Cryptos.Queries;
 using api.Shared;
 using api.Users.Commands;
@@ -75,9 +76,16 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("get-user-by-id/{UserId:int}")]
-    public async Task<ActionResult> GetUserById([FromRoute] GetUserByIdCommand command)
+    [HttpGet("get-user-by-id")]
+    public async Task<ActionResult> GetUserById()
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        GetUserByIdCommand command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result);
