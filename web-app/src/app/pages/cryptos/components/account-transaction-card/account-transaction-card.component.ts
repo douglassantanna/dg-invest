@@ -2,7 +2,7 @@ import { TransactionTypeLabelPipe } from './../../../../core/pipes/transaction-t
 import { Component, Input, input } from '@angular/core';
 import { AccountTransaction, AccountTransactionType } from '../../containers/account/account.component';
 import { CommonModule, JsonPipe, KeyValuePipe } from '@angular/common';
-import { GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
+import { AccountTransactionDto, GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
 import { CryptoSymbolPipe } from 'src/app/core/pipes/crypto-symbol.pipe';
 
 @Component({
@@ -40,6 +40,32 @@ export class AccountTransactionCardComponent {
     }
   }
 
+  getTransactionTypeClass(transactionType: AccountTransactionType): string {
+    switch (transactionType) {
+      case AccountTransactionType.DepositFiat:
+        return 'deposit-fiat';
+      case AccountTransactionType.DepositCrypto:
+        return 'deposit-crypto';
+      case AccountTransactionType.WithdrawToBank:
+        return 'bank-withdraw';
+      case AccountTransactionType.In:
+        return 'money-in';
+      case AccountTransactionType.Out:
+        return 'money-out';
+      default:
+        return 'unknown';
+    }
+  }
+
+  getTransactionValue(accountTransaction: AccountTransactionDto): number {
+    return accountTransaction.amount * accountTransaction.cryptoCurrentPrice;
+  }
+
+  isCryptoTransaction(accountTransaction: AccountTransactionType): boolean {
+    return accountTransaction === AccountTransactionType.DepositCrypto
+      || accountTransaction === AccountTransactionType.In
+      || accountTransaction === AccountTransactionType.Out;
+  }
   isIncoming(transactionType: AccountTransactionType): boolean {
     return transactionType === AccountTransactionType.DepositFiat ||
       transactionType === AccountTransactionType.DepositCrypto ||

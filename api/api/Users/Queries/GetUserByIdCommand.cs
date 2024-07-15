@@ -42,7 +42,9 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
                     at.CryptoCurrentPrice,
                     at.CryptoAsset?.Symbol ?? ""
                 )).ToList()
-            )).ToList();
+            ))
+            .OrderByDescending(g => g.Date)
+            .ToList();
 
         var userDto = new UserDto(
             user.Id,

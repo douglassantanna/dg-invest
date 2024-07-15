@@ -1,41 +1,10 @@
 <main>
-  @for (date of objectKeys(groupedTransactions); track $index) {
-  <div class="card-container">
-    <div class="transaction-date">{{ date | date: 'EEEE, d MMMM, y' }}</div>
-    @for (transaction of groupedTransactions[date]; track $index) {
-    <div class="card-list">
-      <img [src]="transaction.imageUrl" alt="Transaction Image" />
-      <div class="transaction-type">{{ getTransactionTypeLabel(transaction.transactionType) }}
-        <div class="crypto-symbol">{{ transaction.cryptoSymbol | uppercase }}</div>
-      </div>
-      <div class="transaction-details">
-        <div class="transaction-value" [ngClass]="{
-        'in': isIncoming(transaction.transactionType),
-        'out': isOutgoing(transaction.transactionType)
-      }"> {{ getTransactionSign(transaction.transactionType) }}{{ transaction.transactionValue |
-          currency:'USD':'symbol':'1.2-2' }}
-        </div>
-      </div>
-      <div class="crypto-data">
-        @if (transaction.cryptoAmount !== undefined) {
-        <span>Amount: {{ transaction.cryptoAmount }}</span>
-        <span>Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2'
-          }}</span>
-        }
-      </div>
-    </div>
-    }
-  </div>
-  }
-</main>
-
-<main>
   @for (item of groupedTransactionsNew(); track $index) {
   <div class="card-container">
     <div class="transaction-date">{{ item.date | date: 'EEEE, d MMMM, y' }}</div>
     @for (transaction of item.transactions; track $index) {
     <div class="card-list">
-      <div class="symbol">
+      <div [ngClass]="['symbol', getTransactionTypeClass(transaction.transactionType)]">
         @if (transaction.cryptoSymbol) {
         <span>
           {{transaction.cryptoSymbol | cryptoSymbol }}
@@ -53,14 +22,20 @@
         <div class="transaction-value" [ngClass]="{
           'in': isIncoming(transaction.transactionType),
           'out': isOutgoing(transaction.transactionType)
-        }"> {{ getTransactionSign(transaction.transactionType) }}{{ transaction.amount |
+        }">
+          @if (isCryptoTransaction(transaction.transactionType)) {
+          {{ getTransactionSign(transaction.transactionType) }}{{ getTransactionValue(transaction) |
           currency:'USD':'symbol':'1.2-2' }}
+          }@else {
+          {{ getTransactionSign(transaction.transactionType) }}{{ transaction.amount|
+          currency:'USD':'symbol':'1.2-2' }}
+          }
         </div>
       </div>
       <div class="crypto-data">
-        @if (transaction.amount !== undefined) {
+        @if (isCryptoTransaction(transaction.transactionType)){
         <span>Amount: {{ transaction.amount }}</span>
-        <span>Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2'
+        <span>Unit Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2'
           }}</span>
         }
       </div>
@@ -79,9 +54,32 @@
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    background-color: orangered;
     color: white;
     font-size: larger;
+  }
+
+  .symbol.deposit-fiat {
+    background-color: #2ecc71;
+  }
+
+  .symbol.deposit-crypto {
+    background-color: #3498db;
+  }
+
+  .symbol.bank-withdraw {
+    background-color: #e67e22;
+  }
+
+  .symbol.money-in {
+    background-color: #2ecc71;
+  }
+
+  .symbol.money-out {
+    background-color: #e74c3c;
+  }
+
+  .symbol.unknown {
+    background-color: #95a5a6;
   }
 
   .crypto-data {

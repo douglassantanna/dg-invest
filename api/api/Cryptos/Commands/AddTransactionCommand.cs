@@ -43,17 +43,14 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
 }
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
-    private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ILogger<AddTransactionCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
     private readonly IUserRepository _userRepository;
 
-    public AddTransactionCommandHandler(ICryptoAssetRepository cryptoAssetRepository,
-                                        ILogger<AddTransactionCommandHandler> logger,
+    public AddTransactionCommandHandler(ILogger<AddTransactionCommandHandler> logger,
                                         ITransactionService transactionService,
                                         IUserRepository userRepository)
     {
-        _cryptoAssetRepository = cryptoAssetRepository;
         _logger = logger;
         _transactionService = transactionService;
         _userRepository = userRepository;
@@ -71,19 +68,20 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Validation failed", false, errors);
         }
 
-        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId);
-        if (cryptoAsset == null)
-        {
-            _logger.LogInformation("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
-            return new Response("Crypto asset not found", false);
-        }
-
         var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                      x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
+                                                      x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
+                                                      .Include(x => x.CryptoAssets));
         if (user == null)
         {
             _logger.LogInformation("AddTransactionCommandHandler. User {0} not found.", request.UserId);
             return new Response("User not found", false);
+        }
+
+        var cryptoAsset = user.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
+        if (cryptoAsset == null)
+        {
+            _logger.LogInformation("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
+            return new Response("Crypto asset not found", false);
         }
 
         var transaction = new CryptoTransaction(request.Amount,
@@ -113,7 +111,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                 _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
-            await Task.WhenAll(_cryptoAssetRepository.UpdateAsync(cryptoAsset), _userRepository.UpdateAsync(user));
+            await _userRepository.UpdateAsync(user);
 
             _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
             return new Response("ok", true, cryptoAsset);

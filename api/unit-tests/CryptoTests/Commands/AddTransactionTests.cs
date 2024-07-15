@@ -76,7 +76,7 @@ public class AddTransactionTests
         _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), null)).ReturnsAsync((CryptoAsset?)null);
 
         // Act
-        var handler = new AddTransactionCommandHandler(_cryptoAssetRepositoryMock.Object, _loggerMock.Object, _transactionServiceMock.Object, _userRepositoryMock.Object);
+        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _userRepositoryMock.Object);
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
@@ -91,7 +91,7 @@ public class AddTransactionTests
         _cryptoAssetRepositoryMock.Setup(x => x.UpdateAsync(_validCryptoAsset));
 
         // Act
-        var handler = new AddTransactionCommandHandler(_cryptoAssetRepositoryMock.Object, _loggerMock.Object, _transactionServiceMock.Object, _userRepositoryMock.Object);
+        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _userRepositoryMock.Object);
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
@@ -108,7 +108,7 @@ public class AddTransactionTests
         _cryptoAssetRepositoryMock.Setup(x => x.UpdateAsync(_validCryptoAsset));
 
         // Act
-        var handler = new AddTransactionCommandHandler(_cryptoAssetRepositoryMock.Object, _loggerMock.Object, _transactionServiceMock.Object, _userRepositoryMock.Object);
+        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _userRepositoryMock.Object);
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert

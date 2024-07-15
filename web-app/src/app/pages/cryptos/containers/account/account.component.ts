@@ -41,7 +41,6 @@ export class AccountComponent implements OnInit {
       next: (result) => {
         if (result) {
           const user = result.data as UserDto
-          console.log(user.account);
           this.account.set(user.account!);
         }
       },
