@@ -14,8 +14,6 @@ public record AccountTransactionDto(DateTime Date,
                                     EAccountTransactionType TransactionType,
                                     decimal Amount,
                                     string ExchangeName,
-                                    string Currency,
-                                    string Destination,
                                     string Notes,
                                     decimal CryptoCurrentPrice,
                                     string CryptoSymbol);

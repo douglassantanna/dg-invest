@@ -99,8 +99,6 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                                                          amount: request.Amount,
                                                                                          cryptoCurrentPrice: request.Price,
                                                                                          exchangeName: request.ExchangeName,
-                                                                                         currency: string.Empty,
-                                                                                         destination: string.Empty,
                                                                                          notes: string.Empty,
                                                                                          cryptoAssetId: cryptoAsset.Id,
                                                                                          cryptoAsset: cryptoAsset));

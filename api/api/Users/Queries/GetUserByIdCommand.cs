@@ -36,8 +36,6 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
                     at.TransactionType,
                     at.Amount,
                     at.ExchangeName,
-                    at.Currency,
-                    at.Destination,
                     at.Notes,
                     at.CryptoCurrentPrice,
                     at.CryptoAsset?.Symbol ?? ""
@@ -57,29 +55,6 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
                 groupedTransactions
             )
         );
-
-        return new Response("", true, userDto);
-
-
-        // var userDto = new UserDto(user.Id,
-        //                           user.FullName,
-        //                           user.Email,
-        //                           user.Role,
-        //                           new AccountDto
-        //                           (
-        //                            user.Account.Id,
-        //                            user.Account.Balance,
-        //                            user.Account.AccountTransactions.Select(x =>
-        //                             new AccountTransactionDto(x.Date,
-        //                                                       x.TransactionType,
-        //                                                       x.Amount,
-        //                                                       x.ExchangeName,
-        //                                                       x.Currency,
-        //                                                       x.Destination,
-        //                                                       x.Notes,
-        //                                                       x.CryptoCurrentPrice)
-        //                             ).ToList()
-        //                           ));
         return new Response("", true, userDto);
     }
 }

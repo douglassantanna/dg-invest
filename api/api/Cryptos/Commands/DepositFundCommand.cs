@@ -106,7 +106,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             await _userRepository.UpdateAsync(user);
 
             _logger.LogInformation("DepositFundCommandHandler. Deposit added for UserId: {0}", request.UserId);
-            return new Response("ok", true);
+            return new Response("Deposit added succesfully", true);
         }
         catch (Exception ex)
         {
@@ -154,8 +154,6 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 amount: request.Amount,
                 cryptoCurrentPrice: request.CurrentPrice ?? 0,
                 exchangeName: request.ExchangeName ?? string.Empty,
-                currency: string.Empty,
-                destination: string.Empty,
                 notes: request.Notes,
                 cryptoAssetId: cryptoAsset.Id,
                 cryptoAsset: cryptoAsset
