@@ -7,7 +7,7 @@ public class FiatDepositTransaction : ITransactionStrategy
 {
     public EAccountTransactionType TransactionType => EAccountTransactionType.DepositFiat;
 
-    public Response ExcecuteTransaction(Account account, AccountTransaction accountTransaction, CryptoAsset? cryptoAsset = null)
+    public Response ExecuteTransaction(Account account, AccountTransaction accountTransaction, CryptoAsset? cryptoAsset = null)
     {
         account.AddToBalance(accountTransaction.Amount);
         account.AddTransaction(accountTransaction);

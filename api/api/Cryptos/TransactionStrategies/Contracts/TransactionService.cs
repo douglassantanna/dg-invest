@@ -18,6 +18,6 @@ public class TransactionService : ITransactionService
     {
       throw new ArgumentNullException("Transaction type not supported", accountTransaction.TransactionType.ToString());
     }
-    return transactionType.ExcecuteTransaction(account, accountTransaction, accountTransaction.CryptoAsset);
+    return transactionType.ExecuteTransaction(account, accountTransaction, accountTransaction.CryptoAsset);
   }
 }

@@ -12,8 +12,6 @@ export class WithdrawComponent {
   private fb = inject(FormBuilder);
   withdrawForm = this.fb.group({
     amount: ['', Validators.required],
-    currency: ['', Validators.required],
-    destination: ['', Validators.required],
     date: ['', Validators.required],
     notes: ['']
   });

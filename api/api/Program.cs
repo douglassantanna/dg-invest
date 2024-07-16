@@ -31,6 +31,7 @@ builder.Services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
 builder.Services.AddScoped<ITransactionStrategy, BuyTransaction>();
 builder.Services.AddScoped<ITransactionStrategy, SellTransaction>();
 builder.Services.AddScoped<ITransactionStrategy, FiatDepositTransaction>();
+builder.Services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
 builder.Services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 

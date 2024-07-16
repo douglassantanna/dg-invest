@@ -7,7 +7,7 @@ public class SellTransaction : ITransactionStrategy
 {
     public EAccountTransactionType TransactionType => EAccountTransactionType.In;
 
-    public Response ExcecuteTransaction(Account account, AccountTransaction accountTransaction, CryptoAsset? cryptoAsset = null)
+    public Response ExecuteTransaction(Account account, AccountTransaction accountTransaction, CryptoAsset? cryptoAsset = null)
     {
         if (cryptoAsset?.Balance < accountTransaction.Amount)
         {

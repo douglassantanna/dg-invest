@@ -3,21 +3,18 @@ using api.Models.Cryptos;
 using api.Shared;
 
 namespace api.Cryptos.TransactionStrategies.Transactions;
-public class BuyTransaction : ITransactionStrategy
+public class WithdrawDepositTransaction : ITransactionStrategy
 {
-    public EAccountTransactionType TransactionType => EAccountTransactionType.Out;
+    public EAccountTransactionType TransactionType => EAccountTransactionType.WithdrawToBank;
 
     public Response ExecuteTransaction(Account account, AccountTransaction accountTransaction, CryptoAsset? cryptoAsset = null)
     {
-        var balance = accountTransaction.Amount * accountTransaction.CryptoCurrentPrice;
-        if (account.Balance < balance)
+        if (account.Balance < accountTransaction.Amount)
         {
-            return new("You don't have sufficient funds to complete this transaction", false);
+            return new Response("You don't have sufficient fund to complete the withdraw", false);
         }
-
+        account.SubtractFromBalance(accountTransaction.Amount);
         account.AddTransaction(accountTransaction);
-        account.SubtractFromBalance(balance);
-
         return new("Transaction executed successfuly", true);
     }
 }

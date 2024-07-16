@@ -30,11 +30,11 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
 {
     private readonly ITransactionService _transactionService;
     private readonly IUserRepository _userRepository;
-    private readonly ILogger<DepositFundCommandHandler> _logger;
+    private readonly ILogger<WithdrawFundCommandHandler> _logger;
 
     public WithdrawFundCommandHandler(
         IUserRepository userRepository,
-        ILogger<DepositFundCommandHandler> logger,
+        ILogger<WithdrawFundCommandHandler> logger,
         ITransactionService transactionService)
     {
         _userRepository = userRepository;
@@ -44,12 +44,12 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
 
     public async Task<Response> Handle(WithdrawFundCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("DepositFundCommandHandler for UserId: {0}", request.UserId);
+        _logger.LogInformation("WithdrawFundCommandHandler for UserId: {0}", request.UserId);
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogInformation("DepositFundCommandHandler. Validation failed: {0}", errors);
+            _logger.LogInformation("WithdrawFundCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
@@ -58,7 +58,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                                                          .Include(x => x.CryptoAssets).ThenInclude(x => x.Transactions));
         if (user == null)
         {
-            _logger.LogInformation("DepositFundCommandHandler. User {0} not found.", request.UserId);
+            _logger.LogInformation("WithdrawFundCommandHandler. User {0} not found.", request.UserId);
             return new Response("User not found", false);
         }
 
@@ -74,18 +74,18 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
             var response = _transactionService.ExecuteTransaction(user.Account, accountTransaction);
             if (!response.IsSuccess)
             {
-                _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);
+                _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
 
             await _userRepository.UpdateAsync(user);
 
-            _logger.LogInformation("DepositFundCommandHandler. Deposit added for UserId: {0}", request.UserId);
-            return new Response("Deposit added succesfully", true);
+            _logger.LogInformation("WithdrawFundCommandHandler. Withdraw for UserId: {0}", request.UserId);
+            return new Response("Withdraw succesfully", true);
         }
         catch (Exception ex)
         {
-            _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", ex.Message);
+            _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", ex.Message);
             return new Response(ex.Message, false);
         }
     }
