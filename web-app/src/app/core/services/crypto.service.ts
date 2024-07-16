@@ -16,7 +16,7 @@ import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
 import { ViewCryptoInformation } from '../models/view-crypto-information';
 import { AuthService } from './auth.service';
-import { DepositFundCommand } from '../models/deposit-fund-command';
+import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -24,6 +24,7 @@ const url = `${environment.apiUrl}/Crypto`;
   providedIn: 'root'
 })
 export class CryptoService {
+
 
   private _cryptoAssetData: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
   private _cryptoInformation: BehaviorSubject<CryptoInformation[]> = new BehaviorSubject<CryptoInformation[]>([]);
@@ -130,6 +131,10 @@ export class CryptoService {
 
   depositFund(deposit: DepositFundCommand): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/deposit-fund`, deposit)
+  }
+
+  withdrawFund(withdraw: WithdrawFundCommand): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/withdraw-fund`, withdraw)
   }
 
   private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {

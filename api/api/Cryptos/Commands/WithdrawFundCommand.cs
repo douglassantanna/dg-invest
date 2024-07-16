@@ -64,8 +64,8 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
 
         try
         {
-            var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day);
-
+            var currentServerTime = DateTime.Now;
+            var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day, currentServerTime.Hour, currentServerTime.Minute, currentServerTime.Second);
             var accountTransaction = new AccountTransaction(date: date,
                                                             transactionType: EAccountTransactionType.WithdrawToBank,
                                                             amount: request.Amount,

@@ -8,6 +8,12 @@ export interface DepositFundCommand {
   notes: string;
 }
 
+export interface WithdrawFundCommand {
+  amount: number;
+  date: string;
+  notes: string;
+}
+
 export enum AccountTransactionType {
   DepositFiat = 1,
   DepositCrypto = 2,
