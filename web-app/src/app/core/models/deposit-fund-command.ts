@@ -5,6 +5,7 @@ export interface DepositFundCommand {
   cryptoAssetId: string;
   exchangeName: string;
   date: string;
+  notes: string;
 }
 
 export enum AccountTransactionType {

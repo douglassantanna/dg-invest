@@ -14,6 +14,7 @@ public record DepositFundCommand(EAccountTransactionType AccountTransactionType,
                                  decimal Amount,
                                  DateTime Date,
                                  int UserId,
+                                 string Notes,
                                  decimal? CurrentPrice = null,
                                  string? CryptoAssetId = null,
                                  string? ExchangeName = null) : IRequest<Response>;
@@ -22,6 +23,10 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
     public DepositFundCommandValidator()
     {
         RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Deposit amount must be greater than zero");
+
+        RuleFor(x => x.Notes)
+            .MaximumLength(255)
+            .WithMessage("Notes must be between 1 and 255 characters");
 
         When(x => x.AccountTransactionType == EAccountTransactionType.DepositCrypto, () =>
         {
@@ -151,7 +156,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 exchangeName: request.ExchangeName ?? string.Empty,
                 currency: string.Empty,
                 destination: string.Empty,
-                notes: string.Empty,
+                notes: request.Notes,
                 cryptoAssetId: cryptoAsset.Id,
                 cryptoAsset: cryptoAsset
             );

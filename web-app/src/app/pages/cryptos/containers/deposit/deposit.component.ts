@@ -31,6 +31,7 @@ export class DepositComponent implements OnInit, OnDestroy {
       currentPrice: [],
       cryptoAssetId: [],
       exchangeName: [],
+      notes: ['', [Validators.max(255)]],
       date: ['', [Validators.required]],
     });
   }
@@ -56,13 +57,14 @@ export class DepositComponent implements OnInit, OnDestroy {
       exchangeName: this.depositForm.value.exchangeName?.trim() || '',
       cryptoAssetId: (this.depositForm.value.cryptoAssetId?.trim() || ''),
       date: this.depositForm.value.date,
+      notes: this.depositForm.value.notes,
     };
 
     this.cryptoService.depositFund(deposit)
       .pipe(takeUntil(this.subscription))
       .subscribe({
-        next: (result) => { console.log(result) },
-        error: (err) => { console.log(err) }
+        next: (result) => { this.toastService.showSuccess(result.message) },
+        error: (err) => { this.toastService.showError(err), console.log(err) }
       });
   }
 
