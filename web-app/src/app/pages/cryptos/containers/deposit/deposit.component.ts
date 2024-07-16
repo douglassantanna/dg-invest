@@ -1,12 +1,11 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepositFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { AccountTransactionType } from '../account/account.component';
 import { ToastService } from 'src/app/core/services/toast.service';
-import { JsonPipe, UpperCasePipe } from '@angular/common';
-import { Subject, takeUntil, tap } from 'rxjs';
-import { Crypto } from '../../../../core/models/crypto';
+import { UpperCasePipe } from '@angular/common';
+import { tap } from 'rxjs';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 
 @Component({
@@ -16,11 +15,10 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
   templateUrl: './deposit.component.html',
   styleUrl: './deposit.component.scss'
 })
-export class DepositComponent implements OnInit, OnDestroy {
+export class DepositComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cryptoService = inject(CryptoService);
   private toastService = inject(ToastService);
-  private subscription: Subject<void> = new Subject();
   cryptoAssets = signal<ViewCryptoInformation[]>([]);
   depositType = AccountTransactionType;
   depositForm!: FormGroup;
@@ -34,11 +32,6 @@ export class DepositComponent implements OnInit, OnDestroy {
       notes: ['', [Validators.max(255)]],
       date: ['', [Validators.required]],
     });
-  }
-
-  ngOnDestroy(): void {
-    this.subscription.unsubscribe();
-    this.subscription.complete();
   }
 
   ngOnInit(): void {
@@ -61,7 +54,6 @@ export class DepositComponent implements OnInit, OnDestroy {
     };
 
     this.cryptoService.depositFund(deposit)
-      .pipe(takeUntil(this.subscription))
       .subscribe({
         next: (result) => { this.toastService.showSuccess(result.message) },
         error: (err) => { this.toastService.showError(err), console.log(err) }
@@ -74,7 +66,6 @@ export class DepositComponent implements OnInit, OnDestroy {
 
   private addConditionalValidation() {
     this.depositForm.get('accountTransactionType')?.valueChanges.pipe(
-      takeUntil(this.subscription),
       tap(value => {
         if (value == this.depositType.DepositCrypto) {
           this.getCryptos();
@@ -98,7 +89,6 @@ export class DepositComponent implements OnInit, OnDestroy {
 
   private getCryptos() {
     this.cryptoService.getCryptoAssets()
-      .pipe(takeUntil(this.subscription))
       .subscribe({
         next: (response) => this.cryptoAssets.set(response.items),
         error: (err) => console.log(err)

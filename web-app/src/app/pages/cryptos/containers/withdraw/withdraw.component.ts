@@ -1,6 +1,5 @@
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
 import { WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { ToastService } from 'src/app/core/services/toast.service';
@@ -12,11 +11,10 @@ import { ToastService } from 'src/app/core/services/toast.service';
   templateUrl: './withdraw.component.html',
   styleUrl: './withdraw.component.scss'
 })
-export class WithdrawComponent implements OnDestroy {
+export class WithdrawComponent {
   private fb = inject(FormBuilder);
   private cryptoService = inject(CryptoService);
   private toastService = inject(ToastService);
-  private subscription: Subject<void> = new Subject();
   withdrawForm!: FormGroup;
   constructor() {
     this.withdrawForm = this.fb.group({
@@ -24,11 +22,6 @@ export class WithdrawComponent implements OnDestroy {
       date: ['', Validators.required],
       notes: ['', [Validators.max(255)]]
     });
-  }
-
-  ngOnDestroy(): void {
-    this.subscription.unsubscribe();
-    this.subscription.complete();
   }
 
   onSubmit() {
@@ -43,7 +36,6 @@ export class WithdrawComponent implements OnDestroy {
       notes: this.withdrawForm.value.notes
     };
     this.cryptoService.withdrawFund(withdraw)
-      .pipe(takeUntil(this.subscription))
       .subscribe({
         next: (result) => { this.toastService.showSuccess(result.message) },
         error: (err) => { this.toastService.showError(err), console.log(err) }
