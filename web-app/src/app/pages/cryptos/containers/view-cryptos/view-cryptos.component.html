@@ -35,7 +35,7 @@
               <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
             </div>
             <div class="alert alert-light account">
-              <strong>Current Available Funds: $ 12345</strong>
+              <strong>Current Available Funds:{{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}</strong>
               <a routerLink="/account" class="btn btn-primary" aria-label="Check account details">Check account</a>
             </div>
           </div>

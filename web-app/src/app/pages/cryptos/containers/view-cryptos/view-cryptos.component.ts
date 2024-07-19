@@ -40,6 +40,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalInvested = 0;
   totalMarketValue = 0;
   investmentChangePercent = 0;
+  accountBalance = signal(0);
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
@@ -63,11 +64,14 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (cryptos) => {
+          const cryptoArray = cryptos.items.map((item) => item.cryptoAssetDto);
+          const accountBalance = cryptos.items.map((item) => item.accountBalance)[0];
+          this.accountBalance.set(accountBalance);
           this.isCryptoAssetListEmpty.set(cryptos.items.length > 0);
-          this.totalInvested = this.sumTotalInvested(cryptos.items);
-          this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
-          this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);
-          this.cryptoAssetList.set(cryptos.items);
+          this.totalInvested = this.sumTotalInvested(cryptoArray);
+          this.totalMarketValue = this.sumTotalMarketValue(cryptoArray);
+          this.investmentChangePercent = this.calculatePercentDifference(cryptoArray);
+          this.cryptoAssetList.set(cryptoArray);
         },
         error: (err) => {
           this.updateLocalStorageSortOrder();
@@ -82,10 +86,13 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
         takeUntil(this.unsubscribe$)
       ).subscribe({
         next: (cryptos) => {
-          this.cryptoAssetList.set(cryptos.items);
-          this.totalInvested = this.sumTotalInvested(cryptos.items);
-          this.totalMarketValue = this.sumTotalMarketValue(cryptos.items);
-          this.investmentChangePercent = this.calculatePercentDifference(cryptos.items);
+          const cryptoArray = cryptos.items.map((item) => item.cryptoAssetDto);
+          const accountBalance = cryptos.items.map((item) => item.accountBalance)[0];
+          this.accountBalance.set(accountBalance);
+          this.cryptoAssetList.set(cryptoArray);
+          this.totalInvested = this.sumTotalInvested(cryptoArray);
+          this.totalMarketValue = this.sumTotalMarketValue(cryptoArray);
+          this.investmentChangePercent = this.calculatePercentDifference(cryptoArray);
         },
         error: (err) => {
           this.setBalanceStatus(false);

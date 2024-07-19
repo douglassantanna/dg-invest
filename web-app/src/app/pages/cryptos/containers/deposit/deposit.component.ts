@@ -90,7 +90,7 @@ export class DepositComponent implements OnInit {
   private getCryptos() {
     this.cryptoService.getCryptoAssets()
       .subscribe({
-        next: (response) => this.cryptoAssets.set(response.items),
+        next: (response) => console.log(response),
         error: (err) => console.log(err)
       });
   }

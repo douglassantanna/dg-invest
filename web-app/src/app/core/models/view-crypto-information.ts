@@ -9,3 +9,7 @@ export interface ViewCryptoInformation {
   coinMarketCapId: number;
   id: number;
 }
+export interface UserCryptoAssetDto {
+  accountBalance: number;
+  cryptoAssetDto: ViewCryptoInformation;
+}

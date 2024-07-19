@@ -14,7 +14,7 @@ import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
-import { ViewCryptoInformation } from '../models/view-crypto-information';
+import { UserCryptoAssetDto, ViewCryptoInformation } from '../models/view-crypto-information';
 import { AuthService } from './auth.service';
 import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 
@@ -44,7 +44,7 @@ export class CryptoService {
     assetName: string = "",
     sortBy: string = "ASC",
     sortOrder: string = "asc",
-    hideZeroBalance: boolean = false): Observable<Pagination<ViewCryptoInformation>> {
+    hideZeroBalance: boolean = false): Observable<Pagination<UserCryptoAssetDto>> {
     let userId = this.authService.userId ?? '';
     let params = new HttpParams()
       .append("page", page)
@@ -55,7 +55,7 @@ export class CryptoService {
       .append("hideZeroBalance", hideZeroBalance)
       .append("userId", userId)
 
-    return this.http.get<Pagination<ViewCryptoInformation>>(`${url}/list-assets`, {
+    return this.http.get<Pagination<UserCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
     }).pipe(
       catchError(error => {
