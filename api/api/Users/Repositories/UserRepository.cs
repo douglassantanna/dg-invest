@@ -16,7 +16,6 @@ public interface IUserRepository
     Task<bool> IsCryptoAssetInUserListAsync(int userId);
     Task<User?> GetByIdAsync(int id, Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null);
     bool IsUnique(string email);
-    IQueryable<User?> GetQuery();
 }
 public class UserRepository : IUserRepository
 {
@@ -49,6 +48,4 @@ public class UserRepository : IUserRepository
         => await _baseRepository.GetByIdAsync(id, include);
 
     public bool IsUnique(string email) => _dataContext.Users.Any(x => x.Email == email);
-
-    public IQueryable<User> GetQuery() => _dataContext.Users;
 }

@@ -2,7 +2,7 @@ using api.Models.Cryptos;
 
 namespace api.Cryptos.Dtos;
 
-public record NewDto(decimal AccountBalance, ViewMinimalCryptoAssetDto CryptoAssetDto);
+public record UserCryptoAssetDto(decimal AccountBalance, ViewMinimalCryptoAssetDto CryptoAssetDto);
 public record ViewMinimalCryptoAssetDto(int Id,
                                         string Symbol,
                                         decimal PricePerUnit,
