@@ -7,7 +7,6 @@ using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic;
 
 namespace api.Cryptos.Commands;
 public record DepositFundCommand(EAccountTransactionType AccountTransactionType,

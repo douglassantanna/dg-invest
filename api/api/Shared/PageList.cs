@@ -27,4 +27,5 @@ public class PageList<T>
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         return new PageList<T>(items, page, pageSize, totalCount);
     }
+    public static PageList<T> Empty() => new(new List<T>(), 0, 1, 0);
 }

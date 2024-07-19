@@ -53,9 +53,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
             return new Response("Validation failed", false, errors);
         }
 
-        var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                   x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
-                                                         .Include(x => x.CryptoAssets).ThenInclude(x => x.Transactions));
+        var user = await _userRepository.GetByIdAsync(request.UserId, x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
         if (user == null)
         {
             _logger.LogInformation("WithdrawFundCommandHandler. User {0} not found.", request.UserId);
