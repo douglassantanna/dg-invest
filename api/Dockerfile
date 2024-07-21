@@ -15,4 +15,4 @@ FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "api.dll"]
-EXPOSE 8080
+EXPOSE 80

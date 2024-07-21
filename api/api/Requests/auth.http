@@ -1,6 +1,7 @@
 @url = https://dg-api-w.azurewebsites.net/api/Authentication
+@url-docker = http://localhost:8080/api/Authentication
 
-POST {{url}}/login
+POST {{url-docker}}/login
 Content-Type: application/json
 
 {
