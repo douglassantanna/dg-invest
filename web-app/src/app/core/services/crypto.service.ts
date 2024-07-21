@@ -7,14 +7,16 @@ import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
 import { ViewCryptoAssetDto } from '../models/view-crypto-asset-dto';
 import { ViewMinimalCryptoAssetDto } from '../models/view-minimal-crypto-asset-dto';
+import { Crypto } from '../models/crypto';
 import { Response } from '../models/response';
 import { CryptoAssetData } from '../models/crypto-asset-data';
 import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
-import { ViewCryptoInformation } from '../models/view-crypto-information';
+import { UserCryptoAssetDto, ViewCryptoInformation } from '../models/view-crypto-information';
 import { AuthService } from './auth.service';
+import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 
 const url = `${environment.apiUrl}/Crypto`;
 
@@ -22,6 +24,7 @@ const url = `${environment.apiUrl}/Crypto`;
   providedIn: 'root'
 })
 export class CryptoService {
+
 
   private _cryptoAssetData: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
   private _cryptoInformation: BehaviorSubject<CryptoInformation[]> = new BehaviorSubject<CryptoInformation[]>([]);
@@ -41,7 +44,7 @@ export class CryptoService {
     assetName: string = "",
     sortBy: string = "ASC",
     sortOrder: string = "asc",
-    hideZeroBalance: boolean = false): Observable<Pagination<ViewCryptoInformation>> {
+    hideZeroBalance: boolean = false): Observable<Pagination<UserCryptoAssetDto>> {
     let userId = this.authService.userId ?? '';
     let params = new HttpParams()
       .append("page", page)
@@ -52,7 +55,7 @@ export class CryptoService {
       .append("hideZeroBalance", hideZeroBalance)
       .append("userId", userId)
 
-    return this.http.get<Pagination<ViewCryptoInformation>>(`${url}/list-assets`, {
+    return this.http.get<Pagination<UserCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
     }).pipe(
       catchError(error => {
@@ -124,6 +127,14 @@ export class CryptoService {
         return of();
       })
     );
+  }
+
+  depositFund(deposit: DepositFundCommand): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/deposit-fund`, deposit)
+  }
+
+  withdrawFund(withdraw: WithdrawFundCommand): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/withdraw-fund`, withdraw)
   }
 
   private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {

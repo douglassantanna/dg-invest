@@ -5,6 +5,9 @@ import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login.component';
 import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos/view-cryptos.component';
 import { roleGuard } from './core/guards/role.guard';
+import { AccountComponent } from './pages/cryptos/containers/account/account.component';
+import { DepositComponent } from './pages/cryptos/containers/deposit/deposit.component';
+import { WithdrawComponent } from './pages/cryptos/containers/withdraw/withdraw.component';
 
 export const routes: Routes = [
   {
@@ -26,6 +29,21 @@ export const routes: Routes = [
     path: "crypto-dashboard/:cryptoId",
     canActivate: [authGuard],
     component: CryptoDetailsComponent,
+  },
+  {
+    path: "account",
+    canActivate: [authGuard],
+    component: AccountComponent,
+  },
+  {
+    path: "account/deposit",
+    canActivate: [authGuard],
+    component: DepositComponent,
+  },
+  {
+    path: "account/withdraw",
+    canActivate: [authGuard],
+    component: WithdrawComponent,
   },
   {
     path: "login",

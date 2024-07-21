@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using api.Cryptos.Commands;
 using api.Cryptos.Queries;
 using api.RateLimiterPolicies;
@@ -32,13 +33,55 @@ public class CryptoController : ControllerBase
     [HttpPost("add-transaction")]
     public async Task<ActionResult<Response>> AddTransaction([FromBody] AddTransactionCommand command)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
 
-        var result = await _mediator.Send(command);
+        var commandWithUserId = command with { UserId = userId };
+        var result = await _mediator.Send(commandWithUserId);
         if (!result.IsSuccess)
         {
             return BadRequest(result);
         }
-        return Created("", result);
+        return CreatedAtAction(nameof(AddTransaction), result);
+    }
+
+    [HttpPost("deposit-fund")]
+    public async Task<ActionResult<Response>> Depositfund([FromBody] DepositFundCommand command)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        var commandWithUserId = command with { UserId = userId };
+        var result = await _mediator.Send(commandWithUserId);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return Created(nameof(DepositFundCommand), result);
+    }
+
+    [HttpPost("withdraw-fund")]
+    public async Task<ActionResult<Response>> Withdrawfund([FromBody] WithdrawFundCommand command)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        var commandWithUserId = command with { UserId = userId };
+        var result = await _mediator.Send(commandWithUserId);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return Created(nameof(DepositFundCommand), result);
     }
 
     [HttpGet("list-assets")]

@@ -30,9 +30,12 @@
             <div class="alert alert-light mb-2"> <strong>Total Invested:</strong> {{ totalInvested |
               currency:'USD':'symbol':'1.2-2'}}
             </div>
-            <div class="alert alert-light">
+            <div class="alert alert-light mb-2">
               <strong>Total Market Value:</strong> {{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
               <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
+            </div>
+            <div class="alert alert-light account" (click)="redirectToAccount()">
+              <strong>Current Available Funds:</strong> {{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}
             </div>
           </div>
           <div class="col-md-6">
@@ -61,6 +64,16 @@
   header {
     display: flex;
     flex-wrap: wrap;
+  }
+
+  .account {
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  .account:hover {
+    background-color: aliceblue;
+    color: darkslategray;
+    cursor: pointer;
   }
 
   .coll-1,

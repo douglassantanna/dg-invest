@@ -6,9 +6,10 @@ using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
-public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoAssetDto>>
+public class ListCryptoAssetsQueryCommand : IRequest<PageList<UserCryptoAssetDto>>
 {
     public string? AssetName { get; set; } = string.Empty;
     public string? SortBy { get; set; } = "symbol";
@@ -18,7 +19,7 @@ public class ListCryptoAssetsQueryCommand : IRequest<PageList<ViewMinimalCryptoA
     public int PageSize { get; set; }
     public int UserId { get; set; }
 }
-public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAssetsQueryCommand, PageList<ViewMinimalCryptoAssetDto>>
+public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAssetsQueryCommand, PageList<UserCryptoAssetDto>>
 {
     private readonly DataContext _context;
     private readonly ICoinMarketCapService _coinMarketCapService;
@@ -32,10 +33,10 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         _logger = logger;
     }
 
-    public async Task<PageList<ViewMinimalCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
+    public async Task<PageList<UserCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
-        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets;
+        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets.Include(x => x.User).ThenInclude(x => x.Account);
 
         int maxPageSize = 50;
 
@@ -76,7 +77,8 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssetQuery);
         }
 
-        var collection = cryptoAssetQuery.Select(x => new ViewMinimalCryptoAssetDto(x.Id,
+        var collection = cryptoAssetQuery.Select(x => new UserCryptoAssetDto(x.User.Account.Balance,
+                                                      new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.Symbol,
                                                                                     GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse),
                                                                                     x.Balance,
@@ -84,11 +86,11 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
                                                                                     x.CurrentWorth(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
                                                                                     x.GetInvestmentGainLossValue(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
                                                                                     x.GetInvestmentGainLossPercentage(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
-                                                                                    x.CoinMarketCapId));
+                                                                                    x.CoinMarketCapId)));
 
-        var pagedCollection = await PageList<ViewMinimalCryptoAssetDto>.CreateAsync(collection,
-                                                                                    request.Page,
-                                                                                    request.PageSize);
+        var pagedCollection = await PageList<UserCryptoAssetDto>.CreateAsync(collection,
+                                                                             request.Page,
+                                                                             request.PageSize);
 
         _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets completed.");
         return pagedCollection;

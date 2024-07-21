@@ -1,10 +1,14 @@
 using api.Cryptos.Exceptions;
+using api.Cryptos.Models;
 using api.Cryptos.Repositories;
+using api.Cryptos.TransactionStrategies.Contracts;
 using api.Models.Cryptos;
 using api.Shared;
+using api.Users.Repositories;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
 public record AddTransactionCommand(decimal Amount,
@@ -12,7 +16,8 @@ public record AddTransactionCommand(decimal Amount,
                                     DateTimeOffset PurchaseDate,
                                     string ExchangeName,
                                     ETransactionType TransactionType,
-                                    int CryptoAssetId) : IRequest<Response>;
+                                    int CryptoAssetId,
+                                    int UserId) : IRequest<Response>;
 
 public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCommand>
 {
@@ -38,14 +43,17 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
 }
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
-    private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ILogger<AddTransactionCommandHandler> _logger;
+    private readonly ITransactionService _transactionService;
+    private readonly IUserRepository _userRepository;
 
-    public AddTransactionCommandHandler(ICryptoAssetRepository cryptoAssetRepository,
-                                        ILogger<AddTransactionCommandHandler> logger)
+    public AddTransactionCommandHandler(ILogger<AddTransactionCommandHandler> logger,
+                                        ITransactionService transactionService,
+                                        IUserRepository userRepository)
     {
-        _cryptoAssetRepository = cryptoAssetRepository;
         _logger = logger;
+        _transactionService = transactionService;
+        _userRepository = userRepository;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
@@ -60,7 +68,16 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Validation failed", false, errors);
         }
 
-        var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId);
+        var user = await _userRepository.GetByIdAsync(request.UserId,
+                                                      x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
+                                                      .Include(x => x.CryptoAssets));
+        if (user == null)
+        {
+            _logger.LogInformation("AddTransactionCommandHandler. User {0} not found.", request.UserId);
+            return new Response("User not found", false);
+        }
+
+        var cryptoAsset = user.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
         if (cryptoAsset == null)
         {
             _logger.LogInformation("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
@@ -72,23 +89,42 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                 request.PurchaseDate,
                                                 request.ExchangeName,
                                                 request.TransactionType);
-
         try
         {
+            var accountTransactionType = GetAccountTransactionType(request.TransactionType);
+            var date = new DateTime(request.PurchaseDate.Year, request.PurchaseDate.Month, request.PurchaseDate.Day);
+            var response = _transactionService.ExecuteTransaction(user.Account,
+                                                                  new AccountTransaction(date: date,
+                                                                                         transactionType: accountTransactionType,
+                                                                                         amount: request.Amount,
+                                                                                         cryptoCurrentPrice: request.Price,
+                                                                                         exchangeName: request.ExchangeName,
+                                                                                         notes: string.Empty,
+                                                                                         cryptoAssetId: cryptoAsset.Id,
+                                                                                         cryptoAsset: cryptoAsset));
             cryptoAsset.AddTransaction(transaction);
+
+            if (!response.IsSuccess)
+            {
+                _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", response.Message);
+                return response;
+            }
+            await _userRepository.UpdateAsync(user);
+
+            _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
+            return new Response("ok", true, cryptoAsset);
         }
         catch (CryptoAssetException ex)
         {
             _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", ex.Message);
             return new Response(ex.Message, false);
         }
-
-        await _cryptoAssetRepository.UpdateAsync(cryptoAsset);
-
-        _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
-        return new Response("ok", true, cryptoAsset);
     }
 
+    private EAccountTransactionType GetAccountTransactionType(ETransactionType transactionType)
+    {
+        return transactionType == ETransactionType.Buy ? EAccountTransactionType.Out : EAccountTransactionType.In;
+    }
     private async Task<ValidationResult> ValidateRequestAsync(AddTransactionCommand request)
     {
         var validation = new AddTransactionCommandValidator();

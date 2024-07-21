@@ -22,6 +22,76 @@ namespace api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("api.Cryptos.Models.Account", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Balance")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Accounts");
+                });
+
+            modelBuilder.Entity("api.Cryptos.Models.AccountTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<int?>("CryptoAssetId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("CryptoCurrentPrice")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExchangeName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
+                    b.Property<int>("TransactionType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("CryptoAssetId");
+
+                    b.ToTable("AccountTransactions");
+                });
+
             modelBuilder.Entity("api.Cryptos.Models.Address", b =>
                 {
                     b.Property<int>("Id")
@@ -210,6 +280,30 @@ namespace api.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("api.Cryptos.Models.Account", b =>
+                {
+                    b.HasOne("api.Users.Models.User", "User")
+                        .WithOne("Account")
+                        .HasForeignKey("api.Cryptos.Models.Account", "UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("api.Cryptos.Models.AccountTransaction", b =>
+                {
+                    b.HasOne("api.Cryptos.Models.Account", null)
+                        .WithMany("AccountTransactions")
+                        .HasForeignKey("AccountId");
+
+                    b.HasOne("api.Models.Cryptos.CryptoAsset", "CryptoAsset")
+                        .WithMany()
+                        .HasForeignKey("CryptoAssetId");
+
+                    b.Navigation("CryptoAsset");
+                });
+
             modelBuilder.Entity("api.Cryptos.Models.Address", b =>
                 {
                     b.HasOne("api.Models.Cryptos.CryptoAsset", "CryptoAsset")
@@ -223,11 +317,13 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
                 {
-                    b.HasOne("api.Users.Models.User", null)
+                    b.HasOne("api.Users.Models.User", "User")
                         .WithMany("CryptoAssets")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
@@ -235,6 +331,11 @@ namespace api.Migrations
                     b.HasOne("api.Models.Cryptos.CryptoAsset", null)
                         .WithMany("Transactions")
                         .HasForeignKey("CryptoAssetId");
+                });
+
+            modelBuilder.Entity("api.Cryptos.Models.Account", b =>
+                {
+                    b.Navigation("AccountTransactions");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
@@ -246,6 +347,9 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Users.Models.User", b =>
                 {
+                    b.Navigation("Account")
+                        .IsRequired();
+
                     b.Navigation("CryptoAssets");
                 });
 #pragma warning restore 612, 618

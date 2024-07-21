@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using api.Cryptos.Models;
 using api.Models.Cryptos;
 using api.Shared;
 
@@ -12,7 +13,7 @@ public class User : Entity
     public Role Role { get; set; }
     public bool EmailConfirmed { get; set; } = false;
     private readonly List<CryptoAsset> _criptoAssets = new();
-
+    public Account Account { get; private set; }
     public User(string fullName,
                 string email,
                 string password,
@@ -22,6 +23,10 @@ public class User : Entity
         Email = email;
         Password = password;
         Role = role;
+    }
+    public void CreateAccountIfNotExists()
+    {
+        Account ??= new Account(this, this.Id);
     }
 
     public IReadOnlyCollection<CryptoAsset> CryptoAssets => _criptoAssets;
