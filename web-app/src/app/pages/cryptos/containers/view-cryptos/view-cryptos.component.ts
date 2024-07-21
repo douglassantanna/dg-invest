@@ -11,7 +11,7 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
 import { PercentDifferenceComponent } from '../../components/percent-difference.component';
 import { PieChartComponent } from '../../components/pie-chart/pie-chart.component';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -31,6 +31,7 @@ import { RouterModule } from '@angular/router';
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
   private localStorageService = inject(LocalStorageService);
+  private readonly router = inject(Router);
   private unsubscribe$: Subject<void> = new Subject<void>();
   cryptoAssetList = signal<ViewCryptoInformation[]>([]);
   searchControl: FormControl = new FormControl();
@@ -49,7 +50,9 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCryptoAssets();
   }
-
+  redirectToAccount() {
+    this.router.navigateByUrl('/account');
+  }
   loadCryptoAssets(params: any = {}) {
     const sortByLocalStorage = this.localStorageService.getAssetListSortBy() ?? 'symbol';
     const sortOrderLocalStorage = this.localStorageService.getAssetListSortOrder() ?? 'asc';

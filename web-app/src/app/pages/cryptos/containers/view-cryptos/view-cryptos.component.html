@@ -34,9 +34,8 @@
               <strong>Total Market Value:</strong> {{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
               <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
             </div>
-            <div class="alert alert-light account">
-              <strong>Current Available Funds:{{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}</strong>
-              <a routerLink="/account" class="btn btn-primary" aria-label="Check account details">Check account</a>
+            <div class="alert alert-light account" (click)="redirectToAccount()">
+              <strong>Current Available Funds:</strong> {{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}
             </div>
           </div>
           <div class="col-md-6">
@@ -68,9 +67,13 @@
   }
 
   .account {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  .account:hover {
+    background-color: aliceblue;
+    color: darkslategray;
+    cursor: pointer;
   }
 
   .coll-1,
