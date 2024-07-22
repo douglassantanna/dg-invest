@@ -64,7 +64,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogInformation("AddTransactionCommandHandler. Validation failed: {0}", errors);
+            _logger.LogError("AddTransactionCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
@@ -73,14 +73,14 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                       .Include(x => x.CryptoAssets));
         if (user == null)
         {
-            _logger.LogInformation("AddTransactionCommandHandler. User {0} not found.", request.UserId);
+            _logger.LogError("AddTransactionCommandHandler. User {0} not found.", request.UserId);
             return new Response("User not found", false);
         }
 
         var cryptoAsset = user.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
         if (cryptoAsset == null)
         {
-            _logger.LogInformation("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
+            _logger.LogError("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
             return new Response("Crypto asset not found", false);
         }
 

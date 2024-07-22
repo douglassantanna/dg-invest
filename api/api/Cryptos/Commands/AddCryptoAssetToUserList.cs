@@ -41,14 +41,14 @@ public class AddCryptoAssetToUserListCommandHandler : IRequestHandler<AddCryptoA
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogInformation("AddCryptoAssetToUserListCommandHandler. Validation failed: {0}", errors);
+            _logger.LogError("AddCryptoAssetToUserListCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed!", false, errors);
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId);
         if (user == null)
         {
-            _logger.LogInformation("AddCryptoAssetToUserListCommandHandler. User not found: {0}", request.UserId);
+            _logger.LogError("AddCryptoAssetToUserListCommandHandler. User not found: {0}", request.UserId);
             return new Response("User not found!", false);
         }
 
@@ -67,7 +67,7 @@ public class AddCryptoAssetToUserListCommandHandler : IRequestHandler<AddCryptoA
         }
         catch (System.Exception)
         {
-            _logger.LogInformation("AddCryptoAssetToUserListCommandHandler. Asset already exists: {0}", request.CoinMarketCapId);
+            _logger.LogError("AddCryptoAssetToUserListCommandHandler. Asset already exists: {0}", request.CoinMarketCapId);
             return new Response("Asset already exists on your lis!", false);
         }
         await _userRepository.UpdateAsync(user);

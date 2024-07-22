@@ -41,13 +41,13 @@ public class AuthenticateHandler : IRequestHandler<AuthenticateCommand, Response
         var user = await _context.Users.Where(u => u.Email == request.Email).FirstOrDefaultAsync(cancellationToken);
         if (user is null)
         {
-            _logger.LogInformation("User {0} not found", request.Email);
+            _logger.LogError("User {0} not found", request.Email);
             return new Response("User not found", false);
         }
 
         if (!_passwordHelper.VerifyPassword(request.Password, user.Password ?? string.Empty))
         {
-            _logger.LogInformation("Password for user {0} is incorrect", request.Email);
+            _logger.LogError("Password for user {0} is incorrect", request.Email);
             return new Response("Password is incorrect", false);
         }
 

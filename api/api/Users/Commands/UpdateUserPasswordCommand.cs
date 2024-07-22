@@ -47,20 +47,20 @@ public class UpdateUserPasswordCommandHandler : IRequestHandler<UpdateUserPasswo
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogInformation("UpdateUserPasswordCommandHandler. Validation failed: {0}", errors);
+            _logger.LogError("UpdateUserPasswordCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed!", false, new { validationErrors = validationResult.Errors.Select(x => x.ErrorMessage).ToList(), HttpStatusCode = HttpStatusCode.BadRequest });
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId);
         if (user == null)
         {
-            _logger.LogInformation("UpdateUserPasswordCommandHandler. User not found: {0}", request.UserId);
+            _logger.LogError("UpdateUserPasswordCommandHandler. User not found: {0}", request.UserId);
             return new Response("User not found!", false, new { HttpStatusCode = HttpStatusCode.NotFound });
         }
 
         if (!_passwordHelper.VerifyPassword(request.CurrentPassword, user.Password ?? string.Empty))
         {
-            _logger.LogInformation("UpdateUserPasswordCommandHandler. Password for user {0} is incorrect", request.UserId);
+            _logger.LogError("UpdateUserPasswordCommandHandler. Password for user {0} is incorrect", request.UserId);
             return new Response("Current password is incorrect", false);
         }
 
@@ -73,7 +73,7 @@ public class UpdateUserPasswordCommandHandler : IRequestHandler<UpdateUserPasswo
         }
         catch (Exception ex)
         {
-            _logger.LogInformation("UpdateUserPasswordCommandHandler. Error while updating user password: {0}. Error:{1}", request.UserId, ex.Message);
+            _logger.LogError("UpdateUserPasswordCommandHandler. Error while updating user password: {0}. Error:{1}", request.UserId, ex.Message);
             return new Response("An error occured while updating your password. Please try again!", false, new { HttpStatusCode = HttpStatusCode.BadRequest });
         }
 
