@@ -69,7 +69,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogInformation("DepositFundCommandHandler. Validation failed: {0}", errors);
+            _logger.LogError("DepositFundCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
@@ -78,7 +78,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                                                           .Include(x => x.CryptoAssets).ThenInclude(x => x.Transactions));
         if (user == null)
         {
-            _logger.LogInformation("DepositFundCommandHandler. User {0} not found.", request.UserId);
+            _logger.LogError("DepositFundCommandHandler. User {0} not found.", request.UserId);
             return new Response("User not found", false);
         }
 
@@ -93,6 +93,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, user.CryptoAssets);
             if (newAccountTransaction == null)
             {
+                _logger.LogError("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
                 return new Response("Crypto asset not found", false);
             }
 
@@ -133,10 +134,8 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             _ = int.TryParse(request.CryptoAssetId, out var cryptoId);
             var cryptoAsset = cryptoAssets.FirstOrDefault(c => c.Id == cryptoId);
             if (cryptoAsset == null)
-            {
-                _logger.LogInformation("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
                 return null;
-            }
+
 
             var buyTransaction = new CryptoTransaction(
                 request.Amount,
