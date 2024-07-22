@@ -10,8 +10,9 @@ services:
     ports:
       - "8080:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=mydatabase;User Id=sa;Password=YourStrong!Passw0rd;
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=dg-invest;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+    restart: on-failure
 
   sqlserver:
     image: mcr.microsoft.com/azure-sql-edge:latest
