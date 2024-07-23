@@ -32,7 +32,7 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
                                                                     x => x.Include(q => q.Transactions));
         if (cryptoAsset is null)
         {
-            _logger.LogInformation("GetCryptoAssetByIdCommandQuery. CryptoAssetId: {0} not found", request.CryptoAssetId);
+            _logger.LogError("GetCryptoAssetByIdCommandQuery. CryptoAssetId: {0} not found", request.CryptoAssetId);
             return new Response("Crypto asset not found", false);
         }
 

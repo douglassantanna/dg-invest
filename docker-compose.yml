@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  app:
+    build: 
+      context: api/.
+    container_name: dg-api
+    depends_on:
+      - sqlserver
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=dg-invest;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+    restart: on-failure
+
+  sqlserver:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    container_name: my-sqlserver
+    environment:
+      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
+      ACCEPT_EULA: "1"
+    ports:
+      - "1434:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  angular-app:
+    build:
+      context: web-app/.
+    container_name: web-app
+    ports:
+      - "4201:80"
+    depends_on:
+      - app
+    restart: on-failure
+
+volumes:
+  sqlserver-data:

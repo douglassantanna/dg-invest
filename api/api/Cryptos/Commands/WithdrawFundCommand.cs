@@ -49,14 +49,14 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogInformation("WithdrawFundCommandHandler. Validation failed: {0}", errors);
+            _logger.LogError("WithdrawFundCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId, x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
         if (user == null)
         {
-            _logger.LogInformation("WithdrawFundCommandHandler. User {0} not found.", request.UserId);
+            _logger.LogError("WithdrawFundCommandHandler. User {0} not found.", request.UserId);
             return new Response("User not found", false);
         }
 
