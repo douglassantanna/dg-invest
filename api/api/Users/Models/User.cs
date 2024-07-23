@@ -23,6 +23,7 @@ public class User : Entity
         Email = email;
         Password = password;
         Role = role;
+        CreateAccountIfNotExists();
     }
     public void CreateAccountIfNotExists()
     {
