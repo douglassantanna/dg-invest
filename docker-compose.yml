@@ -25,5 +25,15 @@ services:
     volumes:
       - sqlserver-data:/var/opt/mssql
 
+  angular-app:
+    build:
+      context: web-app/.
+    container_name: web-app
+    ports:
+      - "4201:80"
+    depends_on:
+      - app
+    restart: on-failure
+
 volumes:
   sqlserver-data:
