@@ -7,4 +7,4 @@ VALUES
 ( 
  'Theo', 'theo@gmail.com', 'any-password', 1, 0
 )
-GO 
+GO
