@@ -47,7 +47,7 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
             return new Response($"Error getting quotes for this crypto asset. Error: {ex.Message}", false);
         }
 
-        var currentPrice = GetCryptoCurrentPriceById(cryptoAsset.CoinMarketCapId, cmpResponse);
+        var currentPrice = _coinMarketCapService.GetCryptoCurrencyPriceById(cryptoAsset.CoinMarketCapId, cmpResponse);
 
         List<CryptoAssetData> cards = new()
         {
@@ -75,17 +75,5 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
 
         _logger.LogInformation("GetCryptoAssetByIdCommandQuery. Retrieved CryptoAssetId: {0}", request.CryptoAssetId);
         return new Response("", true, cryptoInfo);
-    }
-    private static decimal GetCryptoCurrentPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse)
-    {
-        if (cmpResponse != null)
-        {
-            var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
-            if (coin.Value != null)
-            {
-                return coin.Value.Quote.USD.Price;
-            }
-        }
-        return 0;
     }
 }

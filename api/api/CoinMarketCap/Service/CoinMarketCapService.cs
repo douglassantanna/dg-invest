@@ -65,4 +65,17 @@ public class CoinMarketCapService : ICoinMarketCapService
         string symbolList = string.Join(",", ids);
         return symbolList;
     }
+
+    public decimal GetCryptoCurrencyPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse)
+    {
+        if (cmpResponse != null)
+        {
+            var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
+            if (coin.Value != null)
+            {
+                return coin.Value.Quote.USD.Price;
+            }
+        }
+        return 0;
+    }
 }
