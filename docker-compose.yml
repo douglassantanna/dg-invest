@@ -15,11 +15,11 @@ services:
     restart: on-failure
 
   sqlserver:
-    image: mcr.microsoft.com/mssql/server
-    container_name: dg-sqlserver
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    container_name: my-sqlserver
     environment:
-      SA_PASSWORD: Dege1994
-      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
+      ACCEPT_EULA: "1"
     ports:
       - "1434:1433"
     volumes:

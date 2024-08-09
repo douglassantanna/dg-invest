@@ -1,2 +1,2 @@
 namespace api.Shared;
-public record Response(string Message, bool IsSuccess, object Data = null);
+public record Response(string Message, bool IsSuccess, object? Data = null);
