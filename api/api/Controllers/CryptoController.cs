@@ -45,7 +45,7 @@ public class CryptoController : ControllerBase
         {
             return BadRequest(result);
         }
-        return CreatedAtAction(nameof(AddTransaction), result);
+        return Created("", result);
     }
 
     [HttpPost("deposit-fund")]

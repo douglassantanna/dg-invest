@@ -80,12 +80,12 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         var collection = cryptoAssetQuery.Select(x => new UserCryptoAssetDto(x.User.Account.Balance,
                                                       new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.Symbol,
-                                                                                    GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse),
+                                                                                    _coinMarketCapService.GetCryptoCurrencyPriceById(x.CoinMarketCapId, cmpResponse),
                                                                                     x.Balance,
                                                                                     x.TotalInvested,
-                                                                                    x.CurrentWorth(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
-                                                                                    x.GetInvestmentGainLossValue(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
-                                                                                    x.GetInvestmentGainLossPercentage(GetCryptoCurrentPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    x.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    x.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(x.CoinMarketCapId, cmpResponse)),
+                                                                                    x.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(x.CoinMarketCapId, cmpResponse)),
                                                                                     x.CoinMarketCapId)));
 
         var pagedCollection = await PageList<UserCryptoAssetDto>.CreateAsync(collection,
@@ -100,19 +100,6 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     {
         string[] ids = cryptoAssetQuery.Select(x => x.CoinMarketCapId.ToString()).ToArray();
         return await _coinMarketCapService.GetQuotesByIds(ids);
-    }
-
-    private static decimal GetCryptoCurrentPriceById(int coinMarketCapId, GetQuoteResponse? cmpResponse)
-    {
-        if (cmpResponse != null)
-        {
-            var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
-            if (coin.Value != null)
-            {
-                return coin.Value.Quote.USD.Price;
-            }
-        }
-        return 0;
     }
 
     private static Expression<Func<CryptoAsset, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)

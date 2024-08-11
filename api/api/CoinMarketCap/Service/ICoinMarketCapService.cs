@@ -3,4 +3,5 @@ public interface ICoinMarketCapService
 {
     Task<GetQuoteResponse> GetQuoteBySymbol(string symbol);
     Task<GetQuoteResponse> GetQuotesByIds(string[] ids);
+    decimal GetCryptoCurrencyPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse);
 }
