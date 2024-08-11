@@ -17,17 +17,19 @@ public class User : Entity
     public User(string fullName,
                 string email,
                 string password,
-                Role role)
+                Role role,
+                Account account)
     {
         FullName = fullName;
         Email = email;
         Password = password;
         Role = role;
-        CreateAccountIfNotExists();
+        Account = account;
     }
-    public void CreateAccountIfNotExists()
+
+    protected User()
     {
-        Account ??= new Account(this, this.Id);
+
     }
 
     public IReadOnlyCollection<CryptoAsset> CryptoAssets => _criptoAssets;

@@ -6,6 +6,7 @@ using api.Users.Models;
 using MediatR;
 using api.Users.Events;
 using api.Users.Repositories;
+using api.Cryptos.Models;
 
 namespace api.Users.Commands;
 public record CreateUserCommand(string FullName,
@@ -59,7 +60,8 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         var user = new User(request.FullName,
                             request.Email,
                             _passwordHelper.EncryptPassword(randomPassword),
-                            request.Role);
+                            request.Role,
+                            new Account());
 
         await _userRepository.AddAsync(user);
 
