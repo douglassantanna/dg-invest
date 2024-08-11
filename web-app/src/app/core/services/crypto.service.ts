@@ -6,7 +6,6 @@ import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
 import { ViewCryptoAssetDto } from '../models/view-crypto-asset-dto';
-import { ViewMinimalCryptoAssetDto } from '../models/view-minimal-crypto-asset-dto';
 import { Crypto } from '../models/crypto';
 import { Response } from '../models/response';
 import { CryptoAssetData } from '../models/crypto-asset-data';
@@ -14,7 +13,7 @@ import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
-import { UserCryptoAssetDto, ViewCryptoInformation } from '../models/view-crypto-information';
+import { UserCryptoAssetDto } from '../models/view-crypto-information';
 import { AuthService } from './auth.service';
 import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 

@@ -35,9 +35,6 @@ export class LocalStorageService {
     this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
     if (this.appConfig.jwtToken) {
       this.appConfig.jwtToken = null;
-      this.appConfig.hideZeroBalance = false;
-      this.appConfig.sortBy = 'symbol';
-      this.appConfig.sortOrder = 'asc';
       this.set(local_storage_token, JSON.stringify(this.appConfig));
       return;
     }

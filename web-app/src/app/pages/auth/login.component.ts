@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { tap } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -44,12 +45,9 @@ import { ToastService } from '../../core/services/toast.service';
     </div>
   </div>
   `,
-  styles: [
-    `
-    `
-  ]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
+
   authService = inject(AuthService);
   private router = inject(Router);
   loading = false;
@@ -60,6 +58,10 @@ export class LoginComponent {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(4)]]
     });
+  }
+
+  ngOnInit(): void {
+    this.checkLoginStatus();
   }
 
   login() {
@@ -75,6 +77,14 @@ export class LoginComponent {
         this.toastService.showError(err.error.message);
       }
     });
+  }
+
+  private checkLoginStatus() {
+    this.authService.isLoggedIn.pipe(tap((result) => {
+      if (result) {
+        this.router.navigate(['/cryptos']);
+      }
+    })).subscribe();
   }
 
   get emailFormControl() {

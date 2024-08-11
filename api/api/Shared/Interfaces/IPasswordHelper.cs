@@ -1,4 +1,4 @@
-namespace api.Interfaces;
+namespace api.Shared.Interfaces;
 public interface IPasswordHelper
 {
     string EncryptPassword(string password);
