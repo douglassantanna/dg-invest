@@ -48,8 +48,10 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadCryptoAssets();
+    const params = this.getCryptoAssetParams();
+    this.loadCryptoAssets(params);
   }
+
   redirectToAccount() {
     this.router.navigateByUrl('/account');
   }
@@ -61,7 +63,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     const sortBy = params.sortBy ?? sortByLocalStorage;
     const sortOrder = params.sortOrder ?? sortOrderLocalStorage;
     const assetName = params.assetName ?? '';
-    const hideZeroBalance = params.hideZeroBalance ?? false;
+    const hideZeroBalance = params.hideZeroBalance ? true : false;
 
     this.cryptoService.getCryptoAssets(page, pageSize, assetName, sortBy, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
@@ -114,14 +116,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       this.localStorageService.setAssetListSortBy(event);
     }
 
-    const params = {
-      page: 1,
-      pageSize: 50,
-      assetName: '',
-      sortBy: this.localStorageService.getAssetListSortBy(),
-      sortOrder: newSortOrder,
-      hideZeroBalance: this.localStorageService.getHideZeroBalance()
-    };
+    const params = this.getCryptoAssetParams(newSortOrder);
     this.loadCryptoAssets(params);
   }
 
@@ -158,5 +153,16 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
     const percentDifference = ((totalMarketValue - totalInvested) / totalInvested) * 100;
     return percentDifference;
+  }
+
+  private getCryptoAssetParams(sortOrderOverride?: string): { page: number, pageSize: number, assetName: string, sortBy: string, sortOrder: string, hideZeroBalance: boolean } {
+    return {
+      page: 1,
+      pageSize: 50,
+      assetName: '',
+      sortBy: this.localStorageService.getAssetListSortBy() || 'symbol',
+      sortOrder: sortOrderOverride || this.localStorageService.getAssetListSortOrder() || 'asc',
+      hideZeroBalance: this.localStorageService.getHideZeroBalance() ?? false
+    };
   }
 }
