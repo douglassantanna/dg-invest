@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json.Serialization;
 using api.Authentication;
 using api.AzureStorage;
 using api.AzureStorage.Queue;
@@ -67,6 +68,10 @@ builder.Services.AddCustomRateLimiter(builder.Configuration);
 builder.Services.AddControllers(opt =>
 {
     opt.Filters.Add<GlobalExceptionFilter>();
+}).AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
 builder.Services.AddEndpointsApiExplorer();

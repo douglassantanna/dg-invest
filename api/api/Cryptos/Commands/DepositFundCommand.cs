@@ -84,9 +84,6 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
 
         try
         {
-            if (user.Account == null)
-                user.CreateAccountIfNotExists();
-
             var currentServerTime = DateTime.Now;
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day, currentServerTime.Hour, currentServerTime.Minute, currentServerTime.Second);
             var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);

@@ -1,6 +1,5 @@
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
-using api.Cryptos.Repositories;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Models.Cryptos;
 using api.Shared;
@@ -69,8 +68,8 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                      x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
-                                                      .Include(x => x.CryptoAssets));
+                                                      x => x.Include(x => x.CryptoAssets).Include(x => x.Account));
+
         if (user == null)
         {
             _logger.LogError("AddTransactionCommandHandler. User {0} not found.", request.UserId);

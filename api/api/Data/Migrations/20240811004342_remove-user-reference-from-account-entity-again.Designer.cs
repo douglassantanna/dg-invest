@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using api.Data;
 
@@ -11,9 +12,11 @@ using api.Data;
 namespace api.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20240811004342_remove-user-reference-from-account-entity-again")]
+    partial class removeuserreferencefromaccountentityagain
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,7 +45,7 @@ namespace api.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Accounts", (string)null);
+                    b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.AccountTransaction", b =>
@@ -89,7 +92,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("AccountTransactions", (string)null);
+                    b.ToTable("AccountTransactions");
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Address", b =>
@@ -118,7 +121,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("Address", (string)null);
+                    b.ToTable("Address");
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Crypto", b =>
@@ -149,7 +152,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cryptos", (string)null);
+                    b.ToTable("Cryptos");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
@@ -203,7 +206,7 @@ namespace api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CryptoAssets", (string)null);
+                    b.ToTable("CryptoAssets");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
@@ -243,7 +246,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("CryptoTransactions", (string)null);
+                    b.ToTable("CryptoTransactions");
                 });
 
             modelBuilder.Entity("api.Users.Models.User", b =>
@@ -277,7 +280,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>
