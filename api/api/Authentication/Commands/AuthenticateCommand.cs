@@ -1,5 +1,5 @@
 using api.Data;
-using api.Interfaces;
+using api.Shared.Interfaces;
 using api.Shared;
 using FluentValidation;
 using MediatR;

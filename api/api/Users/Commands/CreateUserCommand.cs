@@ -1,6 +1,6 @@
 using FluentValidation;
 using FluentValidation.Results;
-using api.Interfaces;
+using api.Shared.Interfaces;
 using api.Shared;
 using api.Users.Models;
 using MediatR;

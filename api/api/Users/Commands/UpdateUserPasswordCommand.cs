@@ -1,5 +1,5 @@
 using System.Net;
-using api.Interfaces;
+using api.Shared.Interfaces;
 using api.Shared;
 using api.Users.Repositories;
 using FluentValidation;

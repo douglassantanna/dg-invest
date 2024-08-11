@@ -1,5 +1,5 @@
 using System.Text;
-using api.Interfaces;
+using api.Shared.Interfaces;
 using BC = BCrypt.Net.BCrypt;
 
 namespace api.Shared;

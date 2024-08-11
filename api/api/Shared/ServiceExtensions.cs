@@ -11,7 +11,7 @@ using api.Cryptos.TransactionStrategies.Contracts;
 using api.Cryptos.TransactionStrategies.Transactions;
 using api.Data;
 using api.Data.Repositories;
-using api.Interfaces;
+using api.Shared.Interfaces;
 using api.RateLimiterPolicies;
 using api.Users.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
