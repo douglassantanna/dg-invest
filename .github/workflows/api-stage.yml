@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: dgi-api-l
+name: dgi-api-l-stage
 env:
   AZURE_WEBAPP_NAME: dgi-api-l
   AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
@@ -10,7 +10,7 @@ env:
 on:
   push:
     branches:
-      - master
+      - stage
   workflow_dispatch:
 
 jobs:
