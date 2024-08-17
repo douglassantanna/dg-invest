@@ -15,7 +15,7 @@ public interface IUserRepository
                                    Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null);
     Task<bool> IsCryptoAssetInUserListAsync(int userId);
     Task<User?> GetByIdAsync(int id, Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null);
-    bool IsUnique(string email);
+    Task<bool> IsUnique(string email);
 }
 public class UserRepository : IUserRepository
 {
@@ -47,5 +47,5 @@ public class UserRepository : IUserRepository
         Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null)
         => await _baseRepository.GetByIdAsync(id, include);
 
-    public bool IsUnique(string email) => _dataContext.Users.Any(x => x.Email == email);
+    public Task<bool> IsUnique(string email) => _dataContext.Users.AnyAsync(x => x.Email == email);
 }

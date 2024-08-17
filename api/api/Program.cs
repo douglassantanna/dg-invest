@@ -29,9 +29,13 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+var runMigrationsConfig = app.Configuration.GetSection("RunMigrations")?.Value;
+bool runMigrations = false;
+if (!string.IsNullOrEmpty(runMigrationsConfig)
+    && bool.TryParse(runMigrationsConfig, out runMigrations)
+    && runMigrations)
 {
-    DatabaseManagementService.MigrationInitialization(app);
+    await app.Services.SeedAsync();
 }
 
 app.UseCors("Policy");
