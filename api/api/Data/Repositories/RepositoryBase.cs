@@ -22,6 +22,12 @@ public class RepositoryBase<T> : IBaseRepository<T> where T : Entity
         await _context.SaveChangesAsync();
     }
 
+    public async Task AddBatchAsync(List<T> entities)
+    {
+        await _DbSet.AddRangeAsync(entities);
+        await _context.SaveChangesAsync();
+    }
+
     public void Delete(T entity)
     {
         _DbSet.Remove(entity);

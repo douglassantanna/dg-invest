@@ -129,11 +129,9 @@ public static class ServiceExtensions
     }
     public static async Task SeedAsync(this IServiceProvider services)
     {
-        using (var scope = services.CreateScope())
-        {
-            var seedDataService = scope.ServiceProvider.GetRequiredService<ISeedDataService>();
-            await seedDataService.SeedDataAsync();
-        }
+        using var scope = services.CreateScope();
+        var seedDataService = scope.ServiceProvider.GetRequiredService<ISeedDataService>();
+        await seedDataService.SeedDataAsync();
     }
 
 }
