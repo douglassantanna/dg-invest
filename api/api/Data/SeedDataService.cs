@@ -15,8 +15,11 @@ public class SeedDataService : ISeedDataService
     private readonly DataContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ILogger<SeedDataService> _logger;
-    private readonly string _baseUserEmail = "john2@email.com";
+    private readonly string _baseUserEmail = "john8@email.com";
     private readonly string _baseCryptoSymbol = "BTC";
+    private readonly string _baseUserPassword = "$2a$11$8TffsGWVArlU10uzS9LufuJNolCc15GiOgvaaMiiYpGqMPg0lRud.";
+    private readonly string _baseUserName = "John Doe";
+    private decimal _baseUserAccountInitialValue = 100000;
     private User? _user;
     private readonly ICryptoRepository _cryptoRepository;
     public SeedDataService(
@@ -38,7 +41,9 @@ public class SeedDataService : ISeedDataService
         {
             await MigrateDatabase();
             await SeedAdminUserIfNotExists();
-            _user = await _userRepository.GetByIdAsync(1);
+            _user = await _userRepository.GetByIdAsync(2007, x => x.Include(x => x.CryptoAssets)
+                                                                    .ThenInclude(c => c.Transactions)
+                                                                .Include(x => x.Account));
             if (_user != null)
             {
                 await SeedCryptosIfNotExists();
@@ -77,7 +82,7 @@ public class SeedDataService : ISeedDataService
         if (!userExists)
         {
             _logger.LogInformation("Admin user does not exist, seeding admin user.");
-            var user = new User("John Doe", _baseUserEmail, "111111", Role.Admin, new Cryptos.Models.Account());
+            var user = new User(_baseUserName, _baseUserEmail, _baseUserPassword, Role.Admin, new Account());
             try
             {
                 await _userRepository.AddAsync(user);
@@ -136,6 +141,9 @@ public class SeedDataService : ISeedDataService
 
     private async Task SeedAccountIfNotExists()
     {
+        _baseUserAccountInitialValue = _baseUserAccountInitialValue - 20.72m - 4100.65m + 27.63m;
+        _user.Account.AddToBalance(_baseUserAccountInitialValue);
+
         var accountTransactions = new List<AccountTransaction>
             {
                 new (date: DateTime.Now.AddDays(-25),
