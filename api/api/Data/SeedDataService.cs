@@ -15,11 +15,11 @@ public class SeedDataService : ISeedDataService
     private readonly DataContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ILogger<SeedDataService> _logger;
-    private string _baseUserEmail = "john8@email.com";
-    private string _baseCryptoSymbol = "BTC";
-    private string _baseUserPassword = "$2a$11$8TffsGWVArlU10uzS9LufuJNolCc15GiOgvaaMiiYpGqMPg0lRud.";
-    private string _baseUserName = "John Doe";
-    private int _baseUserId = 2007;
+    private string _baseUserEmail;
+    private string _baseCryptoSymbol;
+    private string _baseUserPassword;
+    private string _baseUserName;
+    private int _baseUserId;
     private User? _user;
     private readonly ICryptoRepository _cryptoRepository;
     public SeedDataService(
@@ -147,11 +147,14 @@ public class SeedDataService : ISeedDataService
 
     private void SeedAccountIfNotExists()
     {
-        decimal adjustedValue = CalculateInitialAccountValue();
-        _user.Account.AddToBalance(adjustedValue);
+        if (_user.Account.Balance == 0)
+        {
+            decimal adjustedValue = CalculateInitialAccountValue();
+            _user.Account.AddToBalance(adjustedValue);
 
-        List<AccountTransaction> accountTransactions = InitializeAccountTransactions();
-        AddTransactionsToAccount(accountTransactions);
+            List<AccountTransaction> accountTransactions = InitializeAccountTransactions();
+            AddTransactionsToAccount(accountTransactions);
+        }
     }
 
     private static List<AccountTransaction> InitializeAccountTransactions()
