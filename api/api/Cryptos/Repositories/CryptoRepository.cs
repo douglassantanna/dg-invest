@@ -2,12 +2,15 @@ using System.Linq.Expressions;
 using api.Cryptos.Models;
 using api.Data;
 using api.Data.Repositories;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 
 namespace api.Cryptos.Repositories;
 public interface ICryptoRepository
 {
     Task AddAsync(Crypto entity);
+    Task AddBatchAsync(List<Crypto> cryptos);
+    Task<bool> ExistsAsync(string symbol);
     Task UpdateAsync(Crypto entity);
     IEnumerable<Crypto> GetAll(
         Expression<Func<Crypto, bool>> filter = null,
@@ -27,6 +30,17 @@ public class CryptoRepository : ICryptoRepository
     }
 
     public async Task AddAsync(Crypto entity) => await _baseRepository.AddAsync(entity);
+
+    public async Task AddBatchAsync(List<Crypto> cryptos)
+    {
+        await _baseRepository.AddBatchAsync(cryptos);
+    }
+
+    public Task<bool> ExistsAsync(string symbol)
+    {
+        return _dataContext.Cryptos.AnyAsync(c => c.Symbol == symbol);
+    }
+
     public IEnumerable<Crypto> GetAll(Expression<Func<Crypto, bool>> filter = null, Func<IQueryable<Crypto>, IIncludableQueryable<Crypto, object>> include = null)
     {
         return _dataContext.Cryptos.OrderBy(x => x.Symbol);

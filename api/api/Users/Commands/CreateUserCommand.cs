@@ -52,7 +52,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         if (!validationResult.IsValid)
             return new Response("Validation failed", false, validationResult.Errors.Select(x => x.ErrorMessage).ToList());
 
-        if (_userRepository.IsUnique(request.Email))
+        if (await _userRepository.IsUnique(request.Email))
             return new Response("Email already exists", false);
 
         var randomPassword = "111111"; //_passwordHelper.RandomPassword();

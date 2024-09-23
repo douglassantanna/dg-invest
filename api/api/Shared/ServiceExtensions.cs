@@ -62,6 +62,7 @@ public static class ServiceExtensions
         services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IQueueService, QueueService>();
         services.AddSingleton<ITokenService, TokenService>();
+        services.AddScoped<ISeedDataService, SeedDataService>();
 
         services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
         services.AddScoped<IUserRepository, UserRepository>();
@@ -126,4 +127,11 @@ public static class ServiceExtensions
         });
         return services;
     }
+    public static async Task SeedAsync(this IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var seedDataService = scope.ServiceProvider.GetRequiredService<ISeedDataService>();
+        await seedDataService.SeedDataAsync();
+    }
+
 }
