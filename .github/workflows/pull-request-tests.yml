@@ -1,0 +1,26 @@
+name: Run Tests on Pull Request
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.x"
+
+      - name: Restore dependencies
+        run: dotnet restore api/dg-invest.api.sln
+
+      - name: Build the project
+        run: dotnet build api/dg-invest.api.sln --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test api/dg-invest.api.sln --no-build --configuration Release --verbosity normal
