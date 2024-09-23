@@ -1,4 +1,4 @@
-name: Web Api Prod
+name: Web Api Stage
 env:
   AZURE_WEBAPP_NAME: dgi-api-l
   AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"

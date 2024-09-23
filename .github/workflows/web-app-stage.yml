@@ -29,7 +29,7 @@ jobs:
       # Build the Angular app
       - name: Build Angular app
         working-directory: ./web-app
-        run: npm run build --if-present
+        run: npm run build --if-present -- --configuration=staging
 
       - name: Build And Deploy
         id: builddeploy
