@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_backend:
-    name: Build Backend
+    name: Build and Deploy Backend
     runs-on: ubuntu-latest
     env:
       AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
@@ -42,6 +42,7 @@ jobs:
     needs: build_backend
     environment:
       name: ${{ github.event.inputs.environment }}
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write # This is required for requesting the JWT
 
@@ -51,6 +52,13 @@ jobs:
         with:
           name: .net-app
 
+      - name: Login to Azure
+        uses: actions/download-artifact@v4
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:  ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id:  ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
@@ -58,7 +66,6 @@ jobs:
           app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           slot-name: ${{ github.event.inputs.environment }}
           package: .
-          publish-profile: ${{ secrets.AZURE_WEB_API_SECRET_DG_API }}
 
   build_and_deploy_frontend:
     name: Build and Deploy Frontend
