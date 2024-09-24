@@ -1,7 +1,8 @@
 name: Run Tests on Pull Request
 
 on:
-  pull_request:
+  pull_request: {}  # This can remain empty, which means it triggers on all pull requests
+  workflow_dispatch: {}  # Ensure this is correctly formatted
 
 jobs:
   test:
