@@ -104,9 +104,7 @@ jobs:
       # Build the Angular app
       - name: Build Angular app
         working-directory: ./web-app
-        run: npm run build --if-present -- --configuration=$ENVIRONMENT
-        env:
-          ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+        run: npm run build --if-present -- --configuration=${{ github.event.inputs.environment }}
 
       - name: Build And Deploy
         id: builddeploy
