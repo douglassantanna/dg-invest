@@ -59,7 +59,7 @@ jobs:
           app-name: dgi-api-l
           slot-name: ${{ github.event.inputs.environment }}
           package: .
-          publish-profile: ${{ secrets.AZURE_WEB_API_SECRET_DG_API_L }}
+          publish-profile: ${{ secrets.AZURE_WEB_API_SECRET_DG_API }}
 
   build_and_deploy_frontend:
     name: Build and Deploy Frontend
