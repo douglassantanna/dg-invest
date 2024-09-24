@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Full Stack Deployment Pipeline
 
 on:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
           slot-name: ${{ github.event.inputs.environment }}
