@@ -13,7 +13,6 @@ jobs:
     name: Build and Deploy Backend
     runs-on: ubuntu-latest
     env:
-      AZURE_WEBAPP_NAME: dgi-api-l
       AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
       SOLUTION: "api/dg-invest.api.sln"
 
@@ -56,7 +55,7 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
           slot-name: ${{ github.event.inputs.environment }}
           package: .
           publish-profile: ${{ secrets.AZURE_WEB_API_SECRET_DG_API_L }}
