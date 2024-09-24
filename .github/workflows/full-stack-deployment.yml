@@ -13,7 +13,7 @@ jobs:
     name: Build and Deploy Backend
     runs-on: ubuntu-latest
     env:
-      ENV: "staging"
+      ENV: ${{ secrets.BUILD_ENV }}
       AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
       SOLUTION: "api/dg-invest.api.sln"
 
