@@ -16,14 +16,15 @@ jobs:
       ENV: ${{ secrets.BUILD_ENV }}
       AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
       SOLUTION: "api/dg-invest.api.sln"
+      APP_URL: ${{ vars.APP_URL }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Print Environment Variables
         run: |
-          echo "ENVIRONMENT: ${{ env.ENV }}"
-          echo "APP_URL: ${{ vars.APP_URL }}"
+          echo "ENVIRONMENT: $ENV"
+          echo "APP_URL: $APP_URL"
 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
@@ -100,7 +101,9 @@ jobs:
       # Build the Angular app
       - name: Build Angular app
         working-directory: ./web-app
-        run: npm run build --if-present -- --configuration=${{ vars.ENVIRONMENT }}
+        run: npm run build --if-present -- --configuration=$ENVIRONMENT
+        env:
+          ENVIRONMENT: ${{ vars.ENVIRONMENT }}
 
       - name: Build And Deploy
         id: builddeploy
