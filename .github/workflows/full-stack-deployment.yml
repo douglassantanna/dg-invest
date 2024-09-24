@@ -13,6 +13,7 @@ jobs:
     name: Build and Deploy Backend
     runs-on: ubuntu-latest
     env:
+      ENV: "staging"
       AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
       SOLUTION: "api/dg-invest.api.sln"
 
@@ -21,7 +22,7 @@ jobs:
 
       - name: Print Environment Variables
         run: |
-          echo "ENVIRONMENT: ${{ secrets.BUILD_ENV }}"
+          echo "ENVIRONMENT: ${{ env.ENV }}"
           echo "APP_URL: ${{ vars.APP_URL }}"
 
       - name: Set up .NET Core
