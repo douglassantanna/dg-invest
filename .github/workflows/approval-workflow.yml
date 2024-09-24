@@ -9,37 +9,23 @@ on:
     # Allow manual trigger of the workflow if needed
 
 jobs:
-  test:
+  trigger_backend_tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: "8.x"
-
-      - name: Restore dependencies
-        run: dotnet restore api/dg-invest.api.sln
-
-      - name: Build the project
-        run: dotnet build api/dg-invest.api.sln --no-restore --configuration Release
-
-      - name: Run backend tests
-        run: dotnet test api/dg-invest.api.sln --no-build --configuration Release --verbosity normal
-
-      # Add your frontend tests step here
-      # - name: Run frontend tests
-      #   run: npm run test --prefix ./web-app
+      - name: Trigger Backend Tests Pipeline
+        run: |
+          curl -X POST -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/douglassantanna/dg-intest/actions/workflows/pull-request-tests.yml/dispatches \
+          -d '{"ref":"stage"}'
 
   deploy_to_stage:
     runs-on: ubuntu-latest
-    needs: test
+    needs: trigger_backend_tests
     environment:
       name: Staging
       url: 'https://gentle-sea-021fa1c03.5.azurestaticapps.net/#/login'
-    if: github.event_name == 'pull_request' && github.base_ref == 'staging'
+    if: github.event_name == 'pull_request' && github.base_ref == 'stage'
     steps:
       - name: Approval required before merging into stage
         run: echo "Deploying to stage environment..."  # Replace with your stage deployment script
