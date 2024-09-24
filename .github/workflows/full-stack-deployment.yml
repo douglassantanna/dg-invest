@@ -23,8 +23,8 @@ jobs:
 
       - name: Print Environment Variables
         run: |
-          echo "ENVIRONMENT: $ENV"
-          echo "APP_URL: $APP_URL"
+          echo "ENVIRONMENT: ${{ env.ENV }}"
+          echo "APP_URL: ${{ env.APP_URL }}"
 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
