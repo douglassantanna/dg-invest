@@ -21,7 +21,7 @@ jobs:
 
       - name: Print Environment Variables
         run: |
-          echo "ENVIRONMENT: ${{ vars.ENVIRONMENT }}"
+          echo "ENVIRONMENT: ${{ secrets.BUILD_ENV }}"
           echo "APP_URL: ${{ vars.APP_URL }}"
 
       - name: Set up .NET Core
