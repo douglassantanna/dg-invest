@@ -56,7 +56,7 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-name: dgi-api-l
           slot-name: ${{ github.event.inputs.environment }}
           package: .
           publish-profile: ${{ secrets.AZURE_WEB_API_SECRET_DG_API_L }}
