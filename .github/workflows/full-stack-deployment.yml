@@ -55,10 +55,7 @@ jobs:
           
       - name: Deploy to Azure Web App
         run: |
-          if [ -z "${{ secrets.AZURE_WEB_API_SECRET_DG_API }}" ]; then
-            echo "Publish profile is empty"
-          else
-            echo "Publish profile exists: ${#secrets.AZURE_WEB_API_SECRET_DG_API}"
+          echo "${{ vars.AZURE_WEB_API_SECRET_DG_API }}" | cut -c1-100
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
