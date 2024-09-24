@@ -4,13 +4,16 @@ on:
   pull_request:
     branches:
       - stage  # Trigger the workflow when merging into stage
-
-  workflow_dispatch:
-    # Allow manual trigger of the workflow if needed
+  workflow_dispatch: # Allow manual trigger of the workflow if needed
 
 jobs:
   trigger_backend_tests:
     runs-on: ubuntu-latest
+    permissions: # Add this block to set the required permissions
+      contents: read
+      id-token: write
+      actions: write # Ensure this permission is included for triggering workflows
+
     steps:
       - name: Trigger Backend Tests Pipeline
         run: |
@@ -18,6 +21,7 @@ jobs:
           -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
           https://api.github.com/repos/douglassantanna/dg-invest/actions/workflows/pull-request-tests.yml/dispatches \
           -d '{"ref":"stage"}'
+
 
   # deploy_to_stage:
   #   runs-on: ubuntu-latest
