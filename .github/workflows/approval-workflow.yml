@@ -19,24 +19,24 @@ jobs:
           https://api.github.com/repos/douglassantanna/dg-intest/actions/workflows/pull-request-tests.yml/dispatches \
           -d '{"ref":"stage"}'
 
-  deploy_to_stage:
-    runs-on: ubuntu-latest
-    needs: trigger_backend_tests
-    environment:
-      name: Staging
-      url: 'https://gentle-sea-021fa1c03.5.azurestaticapps.net/#/login'
-    if: github.event_name == 'pull_request' && github.base_ref == 'stage'
-    steps:
-      - name: Approval required before merging into stage
-        run: echo "Deploying to stage environment..."  # Replace with your stage deployment script
+  # deploy_to_stage:
+  #   runs-on: ubuntu-latest
+  #   needs: trigger_backend_tests
+  #   environment:
+  #     name: Staging
+  #     url: 'https://gentle-sea-021fa1c03.5.azurestaticapps.net/#/login'
+  #   if: github.event_name == 'pull_request' && github.base_ref == 'stage'
+  #   steps:
+  #     - name: Approval required before merging into stage
+  #       run: echo "Deploying to stage environment..."  # Replace with your stage deployment script
 
-  deploy_to_production:
-    runs-on: ubuntu-latest
-    needs: deploy_to_stage
-    environment:
-      name: Production
-      url: 'https://red-rock-0ee91e910.4.azurestaticapps.net/#/login'
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
-    steps:
-      - name: Approval required before merging into master
-        run: echo "Deploying to production environment..."  # Replace with your production deployment script
+  # deploy_to_production:
+  #   runs-on: ubuntu-latest
+  #   needs: deploy_to_stage
+  #   environment:
+  #     name: Production
+  #     url: 'https://red-rock-0ee91e910.4.azurestaticapps.net/#/login'
+  #   if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
+  #   steps:
+  #     - name: Approval required before merging into master
+  #       run: echo "Deploying to production environment..."  # Replace with your production deployment script
