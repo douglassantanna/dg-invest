@@ -5,9 +5,6 @@ env:
   SOLUTION: "api/dg-invest.api.sln"
 
 on:
-  push:
-    branches:
-      - stage
   workflow_dispatch:
 
 jobs:
