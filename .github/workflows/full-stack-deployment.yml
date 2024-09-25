@@ -13,21 +13,11 @@ jobs:
     name: Build and Deploy Backend
     runs-on: ubuntu-latest
     env:
-      ENV: ${{ secrets.BUILD_ENV }}
       AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
       SOLUTION: "api/dg-invest.api.sln"
-      APP_URL: ${{ vars.APP_URL }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Print Environment Variables
-        env:
-          ENV: ${{ secrets.BUILD_ENV }}
-          APP_URL: ${{ vars.APP_URL }}
-        run: |
-          echo "ENVIRONMENT: $ENV"
-          echo "APP_URL: $APP_URL"
+      - uses: actions/checkout@v3
 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
