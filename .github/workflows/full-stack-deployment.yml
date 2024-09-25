@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_backend:
-    name: Build and Deploy Backend
+    name: Build Backend
     runs-on: ubuntu-latest
     env:
       AZURE_WEBAPP_PACKAGE_PATH: "api/api/api.csproj"
@@ -78,7 +78,7 @@ jobs:
       # Downcase Environment
       - name: Downcase Environment
         run: |
-          echo "ENVIRONMENT=${{ github.event.inputs.environment | toLowerCase() }}" >> ${GITHUB_ENV}
+          echo "ENVIRONMENT=${{ github.event.inputs.environment }} " | tr '[:upper:]' '[:lower:]' >> ${GITHUB_ENV}
 
       # Install dependencies
       - name: Install dependencies
