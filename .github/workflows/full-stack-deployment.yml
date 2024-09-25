@@ -62,7 +62,9 @@ jobs:
     name: Build Frontend
     runs-on: ubuntu-latest
     needs: deploy_backend
-    environment: staging  # Default to staging
+    environment: 
+      name: staging  # Default to staging
+    
     steps:
       - uses: actions/checkout@v3
         with:
@@ -75,11 +77,6 @@ jobs:
         with:
           node-version: "20.14.0"
 
-      # Downcase Environment
-      - name: Downcase Environment
-        run: |
-          echo "ENVIRONMENT=${{ github.event.inputs.environment }} " | tr '[:upper:]' '[:lower:]' >> ${GITHUB_ENV}
-
       # Install dependencies
       - name: Install dependencies
         working-directory: ./web-app
@@ -89,7 +86,8 @@ jobs:
       - name: Build Angular app
         working-directory: ./web-app
         run: |
-          npm run build --if-present -- --configuration=${{ env.ENVIRONMENT }}
+          lower_env=$(echo "${{ github.event.inputs.environment }}" | tr '[:upper:]' '[:lower:]')
+          npm run build --if-present -- --configuration=$lower_env
 
       # Upload Build Artifacts
       - name: Upload Build Artifacts
@@ -98,11 +96,13 @@ jobs:
           name: web-app
           path: ./web-app/dist/web-app  # Adjust according to your build output
 
-  deploy_staging:
+  deploy_frontend_staging:
+    name: Deploy Frontend to Staging
     runs-on: ubuntu-latest
     needs: build_frontend
     environment:
       name: staging  # Define the staging environment
+    
     steps:
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -110,32 +110,38 @@ jobs:
           name: web-app
 
       - name: Deploy to Azure Static Web App (Staging)
+        id: deploy-staging
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_SEA_021FA1C03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "./web-app/dist/web-app"  # Adjust according to your build output
+          app_location: "./web-app"  # Adjust according to your build output
           api_location: ""                          # Specify if you have an API
-          output_location: "dist/web-app"          # Adjust according to your build output
+          output_location: "dist/web-app"
+          deployment_environment: staging # Adjust according to your build output
 
-  deploy_production:
+  deploy_frontend_production:
+    name: Deploy Frontend to Production
     runs-on: ubuntu-latest
-    needs: deploy_staging
-    environment: production  # Define the production environment
+    needs: deploy_frontend_staging
+    environment: 
+      name: production  # Define the production environment
+    
     steps:
       - name: Wait for Approval
         run: echo "Approval needed before deploying to production"
         id: approval
-        if: ${{ github.event.inputs.approve == 'yes' }}  # Condition for approval
+        if: ${{ github.event.inputs.approve == 'approved' }}  # Condition for approval
 
       - name: Deploy to Azure Static Web App (Production)
-        if: steps.approval.outputs.approval == 'yes'
+        if: steps.approval.outputs.approval == 'approved'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_SEA_021FA1C03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "./web-app/dist/web-app"  # Adjust according to your build output
+          app_location: "./web-app"  # Adjust according to your build output
           api_location: ""                          # Specify if you have an API
-          output_location: "dist/web-app"          # Adjust according to your build output
+          output_location: "dist/web-app" 
+          deployment_environment: production # Adjust according to your build output
