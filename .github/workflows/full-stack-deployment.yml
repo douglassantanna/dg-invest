@@ -94,6 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: .web-app
+          path: ./web-app/dist
 
   deploy_frontend_staging:
     name: Deploy Frontend to Staging
