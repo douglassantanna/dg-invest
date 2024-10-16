@@ -5,6 +5,7 @@ import { CryptoService } from '../../../core/services/crypto.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
 import { ETransactionType } from 'src/app/core/models/etransaction-type';
+import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-add-transaction',
@@ -46,7 +47,7 @@ import { ETransactionType } from 'src/app/core/models/etransaction-type';
       </div>
 
       <div class="col-12 mt-2 mb-2">
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" class="btn" [ngClass]="btnColor">Save</button>
       </div>
     </form>
   `,
@@ -60,6 +61,7 @@ export class AddTransactionComponent {
   toastService = inject(ToastService);
   fb = inject(FormBuilder);
   transactionForm!: FormGroup;
+  btnColor = environment.btnColor;
 
   constructor() {
     this.transactionForm = this.fb.group({

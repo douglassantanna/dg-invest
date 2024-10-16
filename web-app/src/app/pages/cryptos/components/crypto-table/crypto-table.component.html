@@ -37,7 +37,7 @@
             </span>
           </div>
         </td> <!-- currentWorth -->
-        <td> <a (click)="cryptoDashboard(element.id)" class="btn btn-primary">See details</a></td>
+        <td> <a (click)="cryptoDashboard(element.id)" class="btn" [ngClass]="btnColor">See details</a></td>
       </tr>
     </tbody>
   </table>
