@@ -17,7 +17,8 @@
             <input name="email" class="form-control" type="email" placeholder="Enter email" [(ngModel)]="userEmail">
           </div>
 
-          <button (click)="updateUserProfile()" type="button" class="btn btn-primary w-100" [disabled]="loading">Save
+          <button (click)="updateUserProfile()" type="button" class="btn w-100" [ngClass]="btnColor"
+            [disabled]="loading">Save
             User Information
             <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           </button>

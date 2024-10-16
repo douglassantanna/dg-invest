@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
+import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-crypto-filter',
@@ -15,7 +16,7 @@ import { LocalStorageService } from 'src/app/core/services/local-storage.service
     @if (displayHideCryptoCheck()) {
     <div class="col">
         <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
+          <input class="form-check-input" [ngClass]="navbarColor" type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
           <label class="form-check-label" for="gridCheck">
             Hide zero balance cryptos
           </label>
@@ -39,7 +40,7 @@ export class CryptoFilterComponent implements OnDestroy {
   searchControl: FormControl = new FormControl();
   showZeroBalance: FormControl = new FormControl();
   @Input() setBalanceStatus = (value: boolean) => this.showZeroBalance.setValue(value);
-
+  navbarColor = environment.navbarColor;
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   constructor(localStorageService: LocalStorageService) {

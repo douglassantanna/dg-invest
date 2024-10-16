@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { LayoutService } from '../core/services/layout.service';
 import { AuthService } from '../core/services/auth.service';
 import { NavItems } from '../core/models/nav-items';
+import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-header',
@@ -13,7 +14,7 @@ import { NavItems } from '../core/models/nav-items';
     CommonModule,
     RouterModule],
   template: `
-    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+    <nav class="navbar navbar-expand-lg" [ngClass]="navbarColor" data-bs-theme="dark">
       <div class="container-fluid">
         <a class="navbar-brand">DG</a>
         <button class="navbar-toggler" type="button" (click)="toggleMenu()" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,7 +34,7 @@ export class HeaderComponent implements OnInit {
   authService = inject(AuthService);
   isCollapsed: boolean = true;
   navItems: NavItems[] = [];
-
+  navbarColor = environment.navbarColor;
   ngOnInit(): void {
     this.shouldShowLink();
   }
