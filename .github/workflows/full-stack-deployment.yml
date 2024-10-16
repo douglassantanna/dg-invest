@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy_backend
     environment:
-      name: staging # Default to staging
+      name: staging
 
     steps:
       - uses: actions/checkout@v3
