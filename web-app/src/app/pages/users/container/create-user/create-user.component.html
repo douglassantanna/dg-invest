@@ -34,13 +34,13 @@
     </form>
   </div>
   <div class="modal-footer">
-    <button type="button" class="btn btn-primary" (click)="createCryptoAsset(modal)"
+    <button type="button" class="btn" [ngClass]="btnColor" (click)="createCryptoAsset(modal)"
       [disabled]="!createUserForm.valid">Save
       <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
     </button>
   </div>
 </ng-template>
 
-<button type="button" class="btn btn-primary" (click)="open(content)">
+<button type="button" class="btn" [ngClass]="btnColor" (click)="open(content)">
   Add user
 </button>

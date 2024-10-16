@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { tap } from 'rxjs';
+import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-login',
@@ -35,7 +36,8 @@ import { tap } from 'rxjs';
           <div class="text-center">
             <button
               type="submit"
-              class="btn btn-primary"
+              class="btn"
+              [ngClass]="btnColor"
               [disabled]="loading || loginForm.invalid"
               [ngStyle]="{'cursor': loading ? 'not-allowed' : 'pointer'}"
               >{{loading ? 'Loading...' : 'Login'}}</button>
@@ -52,6 +54,7 @@ export class LoginComponent implements OnInit {
   private router = inject(Router);
   loading = false;
   loginForm!: FormGroup;
+  btnColor = environment.btnColor;
 
   constructor(private fb: FormBuilder, private toastService: ToastService) {
     this.loginForm = this.fb.group({

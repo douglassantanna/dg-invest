@@ -8,6 +8,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { CreateCryptoAssetCommand } from 'src/app/core/models/create-crypto-asset-command';
 import { Crypto } from 'src/app/core/models/crypto';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-create-crypto',
@@ -41,7 +42,8 @@ import { AuthService } from 'src/app/core/services/auth.service';
       <div class="modal-footer">
         <button
           type="button"
-          class="btn btn-primary"
+          class="btn"
+          [ngClass]="btnColor"
           (click)="createCryptoAsset(selectedCoinMarketCapId, modal)"
           [disabled]="selectedCoinMarketCapId < 1" >Save
           <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -51,7 +53,8 @@ import { AuthService } from 'src/app/core/services/auth.service';
 
     <button
       type="button"
-      class="btn btn-primary"
+      class="btn"
+      [ngClass]="btnColor"
       (click)="open(content)">
       Add asset
     </button>
@@ -63,7 +66,7 @@ export class CreateCryptoComponent {
   @Output() cryptoCreated = new EventEmitter();
   selectedCoinMarketCapId = 0;
   loading: boolean = false;
-
+  btnColor = environment.btnColor;
   cryptoOptions$ = new BehaviorSubject<Crypto[]>([]);
 
   constructor(
