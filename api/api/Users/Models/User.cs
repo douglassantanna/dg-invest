@@ -20,7 +20,7 @@ public class User : Entity
                 Role role,
                 Account account)
     {
-        FullName = fullName;
+        FullName = StringSanitizer.Sanitize(fullName);
         Email = email;
         Password = password;
         Role = role;
@@ -46,7 +46,7 @@ public class User : Entity
 
     internal void Update(string fullname, string email)
     {
-        FullName = fullname;
+        FullName = StringSanitizer.Sanitize(fullname);
         Email = email;
     }
     internal void UpdatePassword(string newEncryptedPassword)

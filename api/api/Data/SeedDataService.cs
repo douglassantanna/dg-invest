@@ -61,8 +61,7 @@ public class SeedDataService : ISeedDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred during the data seeding process.");
-            throw;
+            _logger.LogError("An error occurred during the data seeding process. Error: {Error}", ex.Message);
         }
     }
 
@@ -76,7 +75,7 @@ public class SeedDataService : ISeedDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred during database migration.");
+            _logger.LogError("An error occurred during database migration. Error: {Error}", ex.Message);
             throw;
         }
     }
@@ -96,7 +95,7 @@ public class SeedDataService : ISeedDataService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "SeedAdminUserIfNotExists: An error occurred during user creation.");
+                _logger.LogError("SeedAdminUserIfNotExists: An error occurred during user creation. Error: {Error}", ex.Message);
                 throw;
             }
         }

@@ -39,7 +39,7 @@ public class CryptoAsset : Entity
                        int coinMarketCapId)
     {
         CryptoCurrency = cryptoCurrency;
-        CurrencyName = currencyName;
+        CurrencyName = StringSanitizer.Sanitize(currencyName);
         Symbol = symbol;
         CreatedAt = DateTimeOffset.UtcNow;
         Balance = 0;

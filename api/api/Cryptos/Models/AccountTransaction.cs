@@ -22,8 +22,8 @@ public class AccountTransaction : Entity
         Date = date;
         TransactionType = transactionType;
         Amount = amount;
-        ExchangeName = exchangeName;
-        Notes = notes;
+        ExchangeName = StringSanitizer.Sanitize(exchangeName);
+        Notes = StringSanitizer.Sanitize(notes);
         CryptoCurrentPrice = cryptoCurrentPrice;
         CryptoAssetId = cryptoAssetId;
         CryptoAsset = cryptoAsset;
@@ -37,7 +37,7 @@ public class AccountTransaction : Entity
         Date = date;
         TransactionType = transactionType;
         Amount = amount;
-        Notes = notes ?? string.Empty;
+        Notes = StringSanitizer.Sanitize(notes) ?? string.Empty;
     }
 
     public DateTime Date { get; private set; }
