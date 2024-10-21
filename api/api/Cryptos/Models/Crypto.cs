@@ -5,8 +5,8 @@ public class Crypto : Entity
 {
     public Crypto(string name, string symbol, string image, int coinMarketCapId)
     {
-        Name = name;
-        Symbol = symbol;
+        Name = StringSanitizer.Sanitize(name);
+        Symbol = StringSanitizer.Sanitize(symbol);
         Image = image;
         CoinMarketCapId = coinMarketCapId;
     }
