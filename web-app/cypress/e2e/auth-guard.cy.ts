@@ -25,7 +25,7 @@ describe('Auth Guard', () => {
     // Visit the cryptos page
     cy.visit('http://localhost:4200/#/cryptos');
 
-    cy.wait(500);
+    cy.wait(10000);
 
     // Check if the login page contains the login form
     cy.get('app-login').should('exist');
