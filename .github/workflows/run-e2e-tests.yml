@@ -14,10 +14,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: "20"
+          node-version: "14"
 
       - name: Install dependencies
         run: npm install
+        working-directory: ./web-app
+
+      - name: Build the application
+        run: npm run build
         working-directory: ./web-app
 
       - name: Start the application
@@ -31,7 +35,13 @@ jobs:
         working-directory: ./web-app
 
       - name: Run Cypress tests
-        run: npx cypress run
-        working-directory: ./web-app
+        uses: cypress-io/github-action@v2
+        with:
+          build: npm run build
+          start: npm start
+          record: true
+          env: CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}
         env:
           CI: true
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
