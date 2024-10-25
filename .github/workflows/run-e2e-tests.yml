@@ -14,33 +14,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Cache Node.js modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/web-app/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
-
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: |
-          cd web-app
-          npm install
+        run: npm install
+        working-directory: ./web-app
 
-      - name: Start server
-        run: |
-          cd web-app
-          npm start &
-          npx wait-on http://localhost:4200
+      - name: Build the application
+        run: npm run build
+        working-directory: ./web-app
+
+      - name: Start the application
+        run: npm start &
+        working-directory: ./web-app
+        env:
+          CI: true
+
+      - name: Wait for application to be ready
+        run: npx wait-on http://localhost:4200
+        working-directory: ./web-app
 
       - name: Run Cypress tests
+        uses: cypress-io/github-action@v2
+        with:
+          build: npm run build
+          start: npm start
+          record: true
+          env: CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}
         env:
+          CI: true
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-        run: |
-          cd web-app
-          npx cypress run --record --key $CYPRESS_RECORD_KEY --project-id your-project-id
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
