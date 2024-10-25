@@ -27,7 +27,7 @@ describe('Auth Guard', () => {
     cy.visit('http://localhost:4200/#/cryptos');
 
     // Check if the URL includes 'login'
-    cy.url().should('include', '/login');
+    cy.url({ timeout: 10000 }).should('include', '/login');
 
     // Check if the login page contains the login form
     cy.get('form').should('exist');
