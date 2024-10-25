@@ -27,11 +27,18 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Change to web-app directory
-        run: cd web-app
-
-      - name: Install and Run Cypress
+      - name: Install dependencies
         run: |
           cd web-app
-          npm ci
+          npm install
+
+      - name: Start server
+        run: |
+          cd web-app
+          npm start &
+          npx wait-on http://localhost:4200
+
+      - name: Run Cypress tests
+        run: |
+          cd web-app
           npx cypress run
