@@ -18,7 +18,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/web-app/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
 
@@ -27,7 +27,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Change to web-app directory
+        run: cd web-app
+
       - name: Install and Run Cypress
         run: |
+          cd web-app
           npm ci
-          npm cypress run
+          npx cypress run
