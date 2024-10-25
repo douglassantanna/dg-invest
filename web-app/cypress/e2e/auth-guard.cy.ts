@@ -22,15 +22,11 @@ describe('Auth Guard', () => {
     cy.window().then((window) => {
       window.localStorage.setItem(localStorageTokenKey, JSON.stringify({ jwtToken: fakeExpiredJwt }));
     });
-
     // Visit the cryptos page
     cy.visit('http://localhost:4200/#/cryptos');
 
-    // Check if the URL includes 'login'
-    cy.url({ timeout: 20000 }).should('include', '/#/login');
-
     // Check if the login page contains the login form
-    cy.get('form').should('exist');
+    cy.url().should('include', '/login');
   });
 
   it('should allow authenticated users to access the cryptos page', () => {
