@@ -18,18 +18,23 @@ describe('Auth Guard', () => {
   });
 
   it('should redirect users with an invalid JWT to the login page', () => {
-    // Set an invalid JWT using the LocalStorageService's setToken method
+    // Arrange: Set an invalid JWT in local storage
     cy.window().then((window) => {
       window.localStorage.setItem(localStorageTokenKey, JSON.stringify({ jwtToken: fakeExpiredJwt }));
+      // Confirm the token is set in local storage
+      expect(window.localStorage.getItem(localStorageTokenKey)).to.exist;
     });
-    // Visit the cryptos page
+
+    // Act: Visit the cryptos page
     cy.visit('http://localhost:4200/#/cryptos');
 
-    cy.wait(10000);
+    // Assert: Check if the URL redirects to the login page
+    cy.url({ timeout: 10000 }).should('include', '/login');
 
-    // Check if the login page contains the login form
-    cy.get('app-login').should('exist');
+    // Confirm the login component is displayed on the page
+    cy.get('app-login', { timeout: 10000 }).should('exist');
   });
+
 
   it('should allow authenticated users to access the cryptos page', () => {
     // Set a valid JWT using the LocalStorageService's setToken method
