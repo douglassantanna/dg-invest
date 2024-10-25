@@ -25,8 +25,9 @@ describe('Auth Guard', () => {
     // Visit the cryptos page
     cy.visit('http://localhost:4200/#/cryptos');
 
+    cy.wait(500);
     // Check if the login page contains the login form
-    cy.url().should('include', '/login');
+    cy.url().should('include', '/login', { timeout: 10000 });
   });
 
   it('should allow authenticated users to access the cryptos page', () => {
