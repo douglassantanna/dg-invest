@@ -39,6 +39,8 @@ jobs:
           npx wait-on http://localhost:4200
 
       - name: Run Cypress tests
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
         run: |
           cd web-app
-          npx cypress run
+          npx cypress run --record --key $CYPRESS_RECORD_KEY --project-id your-project-id
