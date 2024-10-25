@@ -14,13 +14,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Cache Node.js modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/web-app/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         working-directory: ./web-app
 
       - name: Build the application
@@ -38,14 +46,9 @@ jobs:
         working-directory: ./web-app
 
       - name: Run Cypress tests
-        uses: cypress-io/github-action@v2
-        with:
-          build: npm run build
-          start: npm start
-          record: true
-          env: CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}
+        run: npx cypress run --record --key $CYPRESS_RECORD_KEY
         env:
           CI: true
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: web-app
+        working-directory: ./web-app
