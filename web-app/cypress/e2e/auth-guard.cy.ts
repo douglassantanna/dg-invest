@@ -1,54 +1,52 @@
 describe('Auth Guard', () => {
   const localStorageTokenKey = 'dg-invest-token';
-  const fakeValidJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvaG45QGVtYWlsLmNvbSIsIm5hbWVpZCI6IjIwMDgiLCJ1bmlxdWVfbmFtZSI6IkpvaG4gRG9lIiwicm9sZSI6IkFkbWluIiwibmJmIjoxNzI5ODU0MjU2LCJleHAiOjE3MzA0NTkwNTYsImlhdCI6MTcyOTg1NDI1NiwiaXNzIjoiaHR0cDovL215LWxvY2FsLWhvc3QuY29tIn0.eqzUT6DYqXcftzsIY-XDToI578_biUWE1DrVbp2PhYQ';
-  const fakeExpiredJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.QuY29tIn0';
+  const fakeValidJwt = Cypress.env('FAKE_VALID_JWT');
+  const fakeExpiredJwt = Cypress.env('FAKE_EXPIRED_JWT');
   beforeEach(() => {
     cy.clearLocalStorage();
   });
 
   it('should redirect unauthenticated users to the login page', () => {
-    // Visit the cryptos page directly without setting a JWT
     cy.visit('http://localhost:4200/#/cryptos');
 
-    // Check if the URL includes 'login'
     cy.url().should('include', '/login');
 
-    // Check if the login page contains the login form
     cy.get('form').should('exist');
   });
 
   it('should redirect users with an invalid JWT to the login page', () => {
-    // Arrange: Set an invalid JWT in local storage
     cy.window().then((window) => {
       window.localStorage.setItem(localStorageTokenKey, JSON.stringify({ jwtToken: fakeExpiredJwt }));
-      // Confirm the token is set in local storage
       expect(window.localStorage.getItem(localStorageTokenKey)).to.exist;
     });
 
-    // Act: Visit the cryptos page
+    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets?page=1&pageSize=50&assetName=&sortBy=symbol&sortOrder=asc&hideZeroBalance=false&userId=2003', (req) => {
+      req.reply({
+        statusCode: 401,
+        body: {
+          message: 'Unauthorized'
+        }
+      });
+    }).as('list-assets');
+
     cy.visit('http://localhost:4200/#/cryptos');
 
-    // Assert: Check if the URL redirects to the login page
-    cy.url({ timeout: 10000 }).should('include', '/login');
+    cy.wait('@list-assets');
 
-    // Confirm the login component is displayed on the page
-    cy.get('app-login', { timeout: 10000 }).should('exist');
+    cy.url().should('include', '/login');
+
+    cy.get('app-login').should('exist');
   });
 
-
   it('should allow authenticated users to access the cryptos page', () => {
-    // Set a valid JWT using the LocalStorageService's setToken method
     cy.window().then((window) => {
       window.localStorage.setItem(localStorageTokenKey, JSON.stringify({ jwtToken: fakeValidJwt }));
     });
 
-    // Visit the cryptos page
     cy.visit('http://localhost:4200/#/cryptos');
 
-    // Check if the URL includes 'cryptos'
     cy.url().should('include', '/cryptos');
 
-    // Check if the cryptos page contains the cryptos list
     cy.get('app-view-cryptos').should('exist');
   });
 });

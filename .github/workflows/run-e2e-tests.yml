@@ -51,4 +51,6 @@ jobs:
           CI: true
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAKE_VALID_JWT: ${{ secrets.FAKE_VALID_JWT }}
+          FAKE_EXPIRED_JWT: ${{ secrets.FAKE_EXPIRED_JWT }}
         working-directory: ./web-app
