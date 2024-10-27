@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "accountBalance": 334.86023254,
+      "cryptoAssetDto": {
+        "id": 9,
+        "symbol": "atomUSD",
+        "pricePerUnit": 4.749413347096044,
+        "balance": 71.24,
+        "investedAmount": 550.951272,
+        "currentWorth": 338.34820684712217456,
+        "investmentGainLossValue": -212.60306515287782544,
+        "investmentGainLossPercentage": -38.58836088736316148118449212,
+        "coinMarketCapId": 3794
+      }
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "totalCount": 6,
+  "hasNextPage": false,
+  "hasPreviousPage": false
+}

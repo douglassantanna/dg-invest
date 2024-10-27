@@ -6,7 +6,6 @@ import { AppConfig } from '../models/app-config';
   providedIn: 'root'
 })
 export class LocalStorageService {
-
   private appConfig: AppConfig = {} as AppConfig;
 
   private set(key: string, value: any) {
@@ -26,72 +25,92 @@ export class LocalStorageService {
 
   getToken(): string | null {
     const storedConfig = this.get(local_storage_token);
-    this.appConfig = storedConfig ? JSON.parse(storedConfig) : this.setToken("");
-    return this.appConfig.jwtToken;
+    if (storedConfig) {
+      this.appConfig = JSON.parse(storedConfig);
+      return this.appConfig.jwtToken;
+    }
+    return null;
   }
 
   removeToken() {
     const storedConfig = this.get(local_storage_token);
-    this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
-    if (this.appConfig.jwtToken) {
+    if (storedConfig) {
+      this.appConfig = JSON.parse(storedConfig);
       this.appConfig.jwtToken = null;
       this.set(local_storage_token, JSON.stringify(this.appConfig));
-      return;
     }
   }
 
   updateToken(token: string) {
     const storedConfig = this.get(local_storage_token);
-    this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
-    if (this.appConfig.jwtToken) {
+    if (storedConfig) {
+      this.appConfig = JSON.parse(storedConfig);
       this.appConfig.jwtToken = token;
       this.appConfig.hideZeroBalance = this.appConfig.hideZeroBalance;
       this.appConfig.sortBy = this.appConfig.sortBy;
       this.appConfig.sortOrder = this.appConfig.sortOrder;
       this.set(local_storage_token, JSON.stringify(this.appConfig));
-      return;
     }
   }
 
   setHideZeroBalance(hideZeroBalance: boolean) {
-    this.appConfig.hideZeroBalance = hideZeroBalance;
-    this.appConfig.jwtToken = this.appConfig.jwtToken;
-    this.appConfig.sortBy = this.appConfig.sortBy;
-    this.appConfig.sortOrder = this.appConfig.sortOrder;
-    this.set(local_storage_token, JSON.stringify(this.appConfig));
+    const storedConfig = this.get(local_storage_token);
+    if (storedConfig) {
+      this.appConfig = JSON.parse(storedConfig);
+      this.appConfig.hideZeroBalance = hideZeroBalance;
+      this.appConfig.jwtToken = this.appConfig.jwtToken;
+      this.appConfig.sortBy = this.appConfig.sortBy;
+      this.appConfig.sortOrder = this.appConfig.sortOrder;
+      this.set(local_storage_token, JSON.stringify(this.appConfig));
+    }
   }
 
   setAssetListSortOrder(sortOrder: string) {
-    this.appConfig.hideZeroBalance = this.appConfig.hideZeroBalance;
-    this.appConfig.jwtToken = this.appConfig.jwtToken;
-    this.appConfig.sortBy = this.appConfig.sortBy;
-    this.appConfig.sortOrder = sortOrder == 'asc' ? 'asc' : 'desc';
-    this.set(local_storage_token, JSON.stringify(this.appConfig));
+    const storedConfig = this.get(local_storage_token);
+    if (storedConfig) {
+      this.appConfig.hideZeroBalance = this.appConfig.hideZeroBalance;
+      this.appConfig.jwtToken = this.appConfig.jwtToken;
+      this.appConfig.sortBy = this.appConfig.sortBy;
+      this.appConfig.sortOrder = sortOrder == 'asc' ? 'asc' : 'desc';
+      this.set(local_storage_token, JSON.stringify(this.appConfig));
+    }
   }
 
   setAssetListSortBy(sortBy: string) {
-    this.appConfig.hideZeroBalance = this.appConfig.hideZeroBalance;
-    this.appConfig.jwtToken = this.appConfig.jwtToken;
-    this.appConfig.sortBy = sortBy;
-    this.appConfig.sortOrder = this.appConfig.sortOrder;
-    this.set(local_storage_token, JSON.stringify(this.appConfig));
+    const storedConfig = this.get(local_storage_token);
+    if (storedConfig) {
+      this.appConfig.hideZeroBalance = this.appConfig.hideZeroBalance;
+      this.appConfig.jwtToken = this.appConfig.jwtToken;
+      this.appConfig.sortBy = sortBy;
+      this.appConfig.sortOrder = this.appConfig.sortOrder;
+      this.set(local_storage_token, JSON.stringify(this.appConfig));
+    }
   }
 
   getHideZeroBalance(): boolean {
     const storedConfig = this.get(local_storage_token);
-    this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
-    return this.appConfig.hideZeroBalance;
+    if (storedConfig) {
+      this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
+      return this.appConfig.hideZeroBalance;
+    }
+    return false;
   }
 
   getAssetListSortBy(): string {
     const storedConfig = this.get(local_storage_token);
-    this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
-    return this.appConfig.sortBy ?? 'symbol';
+    if (storedConfig) {
+      this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
+      return this.appConfig.sortBy ?? 'symbol';
+    }
+    return 'symbol';
   }
 
   getAssetListSortOrder(): string {
     const storedConfig = this.get(local_storage_token);
-    this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
-    return this.appConfig.sortOrder ?? 'asc';
+    if (storedConfig) {
+      this.appConfig = storedConfig ? JSON.parse(storedConfig) : null;
+      return this.appConfig.sortOrder ?? 'asc';
+    }
+    return 'asc';
   }
 }
