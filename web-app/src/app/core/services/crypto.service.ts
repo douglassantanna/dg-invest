@@ -56,13 +56,7 @@ export class CryptoService {
 
     return this.http.get<Pagination<UserCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
-    }).pipe(
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+    });
   }
 
   getCryptos(): Observable<Response<Crypto>> {

@@ -69,6 +69,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (cryptos) => {
+          console.log(cryptos);
           const cryptoArray = cryptos.items.map((item) => item.cryptoAssetDto);
           const accountBalance = cryptos.items.map((item) => item.accountBalance)[0];
           this.accountBalance.set(accountBalance);
@@ -79,6 +80,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.cryptoAssetList.set(cryptoArray);
         },
         error: (err) => {
+          console.log('HTTP call failed:', err);
           this.updateLocalStorageSortOrder();
         }
       });

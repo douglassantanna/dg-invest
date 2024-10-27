@@ -43,7 +43,7 @@ export class AuthService {
       const decodedToken = jwt_decode(token as string) as { role: string };
 
       if (decodedToken) {
-        return decodedToken.role.toLowerCase();
+        return decodedToken.role;
       }
 
     } catch (error) {
