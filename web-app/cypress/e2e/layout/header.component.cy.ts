@@ -26,7 +26,7 @@ describe('Header Component', () => {
     cy.wait('@loginRequest');
 
     cy.window().then((window) => {
-      window.localStorage.setItem(localStorageTokenKey, token);
+      window.localStorage.setItem(localStorageTokenKey, JSON.stringify({ jwtToken: token }));
     });
   };
 
