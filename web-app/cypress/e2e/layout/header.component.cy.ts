@@ -8,7 +8,7 @@ describe('Header Component', () => {
   });
 
   const loginAndSetToken = (token: string) => {
-    cy.intercept('POST', '**/Authentication/login', {
+    cy.intercept('POST', 'https://localhost:7204/api/Authentication/login', {
       statusCode: 200,
       body: {
         data: {
@@ -31,7 +31,7 @@ describe('Header Component', () => {
   };
 
   const interceptListAssets = () => {
-    cy.intercept('GET', '**/api/Crypto/list-assets**', {
+    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets**', {
       statusCode: 200,
       fixture: 'list-assets.json'
     }).as('listAssets');
