@@ -62,7 +62,7 @@ jobs:
 
       # Build the Angular app
       - name: Build Angular app
-        working-directory: /web-app
+        working-directory: ./web-app
         run: |
           lower_env=$(echo "${{ github.event.inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           npm run build --if-present -- --configuration=$lower_env
