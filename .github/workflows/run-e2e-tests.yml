@@ -53,4 +53,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FAKE_VALID_JWT: ${{ secrets.FAKE_VALID_JWT }}
           FAKE_EXPIRED_JWT: ${{ secrets.FAKE_EXPIRED_JWT }}
+          FAKE_VALID_USER_JWT: ${{ secrets.FAKE_VALID_USER_JWT }}
         working-directory: ./web-app

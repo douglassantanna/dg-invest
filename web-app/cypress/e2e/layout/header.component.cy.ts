@@ -45,7 +45,7 @@ describe('Header Component', () => {
   };
 
   it('should display Sign Out, Cryptos, and My Profile options in header component for user with user role', () => {
-    loginAndSetToken(fakeValidAdminJwt);
+    loginAndSetToken(fakeValidUserJwt);
     interceptListAssets();
 
     cy.visit('http://localhost:4200/#/cryptos');
