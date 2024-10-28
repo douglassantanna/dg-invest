@@ -10,6 +10,7 @@ export default defineConfig({
     env: {
       FAKE_VALID_JWT: process.env['FAKE_VALID_JWT'],
       FAKE_EXPIRED_JWT: process.env['FAKE_EXPIRED_JWT'],
+      FAKE_VALID_USER_JWT: process.env['FAKE_VALID_USER_JWT'],
     }
   },
 

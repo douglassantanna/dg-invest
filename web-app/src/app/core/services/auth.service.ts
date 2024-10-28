@@ -9,6 +9,7 @@ import { local_storage_token } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
 import { UserDecode } from '../models/user-decode';
 import { LocalStorageService } from './local-storage.service';
+import { Role } from '../models/user.model';
 
 const url = `${environment.apiUrl}/Authentication`;
 
@@ -37,15 +38,23 @@ export class AuthService {
     return decodedUser ?? null;
   }
 
-  get role(): string | null {
+  get role(): Role | null {
     try {
       const token = this.localStorageService.getToken();
-      const decodedToken = jwt_decode(token as string) as { role: string };
-
-      if (decodedToken) {
-        return decodedToken.role;
+      if (!token) {
+        console.error('No token found');
+        return null;
       }
 
+      const decodedToken = jwt_decode(token as string) as { role: string };
+      if (decodedToken && decodedToken.role) {
+        const role = Role[decodedToken.role as keyof typeof Role];
+        if (role !== undefined) {
+          return role;
+        } else {
+          console.error('Invalid role in token:', decodedToken.role);
+        }
+      }
     } catch (error) {
       console.error('Error decoding token:', error);
     }
