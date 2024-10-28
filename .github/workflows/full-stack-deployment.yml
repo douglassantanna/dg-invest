@@ -72,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: .web-app
-          path: ./web-app/dist
+          path: web-app/dist
 
   deploy_backend:
     name: Deploy Backend
@@ -115,13 +115,12 @@ jobs:
           name: .web-app
 
       - name: Deploy to Azure Static Web App (${{ github.event.inputs.environment }})
-        if: steps.approval.conclusion == 'success'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APP_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "./web-app"
+          app_location: "/web-app"
           api_location: ""
           output_location: "dist/web-app"
           deployment_environment: ${{ github.event.inputs.environment }}
