@@ -31,7 +31,7 @@ describe('Header Component', () => {
   };
 
   const interceptListAssets = () => {
-    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets**', {
+    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets?page=1&pageSize=50&assetName=&sortBy=symbol&sortOrder=asc&hideZeroBalance=false&userId=2003', {
       statusCode: 200,
       fixture: 'list-assets.json'
     }).as('listAssets');
