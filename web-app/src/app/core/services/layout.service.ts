@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { NavItems } from '../models/nav-items';
+import { Role } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -10,25 +11,25 @@ export class LayoutService {
       label: 'Cryptos',
       path: 'cryptos',
       icon: 'currency_bitcoin',
-      roles: ['admin', 'user'],
+      roles: [Role.Admin, Role.User],
     },
     {
       label: 'Users',
       path: 'users',
       icon: 'people',
-      roles: ['admin'],
+      roles: [Role.Admin],
     },
     {
       label: 'My Profile',
       path: 'user-profile',
       icon: 'profile',
-      roles: ['admin', 'user'],
+      roles: [Role.Admin, Role.User],
     },
     {
       label: 'Sign out',
       path: 'signout',
       icon: 'signout',
-      roles: ['admin', 'user'],
+      roles: [Role.Admin, Role.User],
     }
   ];
 }
