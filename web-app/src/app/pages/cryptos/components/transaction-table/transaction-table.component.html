@@ -1,0 +1,45 @@
+<div class="">
+  <header class="">
+    <h2 class="">Purchase History</h2>
+    @if (filterDisabled()) {
+    <div class="form-group mb-0">
+      <label for="filterByDate" class="form-label">Filter by date</label>
+      <select class="form-select" id="filterByDate">
+        <option *ngFor="let option of dateOptions" [value]="option">{{ option }}</option>
+      </select>
+    </div>
+    }
+  </header>
+
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Amount</th>
+          <th>Price Unit</th>
+          <th>%</th>
+          <th>Transaction</th>
+          <th>Date</th>
+          <th>Exchange</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let element of transactions | async; trackBy: transactionById">
+          <td>{{ element.amount }}</td>
+          <td>{{ element.price | formatCurrency }}</td>
+          <td>
+            <app-percent-difference *ngIf="element.transactionType === 1"
+              [percentDifference]="element.percentDifference">
+            </app-percent-difference>
+          </td>
+          <td>
+            <span *ngIf="element.transactionType === 1">🛒 Buy</span>
+            <span *ngIf="element.transactionType === 2">💰 Sell</span>
+          </td>
+          <td>{{ element.purchaseDate | date: 'dd/MM/y' }}</td>
+          <td>{{ element.exchangeName }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
