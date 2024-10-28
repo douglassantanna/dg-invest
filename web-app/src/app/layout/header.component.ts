@@ -18,7 +18,9 @@ import { environment } from 'src/environments/environment.development';
   template: `
     <nav class="navbar navbar-expand-lg" [ngClass]="navbarColor" data-bs-theme="dark">
       <div class="container-fluid">
-        <a class="navbar-brand" style=" border: white 1px solid; padding:5px; border-radius:50px; color:white; width:30px; height:30px; display:flex; align-items:center; justify-content:center">{{ username() | slice: 0: 1 }}</a>
+        @if (username()) {
+          <a class="navbar-brand username-initial-letter">{{ username() | slice: 0: 1 }}</a>
+        }
 
         <button class="navbar-toggler" type="button" (click)="toggleMenu()" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -35,6 +37,19 @@ import { environment } from 'src/environments/environment.development';
       </div>
     </nav>
   `,
+  styles: [`
+    .username-initial-letter{
+      border: white 1px solid;
+      padding:5px;
+      border-radius:50px;
+      color:white;
+      width:30px;
+      height:30px;
+      display:flex;
+      align-items:center;
+      justify-content:center
+    }
+    `]
 })
 export class HeaderComponent {
   private layoutService = inject(LayoutService);

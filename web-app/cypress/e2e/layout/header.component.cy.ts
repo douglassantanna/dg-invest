@@ -67,4 +67,16 @@ describe('Header Component', () => {
 
     verifyHeaderLinks(['Sign out', 'Cryptos', 'My Profile', 'Users']);
   });
+
+  it('should display welcome message to logged user', () => {
+    loginAndSetToken(fakeValidAdminJwt);
+    interceptListAssets();
+
+    cy.visit('http://localhost:4200/#/cryptos');
+    cy.wait('@listAssets');
+    cy.url().should('include', '/cryptos');
+    cy.get('app-view-cryptos').should('exist');
+
+    cy.get('app-header .navbar-text').should('contain.text', 'Welcome');
+  });
 });
