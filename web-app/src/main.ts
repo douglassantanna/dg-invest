@@ -15,7 +15,14 @@ import { routes } from './app/app.routes';
 import { AuthorizationInterceptor } from './app/core/interceptors/auth.interceptor';
 import { InvalidTokenInterceptor } from './app/core/interceptors/invalid-token.interceptor';
 import { loadingInterceptor } from './app/core/interceptors/loading.interceptor';
-import { HashLocationStrategy, LocationStrategy } from '@angular/common';
+import { HashLocationStrategy, LocationStrategy, registerLocaleData } from '@angular/common';
+import { provideNzIcons } from './icons-provider';
+import { pt_BR, provideNzI18n } from 'ng-zorro-antd/i18n';
+import pt from '@angular/common/locales/pt';
+import { FormsModule } from '@angular/forms';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+
+registerLocaleData(pt);
 
 if (environment.production) {
   enableProdMode();
@@ -36,6 +43,6 @@ bootstrapApplication(AppComponent, {
     provideAnimations(),
     importProvidersFrom(MatDialogModule),
     importProvidersFrom(MatDatepickerModule),
-    importProvidersFrom(MatNativeDateModule),
+    importProvidersFrom(MatNativeDateModule), provideNzIcons(), provideNzI18n(pt_BR), importProvidersFrom(FormsModule), provideAnimationsAsync(), provideHttpClient(),
   ],
 }).catch((err) => console.error(err));
