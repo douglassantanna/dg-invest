@@ -16,19 +16,19 @@ export class LayoutService {
     {
       label: 'Users',
       path: 'users',
-      icon: 'people',
+      icon: 'group',
       roles: [Role.Admin],
     },
     {
-      label: 'My Profile',
+      label: 'Profile',
       path: 'user-profile',
-      icon: 'profile',
+      icon: 'manage_accounts',
       roles: [Role.Admin, Role.User],
     },
     {
-      label: 'Sign out',
-      path: 'signout',
-      icon: 'signout',
+      label: 'Log out',
+      path: 'logout',
+      icon: 'logout',
       roles: [Role.Admin, Role.User],
     }
   ];
