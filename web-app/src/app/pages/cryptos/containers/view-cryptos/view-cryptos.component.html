@@ -19,16 +19,15 @@
         <span class="custom-card-title">Available Funds</span>
       </div>
     </div>
-
   </div>
 
   <div class="crypto-container">
     <div class="custom-card transaction-card custom-table">
       <div class="custom-table-container">
         <ng-container *ngIf="isCryptoAssetListEmpty(); else noAssets">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 16px; font-weight: bold;">Cryptos</span>
-            <div style="display: flex; align-items: center; justify-content: flex-end;">
+          <div class="table-header">
+            <span class="table-header-title">Cryptos</span>
+            <div class="header-content">
               <div class="coll-2">
                 <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
                   (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
@@ -62,6 +61,23 @@
 </main>
 
 <style>
+  .table-header-title {
+    font-size: 16px;
+    font-weight: bold;
+  }
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   .savings-icon {
     color: green;
   }
@@ -189,6 +205,20 @@
   }
 
   @media (max-width: 600px) {
+    .header-content {
+      flex-direction: row;
+    }
+
+    .table-header {
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+    }
+
+    .table-header-title {
+      margin-bottom: 8px;
+    }
+
     .content {
       flex-direction: column;
       gap: 16px;

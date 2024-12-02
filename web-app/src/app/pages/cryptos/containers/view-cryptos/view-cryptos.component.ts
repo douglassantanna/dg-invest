@@ -5,7 +5,7 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CreateCryptoComponent } from '../create-crypto.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { Observable, Subject, takeUntil } from 'rxjs';
-import { CryptoFilterComponent } from '../../components/crypto-filter.component';
+import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
 import { CryptoTableComponent } from '../../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';

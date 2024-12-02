@@ -24,7 +24,7 @@
 </ng-template>
 
 <button type="button" class="add-btn" (click)="open(content)">
-  Add asset
+  Add <span class="asset-label">asset</span>
 </button>
 
 <style>
@@ -147,6 +147,10 @@
     .spinner {
       width: 14px;
       height: 14px;
+    }
+
+    .asset-label {
+      display: none;
     }
   }
 </style>

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CryptoFilterComponent } from '../../components/crypto-filter.component';
+import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
 import { CommonModule } from '@angular/common';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
 import { RouterModule } from '@angular/router';

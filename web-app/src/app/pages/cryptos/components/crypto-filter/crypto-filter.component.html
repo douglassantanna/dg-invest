@@ -1,0 +1,74 @@
+<div class="filter-container">
+  <ng-container *ngIf="displayHideCryptoCheck(); else searchOnly">
+    <div class="filter-item">
+      <div class="form-switch">
+        <input class="form-check-input" [ngClass]="navbarColor" type="checkbox" id="gridCheck"
+          [formControl]="showZeroBalance">
+        <label class="form-check-label" for="gridCheck">
+          Hide zero balance
+        </label>
+      </div>
+    </div>
+    <div class="filter-item flex-grow">
+      <input class="form-control" placeholder="Search by name.." aria-label="Search" type="text"
+        [formControl]="searchControl">
+    </div>
+  </ng-container>
+  <ng-template #searchOnly>
+    <div class="filter-item full-width">
+      <input class="form-control" placeholder="Search by name.." aria-label="Search" type="text"
+        [formControl]="searchControl">
+    </div>
+  </ng-template>
+</div>
+
+<style>
+  .filter-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  .form-switch {
+    display: flex;
+    align-items: center;
+  }
+
+  .form-check-input {
+    margin-right: 8px;
+  }
+
+  .form-control {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+  }
+
+  /* Mobile styles */
+  @media (max-width: 600px) {
+    .filter-container {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .form-control {
+      font-size: 14px;
+      padding: 6px;
+    }
+
+    .form-check-label {
+      font-size: 14px;
+    }
+  }
+</style>

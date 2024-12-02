@@ -11,27 +11,7 @@ import { environment } from 'src/environments/environment.development';
   imports: [
     CommonModule,
     ReactiveFormsModule],
-  template: `
-  <div class="row d-flex align-items-center">
-    @if (displayHideCryptoCheck()) {
-    <div class="col">
-        <div class="form-check form-switch">
-          <input class="form-check-input" [ngClass]="navbarColor" type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
-          <label class="form-check-label" for="gridCheck">
-            Hide zero balance
-          </label>
-        </div>
-      </div>
-      <div class="col d-flex flex-grow-1">
-        <input class="form-control" placeholder="Search by name.." aria-label="Search" type="text" [formControl]="searchControl">
-      </div>
-    } @else {
-      <div class="col-12">
-        <input class="form-control" placeholder="Search by name.." aria-label="Search" type="text" [formControl]="searchControl">
-      </div>
-    }
-  </div>
-  `,
+  templateUrl: './crypto-filter.component.html',
 })
 export class CryptoFilterComponent implements OnDestroy {
   displayHideCryptoCheck = input<boolean>(true);
