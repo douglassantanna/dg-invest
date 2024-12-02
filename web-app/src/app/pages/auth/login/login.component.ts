@@ -1,5 +1,6 @@
+import { LoadingSpinnerComponent } from './../../../layout/loading-spinner/loading-spinner.component';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -12,14 +13,14 @@ import { environment } from 'src/environments/environment.development';
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule],
+    ReactiveFormsModule,
+    LoadingSpinnerComponent],
   templateUrl: './login.component.html',
 })
 export class LoginComponent implements OnInit {
-
   authService = inject(AuthService);
   private router = inject(Router);
-  loading = false;
+  loading = signal(false);
   loginForm!: FormGroup;
   btnColor = environment.btnColor;
 
@@ -35,15 +36,15 @@ export class LoginComponent implements OnInit {
   }
 
   login() {
-    this.loading = true;
+    this.loading.set(true);
 
     this.authService.login(this.loginForm.value).subscribe({
       next: (value) => {
-        this.loading = false;
+        this.loading.set(false);
         this.router.navigate(['/cryptos']);
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.toastService.showError(err.error.message);
       }
     });
