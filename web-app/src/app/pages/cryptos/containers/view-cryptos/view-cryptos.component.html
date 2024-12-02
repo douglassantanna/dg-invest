@@ -1,26 +1,29 @@
 <main class="dashboard">
   <div class="content">
     <div class="custom-cards">
-      <div class="custom-card">
-        <span class="custom-card-title">Value Invested</span>
+      <div class="custom-card" style="order: 1;">
+        <i class="material-icons card-icon savings-icon">savings</i>
         <span class="custom-card-desc">{{ totalInvested | currency:'USD':'symbol':'1.2-2'}}</span>
+        <span class="custom-card-title">Value Invested</span>
       </div>
-      <div class="custom-card">
-        <span class="custom-card-title">Market Value</span>
+      <div class="custom-card" style="order: 2;">
+        <i class="material-icons card-icon market-icon">show_chart</i>
         <span class="custom-card-desc">{{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
           <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
         </span>
+        <span class="custom-card-title">Market Value</span>
       </div>
-      <div class="custom-card account" (click)="redirectToAccount()">
-        <span class="custom-card-title">Current Available Funds</span>
+      <div class="custom-card account" (click)="redirectToAccount()" style="order: 3;">
+        <i class="material-icons card-icon funds-icon">account_balance_wallet</i>
         <span class="custom-card-desc">{{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}</span>
+        <span class="custom-card-title">Available Funds</span>
       </div>
     </div>
 
   </div>
 
   <div class="crypto-container">
-    <div class="custom-card transaction-card" style="width: 70%;">
+    <div class="custom-card transaction-card custom-table">
       <h3>Cryptos</h3>
       <div class="custom-table-container">
         <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
@@ -29,7 +32,7 @@
     </div>
 
     @if (cryptoAssetList()) {
-    <div class="pie-card" style="width: 30%;">
+    <div class="pie-card" style="order: 1;">
       <app-pie-chart [cryptos]="cryptoAssetList()" />
     </div>
     }
@@ -38,6 +41,25 @@
 </main>
 
 <style>
+  .savings-icon {
+    color: green;
+  }
+
+  .market-icon {
+    color: blue;
+  }
+
+  .funds-icon {
+    color: orange;
+  }
+
+  .card-icon {
+    top: 8px;
+    right: 8px;
+    font-size: 24px;
+    margin-left: 0;
+  }
+
   .dashboard {
     padding: 16px;
     display: flex;
@@ -62,6 +84,10 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
+  }
+
+  .custom-table {
+    width: 70%;
   }
 
   .custom-card {
@@ -162,63 +188,23 @@
     .transactions-table td {
       padding: 4px;
     }
-  }
-</style>
 
-<!-- <style>
-  header {
-    display: flex;
-    flex-wrap: wrap;
-  }
+    .crypto-container {
+      flex-direction: column;
+      width: 100%;
+    }
 
-  .account {
-    transition: background-color 0.3s, color 0.3s;
-  }
+    .pie-card,
+    .custom-table {
+      width: 100%;
+    }
 
-  .account:hover {
-    background-color: aliceblue;
-    color: darkslategray;
-    cursor: pointer;
-  }
-
-  .coll-1,
-  .coll-2,
-  .coll-3 {
-    padding: 5px 0px 5px 5px;
-  }
-
-  .coll-1 {
-    width: 50%;
-  }
-
-  .coll-2 {
-    width: 40%;
-  }
-
-  .coll-3 {
-    width: 10%;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  @media screen and (max-width: 768px) {
-    .coll-1 {
-      width: 70%;
-      justify-content: space-between;
+    .pie-card {
       order: 1;
     }
 
-    .coll-2 {
-      flex: 1;
-      width: 100%;
-      order: 3;
-    }
-
-    .coll-3 {
-      width: 30%;
+    .custom-table {
       order: 2;
-      display: flex;
-      justify-content: flex-end;
     }
   }
-</style> -->
+</style>
