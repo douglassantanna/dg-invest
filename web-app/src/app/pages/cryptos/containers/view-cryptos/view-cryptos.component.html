@@ -43,7 +43,7 @@
         <ng-template #noAssets>
           <div class="text-center">
             <h2>No assets found 😥</h2>
-            <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+            <app-add-crypto (cryptoCreated)="loadCryptoAssets()"></app-add-crypto>
           </div>
         </ng-template>
         <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"

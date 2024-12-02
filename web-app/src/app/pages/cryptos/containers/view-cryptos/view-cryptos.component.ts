@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
-import { CreateCryptoComponent } from '../create-crypto.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { Observable, Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
@@ -20,7 +19,6 @@ import { AddCryptoComponent } from '../../components/add-crypto/add-crypto.compo
   imports: [
     CommonModule,
     FormsModule,
-    CreateCryptoComponent,
     ReactiveFormsModule,
     CryptoFilterComponent,
     CryptoTableComponent,
