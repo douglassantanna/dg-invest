@@ -1,5 +1,5 @@
 import { LoadingSpinnerComponent } from './../../../layout/loading-spinner/loading-spinner.component';
-import { CommonModule } from '@angular/common';
+import { NgStyle } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,7 +12,7 @@ import { environment } from 'src/environments/environment.development';
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule,
+    NgStyle,
     ReactiveFormsModule,
     LoadingSpinnerComponent],
   templateUrl: './login.component.html',
