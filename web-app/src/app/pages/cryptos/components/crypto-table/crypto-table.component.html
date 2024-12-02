@@ -30,7 +30,9 @@
           </div>
         </td>
         <td>
-          <a (click)="cryptoDashboard(element.id)" class="btn see-details-btn">See details</a>
+          <button type="button" (click)="cryptoDashboard(element.id)" class="btn see-details-btn">
+            <i class="material-icons">info</i>
+          </button>
         </td>
       </tr>
     </tbody>
@@ -79,24 +81,16 @@
   }
 
   .btn {
-    padding: 8px 16px;
-    text-decoration: none;
     color: white;
     background-color: #007bff;
-    border-radius: 4px;
-    text-align: center;
-    cursor: pointer;
+    display: inline-flex;
   }
 
   .btn:hover {
     background-color: #0056b3;
   }
 
-  .see-details-btn {
-    background-color: #28a745;
-  }
-
-  .see-details-btn:hover {
-    background-color: #218838;
+  .material-icons {
+    font-size: 20px;
   }
 </style>
