@@ -1,0 +1,152 @@
+<ng-template #content let-modal>
+  <div class="modal-header">
+    <h2 class="modal-title" id="modal-basic-title">New crypto asset</h2>
+    <button type="button" class="close-btn" aria-label="Close" (click)="closeModal(modal)">×</button>
+  </div>
+  <div class="modal-body">
+    <form>
+      <div class="form-group">
+        <select class="form-select" aria-label="Crypto selector" [(ngModel)]="selectedCoinMarketCapId"
+          name="selectedValue" required>
+          <option *ngFor="let crypto of cryptoOptions$ | async" [value]="crypto.coinMarketCapId">
+            {{ crypto.symbol }}
+          </option>
+        </select>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="save-btn" (click)="createCryptoAsset(selectedCoinMarketCapId, modal)"
+      [disabled]="selectedCoinMarketCapId < 1">Save
+      <span *ngIf="loading" class="spinner" role="status" aria-hidden="true"></span>
+    </button>
+  </div>
+</ng-template>
+
+<button type="button" class="add-btn" (click)="open(content)">
+  Add asset
+</button>
+
+<style>
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .modal-title {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-select {
+    width: 100%;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px;
+    border-top: 1px solid #ccc;
+  }
+
+  .save-btn {
+    padding: 8px 16px;
+    font-size: 16px;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .save-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+
+  .spinner {
+    margin-left: 8px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .add-btn {
+    padding: 8px 16px;
+    font-size: 16px;
+    color: white;
+    background-color: #28a745;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .add-btn:hover {
+    background-color: #218838;
+  }
+
+  /* Mobile styles */
+  @media (max-width: 600px) {
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+      padding: 8px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+    }
+
+    .form-select {
+      font-size: 14px;
+      padding: 6px;
+    }
+
+    .save-btn,
+    .add-btn {
+      font-size: 14px;
+      padding: 6px 12px;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+    }
+  }
+</style>
