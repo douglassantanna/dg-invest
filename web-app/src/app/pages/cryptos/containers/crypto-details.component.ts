@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
-import { AddTransactionComponent } from './add-transaction.component';
 import { DataCardComponent } from '../components/data-card.component';
 import { TransactionTableComponent } from '../components/transaction-table.component';
 import { CryptoService } from '../../../core/services/crypto.service';
@@ -10,6 +9,7 @@ import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction
 import { CryptoAssetData } from 'src/app/core/models/crypto-asset-data';
 import { CryptoInformation } from 'src/app/core/models/crypto-information';
 import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
+import { AddTransactionComponent } from '../components/add-transaction/add-transaction.component';
 
 @Component({
   selector: 'app-crypto-details',
@@ -23,7 +23,7 @@ import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
   template: `
   <div class="container">
     <h1>
-      <strong>{{ cryptoInfo.symbol | uppercase }}</strong> Information
+      <strong>{{ cryptoInfo.symbol | uppercase }}</strong>
     </h1>
     <div class="row" >
       <div class="col" *ngFor="let card of cryptoAssetData$ | async; trackBy: cardValue">
@@ -47,6 +47,50 @@ import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
   </div>
   `,
   styles: [`
+  .container{
+    padding: 16px;
+  }
+  .crypto-details-container {
+  padding: 16px;
+}
+
+.crypto-details-container h1 {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.card-col {
+  flex: 1 1 calc(50% - 16px);
+}
+
+.transaction-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.transaction-col {
+  flex: 1 1 calc(50% - 16px);
+}
+
+.transaction-item {
+  margin: 16px 0;
+}
+
+/* Mobile styles */
+@media (max-width: 600px) {
+  .card-col,
+  .transaction-col {
+    flex: 1 1 100%;
+  }
+}
   `]
 })
 export class CryptoDetailsComponent implements OnInit, OnDestroy {
