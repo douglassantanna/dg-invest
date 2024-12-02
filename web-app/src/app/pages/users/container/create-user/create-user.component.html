@@ -1,31 +1,31 @@
 <ng-template #content let-modal>
   <div class="modal-header">
     <h2 class="modal-title" id="modal-basic-title">{{ title }}</h2>
-    <button type="button" class="btn-close" aria-label="Close" (click)="closeModal(modal)"></button>
+    <button type="button" class="close-btn" aria-label="Close" (click)="closeModal(modal)">×</button>
   </div>
   <div class="modal-body">
     <form [formGroup]="createUserForm">
-      <div class="mb-3">
-        <label for="formGroupExampleInput" class="form-label">Full name</label>
-        <input maxlength="220" minlength="2" type="text" class="form-control" formControlName="fullName" required>
-        <div *ngIf="fullName.invalid && (fullName.dirty || fullName.touched)" class="alert alert-danger">
+      <div class="form-group">
+        <label for="formGroupExampleInput">Full name</label>
+        <input maxlength="220" minlength="2" type="text" formControlName="fullName" required>
+        <div *ngIf="fullName.invalid && (fullName.dirty || fullName.touched)" class="error-message">
           <div *ngIf="fullName.errors?.['required']">Name is required.</div>
           <div *ngIf="fullName.errors?.['minlength']">
             Name must be at least 2 characters long.
           </div>
         </div>
       </div>
-      <div class="mb-3">
-        <label for="exampleFormControlInput1" class="form-label">Email address</label>
-        <input maxlength="220" type="email" class="form-control" formControlName="email" required>
-        <div *ngIf="email.invalid && (email.dirty || email.touched)" class="alert alert-danger">
+      <div class="form-group">
+        <label for="exampleFormControlInput1">Email address</label>
+        <input maxlength="220" type="email" formControlName="email" required>
+        <div *ngIf="email.invalid && (email.dirty || email.touched)" class="error-message">
           <div *ngIf="email.errors?.['required']">Email is required.</div>
           <div *ngIf="email.errors?.['email']">Email is invalid.</div>
         </div>
       </div>
-      <div class="mb-3">
-        <label class="form-label">Role</label>
-        <select class="form-select" aria-label="Role selector" formControlName="role" required>
+      <div class="form-group">
+        <label>Role</label>
+        <select aria-label="Role selector" formControlName="role" required>
           <option *ngFor="let role of roles" [value]="role.id">
             {{ role.name }}
           </option>
@@ -34,13 +34,119 @@
     </form>
   </div>
   <div class="modal-footer">
-    <button type="button" class="btn" [ngClass]="btnColor" (click)="createCryptoAsset(modal)"
-      [disabled]="!createUserForm.valid">Save
-      <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    <button type="button" class="save-btn" (click)="createCryptoAsset(modal)" [disabled]="!createUserForm.valid">Save
+      <span *ngIf="loading" class="spinner" role="status" aria-hidden="true"></span>
     </button>
   </div>
 </ng-template>
 
-<button type="button" class="btn" [ngClass]="btnColor" (click)="open(content)">
+<button type="button" class="add-btn" (click)="open(content)">
   Add user
 </button>
+
+<style>
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .modal-title {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group label {
+    margin-bottom: 8px;
+    font-weight: bold;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  .error-message {
+    color: red;
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px;
+    border-top: 1px solid #ccc;
+  }
+
+  .save-btn {
+    padding: 8px 16px;
+    font-size: 16px;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .save-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+
+  .spinner {
+    margin-left: 8px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .add-btn {
+    padding: 8px 16px;
+    font-size: 16px;
+    color: white;
+    background-color: #28a745;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .add-btn:hover {
+    background-color: #218838;
+  }
+</style>

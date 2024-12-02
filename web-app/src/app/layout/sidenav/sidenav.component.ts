@@ -40,7 +40,7 @@ export class SidenavComponent {
   }
 
   logout(item: NavItems) {
-    if (item.path === 'signout')
+    if (item.path === 'logout')
       this.authService.logout();
   }
 
