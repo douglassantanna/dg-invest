@@ -25,7 +25,7 @@ import { environment } from 'src/environments/environment.development';
       </div>
       <div class="modal-body">
         <form>
-          <div class="mb-3">
+          <div class="mb-0">
           <select
             class="form-select"
             aria-label="Crypto selector"

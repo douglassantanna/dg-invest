@@ -1,44 +1,102 @@
 <div class="table-responsive">
-  <table class="table border border-secondary rounded">
+  <table class="custom-table">
     <thead>
       <tr>
-        @for (item of tableHeaders; track $index) {
-        <th (click)="sortTable(item.value)"> {{ item.description }}
-          @if(isCurrentSortHeader(item.value)){
-          <ng-container>
+        <th *ngFor="let item of tableHeaders; track $index" (click)="sortTable(item.value)">
+          {{ item.description }}
+          <ng-container *ngIf="isCurrentSortHeader(item.value)">
             {{ getSortHeaderArrow() }}
           </ng-container>
-          }
         </th>
-        }
       </tr>
     </thead>
     <tbody>
       <tr *ngFor="let element of cryptos">
         <td>{{ element.symbol | uppercase }}</td>
         <td>
-          <div style="display: flex; flex-direction: column;">
-            <span>
-              {{ element.pricePerUnit | formatCurrency }}
-            </span>
-            <span style="color: grey;" *ngIf="element.balance">
-              {{ element.balance }} qty
-            </span>
+          <div class="price-container">
+            <span>{{ element.pricePerUnit | formatCurrency }}</span>
+            <span class="balance" *ngIf="element.balance">{{ element.balance }} qty</span>
           </div>
-        </td> <!-- avaragePrice -->
-        <td>{{ element.investedAmount | formatCurrency }}</td> <!-- investedAmount -->
+        </td>
+        <td>{{ element.investedAmount | formatCurrency }}</td>
         <td>
-          <div style="display: flex; flex-direction: column;">
-            <span>
-              {{ element.currentWorth | formatCurrency }}
-            </span>
-            <span style="color: grey;">
-              <app-percent-difference [percentDifference]="element.investmentGainLossPercentage" />
+          <div class="worth-container">
+            <span>{{ element.currentWorth | formatCurrency }}</span>
+            <span class="investment-gain-loss">
+              <app-percent-difference
+                [percentDifference]="element.investmentGainLossPercentage"></app-percent-difference>
             </span>
           </div>
-        </td> <!-- currentWorth -->
-        <td> <a (click)="cryptoDashboard(element.id)" class="btn" [ngClass]="btnColor">See details</a></td>
+        </td>
+        <td>
+          <a (click)="cryptoDashboard(element.id)" class="btn see-details-btn">See details</a>
+        </td>
       </tr>
     </tbody>
   </table>
 </div>
+
+<style>
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+
+  .custom-table th,
+  .custom-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+
+  .custom-table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .custom-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .price-container,
+  .worth-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .balance,
+  .investment-gain-loss {
+    color: grey;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    text-decoration: none;
+    color: white;
+    background-color: #007bff;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .btn:hover {
+    background-color: #0056b3;
+  }
+
+  .see-details-btn {
+    background-color: #28a745;
+  }
+
+  .see-details-btn:hover {
+    background-color: #218838;
+  }
+</style>

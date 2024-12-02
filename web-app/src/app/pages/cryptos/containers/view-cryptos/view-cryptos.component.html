@@ -23,9 +23,39 @@
   </div>
 
   <div class="crypto-container">
-    <div class="custom-card transaction-card custom-table">
+    <!-- <div class="custom-card transaction-card custom-table">
       <h3>Cryptos</h3>
       <div class="custom-table-container">
+        <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
+          [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
+      </div>
+    </div> -->
+
+    <div class="custom-card transaction-card custom-table">
+      <div class="custom-table-container">
+        <ng-container *ngIf="isCryptoAssetListEmpty(); else noAssets">
+          <div
+            style="background-color: rgb(197, 169, 169); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 16px; font-weight: bold;">Cryptos</span>
+            <div style="display: flex; align-items: center; justify-content: flex-end;">
+              <div class="coll-2">
+                <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
+                  (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
+                  [setBalanceStatus]="setBalanceStatus">
+                </app-crypto-filter>
+              </div>
+              <div class="coll-3">
+                <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+        <ng-template #noAssets>
+          <div class="text-center">
+            <h2>No assets found 😥</h2>
+            <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
+          </div>
+        </ng-template>
         <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
           [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
       </div>
@@ -98,6 +128,16 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
+  }
+
+  .coll-2,
+  .coll-3 {
+    display: inline-block;
+    margin-right: 16px;
+  }
+
+  .text-center {
+    text-align: center;
   }
 
   .pie-card {

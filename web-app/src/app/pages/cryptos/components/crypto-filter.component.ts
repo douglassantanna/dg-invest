@@ -18,7 +18,7 @@ import { environment } from 'src/environments/environment.development';
         <div class="form-check form-switch">
           <input class="form-check-input" [ngClass]="navbarColor" type="checkbox" id="gridCheck" [formControl]="showZeroBalance">
           <label class="form-check-label" for="gridCheck">
-            Hide zero balance cryptos
+            Hide zero balance
           </label>
         </div>
       </div>
