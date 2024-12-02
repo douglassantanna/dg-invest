@@ -16,17 +16,23 @@
         <span class="custom-card-desc">{{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}</span>
       </div>
     </div>
-    <div class="custom-card">
-      <app-pie-chart [cryptos]="cryptoAssetList()" />
-    </div>
 
   </div>
-  <div class="custom-card transaction-card" style="margin-top: 16px;">
-    <h3>Cryptos</h3>
-    <div class="custom-table-container">
-      <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
-        [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
+
+  <div class="crypto-container">
+    <div class="custom-card transaction-card" style="width: 70%;">
+      <h3>Cryptos</h3>
+      <div class="custom-table-container">
+        <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
+          [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
+      </div>
     </div>
+
+    @if (cryptoAssetList()) {
+    <div class="pie-card" style="width: 30%;">
+      <app-pie-chart [cryptos]="cryptoAssetList()" />
+    </div>
+    }
   </div>
 
 </main>
@@ -34,6 +40,16 @@
 <style>
   .dashboard {
     padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .crypto-container {
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    align-items: flex-start;
   }
 
   .content {
@@ -44,7 +60,7 @@
 
   .custom-cards {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
   }
 
@@ -56,6 +72,16 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
+  }
+
+  .pie-card {
+    width: 30%;
+    height: 100%;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .custom-table-container {
