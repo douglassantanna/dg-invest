@@ -1,11 +1,10 @@
-<div class="container">
-  <header>
+<div class="users-container">
+  <header class="users-header">
     <h1>Users</h1>
-
-    <app-create-user (userCreated)="addUserToTable($event)" />
+    <app-create-user (userCreated)="addUserToTable($event)"></app-create-user>
   </header>
-  <div class="table-responsive border border-1 rounded">
-    <table class="table">
+  <div class="table-container">
+    <table class="users-table">
       <thead>
         <tr>
           <th>Name</th>
@@ -23,3 +22,50 @@
     </table>
   </div>
 </div>
+
+<style>
+  .users-container {
+    padding: 16px;
+  }
+
+  .users-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .users-header h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #f9f9f9;
+  }
+
+  .users-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .users-table th,
+  .users-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+
+  .users-table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+  }
+
+  .users-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+</style>

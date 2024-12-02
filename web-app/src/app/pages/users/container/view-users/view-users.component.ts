@@ -14,7 +14,6 @@ import { Pagination } from 'src/app/core/models/pagination';
     CommonModule,
     CreateUserComponent],
   templateUrl: './view-users.component.html',
-  styleUrls: ['./view-users.component.scss']
 })
 export class ViewUsersComponent implements OnInit, OnDestroy {
   users$: BehaviorSubject<ViewUserDto[]> = new BehaviorSubject<ViewUserDto[]>([]);
