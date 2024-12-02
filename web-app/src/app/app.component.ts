@@ -10,7 +10,6 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
 @Component({
   selector: 'app-root',
   template: `
-  <!-- <div> -->
     @if (authService.isLoggedIn | async){
       <app-sidenav [isCollapsed]="onToggleSidenav()">
         <header>
@@ -23,22 +22,6 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
     } @else {
       <router-outlet></router-outlet>
     }
-    <!-- <ng-container *ngIf="(authService.isLoggedIn | async); else unAuthorized">
-      <app-sidenav [isCollapsed]="onToggleSidenav()">
-        <header (toggleSidenavEvent)="toggleSidenavEvent()">
-          <app-header />
-        </header>
-        <div>
-          <router-outlet></router-outlet>
-        </div>
-      </app-sidenav>
-    </ng-container> -->
-  <!-- </div> -->
-  <!-- <div>
-    <ng-template #unAuthorized>
-      <router-outlet></router-outlet>
-    </ng-template>
-  </div> -->
   <app-toast aria-live="polite" aria-atomic="true"></app-toast>
   <ngx-spinner type="ball-8bits"><h3>Loading...</h3></ngx-spinner>
   `,

@@ -1,66 +1,145 @@
-<main class="container">
-  <header>
-    <div class="coll-1">
-      <h1>Cryptos</h1>
-    </div>
-
-    @if(isCryptoAssetListEmpty()){
-    <div class="coll-2">
-      <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
-        (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)" [setBalanceStatus]="setBalanceStatus">
-      </app-crypto-filter>
-    </div>
-
-    <div class="coll-3">
-      <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-    </div>
-    }@else {
-    <div class="text-center">
-      <h2>No assets found 😥</h2>
-      <app-create-crypto (cryptoCreated)="loadCryptoAssets()"></app-create-crypto>
-    </div>
-    }
-  </header>
-
-  <div class="row">
-    <div class="container mt-3">
-      <div class="container mt-3">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="alert alert-light mb-2"> <strong>Total Invested:</strong> {{ totalInvested |
-              currency:'USD':'symbol':'1.2-2'}}
-            </div>
-            <div class="alert alert-light mb-2">
-              <strong>Total Market Value:</strong> {{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
-              <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
-            </div>
-            <div class="alert alert-light account" (click)="redirectToAccount()">
-              <strong>Current Available Funds:</strong> {{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}
-            </div>
-          </div>
-          <div class="col-md-6">
-            <app-pie-chart [cryptos]="cryptoAssetList()" />
-          </div>
-        </div>
+<main class="dashboard">
+  <div class="content">
+    <div class="custom-cards">
+      <div class="custom-card">
+        <span class="custom-card-title">Value Invested</span>
+        <span class="custom-card-desc">{{ totalInvested | currency:'USD':'symbol':'1.2-2'}}</span>
       </div>
-
-    </div>
-
-    <div class="row">
-      <div class="col-md-12">
-        <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
-          [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
+      <div class="custom-card">
+        <span class="custom-card-title">Market Value</span>
+        <span class="custom-card-desc">{{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
+          <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
+        </span>
+      </div>
+      <div class="custom-card account" (click)="redirectToAccount()">
+        <span class="custom-card-title">Current Available Funds</span>
+        <span class="custom-card-desc">{{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}</span>
       </div>
     </div>
+    <div class="custom-card">
+      <app-pie-chart [cryptos]="cryptoAssetList()" />
+    </div>
 
-    <ng-template #loading>
-      <div class="text-center">Loading...</div>
-    </ng-template>
+  </div>
+  <div class="custom-card transaction-card" style="margin-top: 16px;">
+    <h3>Cryptos</h3>
+    <div class="custom-table-container">
+      <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
+        [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
+    </div>
   </div>
 
 </main>
 
 <style>
+  .dashboard {
+    padding: 16px;
+  }
+
+  .content {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .custom-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .custom-card {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .custom-table-container {
+    overflow-x: auto;
+  }
+
+  .account {
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  .account:hover {
+    background-color: aliceblue;
+    color: darkslategray;
+    cursor: pointer;
+  }
+
+  .custom-card-title {
+    font-size: 16px;
+    color: rgb(182, 175, 175);
+    font-weight: slim;
+  }
+
+  .custom-card-desc {
+    margin: 10px 0;
+    font-size: 22px;
+    font-weight: bold;
+  }
+
+  .transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+  }
+
+  .transactions-table th,
+  .transactions-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .transactions-table th {
+    background-color: #f2f2f2;
+  }
+
+  @media (max-width: 600px) {
+    .content {
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .custom-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .custom-card {
+      padding: 12px;
+    }
+
+    .transaction-card {
+      margin-bottom: 60px;
+    }
+
+    .custom-card-title {
+      margin-top: 0;
+      font-size: 16px;
+      color: #333;
+      font-weight: semi-bold;
+    }
+
+    .custom-card-desc {
+      margin: 8px 0;
+      font-size: 14px;
+      font-weight: normal;
+    }
+
+    .transactions-table th,
+    .transactions-table td {
+      padding: 4px;
+    }
+  }
+</style>
+
+<!-- <style>
   header {
     display: flex;
     flex-wrap: wrap;
@@ -116,4 +195,4 @@
       justify-content: flex-end;
     }
   }
-</style>
+</style> -->
