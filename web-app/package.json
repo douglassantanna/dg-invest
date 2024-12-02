@@ -28,7 +28,6 @@
     "@angular/router": "^17.3.10",
     "@ng-bootstrap/ng-bootstrap": "^16.0.0",
     "@popperjs/core": "^2.11.6",
-    "bootstrap": "^5.2.3",
     "chart.js": "^4.4.3",
     "chartjs-plugin-datalabels": "^2.2.0",
     "dotenv": "^16.4.5",
