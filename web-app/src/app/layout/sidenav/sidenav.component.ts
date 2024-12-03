@@ -11,7 +11,7 @@ import { LayoutService } from 'src/app/core/services/layout.service';
   templateUrl: './sidenav.component.html',
   styles: ``,
   standalone: true,
-  imports: [NgClass, RouterModule]
+  imports: [NgClass, RouterModule],
 })
 export class SidenavComponent {
   private authService = inject(AuthService);

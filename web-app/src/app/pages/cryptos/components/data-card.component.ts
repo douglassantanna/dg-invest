@@ -17,9 +17,10 @@ import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
       <div class="card-body">
         <h4 class="card-title">{{ title }}</h4>
         <div class="content">
-          <ng-container *ngIf="title !== 'Balance'; else balance">
-            <span class="price-text">{{ value | formatCurrency }}</span>
-          </ng-container>
+          @if (title !== 'Balance')
+            {
+              <span class="price-text">{{ value | formatCurrency }}</span>
+            }
           <ng-template #balance>
             <span class="price-text">{{ value }}</span>
           </ng-template>
