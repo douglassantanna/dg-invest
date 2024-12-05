@@ -1,40 +1,43 @@
-<main class="dashboard">
-  <div class="content">
-    <div class="custom-cards">
-      <div class="custom-card" style="order: 1;">
-        <i class="material-icons card-icon savings-icon">savings</i>
+<main class="flex flex-col gap-4 p-6">
+  <div class="flex w-full justify-between sm:flex-col gap-4">
+    <div class="grid grid-cols-4 gap-4 sm:grid-cols-2">
+      <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border drop-shadow-md sm:p-2.5"
+        style="order: 1;">
+        <i class="material-icons bg-indigo-50 border border-indigo-300 text-indigo-200 p-2 rounded-lg w-10">savings</i>
         <span class="custom-card-desc">{{ totalInvested | currency:'USD':'symbol':'1.2-2'}}</span>
         <span class="custom-card-title">Value Invested</span>
       </div>
-      <div class="custom-card" style="order: 2;">
-        <i class="material-icons card-icon market-icon">show_chart</i>
+      <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border drop-shadow-md sm:p-2.5 order-2">
+        <i class="material-icons bg-green-50 border border-green-300 text-green-200 p-2 rounded-lg w-10">show_chart</i>
         <span class="custom-card-desc">{{ totalMarketValue | currency:'USD':'symbol':'1.2-2'}}
           <app-percent-difference [percentDifference]="investmentChangePercent"></app-percent-difference>
         </span>
         <span class="custom-card-title">Market Value</span>
       </div>
-      <div class="custom-card account" (click)="redirectToAccount()" style="order: 3;">
-        <i class="material-icons card-icon funds-icon">account_balance_wallet</i>
+      <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border drop-shadow-md sm:p-2.5 account order-3"
+        (click)="redirectToAccount()">
+        <i
+          class="material-icons  bg-sky-50 border border-sky-300 text-sky-200 p-2 rounded-lg w-10">account_balance_wallet</i>
         <span class="custom-card-desc">{{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}</span>
         <span class="custom-card-title">Available Funds</span>
       </div>
     </div>
   </div>
 
-  <div class="crypto-container">
-    <div class="custom-card transaction-card custom-table">
+  <div class="flex gap-4 justify-between items-center sm:flex-col w-full">
+    <div class="flex flex-col p-4 rounded-md bg-white border-gray-100 mb-5 w-[70%] sm:w-full sm:order-2">
       <div class="custom-table-container">
         <ng-container *ngIf="isCryptoAssetListEmpty(); else noAssets">
-          <div class="table-header">
-            <span class="table-header-title">Cryptos</span>
-            <div class="header-content">
-              <div class="coll-2">
+          <div class="flex justify-between items-center sm:flex-col sm:justify-start sm:items-start">
+            <span class="text-base font-bold sm:mb-4">Cryptos</span>
+            <div class="flex items-center justify-end sm:flex-row">
+              <div class="mr-2 inline-block">
                 <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
                   (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
                   [setBalanceStatus]="setBalanceStatus">
                 </app-crypto-filter>
               </div>
-              <div class="coll-3">
+              <div class="mr-0 inline-block">
                 <app-add-crypto (cryptoCreated)="loadCryptoAssets()"></app-add-crypto>
               </div>
             </div>
@@ -52,7 +55,7 @@
     </div>
 
     @if (cryptoAssetList()) {
-    <div class="pie-card" style="order: 1;">
+    <div class="bg-white rounded-md p-2 border-gray-300 border drop-shadow-md w-[30%] sm:w-full sm:order-1">
       <app-pie-chart [cryptos]="cryptoAssetList()" />
     </div>
     }
@@ -61,72 +64,6 @@
 </main>
 
 <style>
-  .table-header-title {
-    font-size: 16px;
-    font-weight: bold;
-  }
-
-  .header-content {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-  }
-
-  .table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .savings-icon {
-    color: green;
-  }
-
-  .market-icon {
-    color: blue;
-  }
-
-  .funds-icon {
-    color: orange;
-  }
-
-  .card-icon {
-    top: 8px;
-    right: 8px;
-    font-size: 24px;
-    margin-left: 0;
-  }
-
-  .dashboard {
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .crypto-container {
-    display: flex;
-    gap: 16px;
-    justify-content: space-between;
-    align-items: flex-start;
-  }
-
-  .content {
-    display: flex;
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .custom-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
-
-  .custom-table {
-    width: 70%;
-  }
-
   .custom-card {
     background-color: #fff;
     border: 1px solid #ddd;
@@ -135,30 +72,6 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-  }
-
-  .coll-2,
-  .coll-3 {
-    display: inline-block;
-    margin-right: 0px;
-  }
-
-  .coll-2 {
-    margin-right: 10px;
-  }
-
-  .text-center {
-    text-align: center;
-  }
-
-  .pie-card {
-    width: 30%;
-    height: 100%;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .custom-table-container {
@@ -205,37 +118,6 @@
   }
 
   @media (max-width: 600px) {
-    .header-content {
-      flex-direction: row;
-    }
-
-    .table-header {
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: flex-start;
-    }
-
-    .table-header-title {
-      margin-bottom: 8px;
-    }
-
-    .content {
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .custom-cards {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .custom-card {
-      padding: 12px;
-    }
-
-    .transaction-card {
-      margin-bottom: 20px;
-    }
-
     .custom-card-title {
       margin-top: 0;
       font-size: 16px;
@@ -252,24 +134,6 @@
     .transactions-table th,
     .transactions-table td {
       padding: 4px;
-    }
-
-    .crypto-container {
-      flex-direction: column;
-      width: 100%;
-    }
-
-    .pie-card,
-    .custom-table {
-      width: 100%;
-    }
-
-    .pie-card {
-      order: 1;
-    }
-
-    .custom-table {
-      order: 2;
     }
   }
 </style>
