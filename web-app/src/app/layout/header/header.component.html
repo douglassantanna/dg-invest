@@ -1,62 +1,10 @@
-<header>
-  <button class="toggle-btn" (click)="toggleSidenavEvent.emit()">
+<header
+  class="sm:h-12  flex items-center h-16 gap-2 justify-between border-y-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <button class="text-gray-900 cursor-pointer ml-6 font-bold dark:text-gray-100 sm:hidden"
+    (click)="toggleSidenavEvent.emit()">
     <span class="material-icons">menu</span>
   </button>
-  <div class="username-initial-letter">{{ username() | slice: 0:1 }}</div>
+  <div
+    class="sm:ml-auto border border-gray-900 p-2 rounded-full text-gray-900 w-8 h-8 flex items-center justify-center mr-5 dark:text-gray-100 dark:border-gray-100">
+    {{ username() | slice: 0:1 }}</div>
 </header>
-
-<style>
-  header {
-    background-color: #333;
-    color: white;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    height: 8vh;
-  }
-
-  .toggle-btn {
-    background-color: #333;
-    color: white;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    margin-left: 20px;
-  }
-
-  .welcome-message {
-    font-size: 16px;
-    font-weight: bold;
-    margin-right: 20px;
-  }
-
-  .username-initial-letter {
-    border: white 1px solid;
-    padding: 5px;
-    border-radius: 50px;
-    color: white;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 20px;
-  }
-
-  @media (max-width: 600px) {
-    header {
-      height: 50px;
-    }
-
-    .username-initial-letter {
-      font-size: 14px;
-      margin-left: auto;
-    }
-
-    .toggle-btn {
-      display: none;
-    }
-  }
-</style>

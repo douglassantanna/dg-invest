@@ -1,5 +1,5 @@
-<div class="sidenav bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" [class.collapsed]="isCollapsed()"
-  [class.mobile]="isMobile()">
+<div class="sidenav bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-x-2"
+  [class.collapsed]="isCollapsed()" [class.mobile]="isMobile()" [class.border-y-2]="isMobile()">
   @for (item of navItemsEnabled(); track $index) {
   <a [routerLink]="item.path" class="hover:bg-gray-200 dark:hover:bg-gray-700" [class.flex]="isMobile()"
     [class.flex-col]="isMobile()" [class.items-center]="isMobile()">
