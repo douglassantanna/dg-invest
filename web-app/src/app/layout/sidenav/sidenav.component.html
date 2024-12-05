@@ -1,13 +1,18 @@
-<div class="sidenav" [class.collapsed]="isCollapsed()" [class.mobile]="isMobile()">
+<div class="sidenav bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" [class.collapsed]="isCollapsed()"
+  [class.mobile]="isMobile()">
   @for (item of navItemsEnabled(); track $index) {
-  <a [routerLink]="item.path">
-    <i class="material-icons">{{ item.icon }}</i>
-    <span class="label" (click)="logout(item)">{{ item.label }}</span>
+  <a [routerLink]="item.path" class="hover:bg-gray-200 dark:hover:bg-gray-700" [class.flex]="isMobile()"
+    [class.flex-col]="isMobile()" [class.items-center]="isMobile()">
+    <i class="material-icons" [class.ml-3]="isMobile()" [class.text-md]="isMobile()">{{ item.icon
+      }}</i>
+    <span [class.opacity-0]="isCollapsed()" [class.width-0]="isCollapsed()" [class.text-xs]="isMobile()"
+      class="inline transition-all duration-300 text-gray-900 dark:text-gray-100" (click)="logout(item)">{{
+      item.label }}</span>
   </a>
   }
 </div>
 
-<div class="ml-52 transition-all duration-300 sm:ml-0 ">
+<div class="main">
   <ng-content></ng-content>
 </div>
 
@@ -23,17 +28,10 @@
     overflow: hidden;
   }
 
-  .sidenav.mobile a {
-    flex-direction: column;
-    padding: 8px;
-    font-size: 18px;
-  }
-
   .sidenav {
     height: 100%;
     width: 209px;
     position: fixed;
-    background-color: #111;
     overflow-x: hidden;
     padding-top: 20px;
     transition: width 0.3s;
@@ -49,9 +47,9 @@
 
   .sidenav a {
     padding: 8px 8px 8px 13px;
+    width: 100%;
     text-decoration: none;
     font-size: 20px;
-    color: #818181;
     display: flex;
     align-items: center;
     transition: padding 0.3s, font-size 0.3s;
@@ -93,22 +91,8 @@
       align-items: center;
     }
 
-    .sidenav a {
-      font-size: 15px;
-      align-items: center;
-    }
-
     .main {
       margin-left: 0px;
-    }
-
-    .sidenav .label {
-      display: none;
-    }
-
-    .logout-btn {
-      margin-top: 0;
-      margin-bottom: 0;
     }
   }
 </style>

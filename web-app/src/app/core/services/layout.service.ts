@@ -8,9 +8,9 @@ import { Role } from '../models/user.model';
 export class LayoutService {
   navItems: NavItems[] = [
     {
-      label: 'Cryptos',
+      label: 'Portfolio',
       path: 'cryptos',
-      icon: 'currency_bitcoin',
+      icon: 'list_alt',
       roles: [Role.Admin, Role.User],
     },
     {
