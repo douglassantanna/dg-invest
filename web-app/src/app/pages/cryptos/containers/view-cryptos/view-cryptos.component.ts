@@ -1,6 +1,5 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl } from '@angular/forms';
 
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { Observable, Subject, takeUntil } from 'rxjs';
@@ -12,20 +11,19 @@ import { PercentDifferenceComponent } from '../../components/percent-difference.
 import { PieChartComponent } from '../../components/pie-chart/pie-chart.component';
 import { Router, RouterModule } from '@angular/router';
 import { AddCryptoComponent } from '../../components/add-crypto/add-crypto.component';
+import { CurrencyPipe } from '@angular/common';
 
 @Component({
   selector: 'app-view-cryptos',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
     CryptoFilterComponent,
     CryptoTableComponent,
     PercentDifferenceComponent,
     PieChartComponent,
     RouterModule,
-    AddCryptoComponent],
+    AddCryptoComponent,
+    CurrencyPipe],
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
