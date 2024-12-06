@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { CryptoDetailsComponent } from './pages/cryptos/containers/crypto-details.component';
+import { CryptoDetailsComponent } from './pages/cryptos/containers/crypto-details/crypto-details.component';
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { ViewCryptosComponent } from './pages/cryptos/containers/view-cryptos/view-cryptos.component';

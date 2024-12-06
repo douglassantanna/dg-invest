@@ -1,15 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
-import { DataCardComponent } from '../components/data-card.component';
-import { TransactionTableComponent } from '../components/transaction-table.component';
-import { CryptoService } from '../../../core/services/crypto.service';
+import { TransactionTableComponent } from '../../components/transaction-table.component';
+import { CryptoService } from '../../../../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
 import { CryptoAssetData } from 'src/app/core/models/crypto-asset-data';
 import { CryptoInformation } from 'src/app/core/models/crypto-information';
 import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
-import { AddTransactionComponent } from '../components/add-transaction/add-transaction.component';
+import { AddTransactionComponent } from '../../components/add-transaction/add-transaction.component';
+import { StatsCardComponent } from '../../components/stats-card/stats-card.component';
 
 @Component({
   selector: 'app-crypto-details',
@@ -17,35 +17,10 @@ import { AddTransactionComponent } from '../components/add-transaction/add-trans
   imports: [
     CommonModule,
     AddTransactionComponent,
-    DataCardComponent,
     TransactionTableComponent,
+    StatsCardComponent
   ],
-  template: `
-  <div class="container">
-    <h1>
-      <strong>{{ cryptoInfo.symbol | uppercase }}</strong>
-    </h1>
-    <div class="row" >
-      <div class="col" *ngFor="let card of cryptoAssetData$ | async; trackBy: cardValue">
-        <app-data-card [title]="card.title" [value]="card.value" [percentDifference]="card.percent ? card.percent : 0"/>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col-md-6">
-        <div class="m-2">
-          <app-add-transaction [cryptoAssetId]="cryptoAssetId"/>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="m-2">
-          <app-transaction-table [transactions]="transactions$" />
-        </div>
-      </div>
-    </div>
-  </div>
-  `,
+  templateUrl: './crypto-details.component.html',
   styles: [`
   .container{
     padding: 16px;
