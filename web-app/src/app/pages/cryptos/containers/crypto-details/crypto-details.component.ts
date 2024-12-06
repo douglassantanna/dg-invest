@@ -1,7 +1,7 @@
 import { AsyncPipe, UpperCasePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
-import { TransactionTableComponent } from '../../components/transaction-table.component';
+import { TransactionTableComponent } from '../../components/transaction-table/transaction-table.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { ActivatedRoute } from '@angular/router';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
