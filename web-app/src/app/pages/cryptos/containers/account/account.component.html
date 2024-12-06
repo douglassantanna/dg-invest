@@ -1,35 +1,51 @@
-<main>
-  <header>
-    <div class="card">
-      <h1>{{ account().balance | currency:'USD':'symbol':'1.2-2' }}</h1>
-      <h2>Balance</h2>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header Section -->
+  <header class="space-y-8">
+    <!-- Balance Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
+      <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Available Balance</h2>
+      <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100">
+        {{ account().balance | currency:'USD':'symbol':'1.2-2' }}
+      </h1>
     </div>
 
-    <div class="actions">
-      <div class="card">
-        <a routerLink="/account/deposit" class="card-link">
-          <h2>Deposit</h2>
-        </a>
-      </div>
+    <!-- Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <a routerLink="/account/deposit"
+        class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+        <div class="flex items-center space-x-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <h2 class="text-xl font-semibold">Deposit</h2>
+        </div>
+      </a>
 
-      <div class="card">
-        <a routerLink="/account/withdraw" class="card-link">
-          <h2>Withdraw</h2>
-        </a>
-      </div>
+      <a routerLink="/account/withdraw"
+        class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+        <div class="flex items-center space-x-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+          </svg>
+          <h2 class="text-xl font-semibold">Withdraw</h2>
+        </div>
+      </a>
     </div>
   </header>
 
-  <section class="recent-transactions">
-    <div class="recent-transactions-header">
-      <span>Recent Transactions</span>
-      <app-crypto-filter [displayHideCryptoCheck]="false"
-        (searchControlEvent)="searchTransactions($event)"></app-crypto-filter>
+  <!-- Recent Transactions Section -->
+  <section class="mt-12">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Recent Transactions</h3>
+      <app-crypto-filter [displayHideCryptoCheck]="false" (searchControlEvent)="searchTransactions($event)"
+        class="w-full sm:w-auto">
+      </app-crypto-filter>
     </div>
 
-    <div class="transaction-list">
-      <app-account-transaction-card
-        [groupedTransactionsNew]="account().groupedAccountTransactions"></app-account-transaction-card>
+    <div
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <app-account-transaction-card [groupedTransactionsNew]="account().groupedAccountTransactions">
+      </app-account-transaction-card>
     </div>
   </section>
 </main>
