@@ -1,154 +1,65 @@
-<main>
+<main class="space-y-6">
   @for (item of groupedTransactionsNew(); track $index) {
-  <div class="card-container">
-    <div class="transaction-date">{{ item.date | date: 'EEEE, d MMMM, y' }}</div>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+    <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        {{ item.date | date: 'EEEE, d MMMM, y' }}
+      </h3>
+    </div>
+
     @for (transaction of item.transactions; track $index) {
-    <div class="card-list">
-      <div [ngClass]="['symbol', getTransactionTypeClass(transaction.transactionType)]">
-        @if (transaction.cryptoSymbol) {
-        <span>
-          {{transaction.cryptoSymbol | cryptoSymbol }}
-        </span>
-        }@else {
-        <span>
-          {{transaction.transactionType | transactionTypeLabel }}
-        </span>
-        }
-      </div>
-      <div class="transaction-type">{{ getTransactionTypeLabel(transaction.transactionType) }}
-        <div class="crypto-symbol">{{ transaction.cryptoSymbol | uppercase }}</div>
-      </div>
-      <div class="transaction-details">
-        <div class="transaction-value" [ngClass]="{
-          'in': isIncoming(transaction.transactionType),
-          'out': isOutgoing(transaction.transactionType)
-        }">
+    <div
+      class="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+      <div class="px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div [class]="{
+              'w-12 h-12 rounded-full flex items-center justify-center': true,
+              'bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-200': isIncoming(transaction.transactionType),
+              'bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-200': isOutgoing(transaction.transactionType)
+            }">
+            @if (transaction.cryptoSymbol) {
+            <span class="text-lg font-medium">{{transaction.cryptoSymbol | cryptoSymbol }}</span>
+            } @else {
+            <span class="text-lg font-medium">{{transaction.transactionType | transactionTypeLabel }}</span>
+            }
+          </div>
+
+          <div class="flex flex-col">
+            <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ getTransactionTypeLabel(transaction.transactionType) }}
+            </span>
+            @if (transaction.cryptoSymbol) {
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              {{ transaction.cryptoSymbol | uppercase }}
+            </span>
+            }
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end">
+          <span class="text-base font-semibold" [ngClass]="{
+            'text-green-600 dark:text-green-400': isIncoming(transaction.transactionType),
+            'text-red-600 dark:text-red-400': isOutgoing(transaction.transactionType)
+            }">
+            @if (isCryptoTransaction(transaction.transactionType)) {
+            {{ getTransactionSign(transaction.transactionType) }}{{ getTransactionValue(transaction) |
+            currency:'USD':'symbol':'1.2-2' }}
+            } @else {
+            {{ getTransactionSign(transaction.transactionType) }}{{ transaction.amount | currency:'USD':'symbol':'1.2-2'
+            }}
+            }
+          </span>
+
           @if (isCryptoTransaction(transaction.transactionType)) {
-          {{ getTransactionSign(transaction.transactionType) }}{{ getTransactionValue(transaction) |
-          currency:'USD':'symbol':'1.2-2' }}
-          }@else {
-          {{ getTransactionSign(transaction.transactionType) }}{{ transaction.amount|
-          currency:'USD':'symbol':'1.2-2' }}
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div>Amount: {{ transaction.amount }}</div>
+            <div>Unit Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2' }}</div>
+          </div>
           }
         </div>
-      </div>
-      <div class="crypto-data">
-        @if (isCryptoTransaction(transaction.transactionType)){
-        <span>Amount: {{ transaction.amount }}</span>
-        <span>Unit Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2'
-          }}</span>
-        }
       </div>
     </div>
     }
   </div>
   }
 </main>
-
-<style>
-  .symbol {
-    border-radius: 100%;
-    width: 50px;
-    height: 50px;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-size: larger;
-  }
-
-  .symbol.deposit-fiat {
-    background-color: #2ecc71;
-  }
-
-  .symbol.deposit-crypto {
-    background-color: #3498db;
-  }
-
-  .symbol.bank-withdraw {
-    background-color: #e67e22;
-  }
-
-  .symbol.money-in {
-    background-color: #2ecc71;
-  }
-
-  .symbol.money-out {
-    background-color: #e74c3c;
-  }
-
-  .symbol.unknown {
-    background-color: #95a5a6;
-  }
-
-  .crypto-data {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-
-  .card-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin-top: 10px;
-  }
-
-  .card-list {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
-    transition: 0.3s;
-    padding: 10px;
-    gap: 10px;
-  }
-
-  .card-list:hover {
-    background-color: aliceblue;
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-    cursor: pointer;
-  }
-
-  .transaction-value.in {
-    color: green;
-  }
-
-  .transaction-value.out {
-    color: red;
-  }
-
-  .crypto-symbol {
-    width: 70px;
-    color: grey;
-  }
-
-  .card-list img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 4px;
-  }
-
-  .transaction-type,
-  .transaction-value,
-  .transaction-date {
-    width: 150px;
-  }
-
-  .transaction-date {
-    border-bottom: 1px dotted gray;
-    width: 100%;
-    color: gray;
-    font-size: medium;
-    margin-top: 10px;
-  }
-
-  @media (max-width: 768px) {
-    .crypto-data {
-      display: none;
-    }
-  }
-</style>
