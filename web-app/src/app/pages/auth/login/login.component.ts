@@ -4,7 +4,6 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { ToastService } from '../../../core/services/toast.service';
 import { tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 
@@ -23,8 +22,9 @@ export class LoginComponent implements OnInit {
   loading = signal(false);
   loginForm!: FormGroup;
   btnColor = environment.btnColor;
+  errorMessages = signal<string[]>([]);
 
-  constructor(private fb: FormBuilder, private toastService: ToastService) {
+  constructor(private fb: FormBuilder) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(4)]]
@@ -37,6 +37,7 @@ export class LoginComponent implements OnInit {
 
   login() {
     this.loading.set(true);
+    this.errorMessages.set([]);
 
     this.authService.login(this.loginForm.value).subscribe({
       next: (value) => {
@@ -45,7 +46,7 @@ export class LoginComponent implements OnInit {
       },
       error: (err) => {
         this.loading.set(false);
-        this.toastService.showError(err.error.message);
+        this.errorMessages.set([err.error.message]);
       }
     });
   }

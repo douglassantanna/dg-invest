@@ -13,7 +13,7 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
     @if (authService.isLoggedIn | async){
       <app-sidenav [isCollapsed]="onToggleSidenav()">
         <header>
-          <app-header (toggleSidenavEvent)="toggleSidenavEvent()"/>
+          <app-header (toggleSidenavEvent)="toggleSidenavEvent()" />
         </header>
         <div>
           <router-outlet></router-outlet>
@@ -22,7 +22,6 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
     } @else {
       <router-outlet></router-outlet>
     }
-  <app-toast aria-live="polite" aria-atomic="true"></app-toast>
   <ngx-spinner type="ball-8bits"><h3>Loading...</h3></ngx-spinner>
   `,
   standalone: true,
@@ -30,7 +29,6 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
     RouterModule,
     CommonModule,
     HeaderComponent,
-    ToastComponent,
     NgxSpinnerModule,
     SidenavComponent],
 })

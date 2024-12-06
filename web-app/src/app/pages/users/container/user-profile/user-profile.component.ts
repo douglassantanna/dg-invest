@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { SlicePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from 'src/app/core/services/auth.service';
@@ -10,7 +10,7 @@ import { environment } from 'src/environments/environment.development';
   selector: 'app-user-profile',
   standalone: true,
   imports: [
-    CommonModule,
+    SlicePipe,
     FormsModule],
   templateUrl: './user-profile.component.html'
 })
@@ -67,13 +67,8 @@ export class UserProfileComponent implements OnInit {
   }
 
   updatePassword() {
-    if (!this.updatePasswordModel().newPassword || !this.updatePasswordModel().confirmNewPassword) {
-      this.toastService.showError('Please, fill in the password and confirm password fields');
-      return;
-    }
-
-    if (this.updatePasswordModel().newPassword !== this.updatePasswordModel().confirmNewPassword) {
-      this.toastService.showError('Password and confirm password dont match');
+    if (!this.updatePasswordModel().newPassword || !this.updatePasswordModel().currentPassword) {
+      this.toastService.showError('Please, fill in the password and current password fields');
       return;
     }
 
