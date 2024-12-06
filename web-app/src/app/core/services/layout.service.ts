@@ -14,16 +14,22 @@ export class LayoutService {
       roles: [Role.Admin, Role.User],
     },
     {
-      label: 'Users',
-      path: 'users',
-      icon: 'group',
-      roles: [Role.Admin],
+      label: 'Account',
+      path: 'account',
+      icon: 'account_balance_wallet',
+      roles: [Role.Admin, Role.User],
     },
     {
       label: 'Profile',
       path: 'user-profile',
       icon: 'manage_accounts',
       roles: [Role.Admin, Role.User],
+    },
+    {
+      label: 'Users',
+      path: 'users',
+      icon: 'group',
+      roles: [Role.Admin],
     },
     {
       label: 'Log out',
