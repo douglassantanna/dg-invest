@@ -13,21 +13,24 @@ import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
     PercentDifferenceComponent,
     FormatCurrencyPipe],
   template: `
-    <div class="card">
-      <div class="card-body">
-        <h4 class="card-title">{{ title }}</h4>
-        <div class="content">
-          @if (title !== 'Balance')
-            {
-              <span class="price-text">{{ value | formatCurrency }}</span>
-            }
-          <ng-template #balance>
-            <span class="price-text">{{ value }}</span>
-          </ng-template>
-          <app-percent-difference *ngIf="percentDifference" [percentDifference]="percentDifference"></app-percent-difference>
-        </div>
-      </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-300">
+  <div class="p-6">
+    <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ title }}</h4>
+    <div class="flex items-center justify-between">
+      @if (title !== 'Balance') {
+        <span class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ value | formatCurrency }}</span>
+      }
+      <ng-template #balance>
+        <span class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ value }}</span>
+      </ng-template>
+      <app-percent-difference
+        *ngIf="percentDifference"
+        [percentDifference]="percentDifference"
+        class="ml-2">
+      </app-percent-difference>
     </div>
+  </div>
+</div>
   `,
   styles: [`
       .card {
