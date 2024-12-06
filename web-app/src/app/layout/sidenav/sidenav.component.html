@@ -1,16 +1,7 @@
 <div class="sidenav bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-x-2"
   [class.collapsed]="isCollapsed()" [class.mobile]="isMobile()" [class.border-y-2]="isMobile()"
-  [class.overflow-hidden]="isMobile()">
+  [class.z-50]="isMobile()">
   @for (item of navItemsEnabled(); track $index) {
-  <!-- <a [routerLink]="item.path" class="hover:bg-gray-200 dark:hover:bg-gray-700" [class.flex]="isMobile()"
-    [class.flex-col]="isMobile()" [class.items-center]="isMobile()">
-    <i class="material-icons" [class.ml-3]="isMobile()" [class.text-md]="isMobile()">{{ item.icon
-      }}</i>
-    <span [class.opacity-0]="isCollapsed()" [class.width-0]="isCollapsed()" [class.text-xs]="isMobile()"
-      class="inline transition-all duration-300 text-gray-900 dark:text-gray-100" (click)="logout(item)">{{
-      item.label }}</span>
-  </a> -->
-
   <a [routerLink]="item.path"
     class="flex items-center w-full p-3 rounded-lg transition-all duration-200 group hover:bg-gray-100 dark:hover:bg-gray-700"
     [class.flex-col]="isMobile()" [class.space-x-3]="!isMobile()" [class.space-y-1]="isMobile()">
