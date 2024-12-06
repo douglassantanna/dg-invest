@@ -9,8 +9,9 @@
         <span class="text-sm font-thin text-gray-900 dark:text-gray-100">Value Invested</span>
       </div>
       <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border shadow-md sm:p-2.5 order-2">
-        <i class="material-icons bg-green-50 border border-green-300 text-green-200 p-2 rounded-lg w-10">show_chart</i>
-        <span class="flex w-full text-base font-normal mt-1 text-gray-900 dark:text-gray-100">{{
+        <i
+          class="material-icons p-2 w-10 rounded-lg bg-green-50 dark:bg-green-900 text-green-400 dark:text-green-300 border border-green-300 dark:border-green-700'">show_chart</i>
+        <span class="flex w-full text-base font-normal mt-1 text-gray-900 dark:text-gray-100 sm:flex-col sm:mb-1">{{
           totalMarketValue |
           currency:'USD':'symbol':'1.2-2'}}
           <app-percent-difference class="ml-1" [percentDifference]="investmentChangePercent"></app-percent-difference>
@@ -36,7 +37,7 @@
         @if (isCryptoAssetListEmpty()) {
         <div class="flex justify-between items-center sm:flex-col sm:justify-start sm:items-start">
           <span class="text-base font-bold sm:mb-4">Cryptos</span>
-          <div class="flex items-center justify-end sm:flex-row">
+          <div class="flex items-center justify-end sm:flex-row mb-2">
             <div class="mr-2 inline-block">
               <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
                 (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"

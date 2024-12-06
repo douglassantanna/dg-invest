@@ -37,10 +37,7 @@
         <td class="px-6 py-4">
           <div class="flex items-center gap-1.5">
             <span class="text-sm text-gray-700">{{ element.currentWorth | formatCurrency }}</span>
-            <span class="text-xs text-gray-500">
-              <app-percent-difference
-                [percentDifference]="element.investmentGainLossPercentage"></app-percent-difference>
-            </span>
+            <app-percent-difference [percentDifference]="element.investmentGainLossPercentage" />
           </div>
         </td>
       </tr>

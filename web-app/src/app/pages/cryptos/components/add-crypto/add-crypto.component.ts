@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { BehaviorSubject, finalize } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { Crypto } from 'src/app/core/models/crypto';
@@ -20,22 +20,22 @@ import { ToastService } from 'src/app/core/services/toast.service';
   templateUrl: './add-crypto.component.html',
 })
 export class AddCryptoComponent {
+  @ViewChild('modal') modal!: ElementRef;
   @Output() cryptoCreated = new EventEmitter();
-  selectedCoinMarketCapId = 0;
   loading: boolean = false;
+  selectedCoinMarketCapId = 0;
   btnColor = environment.btnColor;
   cryptoOptions$ = new BehaviorSubject<Crypto[]>([]);
 
   constructor(
-    private modalService: NgbModal,
     private cryptoService: CryptoService,
     private toastService: ToastService,
     private authService: AuthService) {
   }
 
-  createCryptoAsset(selectedCoinMarketCapId: number, modalRef: any): void {
+  createCryptoAsset(): void {
     this.loading = true;
-    const selectedCrypto = this.getCryptoById(selectedCoinMarketCapId);
+    const selectedCrypto = this.getCryptoById(this.selectedCoinMarketCapId);
 
     if (!selectedCrypto) {
       return;
@@ -53,29 +53,31 @@ export class AddCryptoComponent {
     };
 
     this.cryptoService.createCryptoAsset(command)
-      .pipe(
-        finalize(() => {
-          this.loading = false;
-        })
-      ).subscribe({
+      .subscribe({
         next: () => {
+          this.toastService.showSuccess('Crypto asset created successfully');
           this.cryptoCreated.emit();
           this.cryptoCreated.complete();
-          modalRef.close();
+          this.closeModal();
+          this.loading = false;
+          this.selectedCoinMarketCapId = 0;
         },
         error: (err) => {
+          this.loading = false;
           this.toastService.showError(err.error.message);
         }
       });
   }
 
-  closeModal(modal: any) {
-    modal.close();
+  open() {
+    this.getCryptos();
+    this.modal.nativeElement.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
   }
 
-  open(content: any) {
-    this.getCryptos();
-    this.modalService.open(content);
+  closeModal() {
+    this.modal.nativeElement.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
   }
 
   private getCryptos() {
