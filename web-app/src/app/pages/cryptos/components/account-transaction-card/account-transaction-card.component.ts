@@ -16,7 +16,6 @@ import { CurrencyPipe, DatePipe, NgClass, UpperCasePipe } from '@angular/common'
     CryptoSymbolPipe,
     TransactionTypeLabelPipe],
   templateUrl: './account-transaction-card.component.html',
-  styleUrl: './account-transaction-card.component.scss'
 })
 export class AccountTransactionCardComponent {
   objectKeys = Object.keys;

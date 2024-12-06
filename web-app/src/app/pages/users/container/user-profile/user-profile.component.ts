@@ -15,6 +15,8 @@ import { environment } from 'src/environments/environment.development';
   templateUrl: './user-profile.component.html'
 })
 export class UserProfileComponent implements OnInit {
+  toggleDarkMode() { }
+  isDarkMode = false;
   private authService = inject(AuthService);
   private userService = inject(UserService);
   private toastService = inject(ToastService);
@@ -39,6 +41,10 @@ export class UserProfileComponent implements OnInit {
       this.userFullname = this.authService.user.unique_name;
       this.userEmail = this.authService.user.email;
     }
+  }
+
+  getUserInitial(): string {
+    return this.userFullname.charAt(0).toUpperCase();
   }
 
   updateUserProfile() {
