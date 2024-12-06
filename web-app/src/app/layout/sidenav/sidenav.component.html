@@ -2,13 +2,30 @@
   [class.collapsed]="isCollapsed()" [class.mobile]="isMobile()" [class.border-y-2]="isMobile()"
   [class.overflow-hidden]="isMobile()">
   @for (item of navItemsEnabled(); track $index) {
-  <a [routerLink]="item.path" class="hover:bg-gray-200 dark:hover:bg-gray-700" [class.flex]="isMobile()"
+  <!-- <a [routerLink]="item.path" class="hover:bg-gray-200 dark:hover:bg-gray-700" [class.flex]="isMobile()"
     [class.flex-col]="isMobile()" [class.items-center]="isMobile()">
     <i class="material-icons" [class.ml-3]="isMobile()" [class.text-md]="isMobile()">{{ item.icon
       }}</i>
     <span [class.opacity-0]="isCollapsed()" [class.width-0]="isCollapsed()" [class.text-xs]="isMobile()"
       class="inline transition-all duration-300 text-gray-900 dark:text-gray-100" (click)="logout(item)">{{
       item.label }}</span>
+  </a> -->
+
+  <a [routerLink]="item.path"
+    class="flex items-center w-full p-3 rounded-lg transition-all duration-200 group hover:bg-gray-100 dark:hover:bg-gray-700"
+    [class.flex-col]="isMobile()" [class.space-x-3]="!isMobile()" [class.space-y-1]="isMobile()">
+
+    <i class="material-icons text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors duration-200"
+      [class.text-xl]="!isMobile()" [class.text-lg]="isMobile()" [class.ml-3]="isMobile()">
+      {{ item.icon }}
+    </i>
+
+    <span class="font-medium transition-all duration-200" [class.opacity-0]="isCollapsed()" [class.w-0]="isCollapsed()"
+      [class.text-sm]="!isMobile()" [class.text-xs]="isMobile()" [class.text-gray-700]="!isMobile()"
+      [class.dark:text-gray-300]="!isMobile()" [class.group-hover:text-gray-900]="!isMobile()"
+      [class.dark:group-hover:text-gray-100]="!isMobile()" (click)="logout(item)">
+      {{ item.label }}
+    </span>
   </a>
   }
 </div>
