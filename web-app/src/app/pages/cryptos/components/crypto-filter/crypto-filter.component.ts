@@ -1,5 +1,4 @@
 import { Component, EventEmitter, Input, OnDestroy, Output, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
@@ -9,7 +8,6 @@ import { environment } from 'src/environments/environment.development';
   selector: 'app-crypto-filter',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule],
   templateUrl: './crypto-filter.component.html',
 })
