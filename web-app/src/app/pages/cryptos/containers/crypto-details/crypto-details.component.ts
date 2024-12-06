@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { AsyncPipe, UpperCasePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
 import { TransactionTableComponent } from '../../components/transaction-table.component';
@@ -15,58 +15,13 @@ import { StatsCardComponent } from '../../components/stats-card/stats-card.compo
   selector: 'app-crypto-details',
   standalone: true,
   imports: [
-    CommonModule,
+    UpperCasePipe,
+    AsyncPipe,
     AddTransactionComponent,
     TransactionTableComponent,
     StatsCardComponent
   ],
   templateUrl: './crypto-details.component.html',
-  styles: [`
-  .container{
-    padding: 16px;
-  }
-  .crypto-details-container {
-  padding: 16px;
-}
-
-.crypto-details-container h1 {
-  font-size: 32px;
-  margin-bottom: 16px;
-}
-
-.card-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.card-col {
-  flex: 1 1 calc(50% - 16px);
-}
-
-.transaction-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.transaction-col {
-  flex: 1 1 calc(50% - 16px);
-}
-
-.transaction-item {
-  margin: 16px 0;
-}
-
-/* Mobile styles */
-@media (max-width: 600px) {
-  .card-col,
-  .transaction-col {
-    flex: 1 1 100%;
-  }
-}
-  `]
 })
 export class CryptoDetailsComponent implements OnInit, OnDestroy {
 
