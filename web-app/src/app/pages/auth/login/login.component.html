@@ -43,8 +43,10 @@
           [disabled]="loading() || loginForm.invalid" [ngStyle]="{'cursor': loading() ? 'not-allowed' : 'pointer'}">
           @if (!loading()) {
           Login
-          }@else {
-          <app-loading-spinner [loading]="loading()"></app-loading-spinner>
+          @if (loading()) {
+          <span class="ml-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent">
+          </span>
+          }
           }
         </button>
       </div>

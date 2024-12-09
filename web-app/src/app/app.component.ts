@@ -1,9 +1,8 @@
 import { RouterModule } from '@angular/router';
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { AuthService } from './core/services/auth.service';
 import { HeaderComponent } from './layout/header/header.component';
-import { ToastComponent } from './layout/toast.component';
 import { NgxSpinnerModule } from 'ngx-spinner';
 import { SidenavComponent } from './layout/sidenav/sidenav.component';
 
@@ -27,7 +26,7 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
   standalone: true,
   imports: [
     RouterModule,
-    CommonModule,
+    AsyncPipe,
     HeaderComponent,
     NgxSpinnerModule,
     SidenavComponent],
@@ -38,6 +37,4 @@ export class AppComponent {
   toggleSidenavEvent() {
     this.onToggleSidenav.set(!this.onToggleSidenav());
   };
-  constructor() {
-  }
 }

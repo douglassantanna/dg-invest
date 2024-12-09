@@ -1,4 +1,3 @@
-import { LoadingSpinnerComponent } from './../../../layout/loading-spinner/loading-spinner.component';
 import { NgStyle } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -12,8 +11,7 @@ import { environment } from 'src/environments/environment.development';
   standalone: true,
   imports: [
     NgStyle,
-    ReactiveFormsModule,
-    LoadingSpinnerComponent],
+    ReactiveFormsModule],
   templateUrl: './login.component.html',
 })
 export class LoginComponent implements OnInit {
