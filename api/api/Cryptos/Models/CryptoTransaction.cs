@@ -8,7 +8,8 @@ public class CryptoTransaction : Entity
                              decimal price,
                              DateTimeOffset purchaseDate,
                              string exchangeName,
-                             ETransactionType transactionType)
+                             ETransactionType transactionType,
+                             decimal fee)
     {
         Amount = amount;
         Price = price;
@@ -16,6 +17,7 @@ public class CryptoTransaction : Entity
         ExchangeName = StringSanitizer.Sanitize(exchangeName);
         TransactionType = transactionType;
         Enabled = true;
+        Fee = fee;
     }
     public decimal Amount { get; private set; }
     public decimal Price { get; private set; }
@@ -23,6 +25,7 @@ public class CryptoTransaction : Entity
     public string ExchangeName { get; private set; } = string.Empty;
     public ETransactionType TransactionType { get; private set; }
     public bool Enabled { get; private set; }
+    public decimal Fee { get; set; }
 
     internal void Disable()
     {

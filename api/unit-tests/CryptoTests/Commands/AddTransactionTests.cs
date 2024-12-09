@@ -28,7 +28,8 @@ public class AddTransactionTests
                                                   ExchangeName: "Binance",
                                                   TransactionType: ETransactionType.Buy,
                                                   CryptoAssetId: 1,
-                                                  UserId: 1);
+                                                  UserId: 1,
+                                                  Fee: 0.0m);
 
         _cryptoAssetRepositoryMock = new Mock<ICryptoAssetRepository>();
         _userRepositoryMock = new Mock<IUserRepository>();
@@ -61,7 +62,8 @@ public class AddTransactionTests
                                                 ExchangeName: "Binance",
                                                 TransactionType: ETransactionType.Buy,
                                                 CryptoAssetId: 1,
-                                                UserId: 1);
+                                                UserId: 1,
+                                                Fee: 0.0m);
 
         // Act
         var validator = new AddTransactionCommandValidator();

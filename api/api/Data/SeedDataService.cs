@@ -128,9 +128,9 @@ public class SeedDataService : ISeedDataService
         var cryptoAsset = new CryptoAsset(cryptoCurrency: "BTC", currencyName: "USD", symbol: "BTCUSD", coinMarketCapId: 1);
         var cryptoTransactions = new List<CryptoTransaction>
         {
-            new (amount: 0.00054m, price: 38366.98m, purchaseDate: DateTime.Now.AddDays(-21), exchangeName: "Bybit", transactionType: ETransactionType.Buy),
-            new (amount: 0.08921m, price: 45966.21m, purchaseDate: DateTime.Now.AddDays(-17), exchangeName: "Bybit", transactionType: ETransactionType.Buy),
-            new (amount: 0.00043m, price: 64247.77m, purchaseDate: DateTime.Now.AddDays(-11), exchangeName: "Bybit", transactionType: ETransactionType.Sell),
+            new (amount: 0.00054m, price: 38366.98m, purchaseDate: DateTime.Now.AddDays(-21), exchangeName: "Bybit", transactionType: ETransactionType.Buy, fee: 0.00003m),
+            new (amount: 0.08921m, price: 45966.21m, purchaseDate: DateTime.Now.AddDays(-17), exchangeName: "Bybit", transactionType: ETransactionType.Buy, fee: 0.00003m),
+            new (amount: 0.00043m, price: 64247.77m, purchaseDate: DateTime.Now.AddDays(-11), exchangeName: "Bybit", transactionType: ETransactionType.Sell, fee: 0.00003m),
         };
         foreach (var cryptoTransaction in cryptoTransactions)
         {
@@ -171,7 +171,8 @@ public class SeedDataService : ISeedDataService
                 exchangeName: "Bybit",
                 notes: string.Empty,
                 cryptoAssetId: 1,
-                cryptoAsset: null),
+                cryptoAsset: null,
+                fee: 0.00003m),
             new (date: DateTime.Now.AddDays(-17),
                 transactionType: EAccountTransactionType.Out,
                 amount: 0.08921m,
@@ -179,7 +180,8 @@ public class SeedDataService : ISeedDataService
                 exchangeName: "Bybit",
                 notes: string.Empty,
                 cryptoAssetId: 1,
-                cryptoAsset: null),
+                cryptoAsset: null,
+                fee: 0.00003m),
             new (date: DateTime.Now.AddDays(-11),
                 transactionType: EAccountTransactionType.In,
                 amount: 0.00043m,
@@ -187,7 +189,8 @@ public class SeedDataService : ISeedDataService
                 exchangeName: "Bybit",
                 notes: string.Empty,
                 cryptoAssetId: 1,
-                cryptoAsset: null),
+                cryptoAsset: null,
+                fee: 0.00003m),
         };
     }
 
