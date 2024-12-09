@@ -7,7 +7,9 @@
       </label>
       <select id="filterByDate"
         class="px-4 py-2 text-sm text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-        <option *ngFor="let option of orderOptions" [value]="option">{{ option }}</option>
+        @for (option of orderOptions; track $index) {
+        <option [value]="option">{{ option }}</option>
+        }
       </select>
     </div>
   </header>
@@ -33,8 +35,8 @@
         </tr>
       </thead>
       <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-        <tr *ngFor="let element of transactions | async trackBy: transactionById"
-          class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+        @for (element of transactions | async; track $index) {
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
             {{ element.amount }}
           </td>
@@ -50,14 +52,18 @@
             </app-percent-difference>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm">
-            <span *ngIf="element.transactionType === 1"
+            @if (element.transactionType === 1) {
+            <span
               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100">
               Buy
             </span>
-            <span *ngIf="element.transactionType === 2"
+            }
+            @if (element.transactionType === 2) {
+            <span
               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100">
               Sell
             </span>
+            }
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
             {{ element.purchaseDate | date: 'dd/MM/y' }}
@@ -66,6 +72,7 @@
             {{ element.exchangeName }}
           </td>
         </tr>
+        }
       </tbody>
     </table>
   </div>

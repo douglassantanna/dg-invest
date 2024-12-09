@@ -1,16 +1,17 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CryptoTransactionHistory } from 'src/app/core/models/crypto-transaction-history';
 import { BehaviorSubject } from 'rxjs';
 import { PercentDifferenceComponent } from '../percent-difference.component';
 import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
+import { AsyncPipe, DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-transaction-table',
   standalone: true,
   imports: [
-    CommonModule,
+    AsyncPipe,
+    DatePipe,
     FormsModule,
     PercentDifferenceComponent,
     FormatCurrencyPipe],
