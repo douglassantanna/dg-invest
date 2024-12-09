@@ -1,27 +1,26 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CreateUserComponent } from '../create-user/create-user.component';
 import { UserService } from 'src/app/core/services/user.service';
 import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import { ViewUserDto } from 'src/app/core/models/view-user-dto';
-import { ToastService } from 'src/app/core/services/toast.service';
 import { Pagination } from 'src/app/core/models/pagination';
+import { ModalComponent } from 'src/app/layout/modal/modal.component';
 
 @Component({
   selector: 'app-view-users',
   standalone: true,
   imports: [
     CommonModule,
-    CreateUserComponent],
+    CreateUserComponent,
+    ModalComponent],
   templateUrl: './view-users.component.html',
 })
 export class ViewUsersComponent implements OnInit, OnDestroy {
-  users$: BehaviorSubject<ViewUserDto[]> = new BehaviorSubject<ViewUserDto[]>([]);
+  private readonly userService = inject(UserService);
   private unsubscribe$: Subject<void> = new Subject<void>();
-
-  constructor(
-    private userService: UserService,
-    private toastService: ToastService) { }
+  users$: BehaviorSubject<ViewUserDto[]> = new BehaviorSubject<ViewUserDto[]>([]);
+  isModalOpen = signal(false);
 
   ngOnInit(): void {
     this.loadUsers();
@@ -43,11 +42,6 @@ export class ViewUsersComponent implements OnInit, OnDestroy {
     })
   }
 
-  addUserToTable(user: any) {
-    this.users$.next([...this.users$.value, user]);
-    this.toastService.showSuccess("User added successfully");
-  }
-
   search(input: string) {
     this.userService.getUsers(1, 50, input, "ASC")
       .pipe(
@@ -57,8 +51,20 @@ export class ViewUsersComponent implements OnInit, OnDestroy {
           this.users$.next(users.items);
         },
         error: () => {
-          this.toastService.showError("No user found with given name");
+          console.log("No user found with given name");
         },
       });
+  }
+
+  toggleCreateUserModal(user: any = null) {
+    if (user) {
+      this.addUserToTable(user);
+    }
+    this.isModalOpen.set(!this.isModalOpen());
+  }
+
+  private addUserToTable(user: any) {
+    this.users$.next([...this.users$.value, user]);
+    console.log("User added successfully");
   }
 }

@@ -1,71 +1,52 @@
-<div class="users-container">
-  <header class="users-header">
-    <h1>Users</h1>
-    <app-create-user (userCreated)="addUserToTable($event)"></app-create-user>
+<div class="max-w-7xl mx-auto gap-4 p-6 sm:p-4 sm:z-10 sm:mb-12">
+  <header class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Users</h1>
+    <button (click)="toggleCreateUserModal()"
+      class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
+      Add user
+    </button>
   </header>
-  <div class="table-container">
-    <table class="users-table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Role</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let element of users$ | async">
-          <td>{{ element.fullName }}</td>
-          <td>{{ element.email }}</td>
-          <td>{{ element.role == 1 ? 'Admin' : 'User' }}</td>
-        </tr>
-      </tbody>
-    </table>
+
+  <div
+    class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Name</th>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Email</th>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Role</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tr *ngFor="let element of users$ | async"
+            class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ element.fullName }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ element.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span [ngClass]="{
+                'px-2 py-1 text-xs font-medium rounded-full': true,
+                'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': element.role == 1,
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': element.role != 1
+              }">
+                {{ element.role == 1 ? 'Admin' : 'User' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
-<style>
-  .users-container {
-    padding: 16px;
-  }
-
-  .users-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-
-  .users-header h1 {
-    margin: 0;
-    font-size: 24px;
-  }
-
-  .table-container {
-    overflow-x: auto;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 16px;
-    background-color: #f9f9f9;
-  }
-
-  .users-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .users-table th,
-  .users-table td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: left;
-  }
-
-  .users-table th {
-    background-color: #f4f4f4;
-    font-weight: bold;
-  }
-
-  .users-table tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
-</style>
+@if(isModalOpen()){
+<app-modal (close)="toggleCreateUserModal()">
+  <app-create-user (userCreated)="toggleCreateUserModal($event)"></app-create-user>
+</app-modal>
+}
