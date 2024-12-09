@@ -1,18 +1,13 @@
-import { Component, EventEmitter, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, output, signal, inject } from '@angular/core';
 import { FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { UserService } from 'src/app/core/services/user.service';
 import { CreateUserCommand, Role } from 'src/app/core/models/create-user';
-import { finalize } from 'rxjs';
-import { ToastService } from 'src/app/core/services/toast.service';
 import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-create-user',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     ReactiveFormsModule
   ],
@@ -20,8 +15,11 @@ import { environment } from 'src/environments/environment.development';
   styleUrls: ['./create-user.component.scss']
 })
 export class CreateUserComponent {
+  private fb = inject(FormBuilder);
+  private userService = inject(UserService);
+  userCreated = output<CreateUserCommand>();
   btnColor = environment.btnColor;
-  loading = false;
+  loading = signal(false);
   title = 'New user';
   roleId = 0;
   roles = [{ id: 1, name: 'admin' }, { id: 2, name: 'user' }];
@@ -30,27 +28,14 @@ export class CreateUserComponent {
     email: ['', [Validators.email]],
     role: [0],
   });
-  @Output() userCreated = new EventEmitter<CreateUserCommand>();
 
-
-  constructor(
-    private modalService: NgbModal,
-    private fb: FormBuilder,
-    private userService: UserService,
-    private toastService: ToastService
-  ) { }
-  open(content: any) {
-    this.modalService.open(content);
-  }
-  closeModal(modal: any) {
-    modal.close();
-  }
-  createCryptoAsset(modalRef: any) {
-    this.loading = true;
+  submit() {
+    this.loading.set(true);
 
     const role = this.getRole();
-    if (role === undefined)
+    if (role === undefined) {
       return;
+    }
 
     const command: CreateUserCommand = {
       fullName: this.fullName.value,
@@ -59,20 +44,13 @@ export class CreateUserComponent {
     };
 
     this.userService.createUser(command)
-      .pipe(
-        finalize(() => {
-          this.loading = false;
-        })
-      )
       .subscribe({
         next: () => {
-          modalRef.close();
+          this.loading.set(false);
           this.userCreated.emit(command);
-          this.userCreated.complete();
-          this.toastService.showSuccess('User added successfully');
         },
         error: (err) => {
-          this.toastService.showError(err.error.message);
+          this.loading.set(false);
         }
       });
   }

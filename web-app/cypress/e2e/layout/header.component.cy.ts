@@ -40,11 +40,11 @@ describe('Header Component', () => {
   const verifyHeaderLinks = (expectedLinks: string[]) => {
     cy.get('app-header .navbar-nav .nav-link').should('have.length', expectedLinks.length);
     expectedLinks.forEach(linkText => {
-      cy.get('app-header .navbar-nav .nav-link').should('contain.text', linkText);
+      cy.get('app-header header').should('contain.text', linkText);
     });
   };
 
-  it('should display Sign Out, Cryptos, and My Profile options in header component for user with user role', () => {
+  it('should display hamburguer icon in header component', () => {
     loginAndSetToken(fakeValidUserJwt);
     interceptListAssets();
 
@@ -53,10 +53,10 @@ describe('Header Component', () => {
     cy.url().should('include', '/cryptos');
     cy.get('app-view-cryptos').should('exist');
 
-    verifyHeaderLinks(['Sign out', 'Cryptos', 'My Profile']);
+    cy.get('app-header header button .material-icons').should('contain', 'menu');
   });
 
-  it('should display Sign Out, Cryptos, Users and My Profile options in header component for user with admin role', () => {
+  it('should display username initial letter in header component', () => {
     loginAndSetToken(fakeValidAdminJwt);
     interceptListAssets();
 
@@ -65,18 +65,6 @@ describe('Header Component', () => {
     cy.url().should('include', '/cryptos');
     cy.get('app-view-cryptos').should('exist');
 
-    verifyHeaderLinks(['Sign out', 'Cryptos', 'My Profile', 'Users']);
-  });
-
-  it('should display welcome message to logged user', () => {
-    loginAndSetToken(fakeValidAdminJwt);
-    interceptListAssets();
-
-    cy.visit('http://localhost:4200/#/cryptos');
-    cy.wait('@listAssets');
-    cy.url().should('include', '/cryptos');
-    cy.get('app-view-cryptos').should('exist');
-
-    cy.get('app-header .navbar-text').should('contain.text', 'Welcome');
+    cy.get('app-header header #username-initial-letter').should('contain', 'J');
   });
 });

@@ -2,9 +2,6 @@
 
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { enableProdMode, importProvidersFrom } from '@angular/core';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDialogModule } from '@angular/material/dialog';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
@@ -34,8 +31,5 @@ bootstrapApplication(AppComponent, {
     ),
     provideRouter(routes),
     provideAnimations(),
-    importProvidersFrom(MatDialogModule),
-    importProvidersFrom(MatDatepickerModule),
-    importProvidersFrom(MatNativeDateModule),
   ],
 }).catch((err) => console.error(err));

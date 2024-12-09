@@ -1,129 +1,59 @@
-<main>
-  <header>
-    <div class="card">
-      <h1>{{ account().balance | currency:'USD':'symbol':'1.2-2' }}</h1>
-      <h2>Balance</h2>
+<main class="max-w-7xl mx-auto gap-4 p-6 sm:z-10 sm:mb-10">
+  <header class="space-y-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
+      <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Available Balance</h2>
+      <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100">
+        {{ account().balance | currency:'USD':'symbol':'1.2-2' }}
+      </h1>
     </div>
 
-    <div class="actions">
-      <div class="card">
-        <a routerLink="/account/deposit" class="card-link">
-          <h2>Deposit</h2>
-        </a>
-      </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <button (click)="toggleDepositModal()" type="button"
+        class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+        <div class="flex items-center space-x-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <h2 class="text-xl font-semibold">Deposit</h2>
+        </div>
+      </button>
 
-      <div class="card">
-        <a routerLink="/account/withdraw" class="card-link">
-          <h2>Withdraw</h2>
-        </a>
-      </div>
+      <button type="button" (click)="toggleWithdrawModal()"
+        class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+        <div class="flex items-center space-x-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+          </svg>
+          <h2 class="text-xl font-semibold">Withdraw</h2>
+        </div>
+      </button>
     </div>
   </header>
 
-  <section class="recent-transactions">
-    <div class="recent-transactions-header">
-      <span>Recent Transactions</span>
-      <app-crypto-filter [displayHideCryptoCheck]="false"
-        (searchControlEvent)="searchTransactions($event)"></app-crypto-filter>
+  <section class="mt-10">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+      <h3 class="text-xl font-bold sm:mb-4 text-gray-900 dark:text-gray-100">Recent Transactions</h3>
+      <app-crypto-filter [displayHideCryptoCheck]="false" (searchControlEvent)="searchTransactions($event)"
+        class="w-full sm:w-auto">
+      </app-crypto-filter>
     </div>
 
-    <div class="transaction-list">
-      <app-account-transaction-card [groupedTransactionsNew]="account().groupedAccountTransactions"
-        [groupedTransactions]="recentTransactions"></app-account-transaction-card>
+    <div
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <app-account-transaction-card [groupedTransactionsNew]="account().groupedAccountTransactions">
+      </app-account-transaction-card>
     </div>
   </section>
 </main>
 
-<style>
-  main {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    padding: 10px 24px 10px 24px;
-  }
+@if (isDepositModalOpen()) {
+<app-modal (close)="toggleDepositModal()">
+  <app-deposit (depositEvent)="depositEvent($event)"></app-deposit>
+</app-modal>
+}
 
-  .recent-transactions-header {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 10px;
-
-    span {
-      font-size: x-large;
-    }
-  }
-
-  header {
-    display: flex;
-    gap: 10px;
-    width: 100%;
-  }
-
-  .card {
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    transition: 0.3s;
-    border-radius: 5px;
-    padding: 10px;
-    width: 200px;
-    min-width: 110px;
-  }
-
-  .card:has(h1) {
-    min-width: 200px;
-  }
-
-  .card-link {
-    display: flex;
-    flex-direction: column;
-    color: inherit;
-    text-decoration: none;
-    width: 100%;
-    height: 100%;
-  }
-
-  .card-link:hover {
-    color: inherit;
-  }
-
-  .actions {
-    display: flex;
-    gap: 10px;
-    cursor: pointer;
-  }
-
-  .card:hover {
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-  }
-
-  @media (max-width: 768px) {
-    header {
-      flex-direction: column;
-    }
-
-    .card:has(h1) {
-      width: 100%;
-    }
-
-    .card {
-      width: 100%;
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-
-      .card {
-        justify-content: center;
-        align-items: center;
-      }
-    }
-
-    .recent-transactions-header {
-      span {
-        font-size: large;
-      }
-    }
-  }
-</style>
+@if(isWithdrawModalOpen()){
+<app-modal (close)="toggleWithdrawModal()">
+  <app-withdraw (withdrawEvent)="withdrawEvent($event)"></app-withdraw>
+</app-modal>
+}

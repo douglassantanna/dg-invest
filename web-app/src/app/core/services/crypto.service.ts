@@ -32,7 +32,7 @@ export class CryptoService {
 
   constructor(
     private http: HttpClient,
-    private toastService: ToastService,
+    // private toastService: ToastService,
     private authService: AuthService) {
 
   }
@@ -60,14 +60,7 @@ export class CryptoService {
   }
 
   getCryptos(): Observable<Response<Crypto>> {
-    return this.http.get<Response<Crypto>>(`${url}/get-cryptos`).pipe(
-      tap(),
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+    return this.http.get<Response<Crypto>>(`${url}/get-cryptos`);
   }
 
   getCryptoAssetById(id: number): Observable<Response<ViewCryptoAssetDto>> {
@@ -76,23 +69,12 @@ export class CryptoService {
         this._cryptoAssetData.next(response.data.cryptoAssetData);
         this._cryptoInformation.next(response.data.cryptoInformation);
         this._transactions.next(response.data.transactions);
-      }),
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
       })
     );
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/create`, command).pipe(
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+    return this.http.post<Response<any>>(`${url}/create`, command);
   }
 
   addTransaction(command: AddTransactionCommand) {
@@ -113,13 +95,7 @@ export class CryptoService {
         if (!Array.isArray(updatedCryptoData)) {
           this._cryptoAssetData.next(updatedCryptoData.data.cryptoAssetData);
         }
-      }),
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+      }));
   }
 
   depositFund(deposit: DepositFundCommand): Observable<Response<any>> {

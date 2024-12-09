@@ -28,7 +28,6 @@ export class CryptoTableComponent {
     { value: 'unit_price', description: 'Unit Price' },
     { value: 'invested_amount', description: 'Invested Amount' },
     { value: 'current_worth', description: 'Current Worth' },
-    { value: 'action', description: 'Action' },
   ]
   cryptoDashboard(cryptoID: number) {
     this.router.navigate(['/crypto-dashboard', cryptoID]);

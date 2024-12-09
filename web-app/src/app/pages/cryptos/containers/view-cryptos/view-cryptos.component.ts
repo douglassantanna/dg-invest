@@ -1,37 +1,36 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl } from '@angular/forms';
 
-import { CreateCryptoComponent } from '../create-crypto.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { Observable, Subject, takeUntil } from 'rxjs';
-import { CryptoFilterComponent } from '../../components/crypto-filter.component';
+import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
 import { CryptoTableComponent } from '../../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { LocalStorageService } from 'src/app/core/services/local-storage.service';
 import { PercentDifferenceComponent } from '../../components/percent-difference.component';
 import { PieChartComponent } from '../../components/pie-chart/pie-chart.component';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
+import { AddCryptoComponent } from '../../components/add-crypto/add-crypto.component';
+import { CurrencyPipe } from '@angular/common';
+import { ModalComponent } from 'src/app/layout/modal/modal.component';
 
 @Component({
   selector: 'app-view-cryptos',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    CreateCryptoComponent,
-    ReactiveFormsModule,
     CryptoFilterComponent,
     CryptoTableComponent,
     PercentDifferenceComponent,
     PieChartComponent,
-    RouterModule],
+    RouterModule,
+    AddCryptoComponent,
+    CurrencyPipe,
+    ModalComponent],
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
   private cryptoService = inject(CryptoService);
   private localStorageService = inject(LocalStorageService);
-  private readonly router = inject(Router);
   private unsubscribe$: Subject<void> = new Subject<void>();
   cryptoAssetList = signal<ViewCryptoInformation[]>([]);
   searchControl: FormControl = new FormControl();
@@ -42,6 +41,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalMarketValue = 0;
   investmentChangePercent = 0;
   accountBalance = signal(0);
+  isModalOpen = signal(false);
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
@@ -52,9 +52,14 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.loadCryptoAssets(params);
   }
 
-  redirectToAccount() {
-    this.router.navigateByUrl('/account');
+  toggleCreateCryptoModal(cryptoCreated: any = null) {
+    if (cryptoCreated) {
+      const params = this.getCryptoAssetParams();
+      this.loadCryptoAssets(params);
+    }
+    this.isModalOpen.set(!this.isModalOpen());
   }
+
   loadCryptoAssets(params: any = {}) {
     const sortByLocalStorage = this.localStorageService.getAssetListSortBy() ?? 'symbol';
     const sortOrderLocalStorage = this.localStorageService.getAssetListSortOrder() ?? 'asc';
