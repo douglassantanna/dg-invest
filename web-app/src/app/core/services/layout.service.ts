@@ -32,7 +32,7 @@ export class LayoutService {
       roles: [Role.Admin],
     },
     {
-      label: 'Log out',
+      label: 'Logout',
       path: 'logout',
       icon: 'logout',
       roles: [Role.Admin, Role.User],

@@ -39,14 +39,12 @@
         }
         }
         <button type="submit"
-          class="w-full flex justify-center items-center py-2 px-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-700 focus:outline-none focus:bg-blue-700"
+          class="mt-4 w-full flex justify-center items-center py-2 px-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           [disabled]="loading() || loginForm.invalid" [ngStyle]="{'cursor': loading() ? 'not-allowed' : 'pointer'}">
-          @if (!loading()) {
           Login
           @if (loading()) {
           <span class="ml-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent">
           </span>
-          }
           }
         </button>
       </div>
