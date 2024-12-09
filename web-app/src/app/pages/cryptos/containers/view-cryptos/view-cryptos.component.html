@@ -43,14 +43,20 @@
               </app-crypto-filter>
             </div>
             <div class="inline-block ml-1">
-              <app-add-crypto (cryptoCreated)="loadCryptoAssets()"></app-add-crypto>
+              <button type="button" (click)="toggleCreateCryptoModal()"
+                class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
+                Add <span class="ml-1">asset</span>
+              </button>
             </div>
           </div>
         </div>
         }@else {
         <div class="text-center">
           <h2>No assets found</h2>
-          <app-add-crypto (cryptoCreated)="loadCryptoAssets()"></app-add-crypto>
+          <button type="button" (click)="toggleCreateCryptoModal()"
+            class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
+            Add <span class="ml-1">asset</span>
+          </button>
         </div>
         }
         <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
@@ -66,3 +72,9 @@
   </div>
 
 </main>
+
+@if (isModalOpen()) {
+<app-modal (close)="toggleCreateCryptoModal()">
+  <app-add-crypto (cryptoCreated)="toggleCreateCryptoModal($event)"></app-add-crypto>
+</app-modal>
+}

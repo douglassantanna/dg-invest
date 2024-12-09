@@ -1,17 +1,18 @@
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { CreateUserComponent } from '../create-user/create-user.component';
 import { UserService } from 'src/app/core/services/user.service';
 import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import { ViewUserDto } from 'src/app/core/models/view-user-dto';
 import { Pagination } from 'src/app/core/models/pagination';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
+import { AsyncPipe, NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-view-users',
   standalone: true,
   imports: [
-    CommonModule,
+    NgClass,
+    AsyncPipe,
     CreateUserComponent,
     ModalComponent],
   templateUrl: './view-users.component.html',

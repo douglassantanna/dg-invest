@@ -25,20 +25,21 @@
           </tr>
         </thead>
         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          <tr *ngFor="let element of users$ | async"
-            class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ element.fullName }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ element.email }}</td>
+          @for (user of users$ | async; track $index) {
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ user.fullName }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ user.email }}</td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span [ngClass]="{
-                'px-2 py-1 text-xs font-medium rounded-full': true,
-                'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': element.role == 1,
-                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': element.role != 1
-              }">
-                {{ element.role == 1 ? 'Admin' : 'User' }}
+                  'px-2 py-1 text-xs font-medium rounded-full': true,
+                  'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': user.role == 1,
+                  'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': user.role != 1
+                }">
+                {{ user.role == 1 ? 'Admin' : 'User' }}
               </span>
             </td>
           </tr>
+          }
         </tbody>
       </table>
     </div>

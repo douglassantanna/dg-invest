@@ -12,6 +12,7 @@ import { PieChartComponent } from '../../components/pie-chart/pie-chart.componen
 import { RouterModule } from '@angular/router';
 import { AddCryptoComponent } from '../../components/add-crypto/add-crypto.component';
 import { CurrencyPipe } from '@angular/common';
+import { ModalComponent } from 'src/app/layout/modal/modal.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -23,7 +24,8 @@ import { CurrencyPipe } from '@angular/common';
     PieChartComponent,
     RouterModule,
     AddCryptoComponent,
-    CurrencyPipe],
+    CurrencyPipe,
+    ModalComponent],
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
@@ -39,6 +41,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalMarketValue = 0;
   investmentChangePercent = 0;
   accountBalance = signal(0);
+  isModalOpen = signal(false);
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
@@ -47,6 +50,14 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const params = this.getCryptoAssetParams();
     this.loadCryptoAssets(params);
+  }
+
+  toggleCreateCryptoModal(cryptoCreated: any = null) {
+    if (cryptoCreated) {
+      const params = this.getCryptoAssetParams();
+      this.loadCryptoAssets(params);
+    }
+    this.isModalOpen.set(!this.isModalOpen());
   }
 
   loadCryptoAssets(params: any = {}) {
