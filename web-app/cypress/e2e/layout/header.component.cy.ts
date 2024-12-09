@@ -56,7 +56,7 @@ describe('Header Component', () => {
     cy.get('app-header header button .material-icons').should('contain', 'menu');
   });
 
-  it('should display Sign Out, Cryptos, Users and My Profile options in header component for user with admin role', () => {
+  it('should display username initial letter in header component', () => {
     loginAndSetToken(fakeValidAdminJwt);
     interceptListAssets();
 
