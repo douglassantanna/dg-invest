@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, Input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
 import { ETransactionType } from 'src/app/core/models/etransaction-type';
 import { CryptoService } from 'src/app/core/services/crypto.service';
-import { ToastService } from 'src/app/core/services/toast.service';
 import { environment } from 'src/environments/environment.development';
 
 @Component({
@@ -17,12 +16,12 @@ import { environment } from 'src/environments/environment.development';
     ReactiveFormsModule]
 })
 export class AddTransactionComponent {
-  @Input() cryptoAssetId!: number;
+  cryptoAssetId = input(0);
   cryptoService = inject(CryptoService);
-  toastService = inject(ToastService);
   fb = inject(FormBuilder);
   transactionForm!: FormGroup;
   btnColor = environment.btnColor;
+  loading = signal(false);
 
   constructor() {
     this.transactionForm = this.fb.group({
@@ -35,23 +34,24 @@ export class AddTransactionComponent {
   }
 
   save() {
+    this.loading.set(true);
     const command = {
       amount: this.transactionForm.value.amount,
       price: this.transactionForm.value.price,
       purchaseDate: this.transactionForm.value.purchaseDate,
       exchangeName: this.transactionForm.value.exchangeName,
       transactionType: this.mapTransactionType(this.transactionForm.value.transactionType),
-      cryptoAssetId: this.cryptoAssetId
+      cryptoAssetId: this.cryptoAssetId()
     } as AddTransactionCommand;
 
     this.cryptoService.addTransaction(command)
       .subscribe({
         next: (response) => {
-          this.toastService.showSuccess("Transaction added successfully");
           this.transactionForm.reset();
+          this.loading.set(false);
         },
         error: (err) => {
-          this.toastService.showError(err.error.data);
+          this.loading.set(false);
         }
       });
   }
