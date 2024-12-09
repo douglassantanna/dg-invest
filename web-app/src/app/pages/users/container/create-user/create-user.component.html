@@ -1,46 +1,50 @@
-<ng-template #content let-modal>
-  <div class="modal-header">
-    <h2 class="modal-title" id="modal-basic-title">{{ title }}</h2>
-    <button type="button" class="btn-close" aria-label="Close" (click)="closeModal(modal)"></button>
-  </div>
-  <div class="modal-body">
-    <form [formGroup]="createUserForm">
-      <div class="mb-3">
-        <label for="formGroupExampleInput" class="form-label">Full name</label>
-        <input maxlength="220" minlength="2" type="text" class="form-control" formControlName="fullName" required>
-        <div *ngIf="fullName.invalid && (fullName.dirty || fullName.touched)" class="alert alert-danger">
-          <div *ngIf="fullName.errors?.['required']">Name is required.</div>
-          <div *ngIf="fullName.errors?.['minlength']">
-            Name must be at least 2 characters long.
-          </div>
-        </div>
-      </div>
-      <div class="mb-3">
-        <label for="exampleFormControlInput1" class="form-label">Email address</label>
-        <input maxlength="220" type="email" class="form-control" formControlName="email" required>
-        <div *ngIf="email.invalid && (email.dirty || email.touched)" class="alert alert-danger">
-          <div *ngIf="email.errors?.['required']">Email is required.</div>
-          <div *ngIf="email.errors?.['email']">Email is invalid.</div>
-        </div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Role</label>
-        <select class="form-select" aria-label="Role selector" formControlName="role" required>
-          <option *ngFor="let role of roles" [value]="role.id">
-            {{ role.name }}
-          </option>
-        </select>
-      </div>
-    </form>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn" [ngClass]="btnColor" (click)="createCryptoAsset(modal)"
-      [disabled]="!createUserForm.valid">Save
-      <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-    </button>
-  </div>
-</ng-template>
+<div class="w-60 text-left flex flex-col justify-start">
+  <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ title }}</h2>
 
-<button type="button" class="btn" [ngClass]="btnColor" (click)="open(content)">
-  Add user
-</button>
+  <form [formGroup]="createUserForm" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full name</label>
+      <input type="text" formControlName="fullName" required
+        class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        maxlength="220" minlength="2">
+      @if (fullName.invalid && (fullName.dirty || fullName.touched)) {
+      <div class="mt-2 text-sm text-red-600 dark:text-red-400">
+        @if (fullName.errors?.['required']) {Name is required.}
+        @if (fullName.errors?.['minlength']) {Name must be at least 2 characters long.}
+      </div>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email address</label>
+      <input type="email" formControlName="email" required
+        class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        maxlength="220">
+      @if (email.invalid && (email.dirty || email.touched)) {
+      <div class="mt-2 text-sm text-red-600 dark:text-red-400">
+        @if (email.errors?.['required']) {Email is required.}
+        @if (email.errors?.['email']) {Email is invalid.}
+      </div>
+      }
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+      <select formControlName="role" required
+        class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        @for (role of roles; track $index) {
+        <option [value]="role.id">{{ role.name }}</option>
+        }
+      </select>
+    </div>
+  </form>
+
+  <button type="button" (click)="submit()" [disabled]="!createUserForm.valid || loading()"
+    class="mt-4 w-full flex justify-center items-center py-2 px-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+    Save
+    @if (loading()) {
+    <span class="ml-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent">
+    </span>
+    }
+  </button>
+</div>

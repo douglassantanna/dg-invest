@@ -1,44 +1,48 @@
-<div class="table-responsive">
-  <table class="table border border-secondary rounded">
-    <thead>
+<div class="overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg overflow-hidden">
+    <thead class="bg-gray-50">
       <tr>
         @for (item of tableHeaders; track $index) {
-        <th (click)="sortTable(item.value)"> {{ item.description }}
-          @if(isCurrentSortHeader(item.value)){
-          <ng-container>
-            {{ getSortHeaderArrow() }}
-          </ng-container>
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-indigo-600"
+          (click)="sortTable(item.value)">
+          {{ item.description }}
+          @if (isCurrentSortHeader(item.value)) {
+          {{ getSortHeaderArrow() }}
           }
         </th>
         }
       </tr>
     </thead>
-    <tbody>
-      <tr *ngFor="let element of cryptos">
-        <td>{{ element.symbol | uppercase }}</td>
-        <td>
-          <div style="display: flex; flex-direction: column;">
-            <span>
-              {{ element.pricePerUnit | formatCurrency }}
-            </span>
-            <span style="color: grey;" *ngIf="element.balance">
-              {{ element.balance }} qty
-            </span>
+    <tbody class="divide-y divide-gray-200">
+      @for (element of cryptos; track $index) {
+      <tr class="hover:bg-gray-100">
+        <td class="px-6 py-4">
+          <button type="button" (click)="cryptoDashboard(element.id)"
+            class="text-indigo-600 font-semibold hover:underline focus:outline-none">
+            {{ element.symbol | uppercase }}
+          </button>
+        </td>
+        <td class="px-6 py-4">
+          <div class="flex flex-col space-y-1">
+            <span class="text-sm text-gray-700">{{ element.pricePerUnit | formatCurrency }}</span>
+            @if (element.balance) {
+            <span class="text-xs text-gray-500">{{ element.balance }} qty</span>
+            }
           </div>
-        </td> <!-- avaragePrice -->
-        <td>{{ element.investedAmount | formatCurrency }}</td> <!-- investedAmount -->
-        <td>
-          <div style="display: flex; flex-direction: column;">
-            <span>
-              {{ element.currentWorth | formatCurrency }}
-            </span>
-            <span style="color: grey;">
-              <app-percent-difference [percentDifference]="element.investmentGainLossPercentage" />
-            </span>
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-700">
+          {{ element.investedAmount | formatCurrency }}
+        </td>
+        <td class="px-6 py-4">
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm text-gray-700">{{ element.currentWorth | formatCurrency }}</span>
+            <app-percent-difference [percentDifference]="element.investmentGainLossPercentage" />
           </div>
-        </td> <!-- currentWorth -->
-        <td> <a (click)="cryptoDashboard(element.id)" class="btn" [ngClass]="btnColor">See details</a></td>
+        </td>
       </tr>
+      }
     </tbody>
   </table>
+
 </div>

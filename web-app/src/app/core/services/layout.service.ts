@@ -8,27 +8,33 @@ import { Role } from '../models/user.model';
 export class LayoutService {
   navItems: NavItems[] = [
     {
-      label: 'Cryptos',
+      label: 'Portfolio',
       path: 'cryptos',
-      icon: 'currency_bitcoin',
+      icon: 'list_alt',
+      roles: [Role.Admin, Role.User],
+    },
+    {
+      label: 'Account',
+      path: 'account',
+      icon: 'account_balance_wallet',
+      roles: [Role.Admin, Role.User],
+    },
+    {
+      label: 'Profile',
+      path: 'user-profile',
+      icon: 'manage_accounts',
       roles: [Role.Admin, Role.User],
     },
     {
       label: 'Users',
       path: 'users',
-      icon: 'people',
+      icon: 'group',
       roles: [Role.Admin],
     },
     {
-      label: 'My Profile',
-      path: 'user-profile',
-      icon: 'profile',
-      roles: [Role.Admin, Role.User],
-    },
-    {
-      label: 'Sign out',
-      path: 'signout',
-      icon: 'signout',
+      label: 'Logout',
+      path: 'logout',
+      icon: 'logout',
       roles: [Role.Admin, Role.User],
     }
   ];
