@@ -68,7 +68,9 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                      x => x.Include(x => x.CryptoAssets).Include(x => x.Account));
+                                                      x => x.Include(x => x.CryptoAssets)
+                                                      .ThenInclude(c => c.Transactions)
+                                                      .Include(x => x.Account));
 
         if (user == null)
         {

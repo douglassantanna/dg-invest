@@ -4,6 +4,7 @@ import { PercentDifferenceComponent } from '../percent-difference.component';
 import { Router } from '@angular/router';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
+import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-crypto-table',
@@ -15,6 +16,7 @@ import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
   templateUrl: './crypto-table.component.html'
 })
 export class CryptoTableComponent {
+  btnColor = environment.btnColor;
   sortOrder = input<string>('');
   sortBy = input<string>('');
   outputHeader = output<string>();
@@ -26,7 +28,6 @@ export class CryptoTableComponent {
     { value: 'unit_price', description: 'Unit Price' },
     { value: 'invested_amount', description: 'Invested Amount' },
     { value: 'current_worth', description: 'Current Worth' },
-    { value: 'action', description: 'Action' },
   ]
   cryptoDashboard(cryptoID: number) {
     this.router.navigate(['/crypto-dashboard', cryptoID]);

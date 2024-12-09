@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { NavItems } from '../models/nav-items';
+import { Role } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -7,28 +8,34 @@ import { NavItems } from '../models/nav-items';
 export class LayoutService {
   navItems: NavItems[] = [
     {
-      label: 'Cryptos',
+      label: 'Portfolio',
       path: 'cryptos',
-      icon: 'currency_bitcoin',
-      roles: ['admin', 'user'],
+      icon: 'list_alt',
+      roles: [Role.Admin, Role.User],
+    },
+    {
+      label: 'Account',
+      path: 'account',
+      icon: 'account_balance_wallet',
+      roles: [Role.Admin, Role.User],
+    },
+    {
+      label: 'Profile',
+      path: 'user-profile',
+      icon: 'manage_accounts',
+      roles: [Role.Admin, Role.User],
     },
     {
       label: 'Users',
       path: 'users',
-      icon: 'people',
-      roles: ['admin'],
+      icon: 'group',
+      roles: [Role.Admin],
     },
     {
-      label: 'My Profile',
-      path: 'user-profile',
-      icon: 'profile',
-      roles: ['admin', 'user'],
-    },
-    {
-      label: 'Sign out',
-      path: 'signout',
-      icon: 'signout',
-      roles: ['admin', 'user'],
+      label: 'Logout',
+      path: 'logout',
+      icon: 'logout',
+      roles: [Role.Admin, Role.User],
     }
   ];
 }

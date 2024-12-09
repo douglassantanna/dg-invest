@@ -1,8 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, output, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { CryptoService } from 'src/app/core/services/crypto.service';
-import { ToastService } from 'src/app/core/services/toast.service';
 
 @Component({
   selector: 'app-withdraw',
@@ -14,8 +13,9 @@ import { ToastService } from 'src/app/core/services/toast.service';
 export class WithdrawComponent {
   private fb = inject(FormBuilder);
   private cryptoService = inject(CryptoService);
-  private toastService = inject(ToastService);
   withdrawForm!: FormGroup;
+  loading = signal(false);
+  withdrawEvent = output<WithdrawFundCommand | null>();
   constructor() {
     this.withdrawForm = this.fb.group({
       amount: ['', Validators.required],
@@ -26,7 +26,7 @@ export class WithdrawComponent {
 
   onSubmit() {
     if (this.withdrawForm.invalid) {
-      this.toastService.showError('Please fill all fields correctly');
+      console.log('Please fill all fields correctly');
       return;
     }
 
@@ -35,10 +35,18 @@ export class WithdrawComponent {
       date: this.withdrawForm.value.date,
       notes: this.withdrawForm.value.notes
     };
+    this.loading.set(true);
     this.cryptoService.withdrawFund(withdraw)
       .subscribe({
-        next: (result) => { this.toastService.showSuccess(result.message) },
-        error: (err) => { this.toastService.showError(err), console.log(err) }
+        next: (result) => {
+          this.loading.set(false);
+          this.withdrawEvent.emit(withdraw);
+          console.log('Withdrawal successful');
+        },
+        error: (err) => {
+          this.loading.set(false);
+          console.log(err)
+        }
       });
   }
 }

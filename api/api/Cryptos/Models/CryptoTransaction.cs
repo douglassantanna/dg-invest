@@ -13,7 +13,7 @@ public class CryptoTransaction : Entity
         Amount = amount;
         Price = price;
         PurchaseDate = purchaseDate;
-        ExchangeName = exchangeName;
+        ExchangeName = StringSanitizer.Sanitize(exchangeName);
         TransactionType = transactionType;
         Enabled = true;
     }

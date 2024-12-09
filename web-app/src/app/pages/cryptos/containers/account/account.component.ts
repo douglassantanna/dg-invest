@@ -1,9 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CryptoFilterComponent } from '../../components/crypto-filter.component';
+import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
 import { CommonModule } from '@angular/common';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
 import { RouterModule } from '@angular/router';
-import { AccountDto, UserDto, UserService } from 'src/app/core/services/user.service';
+import { AccountDto, AccountTransactionDto, GroupedAccountTransactionsDto, UserDto, UserService } from 'src/app/core/services/user.service';
+import { ModalComponent } from 'src/app/layout/modal/modal.component';
+import { DepositComponent } from '../deposit/deposit.component';
+import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
+import { WithdrawComponent } from '../withdraw/withdraw.component';
 export type AccountTransaction = {
   imageUrl: string;
   transactionType: AccountTransactionType;
@@ -29,12 +33,18 @@ export enum AccountTransactionType {
     CryptoFilterComponent,
     CommonModule,
     AccountTransactionCardComponent,
-    RouterModule
+    RouterModule,
+    ModalComponent,
+    DepositComponent,
+    WithdrawComponent
   ],
   templateUrl: './account.component.html',
 })
 export class AccountComponent implements OnInit {
   private userService = inject(UserService);
+
+  isDepositModalOpen = signal<boolean>(false);
+  isWithdrawModalOpen = signal<boolean>(false);
   account = signal<AccountDto>({} as AccountDto);
   ngOnInit(): void {
     this.userService.getUserById().subscribe({
@@ -47,55 +57,64 @@ export class AccountComponent implements OnInit {
       error: (err) => { console.log(err) }
     })
   }
-  recentTransactions: { [date: string]: AccountTransaction[] } = {
-    "2024-06-25": [
-      {
-        imageUrl: 'assets/bitcoin-symbol.png',
-        transactionType: AccountTransactionType.DepositFiat,
-        transactionValue: 1000,
-        date: new Date(),
-        notes: 'Deposit fiat money to account',
-      },
-      {
-        imageUrl: 'assets/bitcoin-symbol.png',
-        transactionType: AccountTransactionType.DepositCrypto,
-        transactionValue: 500,
-        date: new Date(),
-        cryptoSymbol: 'btc',
-        notes: 'Deposit crypto to account',
-        cryptoAmount: 0.05,
-        cryptoCurrentPrice: 10000,
-      },
-      {
-        imageUrl: 'assets/bitcoin-symbol.png',
-        transactionType: AccountTransactionType.WithdrawToBank,
-        transactionValue: 20000000,
-        date: new Date(),
-        notes: 'Withdraw fiat money to bank',
-      },
-      {
-        imageUrl: 'assets/bitcoin-symbol.png',
-        transactionType: AccountTransactionType.In,
-        transactionValue: 40230,
-        date: new Date(),
-        cryptoSymbol: 'btc',
-        notes: 'Crypto sold, money received to account',
-        cryptoAmount: 0.04,
-        cryptoCurrentPrice: 61500,
-      },
-      {
-        imageUrl: 'assets/bitcoin-symbol.png',
-        transactionType: AccountTransactionType.Out,
-        transactionValue: 250,
-        date: new Date(),
-        cryptoSymbol: 'btc',
-        notes: 'Money used to buy crypto',
-        cryptoAmount: 0.025,
-        cryptoCurrentPrice: 10000,
-      },
-    ]
-  };
+
   searchTransactions(input: any) {
     console.log(input);
+  }
+
+  toggleDepositModal() {
+    this.isDepositModalOpen.set(!this.isDepositModalOpen());
+  }
+
+  toggleWithdrawModal() {
+    this.isWithdrawModalOpen.set(!this.isWithdrawModalOpen());
+  }
+
+  depositEvent(deposit: DepositFundCommand | null) {
+    if (deposit) {
+      const accountBalance = this.account().balance + deposit.amount;
+      this.account().balance = accountBalance;
+
+      const depositDate = new Date(deposit.date);
+      depositDate.setHours(0, 0, 0, 0);
+
+      const existingTransactions = this.account().groupedAccountTransactions.filter((t) => {
+        const transactionDate = new Date(t.date);
+        transactionDate.setHours(0, 0, 0, 0);
+        return transactionDate.getTime() === depositDate.getTime();
+      });
+
+      const transactionDto: AccountTransactionDto = {
+        date: deposit.date,
+        transactionType: deposit.accountTransactionType,
+        amount: deposit.amount,
+        exchangeName: deposit.exchangeName,
+        currency: '',
+        destination: '',
+        notes: deposit.notes,
+        cryptoCurrentPrice: deposit.currentPrice,
+        cryptoSymbol: deposit.cryptoAssetId
+      }
+
+      if (existingTransactions.length > 0) {
+        existingTransactions[0].transactions.push(transactionDto);
+      } else {
+        const groupedTransaction: GroupedAccountTransactionsDto = {
+          date: deposit.date,
+          transactions: [transactionDto]
+        };
+        const allTransactions = this.account().groupedAccountTransactions;
+        allTransactions.unshift(groupedTransaction);
+        const sortedTransactions = allTransactions.sort((a, b) => {
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        })
+        this.account().groupedAccountTransactions = sortedTransactions;
+      }
+    }
+    this.toggleDepositModal();
+  }
+
+  withdrawEvent(withdraw: WithdrawFundCommand | null) {
+    if (!withdraw) this.toggleWithdrawModal();
   }
 }

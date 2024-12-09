@@ -1,5 +1,5 @@
 using api.Data;
-using api.Interfaces;
+using api.Shared.Interfaces;
 using api.Shared;
 using FluentValidation;
 using MediatR;
@@ -48,7 +48,7 @@ public class AuthenticateHandler : IRequestHandler<AuthenticateCommand, Response
         if (!_passwordHelper.VerifyPassword(request.Password, user.Password ?? string.Empty))
         {
             _logger.LogError("Password for user {0} is incorrect", request.Email);
-            return new Response("Password is incorrect", false);
+            return new Response("Login failed", false);
         }
 
         var token = _tokenService.GenerateToken(user);

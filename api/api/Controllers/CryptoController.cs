@@ -91,7 +91,7 @@ public class CryptoController : ControllerBase
         return Ok(result);
     }
 
-    [EnableRateLimiting(RateLimiterPoliciesExtensions.DefaultPolicy)]
+    [EnableRateLimiting(ServiceExtensions.DefaultPolicy)]
     [HttpGet("get-crypto-asset-by-id/{CryptoAssetId:int}")]
     public async Task<ActionResult> GetCryptoAssetById([FromRoute] GetCryptoAssetByIdCommandQuery command)
     {

@@ -17,7 +17,7 @@ export class PieChartComponent {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['cryptos']) {
       const cryptos = changes['cryptos'].currentValue;
-      this.labels = cryptos.map((x: any) => x.symbol);
+      this.labels = cryptos.map((x: any) => x.symbol.replace(/USD$/, ''));
       this.positionValues = cryptos.map((x: any) => x.currentWorth);
       const ctx = document.getElementById('chart') as HTMLCanvasElement;
 
@@ -29,7 +29,7 @@ export class PieChartComponent {
       const colors = this.generateColors(numColors);
 
       new Chart(ctx, {
-        type: 'pie',
+        type: 'doughnut',
         data: {
           labels: this.labels,
           datasets: [{
@@ -65,6 +65,7 @@ export class PieChartComponent {
             },
             datalabels: {
               align: 'center',
+              color: 'white',
               formatter: (value, context) => {
                 const dataPoints = context.chart.config.data.datasets[0].data;
                 function totalSum(total: any, datapoint: any) {

@@ -39,7 +39,7 @@ public class CryptoAsset : Entity
                        int coinMarketCapId)
     {
         CryptoCurrency = cryptoCurrency;
-        CurrencyName = currencyName;
+        CurrencyName = StringSanitizer.Sanitize(currencyName);
         Symbol = symbol;
         CreatedAt = DateTimeOffset.UtcNow;
         Balance = 0;
@@ -134,7 +134,7 @@ public class CryptoAsset : Entity
     {
         var enableTransactions = _transactions
                                 .Where(t => t.TransactionType == ETransactionType.Buy)
-                                .Where(t => t.Enabled == true)
+                                .Where(t => t.Enabled)
                                 .Select(t => t.Price)
                                 .ToList();
 

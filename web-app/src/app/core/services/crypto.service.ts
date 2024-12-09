@@ -6,7 +6,6 @@ import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
 import { ViewCryptoAssetDto } from '../models/view-crypto-asset-dto';
-import { ViewMinimalCryptoAssetDto } from '../models/view-minimal-crypto-asset-dto';
 import { Crypto } from '../models/crypto';
 import { Response } from '../models/response';
 import { CryptoAssetData } from '../models/crypto-asset-data';
@@ -14,7 +13,7 @@ import { CryptoInformation } from '../models/crypto-information';
 import { CryptoTransactionHistory } from '../models/crypto-transaction-history';
 import { ViewCryptoDataDto } from '../models/view-crypto-data-dto';
 import { ToastService } from './toast.service';
-import { UserCryptoAssetDto, ViewCryptoInformation } from '../models/view-crypto-information';
+import { UserCryptoAssetDto } from '../models/view-crypto-information';
 import { AuthService } from './auth.service';
 import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 
@@ -33,7 +32,7 @@ export class CryptoService {
 
   constructor(
     private http: HttpClient,
-    private toastService: ToastService,
+    // private toastService: ToastService,
     private authService: AuthService) {
 
   }
@@ -57,24 +56,11 @@ export class CryptoService {
 
     return this.http.get<Pagination<UserCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
-    }).pipe(
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+    });
   }
 
   getCryptos(): Observable<Response<Crypto>> {
-    return this.http.get<Response<Crypto>>(`${url}/get-cryptos`).pipe(
-      tap(),
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+    return this.http.get<Response<Crypto>>(`${url}/get-cryptos`);
   }
 
   getCryptoAssetById(id: number): Observable<Response<ViewCryptoAssetDto>> {
@@ -83,23 +69,12 @@ export class CryptoService {
         this._cryptoAssetData.next(response.data.cryptoAssetData);
         this._cryptoInformation.next(response.data.cryptoInformation);
         this._transactions.next(response.data.transactions);
-      }),
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
       })
     );
   }
 
   createCryptoAsset(command: CreateCryptoAssetCommand): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/create`, command).pipe(
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+    return this.http.post<Response<any>>(`${url}/create`, command);
   }
 
   addTransaction(command: AddTransactionCommand) {
@@ -120,13 +95,7 @@ export class CryptoService {
         if (!Array.isArray(updatedCryptoData)) {
           this._cryptoAssetData.next(updatedCryptoData.data.cryptoAssetData);
         }
-      }),
-      catchError(error => {
-        if (error.error.message)
-          this.toastService.showError(error.error.message);
-        return of();
-      })
-    );
+      }));
   }
 
   depositFund(deposit: DepositFundCommand): Observable<Response<any>> {

@@ -1,5 +1,5 @@
 using System.Net;
-using api.Interfaces;
+using api.Shared.Interfaces;
 using api.Shared;
 using api.Users.Repositories;
 using FluentValidation;
@@ -7,7 +7,7 @@ using FluentValidation.Results;
 using MediatR;
 
 namespace api.Users.Commands;
-public record UpdateUserPasswordCommand(int UserId, string CurrentPassword, string NewPassword, string ConfirmNewPassword) : IRequest<Response>;
+public record UpdateUserPasswordCommand(int UserId, string CurrentPassword, string NewPassword) : IRequest<Response>;
 public class UpdateUserPasswordCommandValidator : AbstractValidator<UpdateUserPasswordCommand>
 {
     public UpdateUserPasswordCommandValidator()
@@ -16,13 +16,6 @@ public class UpdateUserPasswordCommandValidator : AbstractValidator<UpdateUserPa
             .NotNull().WithMessage("Password field is required!")
             .NotEmpty().WithMessage("Password field cannot be empty!")
             .Length(4, 20).WithMessage("Password field must be between 4 to 20 characters!");
-
-        RuleFor(x => x.ConfirmNewPassword)
-            .NotNull().WithMessage("Confirm password field is required!")
-            .NotEmpty().WithMessage("Confirm password field cannot be empty!")
-            .Equal(x => x.NewPassword).WithMessage("Password and Confirm password fields must be identical!")
-            .Length(4, 20).WithMessage("Confirm password field must be between 4 to 20 characters!");
-
     }
 }
 public class UpdateUserPasswordCommandHandler : IRequestHandler<UpdateUserPasswordCommand, Response>
