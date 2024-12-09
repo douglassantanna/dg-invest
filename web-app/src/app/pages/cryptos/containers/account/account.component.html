@@ -11,7 +11,7 @@
 
     <!-- Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <a routerLink="/account/deposit"
+      <button (click)="toggleDepositModal()" type="button"
         class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
         <div class="flex items-center space-x-3">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -19,7 +19,7 @@
           </svg>
           <h2 class="text-xl font-semibold">Deposit</h2>
         </div>
-      </a>
+      </button>
 
       <a routerLink="/account/withdraw"
         class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
@@ -49,3 +49,9 @@
     </div>
   </section>
 </main>
+
+@if (isDepositModalOpen()) {
+<app-modal (close)="toggleDepositModal()">
+  <app-deposit (depositEvent)="depositEvent($event)"></app-deposit>
+</app-modal>
+}

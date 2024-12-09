@@ -1,168 +1,92 @@
-<main>
-  <form [formGroup]="depositForm" (ngSubmit)="onSubmit()">
-    <fieldset>
-      <legend>Deposit</legend>
-      <div class="input">
-        <label for="transactionType">Type</label>
-        <select id="transactionType" name="transactionType" aria-label="Transaction Type"
-          formControlName="accountTransactionType">
+<main class="w-[600px] sm:w-[250px]">
+  <form [formGroup]="depositForm" (ngSubmit)="onSubmit()" class="bg-white dark:bg-gray-800">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Deposit</h2>
+
+    <div class="space-y-4">
+      <div>
+        <label for="transactionType"
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+        <select id="transactionType" formControlName="accountTransactionType"
+          class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
           <option [value]="depositType.DepositFiat">Fiat</option>
           <option [value]="depositType.DepositCrypto">Crypto</option>
         </select>
       </div>
-      <div class="input">
-        <label for="amount">Amount</label>
-        <input type="number" id="amount" name="amount" aria-label="Amount" formControlName="amount">
+
+      <div>
+        <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount</label>
+        <input type="number" id="amount" formControlName="amount"
+          class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
       </div>
 
       @if(accountTransactionType.value == depositType.DepositCrypto){
-      <div class="input">
-        <label for="cryptoAssetId">Crypto Asset</label>
-        <select id="cryptoAssetId" name="cryptoAssetId" aria-label="Crypto Asset" formControlName="cryptoAssetId">
+      <div>
+        <label for="cryptoAssetId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Crypto
+          Asset</label>
+        <select id="cryptoAssetId" formControlName="cryptoAssetId"
+          class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
           @for (crypto of cryptoAssets(); track $index) {
           <option [value]="crypto.id">{{ crypto.symbol | uppercase }}</option>
           }
         </select>
         @if (cryptoAssetId.hasError('required')) {
-        <div style="color: red;">
-          Required field.
-        </div>
+        <p class="mt-2 text-sm text-red-600 dark:text-red-400">Required field.</p>
         }
       </div>
 
-      <div class="input">
-        <label for="pricePerUnit">Current Price</label>
-        <input type="number" id="pricePerUnit" name="pricePerUnit" aria-label="Current Price"
-          formControlName="currentPrice">
+      <div>
+        <label for="pricePerUnit" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current
+          Price</label>
+        <input type="number" id="pricePerUnit" formControlName="currentPrice"
+          class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
         @if (currentPrice.hasError('required')) {
-        <div style="color: red;">
-          Required field.
-        </div>
+        <p class="mt-2 text-sm text-red-600 dark:text-red-400">Required field.</p>
         }
       </div>
 
-      <div class="input">
-        <label for="exchangeName">Exchange Name</label>
-        <input maxlength="255" type="text" id="exchangeName" name="exchangeName" aria-label="Exchange Name"
-          formControlName="exchangeName">
+      <div>
+        <label for="exchangeName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Exchange
+          Name</label>
+        <input type="text" id="exchangeName" formControlName="exchangeName" maxlength="255"
+          class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
         @if (exchangeName.hasError('required')) {
-        <div style="color: red;">
-          Required field.
-        </div>
+        <p class="mt-2 text-sm text-red-600 dark:text-red-400">Required field.</p>
         }
         @if (exchangeName.hasError('maxLength')) {
-        <div style="color: red;">
-          Maximum of 255 characters allowed.
-        </div>
+        <p class="mt-2 text-sm text-red-600 dark:text-red-400">Maximum of 255 characters allowed.</p>
         }
       </div>
       }
 
-      <div class="input">
-        <label for="purchaseDate">Date</label>
-        <input type="date" id="purchaseDate" name="purchaseDate" aria-label="Purchase Date" formControlName="date">
+      <div>
+        <label for="purchaseDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+        <input type="date" id="purchaseDate" formControlName="date"
+          class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
         @if (date.hasError('required')) {
-        <div style="color: red;">
-          Required field.
-        </div>
+        <p class="mt-2 text-sm text-red-600 dark:text-red-400">Required field.</p>
         }
       </div>
 
-      <div class="input">
-        <label for="notes">Notes</label>
-        <input type="text" id="notes" name="notes" aria-label="Notes" maxlength="255" formControlName="notes">
+      <div>
+        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+        <input type="text" id="notes" formControlName="notes" maxlength="255"
+          class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
       </div>
 
-      <div class="action">
-        <button class="deposit-button" type="submit">Save</button>
+      <div class="pt-4 flex space-x-4">
+        <button type="button"
+          class="mt-4 w-full flex justify-center items-center py-2 px-4 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200">
+          Cancel
+        </button>
+        <button type="submit" [disabled]="loading() || depositForm.invalid"
+          class="mt-4 w-full flex justify-center items-center py-2 px-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+          Save
+          @if (loading()) {
+          <span class="ml-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent">
+          </span>
+          }
+        </button>
       </div>
-    </fieldset>
+    </div>
   </form>
 </main>
-
-<style>
-  main {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-  }
-
-  form {
-    max-width: 400px;
-    width: 100%;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    background-color: #f9f9f9;
-  }
-
-  fieldset {
-    border: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  legend {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
-
-  .input {
-    margin-bottom: 15px;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-  }
-
-  input,
-  select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-  }
-
-  .action {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-  }
-
-  .deposit-button {
-    border-radius: 5px;
-    width: 100%;
-    background-color: rgb(12, 109, 253);
-    color: white;
-    padding: 10px;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-
-  .deposit-button:hover {
-    background-color: rgb(96, 138, 200);
-  }
-
-  .deposit-button:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(96, 138, 200, 0.5);
-  }
-
-  @media (max-width: 768px) {
-    form {
-      padding: 10px;
-    }
-
-    legend {
-      font-size: 20px;
-    }
-  }
-</style>

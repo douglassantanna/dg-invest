@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, output, signal } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepositFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { CryptoService } from 'src/app/core/services/crypto.service';
@@ -19,9 +19,11 @@ export class DepositComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cryptoService = inject(CryptoService);
   private toastService = inject(ToastService);
+  depositEvent = output<DepositFundCommand>();
   cryptoAssets = signal<ViewCryptoInformation[]>([]);
   depositType = AccountTransactionType;
   depositForm!: FormGroup;
+  loading = signal(false);
   constructor() {
     this.depositForm = this.fb.group({
       accountTransactionType: [this.depositType, Validators.minLength(1)],
@@ -43,7 +45,7 @@ export class DepositComponent implements OnInit {
       this.toastService.showError('Please fill all fields correctly');
       return;
     }
-    const deposit: DepositFundCommand = {
+    const command: DepositFundCommand = {
       amount: parseFloat(this.depositForm.value.amount),
       accountTransactionType: this.mapAccountDepositType(this.depositForm.value.accountTransactionType),
       currentPrice: this.depositForm.value.currentPrice ? parseFloat(this.depositForm.value.currentPrice) : 0,
@@ -52,12 +54,17 @@ export class DepositComponent implements OnInit {
       date: this.depositForm.value.date,
       notes: this.depositForm.value.notes,
     };
+    this.loading.set(true);
+    this.depositEvent.emit(command);
 
-    this.cryptoService.depositFund(deposit)
-      .subscribe({
-        next: (result) => { this.toastService.showSuccess(result.message) },
-        error: (err) => { this.toastService.showError(err), console.log(err) }
-      });
+    // this.cryptoService.depositFund(command)
+    //   .subscribe({
+    //     next: (result) => {
+    //       this.loading.set(false);
+    //       this.depositEvent.emit(command);
+    //     },
+    //     error: (err) => { this.loading.set(false); }
+    //   });
   }
 
   private mapAccountDepositType(depositType: number): AccountTransactionType {
