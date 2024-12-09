@@ -19,7 +19,7 @@ export class DepositComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cryptoService = inject(CryptoService);
   private toastService = inject(ToastService);
-  depositEvent = output<DepositFundCommand>();
+  depositEvent = output<DepositFundCommand | null>();
   cryptoAssets = signal<ViewCryptoInformation[]>([]);
   depositType = AccountTransactionType;
   depositForm!: FormGroup;
@@ -57,14 +57,14 @@ export class DepositComponent implements OnInit {
     this.loading.set(true);
     this.depositEvent.emit(command);
 
-    // this.cryptoService.depositFund(command)
-    //   .subscribe({
-    //     next: (result) => {
-    //       this.loading.set(false);
-    //       this.depositEvent.emit(command);
-    //     },
-    //     error: (err) => { this.loading.set(false); }
-    //   });
+    this.cryptoService.depositFund(command)
+      .subscribe({
+        next: (result) => {
+          this.loading.set(false);
+          this.depositEvent.emit(command);
+        },
+        error: (err) => { this.loading.set(false); }
+      });
   }
 
   private mapAccountDepositType(depositType: number): AccountTransactionType {

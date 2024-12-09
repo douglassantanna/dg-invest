@@ -6,6 +6,8 @@ import { RouterModule } from '@angular/router';
 import { AccountDto, AccountTransactionDto, GroupedAccountTransactionsDto, UserDto, UserService } from 'src/app/core/services/user.service';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
 import { DepositComponent } from '../deposit/deposit.component';
+import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
+import { WithdrawComponent } from '../withdraw/withdraw.component';
 export type AccountTransaction = {
   imageUrl: string;
   transactionType: AccountTransactionType;
@@ -33,7 +35,8 @@ export enum AccountTransactionType {
     AccountTransactionCardComponent,
     RouterModule,
     ModalComponent,
-    DepositComponent
+    DepositComponent,
+    WithdrawComponent
   ],
   templateUrl: './account.component.html',
 })
@@ -41,6 +44,7 @@ export class AccountComponent implements OnInit {
   private userService = inject(UserService);
 
   isDepositModalOpen = signal<boolean>(false);
+  isWithdrawModalOpen = signal<boolean>(false);
   account = signal<AccountDto>({} as AccountDto);
   ngOnInit(): void {
     this.userService.getUserById().subscribe({
@@ -60,11 +64,13 @@ export class AccountComponent implements OnInit {
 
   toggleDepositModal() {
     this.isDepositModalOpen.set(!this.isDepositModalOpen());
-    console.log('account', this.account());
-
   }
 
-  depositEvent(deposit: any) {
+  toggleWithdrawModal() {
+    this.isWithdrawModalOpen.set(!this.isWithdrawModalOpen());
+  }
+
+  depositEvent(deposit: DepositFundCommand | null) {
     if (deposit) {
       const accountBalance = this.account().balance + deposit.amount;
       this.account().balance = accountBalance;
@@ -106,5 +112,9 @@ export class AccountComponent implements OnInit {
       }
     }
     this.toggleDepositModal();
+  }
+
+  withdrawEvent(withdraw: WithdrawFundCommand | null) {
+    if (!withdraw) this.toggleWithdrawModal();
   }
 }

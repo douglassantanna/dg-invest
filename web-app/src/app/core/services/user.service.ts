@@ -11,7 +11,7 @@ import { AccountTransactionType } from '../models/deposit-fund-command';
 
 const url = `${environment.apiUrl}/User`;
 export interface AccountTransactionDto {
-  date: Date;
+  date: Date | string;
   transactionType: AccountTransactionType;
   amount: number;
   exchangeName: string;
@@ -23,7 +23,7 @@ export interface AccountTransactionDto {
 }
 
 export interface GroupedAccountTransactionsDto {
-  date: Date;
+  date: Date | string;
   transactions: AccountTransactionDto[];
 }
 
