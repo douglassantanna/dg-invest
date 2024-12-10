@@ -94,7 +94,8 @@ export class AccountComponent implements OnInit {
         destination: '',
         notes: deposit.notes,
         cryptoCurrentPrice: deposit.currentPrice,
-        cryptoSymbol: deposit.cryptoAssetId
+        cryptoSymbol: deposit.cryptoAssetId,
+        fee: 0
       }
 
       if (existingTransactions.length > 0) {
