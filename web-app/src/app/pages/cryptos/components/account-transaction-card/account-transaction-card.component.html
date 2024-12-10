@@ -42,7 +42,7 @@
             'text-red-600 dark:text-red-400': isOutgoing(transaction.transactionType)
             }">
             @if (isCryptoTransaction(transaction.transactionType)) {
-            {{ getTransactionSign(transaction.transactionType) }}{{ getTransactionValue(transaction) |
+            {{ getTransactionSign(transaction.transactionType) }}{{ getTransactionTotalValue(transaction) |
             currency:'USD':'symbol':'1.2-2' }}
             } @else {
             {{ getTransactionSign(transaction.transactionType) }}{{ transaction.amount | currency:'USD':'symbol':'1.2-2'
@@ -55,6 +55,7 @@
             <div>Amount: {{ transaction.amount }}</div>
             <div>Unit Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2' }}</div>
             <div>Fee: {{ transaction.fee | currency:'USD':'symbol':'1.2-2' }}</div>
+            <div>Subtotal: {{ getTransactionSubtotalValue(transaction) | currency:'USD':'symbol':'1.2-2' }}</div>
           </div>
           }
         </div>
