@@ -25,12 +25,12 @@ public class BuyTransaction : ITransactionStrategy
         if (insufficientFunds)
         {
             _logger.LogError("BuyTransaction: Insufficient funds for account ID: {AccountId}. Required: {RequiredBalance}, Available: {AvailableBalance}",
-                account.Id, balance, account.Balance);
+                account.Id, totalCost, account.Balance);
             return new Response("You don't have sufficient funds to complete this transaction", false);
         }
 
         account.AddTransaction(accountTransaction);
-        account.SubtractFromBalance(balance);
+        account.SubtractFromBalance(totalCost);
 
         _logger.LogInformation("Transaction executed successfully for account ID: {AccountId}. New balance: {NewBalance}",
             account.Id, account.Balance);
