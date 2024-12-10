@@ -38,7 +38,8 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
                     at.ExchangeName,
                     at.Notes,
                     at.CryptoCurrentPrice,
-                    at.CryptoAsset?.Symbol ?? ""
+                    at.CryptoAsset?.Symbol ?? "",
+                    at.Fee ?? 0
                 )).ToList()
             ))
             .OrderByDescending(g => g.Date)
