@@ -54,6 +54,7 @@
           <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             <div>Amount: {{ transaction.amount }}</div>
             <div>Unit Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2' }}</div>
+            <div>Fee: {{ transaction.fee | currency:'USD':'symbol':'1.2-2' }}</div>
           </div>
           }
         </div>

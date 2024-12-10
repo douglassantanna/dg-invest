@@ -17,6 +17,7 @@ export type AccountTransaction = {
   cryptoAmount?: number;
   cryptoCurrentPrice?: number;
   cryptoSymbol?: string;
+  fee?: number;
 }
 
 export enum AccountTransactionType {
