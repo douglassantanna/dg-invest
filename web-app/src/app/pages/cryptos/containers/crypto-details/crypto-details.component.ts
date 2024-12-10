@@ -1,5 +1,5 @@
 import { AsyncPipe, UpperCasePipe } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 
 import { TransactionTableComponent } from '../../components/transaction-table/transaction-table.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
@@ -32,7 +32,7 @@ export class CryptoDetailsComponent implements OnInit, OnDestroy {
 
   private unsubscribe$ = new Subject<void>();
 
-  transactions$: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
+  transactions = signal<CryptoTransactionHistory[]>([]);
 
   cryptoAssetData$: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
 
@@ -56,7 +56,7 @@ export class CryptoDetailsComponent implements OnInit, OnDestroy {
     this.cryptoService.transactions$
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe(transactions => {
-        this.transactions$.next(transactions);
+        this.transactions.set(transactions);
       });
   }
 

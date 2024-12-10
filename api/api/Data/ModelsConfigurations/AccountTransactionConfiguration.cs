@@ -11,6 +11,7 @@ public class AccountTransactionConfiguration : IEntityTypeConfiguration<AccountT
         builder.Property(x => x.ExchangeName).HasColumnType("varchar").HasMaxLength(255);
         builder.Property(x => x.Notes).HasColumnType("varchar").HasMaxLength(255);
         builder.Property(x => x.CryptoCurrentPrice).HasPrecision(18, 8);
+        builder.Property(x => x.Fee).HasPrecision(18, 8);
     }
 }
 

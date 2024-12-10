@@ -12,5 +12,6 @@ public class CryptoTransactionConfiguration : IEntityTypeConfiguration<CryptoTra
         builder.Property(x => x.ExchangeName).HasColumnType("varchar").HasMaxLength(255);
         builder.Property(x => x.Amount).HasPrecision(18, 8);
         builder.Property(x => x.Price).HasPrecision(18, 8);
+        builder.Property(x => x.Fee).HasPrecision(18, 8);
     }
 }
