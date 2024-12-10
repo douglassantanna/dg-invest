@@ -20,8 +20,9 @@ public class BuyTransaction : ITransactionStrategy
         _logger.LogInformation("Executing transaction for account ID: {AccountId}, transaction amount: {Amount}, current crypto price: {CryptoPrice}",
             account.Id, accountTransaction.Amount, accountTransaction.CryptoCurrentPrice);
 
-        var balance = accountTransaction.Amount * accountTransaction.CryptoCurrentPrice;
-        if (account.Balance < balance)
+        decimal totalCost = CalculateTransactionCost(accountTransaction.Amount, accountTransaction.CryptoCurrentPrice, accountTransaction.Fee);
+        var insufficientFunds = account.Balance < totalCost;
+        if (insufficientFunds)
         {
             _logger.LogError("BuyTransaction: Insufficient funds for account ID: {AccountId}. Required: {RequiredBalance}, Available: {AvailableBalance}",
                 account.Id, balance, account.Balance);
@@ -36,4 +37,10 @@ public class BuyTransaction : ITransactionStrategy
 
         return new Response("Transaction executed successfully", true);
     }
+    
+    private static decimal CalculateTransactionCost(decimal amount, decimal cryptoPrice, decimal fee)
+    {
+        return (amount * cryptoPrice) + fee;
+    }
+
 }
