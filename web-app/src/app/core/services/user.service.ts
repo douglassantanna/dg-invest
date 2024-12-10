@@ -20,7 +20,7 @@ export interface AccountTransactionDto {
   notes: string;
   cryptoCurrentPrice: number;
   cryptoSymbol: string;
-  fee?: number;
+  fee: number;
 }
 
 export interface GroupedAccountTransactionsDto {

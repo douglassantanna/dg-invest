@@ -59,8 +59,19 @@ export class AccountTransactionCardComponent {
     }
   }
 
-  getTransactionValue(accountTransaction: AccountTransactionDto): number {
+  getTransactionSubtotalValue(accountTransaction: AccountTransactionDto): number {
     return accountTransaction.amount * accountTransaction.cryptoCurrentPrice;
+  }
+
+  getTransactionTotalValue(accountTransaction: AccountTransactionDto): number {
+    switch (accountTransaction.transactionType) {
+      case AccountTransactionType.In:
+        return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) - accountTransaction.fee;
+      case AccountTransactionType.Out:
+        return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) + accountTransaction.fee;
+      default:
+        return 0;
+    }
   }
 
   isCryptoTransaction(accountTransaction: AccountTransactionType): boolean {
