@@ -10,11 +10,11 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    <div>
       <app-add-transaction [cryptoAssetId]="cryptoAssetId" />
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    <div class="sm:mb-12">
       <app-transaction-table [transactions]="transactions()" />
     </div>
   </div>

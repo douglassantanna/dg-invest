@@ -16,7 +16,8 @@ public record AccountTransactionDto(DateTime Date,
                                     string ExchangeName,
                                     string Notes,
                                     decimal CryptoCurrentPrice,
-                                    string CryptoSymbol);
+                                    string CryptoSymbol,
+                                    decimal? Fee);
 
 public record GroupedAccountTransactionsDto(DateTime Date,
                                             List<AccountTransactionDto> Transactions);
