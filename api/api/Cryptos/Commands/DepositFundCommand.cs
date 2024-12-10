@@ -139,7 +139,8 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 request.CurrentPrice ?? 0,
                 request.Date,
                 request.ExchangeName ?? string.Empty,
-                ETransactionType.Buy
+                ETransactionType.Buy,
+                0
             );
 
             cryptoAsset.AddTransaction(buyTransaction);
@@ -152,7 +153,8 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 exchangeName: request.ExchangeName ?? string.Empty,
                 notes: request.Notes,
                 cryptoAssetId: cryptoAsset.Id,
-                cryptoAsset: cryptoAsset
+                cryptoAsset: cryptoAsset,
+                fee: 0
             );
         }
         else

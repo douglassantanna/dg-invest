@@ -16,7 +16,8 @@ public record AddTransactionCommand(decimal Amount,
                                     string ExchangeName,
                                     ETransactionType TransactionType,
                                     int CryptoAssetId,
-                                    int UserId) : IRequest<Response>;
+                                    int UserId,
+                                    decimal Fee) : IRequest<Response>;
 
 public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCommand>
 {
@@ -89,7 +90,8 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                 request.Price,
                                                 request.PurchaseDate,
                                                 request.ExchangeName,
-                                                request.TransactionType);
+                                                request.TransactionType,
+                                                request.Fee);
         try
         {
             var accountTransactionType = GetAccountTransactionType(request.TransactionType);
@@ -102,7 +104,8 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                                                          exchangeName: request.ExchangeName,
                                                                                          notes: string.Empty,
                                                                                          cryptoAssetId: cryptoAsset.Id,
-                                                                                         cryptoAsset: cryptoAsset));
+                                                                                         cryptoAsset: cryptoAsset,
+                                                                                         fee: request.Fee));
             cryptoAsset.AddTransaction(transaction);
 
             if (!response.IsSuccess)

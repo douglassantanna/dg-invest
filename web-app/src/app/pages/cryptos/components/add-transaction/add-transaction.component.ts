@@ -29,6 +29,7 @@ export class AddTransactionComponent {
       price: ['',],
       purchaseDate: [''],
       exchangeName: [''],
+      fee: [],
       transactionType: [0]
     });
   }
@@ -41,7 +42,8 @@ export class AddTransactionComponent {
       purchaseDate: this.transactionForm.value.purchaseDate,
       exchangeName: this.transactionForm.value.exchangeName,
       transactionType: this.mapTransactionType(this.transactionForm.value.transactionType),
-      cryptoAssetId: this.cryptoAssetId()
+      cryptoAssetId: this.cryptoAssetId(),
+      fee: this.transactionForm.value.fee ?? 0
     } as AddTransactionCommand;
 
     this.cryptoService.addTransaction(command)

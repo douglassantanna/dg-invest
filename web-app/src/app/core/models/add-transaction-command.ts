@@ -7,4 +7,5 @@ export interface AddTransactionCommand {
   exchangeName: string;
   transactionType: ETransactionType;
   cryptoAssetId: number;
+  fee: number;
 }

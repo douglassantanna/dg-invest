@@ -49,7 +49,8 @@ public class CryptoAssetTests
                                             price: 10,
                                             purchaseDate: DateTimeOffset.Parse("2023-10-10"),
                                             exchangeName: "Binance",
-                                            transactionType: ETransactionType.Sell);
+                                            transactionType: ETransactionType.Sell,
+                                            fee: 0.0m);
 
         // Act
         var result = () => cryptoAsset.AddTransaction(transaction);
@@ -66,7 +67,8 @@ public class CryptoAssetTests
                                             price: 10,
                                             purchaseDate: DateTimeOffset.Parse("2023-10-10"),
                                             exchangeName: "Binance",
-                                            transactionType: ETransactionType.Sell);
+                                            transactionType: ETransactionType.Sell,
+                                            fee: 0.0m);
 
         // Act
         cryptoAsset.AddBalance(1); // need to add some balance first, so it can be deducted
@@ -106,12 +108,14 @@ public class CryptoAssetTests
                 price: price1,
                 purchaseDate: DateTimeOffset.Parse("2023-10-10"),
                 exchangeName: "Binance",
-                transactionType: ETransactionType.Buy),
+                transactionType: ETransactionType.Buy,
+                fee: 0.0m),
             new(amount: 1,
                 price: price2,
                 purchaseDate: DateTimeOffset.Parse("2023-10-10"),
                 exchangeName: "Binance",
-                transactionType: ETransactionType.Buy)
+                transactionType: ETransactionType.Buy,
+                fee: 0.0m)
         };
 
         foreach (var transaction in transactions)

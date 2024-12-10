@@ -8,4 +8,5 @@ export interface CryptoTransactionHistory {
   exchangeName: string;
   transactionType: ETransactionType;
   percentDifference: number;
+  fee: number;
 }

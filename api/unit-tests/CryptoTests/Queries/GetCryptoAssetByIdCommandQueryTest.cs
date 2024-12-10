@@ -55,17 +55,20 @@ public class GetCryptoAssetByIdCommandQueryTest
                 price: 15,
                 purchaseDate: DateTimeOffset.Parse("2023-10-10"),
                 exchangeName: "Binance",
-                transactionType: ETransactionType.Buy),
+                transactionType: ETransactionType.Buy,
+                fee: 0.0m),
             new(amount: 1,
                 price: 28,
                 purchaseDate: DateTimeOffset.Parse("2023-10-10"),
                 exchangeName: "Binance",
-                transactionType: ETransactionType.Buy),
+                transactionType: ETransactionType.Buy,
+                fee: 0.0m),
             new(amount: 2,
                 price: 50,
                 purchaseDate: DateTimeOffset.Parse("2023-12-10"),
                 exchangeName: "Binance",
-                transactionType: ETransactionType.Sell)
+                transactionType: ETransactionType.Sell,
+                fee: 0.0m)
         };
 
         foreach (var transaction in transactions)
