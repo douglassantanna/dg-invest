@@ -171,6 +171,24 @@ public class UserController : ControllerBase
         return Created("", result);
     }
 
+    [HttpPost("accounts/{subAccountTag}/add-transaction")]
+    public async Task<ActionResult<Response>> AddTransactionToUserList(string subAccountTag, [FromBody] AddTransactionCommand command)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        var commandWithUserId = command with { UserId = userId, SubAccountTag = subAccountTag };
+        var result = await _mediator.Send(commandWithUserId);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return Created("", result);
+    }
+
     [HttpPut("update-user")]
     public async Task<ActionResult> UpdateUser([FromBody] UpdateUserCommand command)
     {
