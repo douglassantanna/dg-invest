@@ -28,6 +28,14 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
             .MaximumLength(255)
             .WithMessage("Notes must be between 1 and 255 characters");
 
+        RuleFor(x => x.SubaccountTag)
+            .NotNull()
+            .WithMessage("Subaccount Tag must be provided")
+            .NotEmpty()
+            .WithMessage("Subaccount Tag must be provided")
+            .MaximumLength(255)
+            .WithMessage("Subaccount Tag must be between 1 and 255 characters");
+
         When(x => x.AccountTransactionType == EAccountTransactionType.DepositCrypto, () =>
         {
             RuleFor(x => x.CurrentPrice)

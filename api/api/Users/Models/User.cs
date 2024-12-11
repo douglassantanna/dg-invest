@@ -32,7 +32,7 @@ public class User : Entity
     {
 
     }
-    public Response AddAccount(string subaccountTag)
+    internal Response AddAccount(string subaccountTag)
     {
         var accountExists = Accounts.Any(x => x.SubaccountTag.Equals(subaccountTag, StringComparison.OrdinalIgnoreCase));
         if (accountExists)
@@ -42,20 +42,8 @@ public class User : Entity
         return new Response("", true);
     }
 
-    public Account? GetAccountByTag(string subaccountTag)
+    internal Account? GetAccountByTag(string subaccountTag)
         => Accounts.FirstOrDefault(x => x.SubaccountTag.Equals(subaccountTag, StringComparison.OrdinalIgnoreCase));
-
-    // public IReadOnlyCollection<CryptoAsset> CryptoAssets => _criptoAssets;
-
-    // internal void AddCryptoAsset(CryptoAsset cryptoAsset)
-    // {
-    //     var cryptoAssetExists = _criptoAssets.Any(x => x.CoinMarketCapId == cryptoAsset.CoinMarketCapId);
-    //     if (cryptoAssetExists)
-    //     {
-    //         throw new Exception("Crypto asset already exists");
-    //     }
-    //     _criptoAssets.Add(cryptoAsset);
-    // }
 
 
     internal void Update(string fullname, string email)
