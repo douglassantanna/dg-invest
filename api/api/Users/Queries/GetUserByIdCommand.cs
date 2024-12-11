@@ -20,30 +20,28 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
 
     public async Task<Response> Handle(GetUserByIdCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                      x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
-                                                      );
+        var user = await _userRepository.GetByIdAsync(request.UserId);
         if (user is null)
             return new Response("User not found", false);
 
 
-        var groupedTransactions = user.Account.AccountTransactions
-            .GroupBy(at => at.Date.Date)
-            .Select(g => new GroupedAccountTransactionsDto(
-                g.Key,
-                g.Select(at => new AccountTransactionDto(
-                    at.Date,
-                    at.TransactionType,
-                    at.Amount,
-                    at.ExchangeName,
-                    at.Notes,
-                    at.CryptoCurrentPrice,
-                    at.CryptoAsset?.Symbol ?? "",
-                    at.Fee
-                )).ToList()
-            ))
-            .OrderByDescending(g => g.Date)
-            .ToList();
+        // var groupedTransactions = user.Account.AccountTransactions
+        //     .GroupBy(at => at.Date.Date)
+        //     .Select(g => new GroupedAccountTransactionsDto(
+        //         g.Key,
+        //         g.Select(at => new AccountTransactionDto(
+        //             at.Date,
+        //             at.TransactionType,
+        //             at.Amount,
+        //             at.ExchangeName,
+        //             at.Notes,
+        //             at.CryptoCurrentPrice,
+        //             at.CryptoAsset?.Symbol ?? "",
+        //             at.Fee
+        //         )).ToList()
+        //     ))
+        //     .OrderByDescending(g => g.Date)
+        //     .ToList();
 
         var userDto = new UserDto(
             user.Id,
@@ -51,9 +49,9 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
             user.Email,
             user.Role,
             new AccountDto(
-                user.Account.Id,
-                user.Account.Balance,
-                groupedTransactions
+                1,
+                1,
+                null
             )
         );
         return new Response("", true, userDto);

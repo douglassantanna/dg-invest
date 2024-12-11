@@ -53,7 +53,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
             return new Response("Validation failed", false, errors);
         }
 
-        var user = await _userRepository.GetByIdAsync(request.UserId, x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
+        var user = await _userRepository.GetByIdAsync(request.UserId);
         if (user == null)
         {
             _logger.LogError("WithdrawFundCommandHandler. User {0} not found.", request.UserId);
@@ -69,7 +69,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                                                             amount: request.Amount,
                                                             notes: request.Notes);
 
-            var response = _transactionService.ExecuteTransaction(user.Account, accountTransaction);
+            var response = _transactionService.ExecuteTransaction(null, accountTransaction);
             if (!response.IsSuccess)
             {
                 _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);

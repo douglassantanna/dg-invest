@@ -73,8 +73,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             return new Response("Validation failed", false, errors);
         }
 
-        var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
+        var user = await _userRepository.GetByIdAsync(request.UserId);
         if (user == null)
         {
             _logger.LogError("DepositFundCommandHandler. User {0} not found.", request.UserId);
@@ -93,7 +92,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 return new Response("Crypto asset not found", false);
             }
 
-            var response = _transactionService.ExecuteTransaction(user.Account!, newAccountTransaction);
+            var response = _transactionService.ExecuteTransaction(null!, newAccountTransaction);
             if (!response.IsSuccess)
             {
                 _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);

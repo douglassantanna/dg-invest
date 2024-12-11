@@ -13,7 +13,8 @@ public class User : Entity
     public Role Role { get; set; }
     public bool EmailConfirmed { get; set; } = false;
     // private readonly List<CryptoAsset> _criptoAssets = new();
-    public Account Account { get; private set; }
+    private List<Account> _accounts = new();
+    public IReadOnlyCollection<Account> Accounts => _accounts.AsReadOnly();
     public User(string fullName,
                 string email,
                 string password,
@@ -24,7 +25,6 @@ public class User : Entity
         Email = email;
         Password = password;
         Role = role;
-        Account = account;
     }
 
     protected User()
@@ -43,6 +43,7 @@ public class User : Entity
     //     }
     //     _criptoAssets.Add(cryptoAsset);
     // }
+
 
     internal void Update(string fullname, string email)
     {

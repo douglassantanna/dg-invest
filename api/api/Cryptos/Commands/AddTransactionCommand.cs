@@ -68,9 +68,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Validation failed", false, errors);
         }
 
-        var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                      x => x
-                                                      .Include(x => x.Account));
+        var user = await _userRepository.GetByIdAsync(request.UserId);
 
         if (user == null)
         {
@@ -95,7 +93,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         {
             var accountTransactionType = GetAccountTransactionType(request.TransactionType);
             var date = new DateTime(request.PurchaseDate.Year, request.PurchaseDate.Month, request.PurchaseDate.Day);
-            var response = _transactionService.ExecuteTransaction(user.Account,
+            var response = _transactionService.ExecuteTransaction(null,
                                                                   new AccountTransaction(date: date,
                                                                                          transactionType: accountTransactionType,
                                                                                          amount: request.Amount,
