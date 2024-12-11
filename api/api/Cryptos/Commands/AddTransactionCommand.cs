@@ -47,11 +47,11 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
 {
     private readonly ILogger<AddTransactionCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
-    private readonly DataContext _context;
+    private readonly IDataContext _context;
 
     public AddTransactionCommandHandler(ILogger<AddTransactionCommandHandler> logger,
                                         ITransactionService transactionService,
-                                        DataContext context)
+                                        IDataContext context)
     {
         _logger = logger;
         _transactionService = transactionService;
