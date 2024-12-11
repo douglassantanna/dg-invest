@@ -1,10 +1,8 @@
 using System.Net;
 using System.Security.Claims;
-using api.Cryptos.Commands;
 using api.Cryptos.Queries;
 using api.Shared;
 using api.Users.Commands;
-using api.Users.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,10 +30,6 @@ public class UserController : ControllerBase
         }
         return Created("", result);
     }
-
-
-
-
 
     [HttpPost("update-user-password")]
     public async Task<ActionResult<Response>> UpdateUserPassword([FromBody] UpdateUserPasswordCommand command)
@@ -96,28 +90,6 @@ public class UserController : ControllerBase
         if (!result.IsSuccess)
             return NotFound(result.Message);
         return Ok(result);
-    }
-
-
-
-
-
-    [HttpPost("accounts/{subAccountTag}/add-transaction")]
-    public async Task<ActionResult<Response>> AddTransactionToUserList(string subAccountTag, [FromBody] AddTransactionCommand command)
-    {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized(new Response("Invalid user ID", false));
-        }
-
-        var commandWithUserId = command with { UserId = userId, SubAccountTag = subAccountTag };
-        var result = await _mediator.Send(commandWithUserId);
-        if (!result.IsSuccess)
-        {
-            return BadRequest(result);
-        }
-        return Created("", result);
     }
 
     [HttpPut("update-user")]
