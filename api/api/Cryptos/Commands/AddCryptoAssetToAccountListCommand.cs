@@ -46,12 +46,10 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
                 return new Response("Validation failed!", false, errors);
             }
 
-            var account = await _context.Accounts
-                                        .Include(x => x.CryptoAssets)
-                                        .Where(x => x.UserId == request.UserId)
-                                        .Where(x => x.SubaccountTag == request.SubAccountTag)
-                                        .FirstOrDefaultAsync(cancellationToken);
-
+            var account = await _context.Accounts.Include(x => x.CryptoAssets)
+                                                .Where(x => x.UserId == request.UserId)
+                                                .Where(x => x.SubaccountTag == request.SubAccountTag)
+                                                .FirstOrDefaultAsync(cancellationToken);
             if (account == null)
             {
                 _logger.LogError("AddCryptoAssetToAccountListCommandHandler. Account not found: {0}", request.UserId);

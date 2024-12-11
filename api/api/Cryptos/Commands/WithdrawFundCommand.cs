@@ -1,7 +1,7 @@
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
+using api.Data;
 using api.Shared;
-using api.Users.Repositories;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
@@ -11,7 +11,8 @@ namespace api.Cryptos.Commands;
 public record WithdrawFundCommand(decimal Amount,
                                  DateTime Date,
                                  int UserId,
-                                 string Notes) : IRequest<Response>;
+                                 string Notes,
+                                 string SubAccountTag) : IRequest<Response>;
 
 
 public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundCommand>
@@ -19,7 +20,7 @@ public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundComman
     public WithdrawFundCommandValidator()
     {
         RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Deposit amount must be greater than zero");
-
+        RuleFor(x => x.SubAccountTag).NotEmpty().WithMessage("SubAccountTag can't be empty");
         RuleFor(x => x.Notes)
             .MaximumLength(255)
             .WithMessage("Notes must be between 1 and 255 characters");
@@ -29,17 +30,17 @@ public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundComman
 public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, Response>
 {
     private readonly ITransactionService _transactionService;
-    private readonly IUserRepository _userRepository;
     private readonly ILogger<WithdrawFundCommandHandler> _logger;
+    private readonly DataContext _context;
 
     public WithdrawFundCommandHandler(
-        IUserRepository userRepository,
         ILogger<WithdrawFundCommandHandler> logger,
-        ITransactionService transactionService)
+        ITransactionService transactionService,
+        DataContext context)
     {
-        _userRepository = userRepository;
         _logger = logger;
         _transactionService = transactionService;
+        _context = context;
     }
 
     public async Task<Response> Handle(WithdrawFundCommand request, CancellationToken cancellationToken)
@@ -53,11 +54,14 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
             return new Response("Validation failed", false, errors);
         }
 
-        var user = await _userRepository.GetByIdAsync(request.UserId);
-        if (user == null)
+        var account = await _context.Accounts.Include(x => x.CryptoAssets)
+                                            .Where(x => x.UserId == request.UserId)
+                                            .Where(x => x.SubaccountTag == request.SubAccountTag)
+                                            .FirstOrDefaultAsync(cancellationToken);
+        if (account == null)
         {
-            _logger.LogError("WithdrawFundCommandHandler. User {0} not found.", request.UserId);
-            return new Response("User not found", false);
+            _logger.LogError("AddCryptoAssetToAccountListCommandHandler. Account not found: {0}", request.UserId);
+            return new Response("Account not found!", false, 404);
         }
 
         try
@@ -68,15 +72,17 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                                                             transactionType: EAccountTransactionType.WithdrawToBank,
                                                             amount: request.Amount,
                                                             notes: request.Notes);
+            // still need to implement account transaction type withdraw for crypto
 
-            var response = _transactionService.ExecuteTransaction(null, accountTransaction);
+            var response = _transactionService.ExecuteTransaction(account, accountTransaction);
             if (!response.IsSuccess)
             {
                 _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
 
-            await _userRepository.UpdateAsync(user);
+            _context.Accounts.Update(account);
+            await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("WithdrawFundCommandHandler. Withdraw for UserId: {0}", request.UserId);
             return new Response("Withdraw succesfully", true);
@@ -84,7 +90,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
         catch (Exception ex)
         {
             _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", ex.Message);
-            return new Response(ex.Message, false);
+            return new Response(ex.Message, false, 500);
         }
     }
 
