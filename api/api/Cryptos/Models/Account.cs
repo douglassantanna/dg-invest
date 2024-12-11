@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using api.Models.Cryptos;
 using api.Shared;
 using api.Users.Models;
 
@@ -9,6 +10,8 @@ public class Account : Entity
     public User User { get; private set; } = null!;
     public decimal Balance { get; private set; }
     private readonly List<AccountTransaction> _accountTransactions = new();
+    private readonly List<CryptoAsset> _cryptoAssets = new();
+    public IReadOnlyCollection<CryptoAsset> CryptoAssets => _cryptoAssets.AsReadOnly();
     public string SubaccountTag { get; private set; } = string.Empty;
     public Account(string subaccountTag, int userId)
     {

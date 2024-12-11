@@ -1,5 +1,6 @@
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
+using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
 using api.Users.Repositories;
@@ -50,16 +51,19 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
 public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Response>
 {
     private readonly IUserRepository _userRepository;
+    private readonly DataContext _context;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
     public DepositFundCommandHandler(
         IUserRepository userRepository,
         ILogger<DepositFundCommandHandler> logger,
-        ITransactionService transactionService)
+        ITransactionService transactionService,
+        DataContext context)
     {
         _userRepository = userRepository;
         _logger = logger;
         _transactionService = transactionService;
+        _context = context;
     }
 
     public async Task<Response> Handle(DepositFundCommand request, CancellationToken cancellationToken)
@@ -73,6 +77,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             return new Response("Validation failed", false, errors);
         }
 
+        // var account 
         var user = await _userRepository.GetByIdAsync(request.UserId);
         if (user == null)
         {
