@@ -6,11 +6,14 @@ namespace api.Cryptos.Models;
 public class Account : Entity
 {
     public int UserId { get; private set; }
-    public User User { get; private set; }
+    public User User { get; private set; } = null!;
     public decimal Balance { get; private set; }
     private readonly List<AccountTransaction> _accountTransactions = new();
-    public Account()
+    public string SubaccountTag { get; private set; } = string.Empty;
+    public Account(string subaccountTag, int userId)
     {
+        SubaccountTag = subaccountTag;
+        UserId = userId;
     }
 
     public IReadOnlyCollection<AccountTransaction> AccountTransactions => _accountTransactions.AsReadOnly();

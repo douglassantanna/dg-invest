@@ -20,5 +20,6 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
     public void Configure(EntityTypeBuilder<Account> builder)
     {
         builder.Property(x => x.Balance).HasPrecision(18, 8);
+        builder.Property(x => x.SubaccountTag).HasColumnType("varchar").HasMaxLength(255);
     }
 }

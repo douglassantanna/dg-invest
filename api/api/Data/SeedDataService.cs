@@ -85,7 +85,7 @@ public class SeedDataService : ISeedDataService
         if (!userExists)
         {
             _logger.LogInformation("Admin user does not exist, seeding admin user.");
-            var user = new User(_baseUserName, _baseUserEmail, _baseUserPassword, Role.Admin, new Account());
+            var user = new User(_baseUserName, _baseUserEmail, _baseUserPassword, Role.Admin);
             try
             {
                 await _userRepository.AddAsync(user);

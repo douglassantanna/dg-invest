@@ -6,6 +6,7 @@ using api.Shared;
 namespace api.Users.Models;
 public class User : Entity
 {
+    private const string MainAccount = "main";
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     [JsonIgnore]
@@ -18,19 +19,31 @@ public class User : Entity
     public User(string fullName,
                 string email,
                 string password,
-                Role role,
-                Account account)
+                Role role)
     {
         FullName = StringSanitizer.Sanitize(fullName);
         Email = email;
         Password = password;
         Role = role;
+        AddAccount(MainAccount);
     }
 
     protected User()
     {
 
     }
+    public Response AddAccount(string subaccountTag)
+    {
+        var accountExists = Accounts.Any(x => x.SubaccountTag.Equals(subaccountTag, StringComparison.OrdinalIgnoreCase));
+        if (accountExists)
+            return new Response($"Subaccount tag '{subaccountTag}' already exists for this user.", false);
+
+        _accounts.Add(new Account(subaccountTag, Id));
+        return new Response("", true);
+    }
+
+    public Account? GetAccountByTag(string subaccountTag)
+        => Accounts.FirstOrDefault(x => x.SubaccountTag.Equals(subaccountTag, StringComparison.OrdinalIgnoreCase));
 
     // public IReadOnlyCollection<CryptoAsset> CryptoAssets => _criptoAssets;
 

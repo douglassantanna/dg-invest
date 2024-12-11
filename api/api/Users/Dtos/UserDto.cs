@@ -10,6 +10,7 @@ public record UserDto(
     AccountDto? Account = null
 );
 public record AccountDto(int Id, decimal Balance, List<GroupedAccountTransactionsDto> GroupedAccountTransactions);
+public record SubAccountDto(int Id, string Name);
 public record AccountTransactionDto(DateTime Date,
                                     EAccountTransactionType TransactionType,
                                     decimal Amount,
