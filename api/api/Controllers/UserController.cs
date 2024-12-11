@@ -33,21 +33,7 @@ public class UserController : ControllerBase
         return Created("", result);
     }
 
-    [HttpGet("accounts")]
-    public async Task<ActionResult<Response>> GetUserAccounts()
-    {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized(new Response("Invalid user ID", false));
-        }
 
-        GetUserAccountsQueryCommand command = new(userId);
-        var result = await _mediator.Send(command);
-        if (!result.IsSuccess)
-            return BadRequest(result.Message);
-        return Ok(result);
-    }
 
     [HttpPost("accounts/create")]
     public async Task<ActionResult<Response>> CreateAccount([FromBody] CreateAccountCommand command)
