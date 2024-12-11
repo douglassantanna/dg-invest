@@ -98,21 +98,7 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("accounts/{subAccountTag}")]
-    public async Task<ActionResult<Response>> GetAccountBySubAccountTag(string subAccountTag)
-    {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized(new Response("Invalid user ID", false));
-        }
 
-        GetAccountBySubAccountTagCommand command = new(userId, subAccountTag);
-        var result = await _mediator.Send(command);
-        if (!result.IsSuccess)
-            return NotFound(result.Message);
-        return Ok(result);
-    }
 
     [HttpPost("accounts/{subAccountTag}/add-crypto-asset")]
     public async Task<ActionResult<Response>> AddCryptoAssetToUserList(string subAccountTag, [FromBody] AddCryptoAssetToAccountListRequest request)

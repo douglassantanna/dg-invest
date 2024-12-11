@@ -51,4 +51,20 @@ public class AccountController(IMediator mediator) : ControllerBase
         }
         return Created("", result);
     }
+
+    [HttpGet("{subAccountTag}")]
+    public async Task<ActionResult<Response>> GetAccountBySubAccountTag(string subAccountTag)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        GetAccountBySubAccountTagCommand command = new(userId, subAccountTag);
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+            return NotFound(result.Message);
+        return Ok(result);
+    }
 }
