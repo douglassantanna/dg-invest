@@ -6,6 +6,7 @@ namespace api.Cryptos.Models;
 public class Account : Entity
 {
     public int UserId { get; private set; }
+    public User User { get; private set; }
     public decimal Balance { get; private set; }
     private readonly List<AccountTransaction> _accountTransactions = new();
     public Account()
