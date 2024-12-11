@@ -3,7 +3,6 @@ using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
-using api.Users.Repositories;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
@@ -14,6 +13,7 @@ public record DepositFundCommand(EAccountTransactionType AccountTransactionType,
                                  decimal Amount,
                                  DateTime Date,
                                  int UserId,
+                                 string SubaccountTag,
                                  string Notes,
                                  decimal? CurrentPrice = null,
                                  string? CryptoAssetId = null,
@@ -50,17 +50,14 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
 
 public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Response>
 {
-    private readonly IUserRepository _userRepository;
     private readonly DataContext _context;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
     public DepositFundCommandHandler(
-        IUserRepository userRepository,
         ILogger<DepositFundCommandHandler> logger,
         ITransactionService transactionService,
         DataContext context)
     {
-        _userRepository = userRepository;
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
@@ -77,12 +74,14 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             return new Response("Validation failed", false, errors);
         }
 
-        // var account 
-        var user = await _userRepository.GetByIdAsync(request.UserId);
-        if (user == null)
+        var account = await _context.Accounts.Include(a => a.CryptoAssets)
+                                            .Where(ac => ac.SubaccountTag == request.SubaccountTag)
+                                            .Where(ac => ac.UserId == request.UserId)
+                                            .FirstOrDefaultAsync(cancellationToken);
+        if (account == null)
         {
-            _logger.LogError("DepositFundCommandHandler. User {0} not found.", request.UserId);
-            return new Response("User not found", false);
+            _logger.LogError("DepositFundCommandHandler. Account with SubaccountTag {0} not found.", request.SubaccountTag);
+            return new Response("Account not found", false, 404);
         }
 
         try
@@ -94,17 +93,18 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             if (newAccountTransaction == null)
             {
                 _logger.LogError("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
-                return new Response("Crypto asset not found", false);
+                return new Response("Crypto asset not found", false, 404);
             }
 
-            var response = _transactionService.ExecuteTransaction(null!, newAccountTransaction);
+            var response = _transactionService.ExecuteTransaction(account, newAccountTransaction);
             if (!response.IsSuccess)
             {
                 _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
 
-            await _userRepository.UpdateAsync(user);
+            _context.Accounts.Update(account);
+            await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("DepositFundCommandHandler. Deposit added for UserId: {0}", request.UserId);
             return new Response("Deposit added succesfully", true);
