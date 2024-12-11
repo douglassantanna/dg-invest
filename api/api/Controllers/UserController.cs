@@ -100,30 +100,7 @@ public class UserController : ControllerBase
 
 
 
-    [HttpPost("accounts/{subAccountTag}/add-crypto-asset")]
-    public async Task<ActionResult<Response>> AddCryptoAssetToUserList(string subAccountTag, [FromBody] AddCryptoAssetToAccountListRequest request)
-    {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized(new Response("Invalid user ID", false));
-        }
 
-        var result = await _mediator.Send(new AddCryptoAssetToAccountListCommand(userId, subAccountTag, request.CryptoId));
-        if (!result.IsSuccess)
-        {
-            if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)
-            {
-                return httpStatusCode switch
-                {
-                    HttpStatusCode.NotFound => NotFound(result),
-                    HttpStatusCode.BadRequest => BadRequest(result),
-                    _ => BadRequest(result),
-                };
-            }
-        }
-        return Created("", result);
-    }
 
     [HttpPost("accounts/{subAccountTag}/add-transaction")]
     public async Task<ActionResult<Response>> AddTransactionToUserList(string subAccountTag, [FromBody] AddTransactionCommand command)

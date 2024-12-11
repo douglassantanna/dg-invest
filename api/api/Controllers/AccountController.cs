@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Claims;
+using api.Cryptos.Commands;
 using api.Shared;
 using api.Users.Commands;
 using api.Users.Queries;
@@ -66,5 +67,30 @@ public class AccountController(IMediator mediator) : ControllerBase
         if (!result.IsSuccess)
             return NotFound(result.Message);
         return Ok(result);
+    }
+
+    [HttpPost("{subAccountTag}/add-crypto-asset")]
+    public async Task<ActionResult<Response>> AddCryptoAsset(string subAccountTag, [FromBody] AddCryptoAssetToAccountListRequest request)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        var result = await _mediator.Send(new AddCryptoAssetToAccountListCommand(userId, subAccountTag, request.CryptoId));
+        if (!result.IsSuccess)
+        {
+            if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)
+            {
+                return httpStatusCode switch
+                {
+                    HttpStatusCode.NotFound => NotFound(result),
+                    HttpStatusCode.BadRequest => BadRequest(result),
+                    _ => BadRequest(result),
+                };
+            }
+        }
+        return Created("", result);
     }
 }
