@@ -3,6 +3,7 @@ using System.Security.Claims;
 using api.Cryptos.Queries;
 using api.Shared;
 using api.Users.Commands;
+using api.Users.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,21 +32,21 @@ public class UserController : ControllerBase
         return Created("", result);
     }
 
-    // [HttpGet("accounts")]
-    // public async Task<ActionResult<Response>> GetUserAccounts()
-    // {
-    //     var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    //     if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-    //     {
-    //         return Unauthorized(new Response("Invalid user ID", false));
-    //     }
+    [HttpGet("accounts")]
+    public async Task<ActionResult<Response>> GetUserAccounts()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
 
-    //     GetUserAccountsQueryCommand command = new(userId);
-    //     var result = await _mediator.Send(command);
-    //     if (!result.IsSuccess)
-    //         return NotFound(result);
-    //     return Ok(result);
-    // }
+        GetUserAccountsQueryCommand command = new(userId);
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+            return BadRequest(result.Message);
+        return Ok(result);
+    }
 
     [HttpPost("update-user-password")]
     public async Task<ActionResult<Response>> UpdateUserPassword([FromBody] UpdateUserPasswordCommand command)
