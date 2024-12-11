@@ -1,5 +1,7 @@
+using System.Net;
 using System.Security.Claims;
 using api.Shared;
+using api.Users.Commands;
 using api.Users.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -28,5 +30,25 @@ public class AccountController(IMediator mediator) : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(result.Message);
         return Ok(result);
+    }
+
+    [HttpPost("create")]
+    public async Task<ActionResult<Response>> CreateAccount([FromBody] CreateAccountCommand command)
+    {
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)
+            {
+                return httpStatusCode switch
+                {
+                    HttpStatusCode.NotFound => NotFound(result),
+                    HttpStatusCode.Conflict => Conflict(result),
+                    HttpStatusCode.BadRequest => BadRequest(result),
+                    _ => BadRequest(result),
+                };
+            }
+        }
+        return Created("", result);
     }
 }
