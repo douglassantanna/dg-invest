@@ -12,7 +12,7 @@ public class User : Entity
     public string Password { get; set; } = string.Empty;
     public Role Role { get; set; }
     public bool EmailConfirmed { get; set; } = false;
-    private readonly List<CryptoAsset> _criptoAssets = new();
+    // private readonly List<CryptoAsset> _criptoAssets = new();
     public Account Account { get; private set; }
     public User(string fullName,
                 string email,
@@ -32,17 +32,17 @@ public class User : Entity
 
     }
 
-    public IReadOnlyCollection<CryptoAsset> CryptoAssets => _criptoAssets;
+    // public IReadOnlyCollection<CryptoAsset> CryptoAssets => _criptoAssets;
 
-    internal void AddCryptoAsset(CryptoAsset cryptoAsset)
-    {
-        var cryptoAssetExists = _criptoAssets.Any(x => x.CoinMarketCapId == cryptoAsset.CoinMarketCapId);
-        if (cryptoAssetExists)
-        {
-            throw new Exception("Crypto asset already exists");
-        }
-        _criptoAssets.Add(cryptoAsset);
-    }
+    // internal void AddCryptoAsset(CryptoAsset cryptoAsset)
+    // {
+    //     var cryptoAssetExists = _criptoAssets.Any(x => x.CoinMarketCapId == cryptoAsset.CoinMarketCapId);
+    //     if (cryptoAssetExists)
+    //     {
+    //         throw new Exception("Crypto asset already exists");
+    //     }
+    //     _criptoAssets.Add(cryptoAsset);
+    // }
 
     internal void Update(string fullname, string email)
     {

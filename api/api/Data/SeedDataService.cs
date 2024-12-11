@@ -47,8 +47,7 @@ public class SeedDataService : ISeedDataService
         {
             await MigrateDatabase();
             await SeedAdminUserIfNotExists();
-            _user = await _userRepository.GetByIdAsync(_baseUserId, x => x.Include(x => x.CryptoAssets)
-                                                                    .ThenInclude(c => c.Transactions)
+            _user = await _userRepository.GetByIdAsync(_baseUserId, x => x
                                                                 .Include(x => x.Account));
             if (_user != null)
             {
@@ -137,11 +136,11 @@ public class SeedDataService : ISeedDataService
             cryptoAsset.AddTransaction(cryptoTransaction);
         }
 
-        var doesAssetExist = _user.CryptoAssets.Any(x => x.Symbol == cryptoAsset.Symbol);
-        if (!doesAssetExist)
-        {
-            _user.AddCryptoAsset(cryptoAsset);
-        }
+        // var doesAssetExist = _user.CryptoAssets.Any(x => x.Symbol == cryptoAsset.Symbol);
+        // if (!doesAssetExist)
+        // {
+        //     _user.AddCryptoAsset(cryptoAsset);
+        // }
     }
 
     private void SeedAccountIfNotExists()

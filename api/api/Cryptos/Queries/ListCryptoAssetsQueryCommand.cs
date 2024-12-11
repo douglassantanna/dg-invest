@@ -36,7 +36,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     public async Task<PageList<UserCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
-        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets.Include(x => x.User).ThenInclude(x => x.Account);
+        IQueryable<CryptoAsset> cryptoAssetQuery = _context.CryptoAssets;
 
         int maxPageSize = 50;
 
@@ -67,7 +67,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
 
         if (request.UserId > 0)
         {
-            cryptoAssetQuery = cryptoAssetQuery.Where(x => x.UserId == request.UserId);
+            // cryptoAssetQuery = cryptoAssetQuery.Where(x => x.UserId == request.UserId);
         }
 
         GetQuoteResponse cmpResponse = null;
@@ -77,7 +77,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssetQuery);
         }
 
-        var collection = cryptoAssetQuery.Select(x => new UserCryptoAssetDto(x.User.Account.Balance,
+        var collection = cryptoAssetQuery.Select(x => new UserCryptoAssetDto(1,
                                                       new ViewMinimalCryptoAssetDto(x.Id,
                                                                                     x.Symbol,
                                                                                     _coinMarketCapService.GetCryptoCurrencyPriceById(x.CoinMarketCapId, cmpResponse),

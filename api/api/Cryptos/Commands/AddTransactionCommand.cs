@@ -69,8 +69,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                      x => x.Include(x => x.CryptoAssets)
-                                                      .ThenInclude(c => c.Transactions)
+                                                      x => x
                                                       .Include(x => x.Account));
 
         if (user == null)
@@ -79,12 +78,12 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("User not found", false);
         }
 
-        var cryptoAsset = user.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
-        if (cryptoAsset == null)
-        {
-            _logger.LogError("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
-            return new Response("Crypto asset not found", false);
-        }
+        // var cryptoAsset = user.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
+        // if (cryptoAsset == null)
+        // {
+        //     _logger.LogError("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
+        //     return new Response("Crypto asset not found", false);
+        // }
 
         var transaction = new CryptoTransaction(request.Amount,
                                                 request.Price,
@@ -103,10 +102,10 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                                                          cryptoCurrentPrice: request.Price,
                                                                                          exchangeName: request.ExchangeName,
                                                                                          notes: string.Empty,
-                                                                                         cryptoAssetId: cryptoAsset.Id,
-                                                                                         cryptoAsset: cryptoAsset,
+                                                                                         cryptoAssetId: 1,
+                                                                                         cryptoAsset: null,
                                                                                          fee: request.Fee));
-            cryptoAsset.AddTransaction(transaction);
+            // cryptoAsset.AddTransaction(transaction);
 
             if (!response.IsSuccess)
             {
@@ -116,7 +115,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             await _userRepository.UpdateAsync(user);
 
             _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
-            return new Response("ok", true, cryptoAsset);
+            return new Response("ok", true);
         }
         catch (CryptoAssetException ex)
         {

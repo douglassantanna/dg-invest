@@ -74,8 +74,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
-                                                          .Include(x => x.CryptoAssets).ThenInclude(x => x.Transactions));
+                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions));
         if (user == null)
         {
             _logger.LogError("DepositFundCommandHandler. User {0} not found.", request.UserId);
@@ -87,7 +86,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             var currentServerTime = DateTime.Now;
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day, currentServerTime.Hour, currentServerTime.Minute, currentServerTime.Second);
             var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);
-            var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, user.CryptoAssets);
+            var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, []);
             if (newAccountTransaction == null)
             {
                 _logger.LogError("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);

@@ -22,7 +22,7 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
     {
         var user = await _userRepository.GetByIdAsync(request.UserId,
                                                       x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
-                                                      .Include(x => x.CryptoAssets));
+                                                      );
         if (user is null)
             return new Response("User not found", false);
 
