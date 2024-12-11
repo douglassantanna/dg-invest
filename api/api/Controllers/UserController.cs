@@ -129,6 +129,22 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("accounts/{subAccountTag}")]
+    public async Task<ActionResult<Response>> GetAccountBySubAccountTag(string subAccountTag)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        GetAccountBySubAccountTagCommand command = new(userId, subAccountTag);
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+            return NotFound(result);
+        return Ok(result);
+    }
+
     [HttpPut("update-user")]
     public async Task<ActionResult> UpdateUser([FromBody] UpdateUserCommand command)
     {

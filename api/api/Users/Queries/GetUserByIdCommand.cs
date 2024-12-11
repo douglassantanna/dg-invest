@@ -1,6 +1,6 @@
+using System.Xml.Serialization;
 using api.Data;
 using api.Shared;
-using api.Users.Dtos;
 using api.Users.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -20,40 +20,9 @@ public class GetUserByIdCommandHandler : IRequestHandler<GetUserByIdCommand, Res
 
     public async Task<Response> Handle(GetUserByIdCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(request.UserId);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
         if (user is null)
-            return new Response("User not found", false);
-
-
-        // var groupedTransactions = user.Account.AccountTransactions
-        //     .GroupBy(at => at.Date.Date)
-        //     .Select(g => new GroupedAccountTransactionsDto(
-        //         g.Key,
-        //         g.Select(at => new AccountTransactionDto(
-        //             at.Date,
-        //             at.TransactionType,
-        //             at.Amount,
-        //             at.ExchangeName,
-        //             at.Notes,
-        //             at.CryptoCurrentPrice,
-        //             at.CryptoAsset?.Symbol ?? "",
-        //             at.Fee
-        //         )).ToList()
-        //     ))
-        //     .OrderByDescending(g => g.Date)
-        //     .ToList();
-
-        var userDto = new UserDto(
-            user.Id,
-            user.FullName,
-            user.Email,
-            user.Role,
-            new AccountDto(
-                1,
-                1,
-                null
-            )
-        );
-        return new Response("", true, userDto);
+            return new Response("User not found", false, 404);
+        return new Response("", true, user);
     }
 }
