@@ -4,7 +4,7 @@ using api.Users.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Data;
-public class DataContext : DbContext, IDataContext
+public class DataContext : DbContext
 {
     public DataContext(DbContextOptions<DataContext> options)
     : base(options)
@@ -23,17 +23,3 @@ public class DataContext : DbContext, IDataContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);
     }
 }
-public interface IDataContext
-{
-    DbSet<CryptoTransaction> CryptoTransactions { get; set; }
-    DbSet<CryptoAsset> CryptoAssets { get; set; }
-    DbSet<Crypto> Cryptos { get; set; }
-    DbSet<User> Users { get; set; }
-    DbSet<Account> Accounts { get; set; }
-    DbSet<AccountTransaction> AccountTransactions { get; set; }
-
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-    int SaveChanges();
-}
-
-

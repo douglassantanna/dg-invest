@@ -33,7 +33,7 @@ public class Account : Entity
         Balance += balance;
     }
 
-    internal Response AddCryptoAsset(CryptoAsset cryptoAsset)
+    public Response AddCryptoAsset(CryptoAsset cryptoAsset)
     {
         var cryptoAssetExists = _cryptoAssets.Any(x => x.CoinMarketCapId == cryptoAsset.CoinMarketCapId);
         if (cryptoAssetExists)
