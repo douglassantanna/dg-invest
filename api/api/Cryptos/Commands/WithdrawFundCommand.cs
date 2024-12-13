@@ -12,7 +12,7 @@ public record WithdrawFundCommand(decimal Amount,
                                  DateTime Date,
                                  int UserId,
                                  string Notes,
-                                 string SubAccountTag) : IRequest<Response>;
+                                 string? SubAccountTag) : IRequest<Response>;
 
 
 public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundCommand>

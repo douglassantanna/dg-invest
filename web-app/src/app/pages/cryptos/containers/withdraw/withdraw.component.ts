@@ -1,7 +1,7 @@
 import { Component, inject, output, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
-import { CryptoService } from 'src/app/core/services/crypto.service';
+import { AccountService } from 'src/app/core/services/account.service';
 
 @Component({
   selector: 'app-withdraw',
@@ -12,7 +12,7 @@ import { CryptoService } from 'src/app/core/services/crypto.service';
 })
 export class WithdrawComponent {
   private fb = inject(FormBuilder);
-  private cryptoService = inject(CryptoService);
+  private accountService = inject(AccountService);
   withdrawForm!: FormGroup;
   loading = signal(false);
   withdrawEvent = output<WithdrawFundCommand | null>();
@@ -36,7 +36,7 @@ export class WithdrawComponent {
       notes: this.withdrawForm.value.notes
     };
     this.loading.set(true);
-    this.cryptoService.withdrawFund(withdraw)
+    this.accountService.withdrawFund("main", withdraw)
       .subscribe({
         next: (result) => {
           this.loading.set(false);

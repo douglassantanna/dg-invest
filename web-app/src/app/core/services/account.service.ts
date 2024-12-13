@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
 import { AccountDto } from './user.service';
+import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 
 export interface CreateAccountCommand {
   subaccountTag: string;
@@ -54,6 +55,14 @@ export class AccountService {
       `${this.apiUrl}/${subAccountTag}/add-transaction`,
       command
     );
+  }
+
+  depositFund(subAccountTag: string, deposit: DepositFundCommand): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${subAccountTag}/deposit-fund`, deposit)
+  }
+
+  withdrawFund(subAccountTag: string, withdraw: WithdrawFundCommand): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${subAccountTag}/withdraw-fund`, withdraw)
   }
 
 }

@@ -98,13 +98,7 @@ export class CryptoService {
       }));
   }
 
-  depositFund(deposit: DepositFundCommand): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/deposit-fund`, deposit)
-  }
 
-  withdrawFund(withdraw: WithdrawFundCommand): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/withdraw-fund`, withdraw)
-  }
 
   private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {
     const transaction = {

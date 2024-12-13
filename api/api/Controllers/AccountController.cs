@@ -111,4 +111,50 @@ public class AccountController(IMediator mediator) : ControllerBase
         }
         return Created("", result);
     }
+
+    [HttpPost("{subAccountTag}/deposit-fund")]
+    public async Task<ActionResult<Response>> Depositfund([FromBody] DepositFundCommand command, string subAccountTag)
+    {
+        if (string.IsNullOrEmpty(subAccountTag))
+        {
+            return BadRequest(new Response("Subaccount tag is required", false));
+        }
+
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        var commandWithUserId = command with { UserId = userId, SubaccountTag = subAccountTag };
+        var result = await _mediator.Send(commandWithUserId);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return Created(nameof(DepositFundCommand), result);
+    }
+
+    [HttpPost("{subAccountTag}/withdraw-fund")]
+    public async Task<ActionResult<Response>> Withdrawfund([FromBody] WithdrawFundCommand command, string subAccountTag)
+    {
+        if (string.IsNullOrEmpty(subAccountTag))
+        {
+            return BadRequest(new Response("Subaccount tag is required", false));
+        }
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        var commandWithUserId = command with { UserId = userId, SubAccountTag = subAccountTag };
+        var result = await _mediator.Send(commandWithUserId);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return Created(nameof(DepositFundCommand), result);
+    }
+
 }

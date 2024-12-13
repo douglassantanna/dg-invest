@@ -13,7 +13,7 @@ public record DepositFundCommand(EAccountTransactionType AccountTransactionType,
                                  decimal Amount,
                                  DateTime Date,
                                  int UserId,
-                                 string SubaccountTag,
+                                 string? SubaccountTag,
                                  string Notes,
                                  decimal? CurrentPrice = null,
                                  string? CryptoAssetId = null,
@@ -27,14 +27,6 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
         RuleFor(x => x.Notes)
             .MaximumLength(255)
             .WithMessage("Notes must be between 1 and 255 characters");
-
-        RuleFor(x => x.SubaccountTag)
-            .NotNull()
-            .WithMessage("Subaccount Tag must be provided")
-            .NotEmpty()
-            .WithMessage("Subaccount Tag must be provided")
-            .MaximumLength(255)
-            .WithMessage("Subaccount Tag must be between 1 and 255 characters");
 
         When(x => x.AccountTransactionType == EAccountTransactionType.DepositCrypto, () =>
         {

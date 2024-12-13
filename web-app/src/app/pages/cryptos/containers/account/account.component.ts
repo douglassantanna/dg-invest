@@ -3,7 +3,7 @@ import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-fil
 import { CommonModule } from '@angular/common';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
 import { RouterModule } from '@angular/router';
-import { AccountDto, AccountTransactionDto, GroupedAccountTransactionsDto, UserDto, UserService } from 'src/app/core/services/user.service';
+import { AccountDto, AccountTransactionDto, GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
 import { DepositComponent } from '../deposit/deposit.component';
 import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
@@ -43,7 +43,6 @@ export enum AccountTransactionType {
   templateUrl: './account.component.html',
 })
 export class AccountComponent implements OnInit {
-  private userService = inject(UserService);
   private accountService = inject(AccountService);
 
   isDepositModalOpen = signal<boolean>(false);
