@@ -8,6 +8,7 @@ import { ModalComponent } from 'src/app/layout/modal/modal.component';
 import { DepositComponent } from '../deposit/deposit.component';
 import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { WithdrawComponent } from '../withdraw/withdraw.component';
+import { AccountService } from 'src/app/core/services/account.service';
 export type AccountTransaction = {
   imageUrl: string;
   transactionType: AccountTransactionType;
@@ -43,16 +44,16 @@ export enum AccountTransactionType {
 })
 export class AccountComponent implements OnInit {
   private userService = inject(UserService);
+  private accountService = inject(AccountService);
 
   isDepositModalOpen = signal<boolean>(false);
   isWithdrawModalOpen = signal<boolean>(false);
   account = signal<AccountDto>({} as AccountDto);
   ngOnInit(): void {
-    this.userService.getUserById().subscribe({
+    this.accountService.getAccountBySubAccountTag("main").subscribe({
       next: (result) => {
         if (result) {
-          const user = result.data as UserDto
-          this.account.set(user.account!);
+          this.account.set(result);
         }
       },
       error: (err) => { console.log(err) }

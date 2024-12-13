@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
+import { AccountDto } from './user.service';
 
 export interface CreateAccountCommand {
   subaccountTag: string;
@@ -37,8 +38,8 @@ export class AccountService {
     return this.http.post<CustomRespose>(`${this.apiUrl}/create`, command);
   }
 
-  getAccountBySubAccountTag(subAccountTag: string): Observable<CustomRespose> {
-    return this.http.get<CustomRespose>(`${this.apiUrl}/${subAccountTag}`);
+  getAccountBySubAccountTag(subAccountTag: string): Observable<AccountDto> {
+    return this.http.get<AccountDto>(`${this.apiUrl}/${subAccountTag}`);
   }
 
   addCryptoAsset(subAccountTag: string, request: AddCryptoAssetRequest): Observable<CustomRespose> {
