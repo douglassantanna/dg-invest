@@ -51,8 +51,8 @@
           </div>
         </div>
         }@else {
-        <div class="text-center">
-          <h2>No assets found</h2>
+        <div class="text-right mb-1">
+          <h2 class="text-center">No assets found</h2>
           <button type="button" (click)="toggleCreateCryptoModal()"
             class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
             Add <span class="ml-1">asset</span>
@@ -64,7 +64,7 @@
       </div>
     </div>
 
-    @if (cryptoAssetList()) {
+    @if (cryptoAssetList().length > 0) {
     <div class="bg-white rounded-md p-2 border-gray-300 border shadow-md w-[30%] sm:w-full sm:order-1">
       <app-pie-chart [cryptos]="cryptoAssetList()" />
     </div>

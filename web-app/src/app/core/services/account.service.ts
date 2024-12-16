@@ -11,7 +11,9 @@ export interface CreateAccountCommand {
 }
 
 export interface AddCryptoAssetRequest {
-  cryptoId: number;
+  symbol: string;
+  coinMarketCapId: number;
+  subAccountTag: string;
 }
 
 export interface AddTransactionCommand {
@@ -43,9 +45,9 @@ export class AccountService {
     return this.http.get<AccountDto>(`${this.apiUrl}/${subAccountTag}`);
   }
 
-  addCryptoAsset(subAccountTag: string, request: AddCryptoAssetRequest): Observable<CustomRespose> {
+  addCryptoAsset(request: AddCryptoAssetRequest): Observable<CustomRespose> {
     return this.http.post<CustomRespose>(
-      `${this.apiUrl}/${subAccountTag}/add-crypto-asset`,
+      `${this.apiUrl}/add-crypto-asset`,
       request
     );
   }

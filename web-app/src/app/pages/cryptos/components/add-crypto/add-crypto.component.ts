@@ -6,6 +6,7 @@ import { Crypto } from 'src/app/core/models/crypto';
 import { CreateCryptoAssetCommand } from 'src/app/core/models/create-crypto-asset-command';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CryptoService } from 'src/app/core/services/crypto.service';
+import { AccountService, AddCryptoAssetRequest } from 'src/app/core/services/account.service';
 
 @Component({
   selector: 'app-add-crypto',
@@ -17,9 +18,10 @@ import { CryptoService } from 'src/app/core/services/crypto.service';
 })
 export class AddCryptoComponent implements OnInit {
   @ViewChild('modal') modal!: ElementRef;
-  private cryptoService = inject(CryptoService);
+  private accountService = inject(AccountService);
+  private cryptoService = inject(CryptoService)
   private authService = inject(AuthService);
-  cryptoCreated = output<CreateCryptoAssetCommand>();
+  cryptoCreated = output<AddCryptoAssetRequest>();
   loading = signal(false);
   selectedCoinMarketCapId = 0;
   btnColor = environment.btnColor;
@@ -42,14 +44,13 @@ export class AddCryptoComponent implements OnInit {
     if (!userId)
       return;
 
-    const command: CreateCryptoAssetCommand = {
-      crypto: selectedCrypto.symbol,
-      currency: 'USD',
+    const command: AddCryptoAssetRequest = {
+      symbol: selectedCrypto.symbol,
       coinMarketCapId: selectedCrypto.coinMarketCapId,
-      userId: parseInt(userId)
+      subAccountTag: "main"
     };
 
-    this.cryptoService.createCryptoAsset(command)
+    this.accountService.addCryptoAsset(command)
       .subscribe({
         next: () => {
           this.cryptoCreated.emit(command);

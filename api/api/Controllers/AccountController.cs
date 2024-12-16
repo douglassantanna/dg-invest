@@ -69,8 +69,8 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Ok(result.Data);
     }
 
-    [HttpPost("{subAccountTag}/add-crypto-asset")]
-    public async Task<ActionResult<Response>> AddCryptoAsset(string subAccountTag, [FromBody] AddCryptoAssetToAccountListRequest request)
+    [HttpPost("add-crypto-asset")]
+    public async Task<ActionResult<Response>> AddCryptoAsset([FromBody] AddCryptoAssetToAccountListRequest request)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
@@ -78,7 +78,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        var result = await _mediator.Send(new AddCryptoAssetToAccountListCommand(userId, subAccountTag, request.CryptoId));
+        var result = await _mediator.Send(new AddCryptoAssetToAccountListCommand(userId, request.SubAccountTag, request.CoinMarketCapId, request.Symbol));
         if (!result.IsSuccess)
         {
             if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)

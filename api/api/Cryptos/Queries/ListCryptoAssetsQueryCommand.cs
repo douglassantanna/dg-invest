@@ -4,6 +4,7 @@ using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
 using api.Cryptos.Models;
 using api.Data;
+using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -37,38 +38,42 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     public async Task<PageList<UserCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
-        IQueryable<Account> accountQuery = _context.Accounts.Where(x => x.User.Id == request.UserId)
-                                                            .Where(x => x.SubaccountTag == request.SubAccountTag);
+        var filteredByTag = _context.Accounts.Where(x => x.SubaccountTag == "main");
+        var filteredByUser = filteredByTag.Where(x => x.UserId == request.UserId);
 
         if (request.HideZeroBalance)
         {
-            accountQuery = accountQuery.Where(x => x.Balance > 0);
+            filteredByUser = filteredByUser.Where(x => x.Balance > 0);
         }
 
         if (!string.IsNullOrEmpty(request.AssetName))
         {
             var assetName = request.AssetName.ToLower().Trim();
-            accountQuery = accountQuery.Include(x => x.CryptoAssets.Where(x => x.CryptoCurrency.ToLower().Contains(assetName)));
+            filteredByUser = filteredByUser.Include(x => x.CryptoAssets.Where(x => x.CryptoCurrency.ToLower().Contains(assetName)));
         }
         else
         {
-            accountQuery = accountQuery.Include(x => x.CryptoAssets);
+            filteredByUser = filteredByUser.Include(x => x.CryptoAssets);
         }
 
-        if (!string.IsNullOrEmpty(request.SortBy))
+
+        if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
         {
-            var sortExpression = GetSortProperty(request);
-            var compiledSort = sortExpression.Compile();
-
-            accountQuery = request.SortOrder?.ToLower() == "asc"
-                ? accountQuery.OrderBy(x => compiledSort(x))
-                : accountQuery.OrderByDescending(x => compiledSort(x));
+            filteredByUser = filteredByUser.OrderBy(GetSortProperty(request));
+        }
+        else
+        {
+            filteredByUser = filteredByUser.OrderByDescending(GetSortProperty(request));
         }
 
-        var accounts = await accountQuery.ToListAsync(cancellationToken);
-        GetQuoteResponse? cmpResponse = accountQuery.Any()
-        ? cmpResponse = await GetCryptosFromcoinMarketCap(accountQuery)
-        : null;
+        var accounts = await filteredByUser.ToListAsync(cancellationToken);
+        GetQuoteResponse cmpResponse = null;
+
+        var cryptoAssets = accounts.SelectMany(x => x.CryptoAssets).ToList();
+        if (cryptoAssets.Any())
+        {
+            cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssets);
+        }
 
         var collection = accounts.SelectMany(x => x.CryptoAssets.Select(ca =>
         {
@@ -102,13 +107,9 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         return pagedCollection;
     }
 
-    private async Task<GetQuoteResponse> GetCryptosFromcoinMarketCap(IQueryable<Account> accountQuery)
+    private async Task<GetQuoteResponse> GetCryptosFromcoinMarketCap(List<CryptoAsset> accountQuery)
     {
-        var ids = accountQuery.SelectMany(x => x.CryptoAssets)
-                              .Where(x => x.CoinMarketCapId > 0)
-                              .Select(x => x.CoinMarketCapId.ToString())
-                              .Distinct()
-                              .ToArray();
+        string[] ids = accountQuery.Select(x => x.CoinMarketCapId.ToString()).ToArray();
         return await _coinMarketCapService.GetQuotesByIds(ids);
     }
 
@@ -116,17 +117,10 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     {
         return request.SortBy?.ToLower() switch
         {
-            "symbol" => account => account.CryptoAssets
-                .OrderBy(x => x.Symbol)
-                .Select(x => x.Symbol)
-                .FirstOrDefault() ?? string.Empty,
-
-            "invested_amount" => account => account.CryptoAssets
-                .Sum(x => x.TotalInvested),
-
-            "balance" => account => account.Balance,
-
-            _ => account => account.Balance
+            "symbol" => account => account.CryptoAssets.FirstOrDefault().Symbol ?? string.Empty,
+            "invested_amount" => account => account.CryptoAssets.FirstOrDefault().TotalInvested!,
+            "balance" => account => account.CryptoAssets.FirstOrDefault().CurrentWorth,
+            _ => account => account.CryptoAssets.FirstOrDefault().Symbol ?? string.Empty
         };
     }
 }

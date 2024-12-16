@@ -1,4 +1,5 @@
 using api.Data;
+using api.Models.Cryptos;
 using api.Shared;
 using FluentValidation;
 using FluentValidation.Results;
@@ -6,16 +7,18 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
-public record AddCryptoAssetToAccountListCommand(int UserId, string SubAccountTag, int CryptoId)
+public record AddCryptoAssetToAccountListCommand(int UserId, string SubAccountTag, int CoinMarketCapId, string Symbol)
     : IRequest<Response>;
-public record AddCryptoAssetToAccountListRequest(string SubAccountTag, int CryptoId);
+public record AddCryptoAssetToAccountListRequest(string SubAccountTag, int CoinMarketCapId, string Symbol);
 public class AddCryptoAssetToAccountListCommandValidator : AbstractValidator<AddCryptoAssetToAccountListCommand>
 {
     public AddCryptoAssetToAccountListCommandValidator()
     {
-        RuleFor(x => x.UserId).NotNull();
-        RuleFor(x => x.SubAccountTag).NotEmpty();
-        RuleFor(x => x.CryptoId).NotEmpty();
+        RuleFor(x => x.UserId).NotNull().WithMessage("UserId can't be null");
+        RuleFor(x => x.CoinMarketCapId).NotEmpty().WithMessage("CoinMarketCapId can't be empty");
+        RuleFor(x => x.Symbol)
+            .NotEmpty().WithMessage("Symbol can't be empty")
+            .Length(1, 255).WithMessage("Symbol must be between 1 and 255 characters");
     }
 }
 
@@ -56,16 +59,7 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
                 return new Response("Account not found!", false, 404);
             }
 
-            var cryptoAsset = await _context.CryptoAssets
-                                        .Where(x => x.Id == request.CryptoId)
-                                        .FirstOrDefaultAsync(cancellationToken);
-            if (cryptoAsset == null)
-            {
-                _logger.LogError("AddCryptoAssetToAccountListCommandHandler. Crypto asset not found: {0}", request.CryptoId);
-                return new Response("Crypto asset not found!", false, 404);
-            }
-
-            var cryptoAssetResult = account.AddCryptoAsset(cryptoAsset);
+            var cryptoAssetResult = account.AddCryptoAsset(new CryptoAsset("USD", request.Symbol, request.Symbol, request.CoinMarketCapId));
             if (!cryptoAssetResult.IsSuccess)
             {
                 _logger.LogError("AddCryptoAssetToAccountListCommandHandler. AddCryptoAsset failed: {0}", cryptoAssetResult.Message);
@@ -74,7 +68,7 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
 
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
-            return new Response("", true, cryptoAsset.Id);
+            return new Response("", true);
         }
         catch (Exception ex)
         {

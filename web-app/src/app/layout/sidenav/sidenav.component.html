@@ -3,7 +3,7 @@
   [class.collapsed]="isCollapsed()" [class.mobile]="isMobile()" [class.border-y-2]="isMobile()"
   [class.z-50]="isMobile()">
   @for (item of navItemsEnabled(); track $index) {
-  <a [routerLink]="item.path"
+  <button (click)="logout(item)"
     class="flex items-center w-full p-3 rounded-lg transition-all duration-200 group hover:bg-gray-100 dark:hover:bg-gray-700"
     [class.flex-col]="isMobile()" [class.space-x-3]="!isMobile()" [class.space-y-1]="isMobile()">
 
@@ -18,7 +18,7 @@
       [class.dark:group-hover:text-gray-100]="!isMobile()" (click)="logout(item)">
       {{ item.label }}
     </span>
-  </a>
+  </button>
   }
 </div>
 
