@@ -5,6 +5,7 @@ import { environment } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
 import { AccountDto } from './user.service';
 import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
+import { AddTransactionCommand } from '../models/add-transaction-command';
 
 export interface CreateAccountCommand {
   subaccountTag: string;
@@ -14,16 +15,6 @@ export interface AddCryptoAssetRequest {
   symbol: string;
   coinMarketCapId: number;
   subAccountTag: string;
-}
-
-export interface AddTransactionCommand {
-  amount: number;
-  price: number;
-  purchaseDate: Date;
-  exchangeName: string;
-  transactionType: string;
-  cryptoAssetId: number;
-  fee: number;
 }
 
 @Injectable({
@@ -52,9 +43,9 @@ export class AccountService {
     );
   }
 
-  addTransaction(subAccountTag: string, command: AddTransactionCommand): Observable<CustomRespose> {
+  addTransaction(command: AddTransactionCommand): Observable<CustomRespose> {
     return this.http.post<CustomRespose>(
-      `${this.apiUrl}/${subAccountTag}/add-transaction`,
+      `${this.apiUrl}/add-transaction`,
       command
     );
   }

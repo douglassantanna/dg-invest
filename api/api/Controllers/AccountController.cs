@@ -94,8 +94,8 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Created("", result);
     }
 
-    [HttpPost("{subAccountTag}/add-transaction")]
-    public async Task<ActionResult<Response>> AddTransaction(string subAccountTag, [FromBody] AddTransactionCommand command)
+    [HttpPost("add-transaction")]
+    public async Task<ActionResult<Response>> AddTransaction([FromBody] AddTransactionCommand command)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
@@ -103,7 +103,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        var commandWithUserId = command with { UserId = userId, SubAccountTag = subAccountTag };
+        var commandWithUserId = command with { UserId = userId };
         var result = await _mediator.Send(commandWithUserId);
         if (!result.IsSuccess)
         {
