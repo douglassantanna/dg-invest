@@ -1,8 +1,6 @@
-using System.Linq.Expressions;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
-using api.Cryptos.Models;
 using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
@@ -38,73 +36,67 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
     public async Task<PageList<UserCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
-        var filteredByTag = _context.Accounts.Where(x => x.SubaccountTag == "main");
-        var filteredByUser = filteredByTag.Where(x => x.UserId == request.UserId);
+
+        var account = await _context.Accounts
+            .Include(x => x.CryptoAssets)
+            .FirstOrDefaultAsync(x => x.SubaccountTag == "main" && x.UserId == request.UserId, cancellationToken);
+
+        if (account == null)
+        {
+            return PageList<UserCryptoAssetDto>.Empty();
+        }
+
+        var cryptoAssets = account.CryptoAssets.AsQueryable();
 
         if (request.HideZeroBalance)
         {
-            filteredByUser = filteredByUser.Where(x => x.Balance > 0);
+            cryptoAssets = cryptoAssets.Where(x => x.Balance > 0);
         }
 
         if (!string.IsNullOrEmpty(request.AssetName))
         {
             var assetName = request.AssetName.ToLower().Trim();
-            filteredByUser = filteredByUser.Include(x => x.CryptoAssets.Where(x => x.CryptoCurrency.ToLower().Contains(assetName)));
-        }
-        else
-        {
-            filteredByUser = filteredByUser.Include(x => x.CryptoAssets);
+            cryptoAssets = cryptoAssets.Where(x => x.CryptoCurrency.ToLower().Contains(assetName));
         }
 
+        var filteredAssets = cryptoAssets.ToList();
+
+        GetQuoteResponse? cmpResponse = null;
+        if (cryptoAssets.Any())
+        {
+            cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssets.ToList());
+        }
+
+        var dtos = filteredAssets.Select(ca =>
+        new UserCryptoAssetDto(
+            account.Balance,
+            new ViewMinimalCryptoAssetDto(
+                ca.Id,
+                ca.Symbol,
+                _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
+                ca.Balance,
+                ca.TotalInvested,
+                ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+                ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+                ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+                ca.CoinMarketCapId,
+                ca.TotalInvested
+            )
+        ));
 
         if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
         {
-            filteredByUser = filteredByUser.OrderBy(GetSortProperty(request));
+            dtos = dtos.OrderBy(GetSortProperty(request));
         }
         else
         {
-            filteredByUser = filteredByUser.OrderByDescending(GetSortProperty(request));
+            dtos = dtos.OrderByDescending(GetSortProperty(request));
         }
-
-        var accounts = await filteredByUser.ToListAsync(cancellationToken);
-        GetQuoteResponse cmpResponse = null;
-
-        var cryptoAssets = accounts.SelectMany(x => x.CryptoAssets).ToList();
-        if (cryptoAssets.Any())
-        {
-            cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssets);
-        }
-
-        var collection = accounts.SelectMany(x => x.CryptoAssets.Select(ca =>
-        {
-            var price = _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse);
-            return new UserCryptoAssetDto(
-                ca.Id,
-                new ViewMinimalCryptoAssetDto(
-                    ca.Id,
-                    ca.Symbol,
-                    price,
-                    ca.Balance,
-                    ca.TotalInvested,
-                    ca.CurrentWorth(price),
-                    ca.GetInvestmentGainLossValue(price),
-                    ca.GetInvestmentGainLossPercentage(price),
-                    ca.CoinMarketCapId
-                )
-            );
-        }));
 
         int maxPageSize = 50;
-        if (request.PageSize > maxPageSize)
-        {
-            request.PageSize = maxPageSize;
-        }
-        var pagedCollection = await PageList<UserCryptoAssetDto>.CreateAsync(collection.AsQueryable(),
-                                                                             request.Page,
-                                                                             request.PageSize);
+        request.PageSize = Math.Min(request.PageSize, maxPageSize);
 
-        _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets completed.");
-        return pagedCollection;
+        return PageList<UserCryptoAssetDto>.Create(dtos, request.Page, request.PageSize);
     }
 
     private async Task<GetQuoteResponse> GetCryptosFromcoinMarketCap(List<CryptoAsset> accountQuery)
@@ -113,14 +105,12 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         return await _coinMarketCapService.GetQuotesByIds(ids);
     }
 
-    private static Expression<Func<Account, object>> GetSortProperty(ListCryptoAssetsQueryCommand request)
+    private static Func<UserCryptoAssetDto, object> GetSortProperty(ListCryptoAssetsQueryCommand request) =>
+    request.SortBy?.ToLower() switch
     {
-        return request.SortBy?.ToLower() switch
-        {
-            "symbol" => account => account.CryptoAssets.FirstOrDefault().Symbol ?? string.Empty,
-            "invested_amount" => account => account.CryptoAssets.FirstOrDefault().TotalInvested!,
-            "balance" => account => account.CryptoAssets.FirstOrDefault().CurrentWorth,
-            _ => account => account.CryptoAssets.FirstOrDefault().Symbol ?? string.Empty
-        };
-    }
+        "symbol" => dto => dto.CryptoAssetDto.Symbol,
+        "balance" => dto => dto.CryptoAssetDto.Balance,
+        "invested_amount" => dto => dto.CryptoAssetDto.TotalInvested,
+        _ => dto => dto.CryptoAssetDto.Symbol
+    };
 }

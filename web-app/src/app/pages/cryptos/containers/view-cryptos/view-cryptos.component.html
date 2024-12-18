@@ -64,7 +64,7 @@
       </div>
     </div>
 
-    @if (cryptoAssetList().length > 0) {
+    @if (totalInvested > 0) {
     <div class="bg-white rounded-md p-2 border-gray-300 border shadow-md w-[30%] sm:w-full sm:order-1">
       <app-pie-chart [cryptos]="cryptoAssetList()" />
     </div>

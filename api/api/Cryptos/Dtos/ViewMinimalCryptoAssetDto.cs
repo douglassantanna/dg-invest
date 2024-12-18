@@ -11,7 +11,8 @@ public record ViewMinimalCryptoAssetDto(int Id,
                                         decimal CurrentWorth,
                                         decimal InvestmentGainLossValue,
                                         decimal InvestmentGainLossPercentage,
-                                        int CoinMarketCapId);
+                                        int CoinMarketCapId,
+                                        decimal TotalInvested);
 
 public record ViewCryptoAssetDto(int Id,
                                  ViewCryptoInformation CryptoInformation,

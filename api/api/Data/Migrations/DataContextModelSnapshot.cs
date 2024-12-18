@@ -46,7 +46,7 @@ namespace api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Accounts");
+                    b.ToTable("Accounts", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.AccountTransaction", b =>
@@ -97,7 +97,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("AccountTransactions");
+                    b.ToTable("AccountTransactions", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Address", b =>
@@ -126,7 +126,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("Address");
+                    b.ToTable("Address", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Crypto", b =>
@@ -157,7 +157,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cryptos");
+                    b.ToTable("Cryptos", (string)null);
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
@@ -211,7 +211,7 @@ namespace api.Migrations
 
                     b.HasIndex("AccountId");
 
-                    b.ToTable("CryptoAssets");
+                    b.ToTable("CryptoAssets", (string)null);
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
@@ -255,7 +255,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("CryptoTransactions");
+                    b.ToTable("CryptoTransactions", (string)null);
                 });
 
             modelBuilder.Entity("api.Users.Models.User", b =>
@@ -289,7 +289,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>
