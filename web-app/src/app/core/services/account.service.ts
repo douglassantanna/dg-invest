@@ -50,8 +50,8 @@ export class AccountService {
     );
   }
 
-  depositFund(subAccountTag: string, deposit: DepositFundCommand): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/${subAccountTag}/deposit-fund`, deposit)
+  depositFund(deposit: DepositFundCommand): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/deposit-fund`, deposit)
   }
 
   withdrawFund(subAccountTag: string, withdraw: WithdrawFundCommand): Observable<any> {

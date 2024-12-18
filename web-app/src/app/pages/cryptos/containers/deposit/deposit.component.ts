@@ -54,10 +54,11 @@ export class DepositComponent implements OnInit {
       cryptoAssetId: (this.depositForm.value.cryptoAssetId?.trim() || ''),
       date: this.depositForm.value.date,
       notes: this.depositForm.value.notes,
+      subAccountTag: 'main'
     };
     this.loading.set(true);
 
-    this.accountService.depositFund("main", command)
+    this.accountService.depositFund(command)
       .subscribe({
         next: (result) => {
           this.loading.set(false);
