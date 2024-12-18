@@ -130,20 +130,16 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Created(nameof(DepositFundCommand), result);
     }
 
-    [HttpPost("{subAccountTag}/withdraw-fund")]
-    public async Task<ActionResult<Response>> Withdrawfund([FromBody] WithdrawFundCommand command, string subAccountTag)
+    [HttpPost("withdraw-fund")]
+    public async Task<ActionResult<Response>> Withdrawfund([FromBody] WithdrawFundCommand command)
     {
-        if (string.IsNullOrEmpty(subAccountTag))
-        {
-            return BadRequest(new Response("Subaccount tag is required", false));
-        }
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        var commandWithUserId = command with { UserId = userId, SubAccountTag = subAccountTag };
+        var commandWithUserId = command with { UserId = userId };
         var result = await _mediator.Send(commandWithUserId);
         if (!result.IsSuccess)
         {
