@@ -4,10 +4,63 @@
     (click)="toggleSidenavEvent.emit()">
     <span class="material-icons">menu</span>
   </button>
-  <div id="username-initial-letter"
-    class="h-10 w-10 mr-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-    <span class="text-base font-bold text-blue-600 dark:text-blue-300">
-      {{ username() | slice: 0:1 }}
-    </span>
+
+  <div class="flex items-center">
+    <button (click)="toggleAccountModal()"
+      class="flex items-center text-blue-600 cursor-pointer transition-colors duration-200 justify-center h-10 w-10 mr-2 rounded-full bg-blue-100 dark:bg-blue-900">
+      <span class="material-icons">apps</span>
+    </button>
+
+    <div id="username-initial-letter"
+      class="h-10 w-10 mr-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+      <span class="text-base font-bold text-blue-600 dark:text-blue-300">
+        {{ username() | slice: 0:1 }}
+      </span>
+    </div>
   </div>
+
 </header>
+
+@if (showAccountModal()) {
+<app-modal>
+  <app-modal>
+    <div class="w-80 bg-white dark:bg-gray-800 text-right">
+      <div class="flex flex-col gap-2">
+        <div *ngFor="let account of accounts" (click)="selectAccount(account)" [ngClass]="{
+               'block px-4 py-3 rounded-lg cursor-pointer transition-colors duration-200 flex justify-between items-center': true,
+               'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300': account === selectedAccount,
+               'hover:bg-gray-100 dark:hover:bg-gray-700': account !== selectedAccount
+             }">
+          <div class="flex items-center gap-2">
+            <i class="material-icons text-lg">account_balance_wallet</i>
+            <span>{{ account.name }}</span>
+          </div>
+          <span class="text-sm">{{ account.balance | currency }}</span>
+        </div>
+
+        <button (click)="toggleNewAccountInput()" *ngIf="!showNewAccountInput"
+          class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300">
+          <i class="material-icons text-lg mr-2">add</i>
+          Create New Account
+        </button>
+
+        <div *ngIf="showNewAccountInput" class="mt-4 flex flex-col gap-2 transition-all duration-300">
+          <input type="text" [(ngModel)]="newAccountName" placeholder="Enter account name"
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <div *ngIf="errorMessage" class="text-red-600 dark:text-red-400">{{ errorMessage }}</div>
+          <div class="flex w-full gap-2">
+            <button (click)="toggleNewAccountInput()"
+              class="w-full px-4 py-2 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-300">
+              Cancel
+            </button>
+            <button (click)="saveNewAccount()"
+              class="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-300">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </app-modal>
+</app-modal>
+}
