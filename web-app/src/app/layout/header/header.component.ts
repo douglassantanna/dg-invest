@@ -9,6 +9,7 @@ import { NavItems } from '../../core/models/nav-items';
 import { environment } from 'src/environments/environment.development';
 import { ModalComponent } from '../modal/modal.component';
 import { FormsModule } from '@angular/forms';
+import { AccountSelectionComponent } from 'src/app/pages/cryptos/components/account-selection/account-selection.component';
 
 @Component({
   selector: 'app-header',
@@ -18,7 +19,8 @@ import { FormsModule } from '@angular/forms';
     SlicePipe,
     ModalComponent,
     CommonModule,
-    FormsModule],
+    FormsModule,
+    AccountSelectionComponent],
   templateUrl: './header.component.html',
 })
 export class HeaderComponent {
