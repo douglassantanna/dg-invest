@@ -1,6 +1,6 @@
 <div class="w-80 bg-white dark:bg-gray-800 text-right">
   <div class="flex flex-col gap-2">
-    @for (account of accounts; track $index) {
+    @for (account of accounts(); track $index) {
     <div (click)="selectAccount(account)" [ngClass]="{
                'px-4 py-3 rounded-md cursor-pointer transition-colors duration-200 flex justify-between items-center': true,
                'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300': account === selectedAccount,
@@ -8,15 +8,15 @@
              }">
       <div class="flex items-center gap-2">
         <i class="material-icons text-lg">account_balance_wallet</i>
-        <span>{{ account.name }}</span>
+        <span>{{ account.subaccountTag }}</span>
       </div>
-      <span class="text-sm">{{ account.balance | currency }}</span>
+      <span class="text-sm">{{ account.balance | currency }} USD</span>
     </div>
     }
 
     @if (!showNewAccountInput) {
     <div class="flex h-full w-full gap-2">
-      <button
+      <button (click)="this.accountCreatedEvent.emit()"
         class="w-full px-4 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-300">
         Close
       </button>
@@ -27,12 +27,12 @@
     </div>
     }
 
-    @if (showNewAccountInput) {
+    @if (showNewAccountInput()) {
     <div class="mt-4 flex flex-col gap-2 transition-all duration-200">
       <input type="text" [(ngModel)]="newAccountName" placeholder="Enter account name"
         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-      @if (errorMessage) {
-      <span class="text-red-800 dark:text-red-200">{{errorMessage}}</span>
+      @if (errorMessage()) {
+      <span class="text-red-800 dark:text-red-200">{{errorMessage()}}</span>
       }
       <div class="flex w-full gap-2">
         <button (click)="toggleNewAccountInput()"

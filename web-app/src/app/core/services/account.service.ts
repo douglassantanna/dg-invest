@@ -6,6 +6,7 @@ import { CustomRespose } from '../models/custom-response';
 import { AccountDto } from './user.service';
 import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 import { AddTransactionCommand } from '../models/add-transaction-command';
+import { SimpleAccountDto } from 'src/app/pages/cryptos/components/account-selection/account-selection.component';
 
 export interface CreateAccountCommand {
   subaccountTag: string;
@@ -24,8 +25,8 @@ export class AccountService {
   private readonly apiUrl = `${environment.apiUrl}/Account`;
   private readonly http = inject(HttpClient);
 
-  getAccounts(): Observable<CustomRespose> {
-    return this.http.get<CustomRespose>(`${this.apiUrl}`);
+  getAccounts(): Observable<SimpleAccountDto[]> {
+    return this.http.get<SimpleAccountDto[]>(`${this.apiUrl}`);
   }
 
   createAccount(command: CreateAccountCommand): Observable<CustomRespose> {

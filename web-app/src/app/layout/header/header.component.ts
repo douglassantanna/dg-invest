@@ -1,5 +1,5 @@
 import { Role } from '../../core/models/user.model';
-import { CommonModule, NgFor, SlicePipe } from '@angular/common';
+import { SlicePipe } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
@@ -8,7 +8,6 @@ import { AuthService } from '../../core/services/auth.service';
 import { NavItems } from '../../core/models/nav-items';
 import { environment } from 'src/environments/environment.development';
 import { ModalComponent } from '../modal/modal.component';
-import { FormsModule } from '@angular/forms';
 import { AccountSelectionComponent } from 'src/app/pages/cryptos/components/account-selection/account-selection.component';
 
 @Component({
@@ -18,8 +17,6 @@ import { AccountSelectionComponent } from 'src/app/pages/cryptos/components/acco
     RouterModule,
     SlicePipe,
     ModalComponent,
-    CommonModule,
-    FormsModule,
     AccountSelectionComponent],
   templateUrl: './header.component.html',
 })
@@ -37,37 +34,6 @@ export class HeaderComponent {
     return filteredNavItems;
   }
   );
-
-  accounts = [
-    { name: 'Main', balance: 1000 },
-    { name: 'Dad', balance: 500 }
-  ];
-  selectedAccount = this.accounts[0];
-  showNewAccountInput = false;
-  newAccountName = '';
-  errorMessage = '';
-  selectAccount(account: any) {
-    this.selectedAccount = account;
-  }
-
-  toggleNewAccountInput() {
-    this.showNewAccountInput = !this.showNewAccountInput;
-    this.errorMessage = '';
-  }
-
-  saveNewAccount() {
-    if (this.newAccountName.trim()) {
-      const duplicate = this.accounts.some(account => account.name.toLowerCase() === this.newAccountName.trim().toLowerCase());
-      if (duplicate) {
-        this.errorMessage = 'Account name already exists.';
-      } else {
-        this.accounts.push({ name: this.newAccountName, balance: 0 });
-        this.newAccountName = '';
-        this.showNewAccountInput = false;
-        this.errorMessage = ''; // Clear error message on successful save
-      }
-    }
-  }
 
   username = computed(() => this.authService.user?.unique_name);
 

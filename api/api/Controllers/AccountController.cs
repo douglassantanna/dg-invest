@@ -30,7 +30,7 @@ public class AccountController(IMediator mediator) : ControllerBase
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return BadRequest(result.Message);
-        return Ok(result);
+        return Ok(result.Data);
     }
 
     [HttpPost("create")]

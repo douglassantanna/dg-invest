@@ -22,7 +22,7 @@
 </header>
 
 @if (showAccountModal()) {
-<app-modal>
-  <app-account-selection></app-account-selection>
+<app-modal (close)="toggleAccountModal()">
+  <app-account-selection (accountCreatedEvent)="toggleAccountModal()"></app-account-selection>
 </app-modal>
 }

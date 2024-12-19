@@ -24,9 +24,10 @@ public class GetUserAccountsQueryCommandHandler : IRequestHandler<GetUserAccount
         try
         {
             var accounts = await _context.Accounts
+                .AsNoTracking()
                 .Where(x => x.UserId == request.UserId)
-                .Select(x => new SimpleAccountDto(x.Id, x.SubaccountTag))
-                .OrderBy(x => x.SubaccountTag)
+                .Select(x => new SimpleAccountDto(x.Id, x.SubaccountTag, x.Balance))
+                // .OrderBy(x => x.SubaccountTag)
                 .ToListAsync();
             return new Response("", true, accounts);
         }
