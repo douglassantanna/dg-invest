@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using api.Models.Cryptos;
 using api.Shared;
 using api.Users.Models;
@@ -6,6 +5,7 @@ using api.Users.Models;
 namespace api.Cryptos.Models;
 public class Account : Entity
 {
+    public bool IsSelected { get; private set; }
     public int UserId { get; private set; }
     public User User { get; private set; } = null!;
     public decimal Balance { get; private set; }
@@ -17,8 +17,10 @@ public class Account : Entity
     {
         SubaccountTag = subaccountTag;
         UserId = userId;
+        IsSelected = true;
     }
-
+    public void Select() => IsSelected = true;
+    public void Deselect() => IsSelected = false;
     public IReadOnlyCollection<AccountTransaction> AccountTransactions => _accountTransactions.AsReadOnly();
     internal void AddTransaction(AccountTransaction accountTransaction)
     {
