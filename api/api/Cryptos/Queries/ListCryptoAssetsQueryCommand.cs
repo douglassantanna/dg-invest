@@ -39,7 +39,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
 
         var account = await _context.Accounts
             .Include(x => x.CryptoAssets)
-            .FirstOrDefaultAsync(x => x.SubaccountTag == "main" && x.UserId == request.UserId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId, cancellationToken);
 
         if (account == null)
         {
