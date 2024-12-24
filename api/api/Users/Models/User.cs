@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using api.Cryptos.Models;
-using api.Models.Cryptos;
 using api.Shared;
 
 namespace api.Users.Models;
@@ -13,7 +12,6 @@ public class User : Entity
     public string Password { get; set; } = string.Empty;
     public Role Role { get; set; }
     public bool EmailConfirmed { get; set; } = false;
-    // private readonly List<CryptoAsset> _criptoAssets = new();
     private List<Account> _accounts = new();
     public IReadOnlyCollection<Account> Accounts => _accounts.AsReadOnly();
     public User(string fullName,
@@ -28,9 +26,18 @@ public class User : Entity
         AddAccount(MainAccount);
     }
 
-    protected User()
-    {
+    protected User() { }
 
+    internal void SelectAccount(string subAccountTag)
+    {
+        foreach (var account in _accounts)
+        {
+            if (account.SubaccountTag == subAccountTag)
+            {
+                account.Select();
+            }
+            account.Deselect();
+        }
     }
     internal Response AddAccount(string subaccountTag)
     {
