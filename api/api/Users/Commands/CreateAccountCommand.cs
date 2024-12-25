@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace api.Users.Commands;
 public record CreateAccountCommand(int UserId, string SubaccountTag) : IRequest<Response>;
+public record CreateAccountRequest(string SubaccountTag);
 public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand, Response>
 {
     private readonly IUserRepository _userRepository;

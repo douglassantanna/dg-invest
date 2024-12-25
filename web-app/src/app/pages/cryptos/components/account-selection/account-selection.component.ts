@@ -1,7 +1,7 @@
 import { CurrencyPipe, NgClass } from '@angular/common';
 import { Component, inject, OnInit, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AccountService } from 'src/app/core/services/account.service';
+import { AccountService, CreateAccountCommand } from 'src/app/core/services/account.service';
 
 export interface SimpleAccountDto {
   subaccountTag: string;
@@ -27,7 +27,7 @@ export class AccountSelectionComponent implements OnInit {
   showNewAccountInput = signal(false);
   newAccountName = signal('');
   errorMessage = signal('');
-
+  loading = signal(false);
   ngOnInit(): void {
     this.accountService.getAccounts().subscribe((accounts) => {
       this.accounts.set(accounts);
@@ -45,15 +45,26 @@ export class AccountSelectionComponent implements OnInit {
 
   saveNewAccount() {
     if (this.newAccountName().trim()) {
+      this.loading.set(true);
       const duplicate = this.accounts().some(account => account.subaccountTag.toLowerCase() === this.newAccountName().trim().toLowerCase());
       if (duplicate) {
+        this.loading.set(false);
         this.errorMessage.set('Account name already exists.');
       } else {
-        this.accounts().push({ subaccountTag: this.newAccountName(), balance: 0, id: 0 });
-        this.newAccountName.set('');
-        this.showNewAccountInput.set(false);
-        this.errorMessage.set('');
-
+        let command = { subaccountTag: this.newAccountName() } as CreateAccountCommand;
+        this.accountService.createAccount(command).subscribe({
+          next: () => {
+            this.loading.set(false);
+            this.accounts().push({ subaccountTag: this.newAccountName(), balance: 0, id: 0 });
+            this.newAccountName.set('');
+            this.showNewAccountInput.set(false);
+            this.errorMessage.set('');
+          },
+          error: (err) => {
+            this.errorMessage.set(`Error creating account. ${err}`);
+            this.loading.set(false);
+          }
+        });
       }
     }
   }

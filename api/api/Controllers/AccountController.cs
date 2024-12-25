@@ -34,8 +34,15 @@ public class AccountController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("create")]
-    public async Task<ActionResult<Response>> CreateAccount([FromBody] CreateAccountCommand command)
+    public async Task<ActionResult<Response>> CreateAccount([FromBody] CreateAccountRequest request)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        CreateAccountCommand command = new(userId, request.SubaccountTag);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {
@@ -43,14 +50,14 @@ public class AccountController(IMediator mediator) : ControllerBase
             {
                 return httpStatusCode switch
                 {
-                    HttpStatusCode.NotFound => NotFound(result),
-                    HttpStatusCode.Conflict => Conflict(result),
-                    HttpStatusCode.BadRequest => BadRequest(result),
-                    _ => BadRequest(result),
+                    HttpStatusCode.NotFound => NotFound(result.Message),
+                    HttpStatusCode.Conflict => Conflict(result.Message),
+                    HttpStatusCode.BadRequest => BadRequest(result.Message),
+                    _ => BadRequest(result.Message),
                 };
             }
         }
-        return Created("", result);
+        return Ok(result.Message);
     }
 
     [HttpGet("{subAccountTag}")]
