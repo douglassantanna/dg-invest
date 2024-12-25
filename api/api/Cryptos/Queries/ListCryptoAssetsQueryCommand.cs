@@ -4,6 +4,7 @@ using api.Cryptos.Dtos;
 using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
+using Flurl.Http;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -64,7 +65,14 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         GetQuoteResponse? cmpResponse = null;
         if (cryptoAssets.Any())
         {
-            cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssets.ToList());
+            try
+            {
+                cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssets.ToList());
+            }
+            catch (FlurlHttpException ex)
+            {
+                _logger.LogError(ex, "Error getting quotes from CoinMarketCap");
+            }
         }
 
         var dtos = filteredAssets.Select(ca =>
