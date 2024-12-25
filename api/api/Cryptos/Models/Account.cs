@@ -13,11 +13,13 @@ public class Account : Entity
     private readonly List<CryptoAsset> _cryptoAssets = new();
     public IReadOnlyCollection<CryptoAsset> CryptoAssets => _cryptoAssets.AsReadOnly();
     public string SubaccountTag { get; private set; } = string.Empty;
+    public DateTime CreatedAt { get; private set; }
     public Account(string subaccountTag, int userId)
     {
         SubaccountTag = subaccountTag;
         UserId = userId;
         IsSelected = true;
+        CreatedAt = DateTime.Now;
     }
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;

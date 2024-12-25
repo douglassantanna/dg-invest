@@ -11,7 +11,7 @@ public record UserDto(
 );
 public record AccountDto(int Id, decimal Balance, List<GroupedAccountTransactionsDto> GroupedAccountTransactions);
 public record SubAccountDto(int Id, string Name);
-public record SimpleAccountDto(int Id, string SubaccountTag, decimal Balance);
+public record SimpleAccountDto(int Id, string SubaccountTag, decimal Balance, bool IsSelected);
 public record AccountTransactionDto(DateTime Date,
                                     EAccountTransactionType TransactionType,
                                     decimal Amount,

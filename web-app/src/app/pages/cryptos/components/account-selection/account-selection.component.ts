@@ -29,9 +29,14 @@ export class AccountSelectionComponent implements OnInit {
   errorMessage = signal('');
   loading = signal(false);
   ngOnInit(): void {
-    this.accountService.getAccounts().subscribe((accounts) => {
-      this.accounts.set(accounts);
-    })
+    this.accountService.getAccounts().subscribe({
+      next: (accounts) => {
+        this.accounts.set(accounts);
+      },
+      error: (err) => {
+        console.error(err);
+      }
+    });
   }
 
   selectAccount(account: SimpleAccountDto) {

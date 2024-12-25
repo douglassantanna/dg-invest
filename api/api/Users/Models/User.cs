@@ -12,6 +12,8 @@ public class User : Entity
     public string Password { get; set; } = string.Empty;
     public Role Role { get; set; }
     public bool EmailConfirmed { get; set; } = false;
+
+    public DateTime CreatedAt { get; private set; }
     private List<Account> _accounts = new();
     public IReadOnlyCollection<Account> Accounts => _accounts.AsReadOnly();
     public User(string fullName,
@@ -23,6 +25,7 @@ public class User : Entity
         Email = email;
         Password = password;
         Role = role;
+        CreatedAt = DateTime.Now;
         AddAccount(MainAccount);
     }
 
