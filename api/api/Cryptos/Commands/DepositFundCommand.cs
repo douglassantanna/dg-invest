@@ -13,7 +13,6 @@ public record DepositFundCommand(EAccountTransactionType AccountTransactionType,
                                  decimal Amount,
                                  DateTime Date,
                                  int UserId,
-                                 string? SubaccountTag,
                                  string Notes,
                                  decimal? CurrentPrice = null,
                                  string? CryptoAssetId = null,
@@ -75,12 +74,12 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         }
 
         var account = await _context.Accounts.Include(a => a.CryptoAssets)
-                                            .Where(ac => ac.SubaccountTag == request.SubaccountTag)
+                                            .Where(ac => ac.IsSelected == true)
                                             .Where(ac => ac.UserId == request.UserId)
                                             .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {
-            _logger.LogError("DepositFundCommandHandler. Account with SubaccountTag {0} not found.", request.SubaccountTag);
+            _logger.LogError("DepositFundCommandHandler. Account from UserId {0} not found.", request.UserId);
             return new Response("Account not found", false, 404);
         }
 

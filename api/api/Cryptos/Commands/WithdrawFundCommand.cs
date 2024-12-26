@@ -11,8 +11,7 @@ namespace api.Cryptos.Commands;
 public record WithdrawFundCommand(decimal Amount,
                                  DateTime Date,
                                  int UserId,
-                                 string Notes,
-                                 string? SubAccountTag) : IRequest<Response>;
+                                 string Notes) : IRequest<Response>;
 
 
 public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundCommand>
@@ -20,7 +19,6 @@ public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundComman
     public WithdrawFundCommandValidator()
     {
         RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Deposit amount must be greater than zero");
-        RuleFor(x => x.SubAccountTag).NotEmpty().WithMessage("SubAccountTag can't be empty");
         RuleFor(x => x.Notes)
             .MaximumLength(255)
             .WithMessage("Notes must be between 1 and 255 characters");
@@ -56,7 +54,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
 
         var account = await _context.Accounts.Include(x => x.CryptoAssets)
                                             .Where(x => x.UserId == request.UserId)
-                                            .Where(x => x.SubaccountTag == request.SubAccountTag)
+                                            .Where(x => x.IsSelected == true)
                                             .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {

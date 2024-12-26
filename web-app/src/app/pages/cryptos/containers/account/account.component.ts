@@ -49,7 +49,7 @@ export class AccountComponent implements OnInit {
   isWithdrawModalOpen = signal<boolean>(false);
   account = signal<AccountDto>({} as AccountDto);
   ngOnInit(): void {
-    this.accountService.getAccountBySubAccountTag("main").subscribe({
+    this.accountService.getSelectedAccount().subscribe({
       next: (result) => {
         if (result) {
           this.account.set(result);

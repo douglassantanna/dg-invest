@@ -5,7 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Users.Queries;
-public record GetAccountBySubAccountTagCommand(int UserId, string SubAccountTag) : IRequest<Response>;
+public record GetAccountBySubAccountTagCommand(int UserId) : IRequest<Response>;
 public class GetAccountBySubAccountTagCommandHandler : IRequestHandler<GetAccountBySubAccountTagCommand, Response>
 {
     private readonly DataContext _context;
@@ -24,7 +24,7 @@ public class GetAccountBySubAccountTagCommandHandler : IRequestHandler<GetAccoun
         _logger.LogInformation("GetAccountBySubAccountTagCommandHandler: Handling request for user {UserId}", request.UserId);
         var account = await _context.Accounts
                                     .Where(u => u.UserId == request.UserId)
-                                    .Where(a => a.SubaccountTag == request.SubAccountTag)
+                                    .Where(x => x.IsSelected == true)
                                     .Include(x => x.AccountTransactions)
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account is null)

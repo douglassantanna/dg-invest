@@ -37,8 +37,8 @@ export class AccountService {
     return this.http.post<CustomRespose>(`${this.apiUrl}/create`, command);
   }
 
-  getAccountBySubAccountTag(subAccountTag: string): Observable<AccountDto> {
-    return this.http.get<AccountDto>(`${this.apiUrl}/${subAccountTag}`);
+  getSelectedAccount(): Observable<AccountDto> {
+    return this.http.get<AccountDto>(`${this.apiUrl}/selected-account`);
   }
 
   addCryptoAsset(request: AddCryptoAssetRequest): Observable<CustomRespose> {
@@ -59,8 +59,8 @@ export class AccountService {
     return this.http.post<any>(`${this.apiUrl}/deposit-fund`, deposit)
   }
 
-  withdrawFund(subAccountTag: string, withdraw: WithdrawFundCommand): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/${subAccountTag}/withdraw-fund`, withdraw)
+  withdrawFund(withdraw: WithdrawFundCommand): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/withdraw-fund`, withdraw)
   }
 
   selectAccount(command: SelectAccountRequest): Observable<any> {

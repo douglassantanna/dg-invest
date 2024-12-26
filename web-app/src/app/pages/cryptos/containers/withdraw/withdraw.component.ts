@@ -36,7 +36,7 @@ export class WithdrawComponent {
       notes: this.withdrawForm.value.notes
     };
     this.loading.set(true);
-    this.accountService.withdrawFund("main", withdraw)
+    this.accountService.withdrawFund(withdraw)
       .subscribe({
         next: (result) => {
           this.loading.set(false);

@@ -6,7 +6,6 @@ export interface DepositFundCommand {
   exchangeName: string;
   date: string;
   notes: string;
-  subAccountTag: string;
 }
 
 export interface WithdrawFundCommand {
