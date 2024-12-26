@@ -6,13 +6,14 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
-public record SelectAccountCommand(int UserId, string SubAccountTag) : IRequest<Response>;
+public record SelectAccountCommand(int UserId, int AccountId) : IRequest<Response>;
+public record SelectAccountRequest(int AccountId);
 public class SelectAccountCommandValidator : AbstractValidator<SelectAccountCommand>
 {
     public SelectAccountCommandValidator()
     {
         RuleFor(x => x.UserId).GreaterThan(0);
-        RuleFor(x => x.SubAccountTag).NotEmpty().WithMessage("SubAccountTag is required");
+        RuleFor(x => x.AccountId).GreaterThan(0);
     }
 }
 
@@ -46,7 +47,7 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
             return new Response("User not found", false, 404);
         }
 
-        user.SelectAccount(request.SubAccountTag);
+        user.SelectAccount(request.AccountId);
 
         try
         {

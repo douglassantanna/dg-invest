@@ -18,6 +18,10 @@ export interface AddCryptoAssetRequest {
   subAccountTag: string;
 }
 
+export interface SelectAccountRequest {
+  accountId: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -59,4 +63,7 @@ export class AccountService {
     return this.http.post<any>(`${this.apiUrl}/${subAccountTag}/withdraw-fund`, withdraw)
   }
 
+  selectAccount(command: SelectAccountRequest): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/select-account`, command)
+  }
 }

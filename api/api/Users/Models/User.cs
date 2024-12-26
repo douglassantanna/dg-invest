@@ -31,15 +31,14 @@ public class User : Entity
 
     protected User() { }
 
-    internal void SelectAccount(string subAccountTag)
+    internal void SelectAccount(int accountId)
     {
         foreach (var account in _accounts)
         {
-            if (account.SubaccountTag == subAccountTag)
-            {
+            if (account.Id == accountId)
                 account.Select();
-            }
-            account.Deselect();
+            else
+                account.Deselect();
         }
     }
     internal Response AddAccount(string subaccountTag)

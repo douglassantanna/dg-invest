@@ -156,7 +156,7 @@ public class AccountController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("select-account")]
-    public async Task<ActionResult<Response>> SelectAccount([FromBody] SelectAccountCommand command)
+    public async Task<ActionResult<Response>> SelectAccount([FromBody] SelectAccountRequest request)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
@@ -164,12 +164,11 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        var commandWithUserId = command with { UserId = userId };
-        var result = await _mediator.Send(commandWithUserId);
+        var result = await _mediator.Send(new SelectAccountCommand(userId, request.AccountId));
         if (!result.IsSuccess)
         {
-            return BadRequest(result);
+            return BadRequest(result.Message);
         }
-        return Ok(result.Message);
+        return Ok();
     }
 }

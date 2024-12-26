@@ -18,7 +18,7 @@ public class Account : Entity
     {
         SubaccountTag = subaccountTag;
         UserId = userId;
-        IsSelected = true;
+        IsSelected = subaccountTag == "main" ? true : false;
         CreatedAt = DateTime.Now;
     }
     public void Select() => IsSelected = true;
