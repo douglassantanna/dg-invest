@@ -1,7 +1,7 @@
 import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';

@@ -23,7 +23,7 @@ export interface SimpleAccountDto {
 export class AccountSelectionComponent implements OnInit {
   private readonly accountService = inject(AccountService);
   accounts = signal<SimpleAccountDto[]>([]);
-  accountCreatedEvent = output();
+  accountCreatedEvent = output<SimpleAccountDto[]>();
   selectedAccount = this.accounts()[0];
   showNewAccountInput = signal(false);
   newAccountName = signal('');

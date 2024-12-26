@@ -5,8 +5,18 @@
     <span class="material-icons">menu</span>
   </button>
 
+  @if (loading()) {
+  <span class="ml-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent">
+  </span>
+  }
+  @else {
+  <div>
+    <h1 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ accountTag() }} account</h1>
+  </div>
+  }
+
   <div class="flex items-center">
-    <button (click)="toggleAccountModal()"
+    <button (click)="toggleAccountModal([])"
       class="flex items-center text-blue-600 cursor-pointer transition-colors duration-200 justify-center h-10 w-10 mr-2 rounded-full bg-blue-100 dark:bg-blue-900">
       <span class="material-icons">apps</span>
     </button>
@@ -22,7 +32,7 @@
 </header>
 
 @if (showAccountModal()) {
-<app-modal (close)="toggleAccountModal()">
-  <app-account-selection (accountCreatedEvent)="toggleAccountModal()"></app-account-selection>
+<app-modal (close)="toggleAccountModal([])">
+  <app-account-selection (accountCreatedEvent)="toggleAccountModal($event)"></app-account-selection>
 </app-modal>
 }

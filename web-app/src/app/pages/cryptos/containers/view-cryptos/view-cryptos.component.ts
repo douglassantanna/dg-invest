@@ -60,7 +60,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.isModalOpen.set(!this.isModalOpen());
   }
 
-  loadCryptoAssets(params: any = {}) {
+  private loadCryptoAssets(params: any = {}) {
     const sortByLocalStorage = this.localStorageService.getAssetListSortBy() ?? 'symbol';
     const sortOrderLocalStorage = this.localStorageService.getAssetListSortOrder() ?? 'asc';
     const page = params.page ?? 1;
