@@ -43,7 +43,6 @@ export class AddTransactionComponent {
       transactionType: this.mapTransactionType(this.transactionForm.value.transactionType),
       cryptoAssetId: this.cryptoAssetId(),
       fee: this.transactionForm.value.fee ?? 0,
-      subAccountTag: "main"
     } as AddTransactionCommand;
 
     this.cryptoService.addTransaction(command)

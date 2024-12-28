@@ -33,7 +33,6 @@ public class AddTransactionCommandTests
             ExchangeName: "Binance",
             TransactionType: ETransactionType.Buy,
             CryptoAssetId: 1,
-            SubAccountTag: "main",
             UserId: 1,
             Fee: 0.1m
         );

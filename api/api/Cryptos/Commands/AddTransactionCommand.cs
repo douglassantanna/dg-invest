@@ -16,7 +16,6 @@ public record AddTransactionCommand(decimal Amount,
                                     string ExchangeName,
                                     ETransactionType TransactionType,
                                     int CryptoAssetId,
-                                    string SubAccountTag,
                                     int UserId,
                                     decimal Fee) : IRequest<Response>;
 
@@ -29,7 +28,6 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
         RuleFor(x => x.CryptoAssetId).GreaterThan(0);
         RuleFor(x => x.ExchangeName).NotEmpty();
         RuleFor(x => x.TransactionType).IsInEnum();
-        RuleFor(x => x.SubAccountTag).NotEmpty().WithMessage("SubAccountTag can't be empty");
         RuleFor(x => x.PurchaseDate)
             .NotEmpty().WithMessage("Purchase date can't be empty")
             .Must(BeInPastOrPresent)
@@ -73,11 +71,11 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         var account = await _context.Accounts
                                     .Include(x => x.CryptoAssets)
                                     .Where(x => x.UserId == request.UserId)
-                                    .Where(x => x.SubaccountTag == request.SubAccountTag)
+                                    .Where(x => x.IsSelected == true)
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {
-            _logger.LogError("AddTransactionCommandHandler. Account {0} not found.", request.SubAccountTag);
+            _logger.LogError("AddTransactionCommandHandler. Account for UserId {0} not found.", request.UserId);
             return new Response("Account not found", false, 404);
         }
 
