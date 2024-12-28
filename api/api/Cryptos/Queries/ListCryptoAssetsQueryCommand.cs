@@ -75,43 +75,18 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             }
         }
 
-        // var dtos = filteredAssets.Select(ca =>
-        // new UserCryptoAssetDto(
-        //     account.Balance,
-        //     new ViewMinimalCryptoAssetDto(
-        //         ca.Id,
-        //         ca.Symbol,
-        //         _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
-        //         ca.Balance,
-        //         ca.TotalInvested,
-        //         ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-        //         ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-        //         ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-        //         ca.CoinMarketCapId,
-        //         ca.TotalInvested
-        //     )
-        // ));
-
-        IEnumerable<ViewMinimalCryptoAssetDto> cryptoAssetDtos = [];
-        if (!filteredAssets.Any())
-        {
-            cryptoAssetDtos = Array.Empty<ViewMinimalCryptoAssetDto>();
-        }
-        else
-        {
-            cryptoAssetDtos = filteredAssets.Select(ca =>
-                new ViewMinimalCryptoAssetDto(
-                    Id: ca.Id,
-                    Symbol: ca.Symbol,
-                    PricePerUnit: _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
-                    Balance: ca.Balance,
-                    InvestedAmount: ca.TotalInvested,
-                    CurrentWorth: ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                    InvestmentGainLossValue: ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                    InvestmentGainLossPercentage: ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                    CoinMarketCapId: ca.CoinMarketCapId
-                ));
-        }
+        var cryptoAssetDtos = filteredAssets.Select(ca =>
+        new ViewMinimalCryptoAssetDto(
+            Id: ca.Id,
+            Symbol: ca.Symbol,
+            PricePerUnit: _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
+            Balance: ca.Balance,
+            InvestedAmount: ca.TotalInvested,
+            CurrentWorth: ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+            InvestmentGainLossValue: ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+            InvestmentGainLossPercentage: ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+            CoinMarketCapId: ca.CoinMarketCapId
+        ));
 
 
         if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
@@ -128,7 +103,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
 
         IEnumerable<UserCryptoAssetDto> result;
 
-        if (!filteredAssets.Any())
+        if (!cryptoAssetDtos.Any())
         {
             result = [new UserCryptoAssetDto(account.Balance, [])];
         }
