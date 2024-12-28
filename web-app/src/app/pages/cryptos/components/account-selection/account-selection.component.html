@@ -1,11 +1,18 @@
 <div class="w-80 bg-white dark:bg-gray-800 text-right">
+  @if(loadingAccounts()){
+  <div class="flex items-center justify-center">
+    <span class=" inline-block h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent">
+    </span>
+  </div>
+  }
+  @else {
   <div class="flex flex-col gap-2">
     @for (account of accounts(); track $index) {
     <div (click)="selectAccount(account)" [ngClass]="{
-               'px-4 py-3 rounded-md cursor-pointer transition-colors duration-200 flex justify-between items-center': true,
-               'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300': account.isSelected == true,
-               'hover:bg-gray-100 dark:hover:bg-gray-700': account.isSelected == false
-             }">
+                 'px-4 py-3 rounded-md cursor-pointer transition-colors duration-200 flex justify-between items-center': true,
+                 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300': account.isSelected == true,
+                 'hover:bg-gray-100 dark:hover:bg-gray-700': account.isSelected == false
+               }">
       <div class="flex items-center gap-2">
         <i class="material-icons text-lg">account_balance_wallet</i>
         <span>{{ account.subaccountTag }}</span>
@@ -51,4 +58,5 @@
     </div>
     }
   </div>
+  }
 </div>

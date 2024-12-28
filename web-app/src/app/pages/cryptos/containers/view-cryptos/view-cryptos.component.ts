@@ -38,6 +38,8 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   investmentChangePercent = signal(0);
   accountBalance = signal(0);
   isModalOpen = signal(false);
+  loading = signal(false);
+
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
@@ -65,7 +67,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     const sortOrder = params.sortOrder ?? sortOrderLocalStorage;
     const assetName = params.assetName ?? '';
     const hideZeroBalance = params.hideZeroBalance ? true : false;
-
+    this.loading.set(true);
     this.cryptoService.getCryptoAssets(page, pageSize, assetName, sortBy, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
@@ -77,21 +79,25 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.totalMarketValue.set(this.sumTotalMarketValue(portfolioArray));
           this.investmentChangePercent.set(this.calculatePercentDifference(portfolioArray));
           this.cryptoAssetList.set(portfolioArray);
+          this.loading.set(false);
         },
         error: (err) => {
           console.log('HTTP call failed:', err);
           this.updateLocalStorageSortOrder();
+          this.loading.set(false);
         }
       });
   }
 
   search(input: string, hideZeroBalance: boolean) {
+    this.loading.set(true);
     this.localStorageService.setHideZeroBalance(hideZeroBalance);
     this.cryptoService.getCryptoAssets(1, 50, input, "symbol", "asc", hideZeroBalance)
       .pipe(
         takeUntil(this.unsubscribe$)
       ).subscribe({
         next: (response) => {
+          this.loading.set(false);
           const portfolioArray = response.items[0].cryptoAssetDto;
           this.accountBalance.set(response.items[0].accountBalance);
           this.isCryptoAssetListEmpty.set(portfolioArray.length > 0);
@@ -101,6 +107,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.cryptoAssetList.set(portfolioArray);
         },
         error: (err) => {
+          this.loading.set(false);
           this.setBalanceStatus(false);
         },
       });

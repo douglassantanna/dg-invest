@@ -29,6 +29,7 @@ export class AccountSelectionComponent implements OnInit {
   newAccountName = signal('');
   errorMessage = signal('');
   loading = signal(false);
+  loadingAccounts = signal(false);
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -87,11 +88,14 @@ export class AccountSelectionComponent implements OnInit {
   }
 
   private loadAccounts() {
+    this.loadingAccounts.set(true);
     this.accountService.getAccounts().subscribe({
       next: (accounts) => {
+        this.loadingAccounts.set(false);
         this.accounts.set(accounts);
       },
       error: (err) => {
+        this.loadingAccounts.set(false);
         console.error(err);
       }
     });
