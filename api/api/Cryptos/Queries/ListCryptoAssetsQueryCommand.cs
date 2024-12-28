@@ -75,36 +75,76 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             }
         }
 
-        var dtos = filteredAssets.Select(ca =>
-        new UserCryptoAssetDto(
-            account.Balance,
-            new ViewMinimalCryptoAssetDto(
-                ca.Id,
-                ca.Symbol,
-                _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
-                ca.Balance,
-                ca.TotalInvested,
-                ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                ca.CoinMarketCapId,
-                ca.TotalInvested
-            )
-        ));
+        // var dtos = filteredAssets.Select(ca =>
+        // new UserCryptoAssetDto(
+        //     account.Balance,
+        //     new ViewMinimalCryptoAssetDto(
+        //         ca.Id,
+        //         ca.Symbol,
+        //         _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
+        //         ca.Balance,
+        //         ca.TotalInvested,
+        //         ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+        //         ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+        //         ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+        //         ca.CoinMarketCapId,
+        //         ca.TotalInvested
+        //     )
+        // ));
 
-        if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
+        IEnumerable<ViewMinimalCryptoAssetDto> cryptoAssetDtos = [];
+        if (!filteredAssets.Any())
         {
-            dtos = dtos.OrderBy(GetSortProperty(request));
+            cryptoAssetDtos = Array.Empty<ViewMinimalCryptoAssetDto>();
         }
         else
         {
-            dtos = dtos.OrderByDescending(GetSortProperty(request));
+            cryptoAssetDtos = filteredAssets.Select(ca =>
+                new ViewMinimalCryptoAssetDto(
+                    Id: ca.Id,
+                    Symbol: ca.Symbol,
+                    PricePerUnit: _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
+                    Balance: ca.Balance,
+                    InvestedAmount: ca.TotalInvested,
+                    CurrentWorth: ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+                    InvestmentGainLossValue: ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+                    InvestmentGainLossPercentage: ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
+                    CoinMarketCapId: ca.CoinMarketCapId
+                ));
+        }
+
+
+        if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
+        {
+            cryptoAssetDtos = cryptoAssetDtos.OrderBy(GetSortProperty(request));
+        }
+        else
+        {
+            cryptoAssetDtos = cryptoAssetDtos.OrderByDescending(GetSortProperty(request));
         }
 
         int maxPageSize = 50;
         request.PageSize = Math.Min(request.PageSize, maxPageSize);
 
-        return PageList<UserCryptoAssetDto>.Create(dtos, request.Page, request.PageSize);
+        IEnumerable<UserCryptoAssetDto> result;
+
+        if (!filteredAssets.Any())
+        {
+            result = [new UserCryptoAssetDto(account.Balance, [])];
+        }
+        else
+        {
+            result =
+            [
+                new UserCryptoAssetDto
+                (
+                    account.Balance,
+                    cryptoAssetDtos
+                )
+            ];
+        }
+
+        return PageList<UserCryptoAssetDto>.Create(result, request.Page, request.PageSize);
     }
 
     private async Task<GetQuoteResponse> GetCryptosFromcoinMarketCap(List<CryptoAsset> accountQuery)
@@ -113,12 +153,12 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         return await _coinMarketCapService.GetQuotesByIds(ids);
     }
 
-    private static Func<UserCryptoAssetDto, object> GetSortProperty(ListCryptoAssetsQueryCommand request) =>
+    private static Func<ViewMinimalCryptoAssetDto, object> GetSortProperty(ListCryptoAssetsQueryCommand request) =>
     request.SortBy?.ToLower() switch
     {
-        "symbol" => dto => dto.CryptoAssetDto.Symbol,
-        "balance" => dto => dto.CryptoAssetDto.Balance,
-        "invested_amount" => dto => dto.CryptoAssetDto.TotalInvested,
-        _ => dto => dto.CryptoAssetDto.Symbol
+        "symbol" => dto => dto.Symbol,
+        "balance" => dto => dto.Balance,
+        "invested_amount" => dto => dto.InvestedAmount,
+        _ => dto => dto.Symbol
     };
 }

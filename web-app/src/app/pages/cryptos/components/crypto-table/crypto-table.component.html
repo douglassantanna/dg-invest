@@ -15,7 +15,7 @@
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-200">
-      @for (element of cryptos; track $index) {
+      @for (element of cryptos(); track $index) {
       <tr class="hover:bg-gray-100">
         <td class="px-6 py-4">
           <button type="button" (click)="cryptoDashboard(element.id)"

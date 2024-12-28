@@ -11,5 +11,5 @@ export interface ViewCryptoInformation {
 }
 export interface UserCryptoAssetDto {
   accountBalance: number;
-  cryptoAssetDto: ViewCryptoInformation;
+  cryptoAssetDto: ViewCryptoInformation[];
 }
