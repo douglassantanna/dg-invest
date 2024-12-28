@@ -15,7 +15,6 @@ export interface CreateAccountCommand {
 export interface AddCryptoAssetRequest {
   symbol: string;
   coinMarketCapId: number;
-  subAccountTag: string;
 }
 
 export interface SelectAccountRequest {

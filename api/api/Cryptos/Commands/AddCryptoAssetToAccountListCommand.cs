@@ -7,9 +7,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Commands;
-public record AddCryptoAssetToAccountListCommand(int UserId, string SubAccountTag, int CoinMarketCapId, string Symbol)
+public record AddCryptoAssetToAccountListCommand(int UserId, int CoinMarketCapId, string Symbol)
     : IRequest<Response>;
-public record AddCryptoAssetToAccountListRequest(string SubAccountTag, int CoinMarketCapId, string Symbol);
+public record AddCryptoAssetToAccountListRequest(int CoinMarketCapId, string Symbol);
 public class AddCryptoAssetToAccountListCommandValidator : AbstractValidator<AddCryptoAssetToAccountListCommand>
 {
     public AddCryptoAssetToAccountListCommandValidator()
@@ -51,7 +51,7 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
 
             var account = await _context.Accounts.Include(x => x.CryptoAssets)
                                                 .Where(x => x.UserId == request.UserId)
-                                                .Where(x => x.SubaccountTag == request.SubAccountTag)
+                                                .Where(x => x.IsSelected == true)
                                                 .FirstOrDefaultAsync(cancellationToken);
             if (account == null)
             {

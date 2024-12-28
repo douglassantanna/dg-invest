@@ -85,7 +85,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        var result = await _mediator.Send(new AddCryptoAssetToAccountListCommand(userId, request.SubAccountTag, request.CoinMarketCapId, request.Symbol));
+        var result = await _mediator.Send(new AddCryptoAssetToAccountListCommand(userId, request.CoinMarketCapId, request.Symbol));
         if (!result.IsSuccess)
         {
             if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)

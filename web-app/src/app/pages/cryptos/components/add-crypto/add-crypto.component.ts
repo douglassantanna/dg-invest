@@ -47,7 +47,6 @@ export class AddCryptoComponent implements OnInit {
     const command: AddCryptoAssetRequest = {
       symbol: selectedCrypto.symbol,
       coinMarketCapId: selectedCrypto.coinMarketCapId,
-      subAccountTag: "main"
     };
 
     this.accountService.addCryptoAsset(command)
