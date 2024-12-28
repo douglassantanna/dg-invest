@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
 import { ETransactionType } from 'src/app/core/models/etransaction-type';
 import { AccountService } from 'src/app/core/services/account.service';
+import { CryptoService } from 'src/app/core/services/crypto.service';
 import { environment } from 'src/environments/environment.development';
 
 @Component({
@@ -15,7 +16,7 @@ import { environment } from 'src/environments/environment.development';
 })
 export class AddTransactionComponent {
   cryptoAssetId = input(0);
-  private accountService = inject(AccountService);
+  private cryptoService = inject(CryptoService);
   fb = inject(FormBuilder);
   transactionForm!: FormGroup;
   btnColor = environment.btnColor;
@@ -45,7 +46,7 @@ export class AddTransactionComponent {
       subAccountTag: "main"
     } as AddTransactionCommand;
 
-    this.accountService.addTransaction(command)
+    this.cryptoService.addTransaction(command)
       .subscribe({
         next: (response) => {
           this.transactionForm.reset();
