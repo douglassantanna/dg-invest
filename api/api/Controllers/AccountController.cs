@@ -60,8 +60,8 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Ok(result.Message);
     }
 
-    [HttpGet("selected-account")]
-    public async Task<ActionResult<Response>> GetSelectedAccount()
+    [HttpGet("account-details")]
+    public async Task<ActionResult<Response>> GetAccountDetails()
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
@@ -69,7 +69,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetAccountBySubAccountTagCommand command = new(userId);
+        GetAccountDetailsCommand command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result.Message);

@@ -5,23 +5,23 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Users.Queries;
-public record GetAccountBySubAccountTagCommand(int UserId) : IRequest<Response>;
-public class GetAccountBySubAccountTagCommandHandler : IRequestHandler<GetAccountBySubAccountTagCommand, Response>
+public record GetAccountDetailsCommand(int UserId) : IRequest<Response>;
+public class GetAccountDetailsCommandHandler : IRequestHandler<GetAccountDetailsCommand, Response>
 {
     private readonly DataContext _context;
-    private readonly ILogger<GetAccountBySubAccountTagCommandHandler> _logger;
+    private readonly ILogger<GetAccountDetailsCommandHandler> _logger;
 
-    public GetAccountBySubAccountTagCommandHandler(
+    public GetAccountDetailsCommandHandler(
         DataContext context,
-        ILogger<GetAccountBySubAccountTagCommandHandler> logger)
+        ILogger<GetAccountDetailsCommandHandler> logger)
     {
         _context = context;
         _logger = logger;
     }
 
-    public async Task<Response> Handle(GetAccountBySubAccountTagCommand request, CancellationToken cancellationToken)
+    public async Task<Response> Handle(GetAccountDetailsCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("GetAccountBySubAccountTagCommandHandler: Handling request for user {UserId}", request.UserId);
+        _logger.LogInformation("GetAccountDetailsCommandHandler: Handling request for user {UserId}", request.UserId);
         var account = await _context.Accounts
                                     .Where(u => u.UserId == request.UserId)
                                     .Where(x => x.IsSelected == true)
@@ -29,7 +29,7 @@ public class GetAccountBySubAccountTagCommandHandler : IRequestHandler<GetAccoun
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account is null)
         {
-            _logger.LogError("GetAccountBySubAccountTagCommandHandler: Account not found for user {UserId}", request.UserId);
+            _logger.LogError("GetAccountDetailsCommandHandler: Account not found for user {UserId}", request.UserId);
             return new Response("Account not found", false, 404);
         }
 

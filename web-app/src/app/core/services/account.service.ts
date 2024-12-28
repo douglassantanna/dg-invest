@@ -37,7 +37,7 @@ export class AccountService {
   }
 
   getSelectedAccount(): Observable<AccountDto> {
-    return this.http.get<AccountDto>(`${this.apiUrl}/selected-account`);
+    return this.http.get<AccountDto>(`${this.apiUrl}/account-details`);
   }
 
   addCryptoAsset(request: AddCryptoAssetRequest): Observable<CustomRespose> {
