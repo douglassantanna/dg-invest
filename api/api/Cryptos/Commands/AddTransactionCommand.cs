@@ -103,8 +103,8 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                                                          cryptoCurrentPrice: request.Price,
                                                                                          exchangeName: request.ExchangeName,
                                                                                          notes: string.Empty,
-                                                                                         cryptoAssetId: 1,
-                                                                                         cryptoAsset: null,
+                                                                                         cryptoAssetId: cryptoAsset.Id,
+                                                                                         cryptoAsset: cryptoAsset,
                                                                                          fee: request.Fee));
             cryptoAsset.AddTransaction(transaction);
 

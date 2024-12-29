@@ -23,9 +23,11 @@ public class GetAccountDetailsCommandHandler : IRequestHandler<GetAccountDetails
     {
         _logger.LogInformation("GetAccountDetailsCommandHandler: Handling request for user {UserId}", request.UserId);
         var account = await _context.Accounts
+                                    .AsNoTracking()
                                     .Where(u => u.UserId == request.UserId)
                                     .Where(x => x.IsSelected == true)
                                     .Include(x => x.AccountTransactions)
+                                    .ThenInclude(x => x.CryptoAsset)
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account is null)
         {
