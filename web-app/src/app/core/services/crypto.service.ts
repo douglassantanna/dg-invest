@@ -1,6 +1,6 @@
 import { Pagination } from '../models/pagination';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { BehaviorSubject, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
@@ -26,6 +26,7 @@ export class CryptoService {
   private _transactions: BehaviorSubject<CryptoTransactionHistory[]> = new BehaviorSubject<CryptoTransactionHistory[]>([]);
   private _userId: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   private http = inject(HttpClient);
+  accountTag = signal('');
   private authService = inject(AuthService);
 
   getCryptoAssets(
@@ -47,7 +48,11 @@ export class CryptoService {
 
     return this.http.get<Pagination<UserCryptoAssetDto>>(`${url}/list-assets`, {
       params: params
-    });
+    }).pipe(
+      tap((response) => {
+        this.accountTag.set(response.items[0].accountTag);
+      })
+    );
   }
 
   getCryptos(): Observable<Response<Crypto>> {

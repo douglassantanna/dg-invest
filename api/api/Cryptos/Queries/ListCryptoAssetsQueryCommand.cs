@@ -105,7 +105,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
 
         if (!cryptoAssetDtos.Any())
         {
-            result = [new UserCryptoAssetDto(account.Balance, [])];
+            result = [new UserCryptoAssetDto(account.Balance, account.SubaccountTag, [])];
         }
         else
         {
@@ -114,6 +114,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
                 new UserCryptoAssetDto
                 (
                     account.Balance,
+                    account.SubaccountTag,
                     cryptoAssetDtos
                 )
             ];
