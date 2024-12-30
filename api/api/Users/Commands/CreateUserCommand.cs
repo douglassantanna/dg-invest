@@ -60,8 +60,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         var user = new User(request.FullName,
                             request.Email,
                             _passwordHelper.EncryptPassword(randomPassword),
-                            request.Role,
-                            new Account());
+                            request.Role);
 
         await _userRepository.AddAsync(user);
 

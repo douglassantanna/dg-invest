@@ -3,11 +3,12 @@ import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-fil
 import { CommonModule } from '@angular/common';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
 import { RouterModule } from '@angular/router';
-import { AccountDto, AccountTransactionDto, GroupedAccountTransactionsDto, UserDto, UserService } from 'src/app/core/services/user.service';
+import { AccountDto, AccountTransactionDto, GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
 import { DepositComponent } from '../deposit/deposit.component';
 import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { WithdrawComponent } from '../withdraw/withdraw.component';
+import { AccountService } from 'src/app/core/services/account.service';
 export type AccountTransaction = {
   imageUrl: string;
   transactionType: AccountTransactionType;
@@ -17,6 +18,7 @@ export type AccountTransaction = {
   cryptoAmount?: number;
   cryptoCurrentPrice?: number;
   cryptoSymbol?: string;
+  fee?: number;
 }
 
 export enum AccountTransactionType {
@@ -41,17 +43,16 @@ export enum AccountTransactionType {
   templateUrl: './account.component.html',
 })
 export class AccountComponent implements OnInit {
-  private userService = inject(UserService);
+  private accountService = inject(AccountService);
 
   isDepositModalOpen = signal<boolean>(false);
   isWithdrawModalOpen = signal<boolean>(false);
   account = signal<AccountDto>({} as AccountDto);
   ngOnInit(): void {
-    this.userService.getUserById().subscribe({
+    this.accountService.getSelectedAccount().subscribe({
       next: (result) => {
         if (result) {
-          const user = result.data as UserDto
-          this.account.set(user.account!);
+          this.account.set(result);
         }
       },
       error: (err) => { console.log(err) }
@@ -93,7 +94,8 @@ export class AccountComponent implements OnInit {
         destination: '',
         notes: deposit.notes,
         cryptoCurrentPrice: deposit.currentPrice,
-        cryptoSymbol: deposit.cryptoAssetId
+        cryptoSymbol: deposit.cryptoAssetId,
+        fee: 0
       }
 
       if (existingTransactions.length > 0) {

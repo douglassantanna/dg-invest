@@ -63,7 +63,7 @@ public class AddCryptoAssetToUserListCommandHandler : IRequestHandler<AddCryptoA
                                           request.CoinMarketCapId);
         try
         {
-            user.AddCryptoAsset(cryptoAsset);
+            // user.AddCryptoAsset(cryptoAsset);
         }
         catch (System.Exception)
         {

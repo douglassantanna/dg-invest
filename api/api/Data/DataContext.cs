@@ -11,18 +11,15 @@ public class DataContext : DbContext
     {
     }
 
-    public DbSet<CryptoTransaction> CryptoTransactions { get; set; } = null!;
-    public DbSet<CryptoAsset> CryptoAssets { get; set; } = null!;
-    public DbSet<Crypto> Cryptos { get; set; } = null!;
-    public DbSet<User> Users { get; set; } = null!;
-    public DbSet<Account> Accounts { get; set; } = null!;
-    public DbSet<AccountTransaction> AccountTransactions { get; set; } = null!;
+    public virtual DbSet<CryptoTransaction> CryptoTransactions { get; set; } = null!;
+    public virtual DbSet<CryptoAsset> CryptoAssets { get; set; } = null!;
+    public virtual DbSet<Crypto> Cryptos { get; set; } = null!;
+    public virtual DbSet<User> Users { get; set; } = null!;
+    public virtual DbSet<Account> Accounts { get; set; } = null!;
+    public virtual DbSet<AccountTransaction> AccountTransactions { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);
     }
 }
-
-
-

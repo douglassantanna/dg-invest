@@ -1,12 +1,12 @@
 import { Component, OnInit, inject, output, signal } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepositFundCommand } from 'src/app/core/models/deposit-fund-command';
-import { CryptoService } from 'src/app/core/services/crypto.service';
 import { AccountTransactionType } from '../account/account.component';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { UpperCasePipe } from '@angular/common';
 import { tap } from 'rxjs';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
+import { AccountService } from 'src/app/core/services/account.service';
 
 @Component({
   selector: 'app-deposit',
@@ -17,8 +17,9 @@ import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-informati
 })
 export class DepositComponent implements OnInit {
   private fb = inject(FormBuilder);
-  private cryptoService = inject(CryptoService);
   private toastService = inject(ToastService);
+  private accountService = inject(AccountService);
+
   depositEvent = output<DepositFundCommand | null>();
   cryptoAssets = signal<ViewCryptoInformation[]>([]);
   depositType = AccountTransactionType;
@@ -55,15 +56,14 @@ export class DepositComponent implements OnInit {
       notes: this.depositForm.value.notes,
     };
     this.loading.set(true);
-    this.depositEvent.emit(command);
 
-    this.cryptoService.depositFund(command)
+    this.accountService.depositFund(command)
       .subscribe({
         next: (result) => {
           this.loading.set(false);
           this.depositEvent.emit(command);
         },
-        error: (err) => { this.loading.set(false); }
+        error: (err) => { this.loading.set(false); console.log(err) }
       });
   }
 
@@ -75,7 +75,6 @@ export class DepositComponent implements OnInit {
     this.depositForm.get('accountTransactionType')?.valueChanges.pipe(
       tap(value => {
         if (value == this.depositType.DepositCrypto) {
-          this.getCryptos();
           this.currentPrice.setValidators([Validators.required, Validators.min(0)]);
           this.exchangeName.setValidators([Validators.required, Validators.maxLength(255)]);
           this.cryptoAssetId.setValidators([Validators.required, Validators.maxLength(255)]);
@@ -92,14 +91,6 @@ export class DepositComponent implements OnInit {
         this.exchangeName.updateValueAndValidity();
         this.cryptoAssetId.updateValueAndValidity();
       })).subscribe();
-  }
-
-  private getCryptos() {
-    this.cryptoService.getCryptoAssets()
-      .subscribe({
-        next: (response) => console.log(response),
-        error: (err) => console.log(err)
-      });
   }
 
   get accountTransactionType() { return this.depositForm.get('accountTransactionType') as FormControl }

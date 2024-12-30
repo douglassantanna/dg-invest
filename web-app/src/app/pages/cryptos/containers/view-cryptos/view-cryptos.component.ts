@@ -1,8 +1,6 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { FormControl } from '@angular/forms';
-
 import { CryptoService } from '../../../../core/services/crypto.service';
-import { Observable, Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
 import { CryptoTableComponent } from '../../components/crypto-table/crypto-table.component';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
@@ -33,15 +31,15 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   private localStorageService = inject(LocalStorageService);
   private unsubscribe$: Subject<void> = new Subject<void>();
   cryptoAssetList = signal<ViewCryptoInformation[]>([]);
-  searchControl: FormControl = new FormControl();
-  results$!: Observable<any[]>;
   hideZeroBalance: boolean = false;
   isCryptoAssetListEmpty = signal(false);
-  totalInvested = 0;
-  totalMarketValue = 0;
-  investmentChangePercent = 0;
+  totalInvested = signal(0);
+  totalMarketValue = signal(0);
+  investmentChangePercent = signal(0);
   accountBalance = signal(0);
   isModalOpen = signal(false);
+  loading = signal(false);
+
   ngOnDestroy() {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
@@ -60,7 +58,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.isModalOpen.set(!this.isModalOpen());
   }
 
-  loadCryptoAssets(params: any = {}) {
+  private loadCryptoAssets(params: any = {}) {
     const sortByLocalStorage = this.localStorageService.getAssetListSortBy() ?? 'symbol';
     const sortOrderLocalStorage = this.localStorageService.getAssetListSortOrder() ?? 'asc';
     const page = params.page ?? 1;
@@ -69,43 +67,47 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     const sortOrder = params.sortOrder ?? sortOrderLocalStorage;
     const assetName = params.assetName ?? '';
     const hideZeroBalance = params.hideZeroBalance ? true : false;
-
+    this.loading.set(true);
     this.cryptoService.getCryptoAssets(page, pageSize, assetName, sortBy, sortOrder, hideZeroBalance)
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
-        next: (cryptos) => {
-          const cryptoArray = cryptos.items.map((item) => item.cryptoAssetDto);
-          const accountBalance = cryptos.items.map((item) => item.accountBalance)[0];
-          this.accountBalance.set(accountBalance);
-          this.isCryptoAssetListEmpty.set(cryptos.items.length > 0);
-          this.totalInvested = this.sumTotalInvested(cryptoArray);
-          this.totalMarketValue = this.sumTotalMarketValue(cryptoArray);
-          this.investmentChangePercent = this.calculatePercentDifference(cryptoArray);
-          this.cryptoAssetList.set(cryptoArray);
+        next: (response) => {
+          const portfolioArray = response.items[0].cryptoAssetDto;
+          this.accountBalance.set(response.items[0].accountBalance);
+          this.isCryptoAssetListEmpty.set(portfolioArray.length > 0);
+          this.totalInvested.set(this.sumTotalInvested(portfolioArray));
+          this.totalMarketValue.set(this.sumTotalMarketValue(portfolioArray));
+          this.investmentChangePercent.set(this.calculatePercentDifference(portfolioArray));
+          this.cryptoAssetList.set(portfolioArray);
+          this.loading.set(false);
         },
         error: (err) => {
           console.log('HTTP call failed:', err);
           this.updateLocalStorageSortOrder();
+          this.loading.set(false);
         }
       });
   }
 
   search(input: string, hideZeroBalance: boolean) {
+    this.loading.set(true);
     this.localStorageService.setHideZeroBalance(hideZeroBalance);
     this.cryptoService.getCryptoAssets(1, 50, input, "symbol", "asc", hideZeroBalance)
       .pipe(
         takeUntil(this.unsubscribe$)
       ).subscribe({
-        next: (cryptos) => {
-          const cryptoArray = cryptos.items.map((item) => item.cryptoAssetDto);
-          const accountBalance = cryptos.items.map((item) => item.accountBalance)[0];
-          this.accountBalance.set(accountBalance);
-          this.cryptoAssetList.set(cryptoArray);
-          this.totalInvested = this.sumTotalInvested(cryptoArray);
-          this.totalMarketValue = this.sumTotalMarketValue(cryptoArray);
-          this.investmentChangePercent = this.calculatePercentDifference(cryptoArray);
+        next: (response) => {
+          this.loading.set(false);
+          const portfolioArray = response.items[0].cryptoAssetDto;
+          this.accountBalance.set(response.items[0].accountBalance);
+          this.isCryptoAssetListEmpty.set(portfolioArray.length > 0);
+          this.totalInvested.set(this.sumTotalInvested(portfolioArray));
+          this.totalMarketValue.set(this.sumTotalMarketValue(portfolioArray));
+          this.investmentChangePercent.set(this.calculatePercentDifference(portfolioArray));
+          this.cryptoAssetList.set(portfolioArray);
         },
         error: (err) => {
+          this.loading.set(false);
           this.setBalanceStatus(false);
         },
       });

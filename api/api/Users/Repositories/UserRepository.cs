@@ -35,12 +35,12 @@ public class UserRepository : IUserRepository
     public async Task<IEnumerable<User>> GetAll(
         Expression<Func<User, bool>> filter = null,
         Func<IQueryable<User>, IIncludableQueryable<User, object>> include = null)
-        => await _baseRepository.GetAll(filter, i => i.Include(x => x.CryptoAssets));
+        => await _baseRepository.GetAll(filter);
 
     public async Task UpdateAsync(User entity) => await _baseRepository.UpdateAsync(entity);
 
     public async Task<bool> IsCryptoAssetInUserListAsync(int userId)
-       => await _dataContext.CryptoAssets.AnyAsync(x => x.UserId == userId);
+       => await _dataContext.CryptoAssets.AnyAsync(x => x.Id == userId);
 
     public async Task<User?> GetByIdAsync(
         int id,

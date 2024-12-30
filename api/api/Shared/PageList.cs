@@ -27,5 +27,14 @@ public class PageList<T>
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         return new PageList<T>(items, page, pageSize, totalCount);
     }
+    public static PageList<T> Create(IEnumerable<T> source, int page, int pageSize)
+    {
+        var count = source.Count();
+        var items = source
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+        return new PageList<T>(items, page, pageSize, count);
+    }
     public static PageList<T> Empty() => new(new List<T>(), 0, 1, 0);
 }

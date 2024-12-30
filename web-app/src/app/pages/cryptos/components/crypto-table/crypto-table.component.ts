@@ -1,18 +1,18 @@
-import { Component, Input, inject, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, input, output } from '@angular/core';
 import { PercentDifferenceComponent } from '../percent-difference.component';
 import { Router } from '@angular/router';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
 import { environment } from 'src/environments/environment.development';
+import { UpperCasePipe } from '@angular/common';
 
 @Component({
   selector: 'app-crypto-table',
   standalone: true,
   imports: [
-    CommonModule,
     PercentDifferenceComponent,
-    FormatCurrencyPipe],
+    FormatCurrencyPipe,
+    UpperCasePipe],
   templateUrl: './crypto-table.component.html'
 })
 export class CryptoTableComponent {
@@ -20,8 +20,8 @@ export class CryptoTableComponent {
   sortOrder = input<string>('');
   sortBy = input<string>('');
   outputHeader = output<string>();
-  @Input() cryptos: ViewCryptoInformation[] = [];
-  @Input() hideZeroBalance: boolean = false;
+  cryptos = input<ViewCryptoInformation[]>([]);
+  hideZeroBalance = input<boolean>(false);
   router = inject(Router);
   tableHeaders: any[] = [
     { value: 'symbol', description: 'Symbol' },

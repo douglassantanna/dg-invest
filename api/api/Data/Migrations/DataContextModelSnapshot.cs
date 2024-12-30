@@ -34,13 +34,23 @@ namespace api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsSelected")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SubaccountTag")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar");
+
                     b.Property<int>("UserId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("Accounts");
                 });
@@ -164,6 +174,9 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("AveragePrice")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
@@ -200,12 +213,9 @@ namespace api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("AccountId");
 
                     b.ToTable("CryptoAssets");
                 });
@@ -262,6 +272,9 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -290,11 +303,13 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>
                 {
-                    b.HasOne("api.Users.Models.User", null)
-                        .WithOne("Account")
-                        .HasForeignKey("api.Cryptos.Models.Account", "UserId")
+                    b.HasOne("api.Users.Models.User", "User")
+                        .WithMany("Accounts")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.AccountTransaction", b =>
@@ -323,13 +338,9 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
                 {
-                    b.HasOne("api.Users.Models.User", "User")
+                    b.HasOne("api.Cryptos.Models.Account", null)
                         .WithMany("CryptoAssets")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                        .HasForeignKey("AccountId");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
@@ -342,6 +353,8 @@ namespace api.Migrations
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>
                 {
                     b.Navigation("AccountTransactions");
+
+                    b.Navigation("CryptoAssets");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
@@ -353,10 +366,7 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Users.Models.User", b =>
                 {
-                    b.Navigation("Account")
-                        .IsRequired();
-
-                    b.Navigation("CryptoAssets");
+                    b.Navigation("Accounts");
                 });
 #pragma warning restore 612, 618
         }
