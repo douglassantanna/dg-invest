@@ -88,7 +88,7 @@ public class UserController : ControllerBase
         GetUserByIdCommand command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
-            return NotFound(result);
+            return NotFound(result.Message);
         return Ok(result);
     }
 

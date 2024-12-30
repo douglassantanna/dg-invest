@@ -1,8 +1,8 @@
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
+using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
-using api.Users.Repositories;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
@@ -49,17 +49,17 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
 
 public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Response>
 {
-    private readonly IUserRepository _userRepository;
+    private readonly DataContext _context;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
     public DepositFundCommandHandler(
-        IUserRepository userRepository,
         ILogger<DepositFundCommandHandler> logger,
-        ITransactionService transactionService)
+        ITransactionService transactionService,
+        DataContext context)
     {
-        _userRepository = userRepository;
         _logger = logger;
         _transactionService = transactionService;
+        _context = context;
     }
 
     public async Task<Response> Handle(DepositFundCommand request, CancellationToken cancellationToken)
@@ -73,13 +73,14 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             return new Response("Validation failed", false, errors);
         }
 
-        var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                    x => x.Include(q => q.Account).ThenInclude(x => x.AccountTransactions)
-                                                          .Include(x => x.CryptoAssets).ThenInclude(x => x.Transactions));
-        if (user == null)
+        var account = await _context.Accounts.Include(a => a.CryptoAssets)
+                                            .Where(ac => ac.IsSelected == true)
+                                            .Where(ac => ac.UserId == request.UserId)
+                                            .FirstOrDefaultAsync(cancellationToken);
+        if (account == null)
         {
-            _logger.LogError("DepositFundCommandHandler. User {0} not found.", request.UserId);
-            return new Response("User not found", false);
+            _logger.LogError("DepositFundCommandHandler. Account from UserId {0} not found.", request.UserId);
+            return new Response("Account not found", false, 404);
         }
 
         try
@@ -87,21 +88,22 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             var currentServerTime = DateTime.Now;
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day, currentServerTime.Hour, currentServerTime.Minute, currentServerTime.Second);
             var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);
-            var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, user.CryptoAssets);
+            var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, []);
             if (newAccountTransaction == null)
             {
                 _logger.LogError("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
-                return new Response("Crypto asset not found", false);
+                return new Response("Crypto asset not found", false, 404);
             }
 
-            var response = _transactionService.ExecuteTransaction(user.Account!, newAccountTransaction);
+            var response = _transactionService.ExecuteTransaction(account, newAccountTransaction);
             if (!response.IsSuccess)
             {
                 _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
 
-            await _userRepository.UpdateAsync(user);
+            _context.Accounts.Update(account);
+            await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("DepositFundCommandHandler. Deposit added for UserId: {0}", request.UserId);
             return new Response("Deposit added succesfully", true);

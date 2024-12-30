@@ -24,16 +24,12 @@ import { StatsCardComponent } from '../../components/stats-card/stats-card.compo
   templateUrl: './crypto-details.component.html',
 })
 export class CryptoDetailsComponent implements OnInit, OnDestroy {
-
   private cryptoService = inject(CryptoService);
   private route = inject(ActivatedRoute);
   cryptoAssetId = 0;
   cryptoInfo: CryptoInformation = {} as CryptoInformation;
-
   private unsubscribe$ = new Subject<void>();
-
   transactions = signal<CryptoTransactionHistory[]>([]);
-
   cryptoAssetData$: BehaviorSubject<CryptoAssetData[]> = new BehaviorSubject<CryptoAssetData[]>([]);
 
   ngOnInit(): void {

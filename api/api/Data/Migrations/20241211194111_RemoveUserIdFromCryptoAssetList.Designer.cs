@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using api.Data;
 
@@ -11,9 +12,11 @@ using api.Data;
 namespace api.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20241211194111_RemoveUserIdFromCryptoAssetList")]
+    partial class RemoveUserIdFromCryptoAssetList
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,23 +37,13 @@ namespace api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsSelected")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("SubaccountTag")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar");
-
                     b.Property<int>("UserId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("Accounts");
                 });
@@ -174,9 +167,6 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AccountId")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("AveragePrice")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
@@ -214,8 +204,6 @@ namespace api.Migrations
                         .HasColumnType("decimal(18,8)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AccountId");
 
                     b.ToTable("CryptoAssets");
                 });
@@ -272,9 +260,6 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -303,13 +288,11 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>
                 {
-                    b.HasOne("api.Users.Models.User", "User")
-                        .WithMany("Accounts")
-                        .HasForeignKey("UserId")
+                    b.HasOne("api.Users.Models.User", null)
+                        .WithOne("Account")
+                        .HasForeignKey("api.Cryptos.Models.Account", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.AccountTransaction", b =>
@@ -336,13 +319,6 @@ namespace api.Migrations
                     b.Navigation("CryptoAsset");
                 });
 
-            modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
-                {
-                    b.HasOne("api.Cryptos.Models.Account", null)
-                        .WithMany("CryptoAssets")
-                        .HasForeignKey("AccountId");
-                });
-
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
                 {
                     b.HasOne("api.Models.Cryptos.CryptoAsset", null)
@@ -353,8 +329,6 @@ namespace api.Migrations
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>
                 {
                     b.Navigation("AccountTransactions");
-
-                    b.Navigation("CryptoAssets");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
@@ -366,7 +340,8 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Users.Models.User", b =>
                 {
-                    b.Navigation("Accounts");
+                    b.Navigation("Account")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

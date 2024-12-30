@@ -1,9 +1,9 @@
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
+using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
-using api.Users.Repositories;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
@@ -45,15 +45,15 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
 {
     private readonly ILogger<AddTransactionCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
-    private readonly IUserRepository _userRepository;
+    private readonly DataContext _context;
 
     public AddTransactionCommandHandler(ILogger<AddTransactionCommandHandler> logger,
                                         ITransactionService transactionService,
-                                        IUserRepository userRepository)
+                                        DataContext context)
     {
         _logger = logger;
         _transactionService = transactionService;
-        _userRepository = userRepository;
+        _context = context;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
@@ -68,22 +68,22 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             return new Response("Validation failed", false, errors);
         }
 
-        var user = await _userRepository.GetByIdAsync(request.UserId,
-                                                      x => x.Include(x => x.CryptoAssets)
-                                                      .ThenInclude(c => c.Transactions)
-                                                      .Include(x => x.Account));
-
-        if (user == null)
+        var account = await _context.Accounts
+                                    .Include(x => x.CryptoAssets)
+                                    .Where(x => x.UserId == request.UserId)
+                                    .Where(x => x.IsSelected == true)
+                                    .FirstOrDefaultAsync(cancellationToken);
+        if (account == null)
         {
-            _logger.LogError("AddTransactionCommandHandler. User {0} not found.", request.UserId);
-            return new Response("User not found", false);
+            _logger.LogError("AddTransactionCommandHandler. Account for UserId {0} not found.", request.UserId);
+            return new Response("Account not found", false, 404);
         }
 
-        var cryptoAsset = user.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
+        var cryptoAsset = account.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
         if (cryptoAsset == null)
         {
             _logger.LogError("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
-            return new Response("Crypto asset not found", false);
+            return new Response("Crypto asset not found", false, 404);
         }
 
         var transaction = new CryptoTransaction(request.Amount,
@@ -96,7 +96,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         {
             var accountTransactionType = GetAccountTransactionType(request.TransactionType);
             var date = new DateTime(request.PurchaseDate.Year, request.PurchaseDate.Month, request.PurchaseDate.Day);
-            var response = _transactionService.ExecuteTransaction(user.Account,
+            var response = _transactionService.ExecuteTransaction(account,
                                                                   new AccountTransaction(date: date,
                                                                                          transactionType: accountTransactionType,
                                                                                          amount: request.Amount,
@@ -113,15 +113,17 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                 _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
-            await _userRepository.UpdateAsync(user);
+
+            _context.Accounts.Update(account);
+            await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
-            return new Response("ok", true, cryptoAsset);
+            return new Response("ok", true);
         }
         catch (CryptoAssetException ex)
         {
             _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", ex.Message);
-            return new Response(ex.Message, false);
+            return new Response(ex.Message, false, 500);
         }
     }
 

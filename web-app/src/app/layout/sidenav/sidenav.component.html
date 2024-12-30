@@ -3,12 +3,13 @@
   [class.collapsed]="isCollapsed()" [class.mobile]="isMobile()" [class.border-y-2]="isMobile()"
   [class.z-50]="isMobile()">
   @for (item of navItemsEnabled(); track $index) {
-  <a [routerLink]="item.path"
+  <a (click)="logout(item)" [routerLink]="item?.path" routerLinkActive="text-blue-500 dark:text-blue-100"
     class="flex items-center w-full p-3 rounded-lg transition-all duration-200 group hover:bg-gray-100 dark:hover:bg-gray-700"
     [class.flex-col]="isMobile()" [class.space-x-3]="!isMobile()" [class.space-y-1]="isMobile()">
 
     <i class="material-icons text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors duration-200"
-      [class.text-xl]="!isMobile()" [class.text-lg]="isMobile()" [class.ml-3]="isMobile()">
+      [class.text-xl]="!isMobile()" [class.text-lg]="isMobile()" [class.ml-3]="isMobile()"
+      routerLinkActive="text-blue-500 dark:text-blue-100">
       {{ item.icon }}
     </i>
 

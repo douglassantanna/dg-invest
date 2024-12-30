@@ -1,8 +1,8 @@
-import { CommonModule } from '@angular/common';
 import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
 import { ETransactionType } from 'src/app/core/models/etransaction-type';
+import { AccountService } from 'src/app/core/services/account.service';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { environment } from 'src/environments/environment.development';
 
@@ -11,13 +11,12 @@ import { environment } from 'src/environments/environment.development';
   templateUrl: './add-transaction.component.html',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     ReactiveFormsModule]
 })
 export class AddTransactionComponent {
   cryptoAssetId = input(0);
-  cryptoService = inject(CryptoService);
+  private cryptoService = inject(CryptoService);
   fb = inject(FormBuilder);
   transactionForm!: FormGroup;
   btnColor = environment.btnColor;
@@ -43,7 +42,7 @@ export class AddTransactionComponent {
       exchangeName: this.transactionForm.value.exchangeName,
       transactionType: this.mapTransactionType(this.transactionForm.value.transactionType),
       cryptoAssetId: this.cryptoAssetId(),
-      fee: this.transactionForm.value.fee ?? 0
+      fee: this.transactionForm.value.fee ?? 0,
     } as AddTransactionCommand;
 
     this.cryptoService.addTransaction(command)
