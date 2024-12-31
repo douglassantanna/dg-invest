@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using api.Data;
 
@@ -11,9 +12,11 @@ using api.Data;
 namespace api.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20241211202608_AddSubAccountTagToAccountTable")]
+    partial class AddSubAccountTagToAccountTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -33,12 +36,6 @@ namespace api.Migrations
                     b.Property<decimal>("Balance")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsSelected")
-                        .HasColumnType("bit");
 
                     b.Property<string>("SubaccountTag")
                         .IsRequired()
@@ -174,9 +171,6 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AccountId")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("AveragePrice")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
@@ -214,8 +208,6 @@ namespace api.Migrations
                         .HasColumnType("decimal(18,8)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AccountId");
 
                     b.ToTable("CryptoAssets");
                 });
@@ -271,9 +263,6 @@ namespace api.Migrations
                         .HasColumnType("INTEGER");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -336,13 +325,6 @@ namespace api.Migrations
                     b.Navigation("CryptoAsset");
                 });
 
-            modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
-                {
-                    b.HasOne("api.Cryptos.Models.Account", null)
-                        .WithMany("CryptoAssets")
-                        .HasForeignKey("AccountId");
-                });
-
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
                 {
                     b.HasOne("api.Models.Cryptos.CryptoAsset", null)
@@ -353,8 +335,6 @@ namespace api.Migrations
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>
                 {
                     b.Navigation("AccountTransactions");
-
-                    b.Navigation("CryptoAssets");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>

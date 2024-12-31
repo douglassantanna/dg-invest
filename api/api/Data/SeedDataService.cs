@@ -47,14 +47,12 @@ public class SeedDataService : ISeedDataService
         {
             await MigrateDatabase();
             await SeedAdminUserIfNotExists();
-            _user = await _userRepository.GetByIdAsync(_baseUserId, x => x.Include(x => x.CryptoAssets)
-                                                                    .ThenInclude(c => c.Transactions)
-                                                                .Include(x => x.Account));
+            _user = await _userRepository.GetByIdAsync(_baseUserId);
             if (_user != null)
             {
                 await SeedCryptosIfNotExists();
                 SeedCryptoAssetsIfNotExists();
-                SeedAccountIfNotExists();
+                // SeedAccountIfNotExists();
                 await _userRepository.UpdateAsync(_user);
             }
             _logger.LogInformation("Data seeding process completed successfully.");
@@ -87,7 +85,7 @@ public class SeedDataService : ISeedDataService
         if (!userExists)
         {
             _logger.LogInformation("Admin user does not exist, seeding admin user.");
-            var user = new User(_baseUserName, _baseUserEmail, _baseUserPassword, Role.Admin, new Account());
+            var user = new User(_baseUserName, _baseUserEmail, _baseUserPassword, Role.Admin);
             try
             {
                 await _userRepository.AddAsync(user);
@@ -137,24 +135,24 @@ public class SeedDataService : ISeedDataService
             cryptoAsset.AddTransaction(cryptoTransaction);
         }
 
-        var doesAssetExist = _user.CryptoAssets.Any(x => x.Symbol == cryptoAsset.Symbol);
-        if (!doesAssetExist)
-        {
-            _user.AddCryptoAsset(cryptoAsset);
-        }
+        // var doesAssetExist = _user.CryptoAssets.Any(x => x.Symbol == cryptoAsset.Symbol);
+        // if (!doesAssetExist)
+        // {
+        //     _user.AddCryptoAsset(cryptoAsset);
+        // }
     }
 
-    private void SeedAccountIfNotExists()
-    {
-        if (_user.Account.Balance == 0)
-        {
-            decimal adjustedValue = CalculateInitialAccountValue();
-            _user.Account.AddToBalance(adjustedValue);
+    // private void SeedAccountIfNotExists()
+    // {
+    //     if (_user.Account.Balance == 0)
+    //     {
+    //         decimal adjustedValue = CalculateInitialAccountValue();
+    //         _user.Account.AddToBalance(adjustedValue);
 
-            List<AccountTransaction> accountTransactions = InitializeAccountTransactions();
-            AddTransactionsToAccount(accountTransactions);
-        }
-    }
+    //         List<AccountTransaction> accountTransactions = InitializeAccountTransactions();
+    //         AddTransactionsToAccount(accountTransactions);
+    //     }
+    // }
 
     private static List<AccountTransaction> InitializeAccountTransactions()
     {
@@ -203,7 +201,7 @@ public class SeedDataService : ISeedDataService
     {
         foreach (var accountTransaction in accountTransactions)
         {
-            _user.Account.AddTransaction(accountTransaction);
+            // _user.Account.AddTransaction(accountTransaction);
         }
     }
 }

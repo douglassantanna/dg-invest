@@ -1,26 +1,33 @@
 import { Role } from '../../core/models/user.model';
 import { SlicePipe } from '@angular/common';
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { AfterViewChecked, Component, computed, inject, output, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { LayoutService } from '../../core/services/layout.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NavItems } from '../../core/models/nav-items';
 import { environment } from 'src/environments/environment.development';
+import { ModalComponent } from '../modal/modal.component';
+import { AccountSelectionComponent, SimpleAccountDto } from 'src/app/pages/cryptos/components/account-selection/account-selection.component';
+import { CryptoService } from 'src/app/core/services/crypto.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
   imports: [
     RouterModule,
-    SlicePipe],
+    SlicePipe,
+    ModalComponent,
+    AccountSelectionComponent],
   templateUrl: './header.component.html',
 })
-export class HeaderComponent {
+export class HeaderComponent implements AfterViewChecked {
   toggleSidenavEvent = output();
   private layoutService = inject(LayoutService);
   private authService = inject(AuthService);
+  private cryptoService = inject(CryptoService);
   isCollapsed = signal(true);
+  showAccountModal = signal(false);
   navItems = signal<NavItems[]>([]);
   navbarColor = environment.navbarColor;
   navItemsEnabled = computed(() => {
@@ -29,10 +36,24 @@ export class HeaderComponent {
     return filteredNavItems;
   }
   );
+  accountTag = signal('');
   username = computed(() => this.authService.user?.unique_name);
+
+  ngAfterViewChecked(): void {
+    this.accountTag.set(this.cryptoService.accountTag());
+  }
 
   toggleMenu() {
     this.isCollapsed.set(!this.isCollapsed());
+  }
+
+  toggleAccountModal(accounts: SimpleAccountDto[]) {
+    const selectedAccount = accounts.find(account => account.isSelected);
+    if (selectedAccount) {
+      this.accountTag.set(selectedAccount.subaccountTag);
+      location.reload();
+    }
+    this.showAccountModal.set(!this.showAccountModal());
   }
 
   logout(item: NavItems) {
