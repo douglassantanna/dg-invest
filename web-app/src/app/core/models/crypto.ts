@@ -1,4 +1,4 @@
-export interface Crypto {
+export interface ViewCryptoDto {
   id: number;
   name: string;
   symbol: string;

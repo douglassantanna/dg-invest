@@ -7,6 +7,7 @@ export interface ViewCryptoInformation {
   investmentGainLossValue: number;
   investmentGainLossPercentage: number;
   coinMarketCapId: number;
+  image: string;
   id: number;
 }
 export interface UserCryptoAssetDto {

@@ -85,7 +85,8 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
             CurrentWorth: ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
             InvestmentGainLossValue: ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
             InvestmentGainLossPercentage: ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-            CoinMarketCapId: ca.CoinMarketCapId
+            CoinMarketCapId: ca.CoinMarketCapId,
+            Image: string.Empty
         ));
 
 

@@ -2,7 +2,7 @@ import { Component, ElementRef, inject, output, ViewChild, signal, OnInit } from
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { environment } from 'src/environments/environment.development';
-import { Crypto } from 'src/app/core/models/crypto';
+import { ViewCryptoDto } from 'src/app/core/models/crypto';
 import { CreateCryptoAssetCommand } from 'src/app/core/models/create-crypto-asset-command';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CryptoService } from 'src/app/core/services/crypto.service';
@@ -25,7 +25,7 @@ export class AddCryptoComponent implements OnInit {
   loading = signal(false);
   selectedCoinMarketCapId = 0;
   btnColor = environment.btnColor;
-  cryptoOptions = signal<Crypto[]>([]);
+  cryptoOptions = signal<ViewCryptoDto[]>([]);
 
   ngOnInit(): void {
     this.selectedCoinMarketCapId = 0;
@@ -68,7 +68,24 @@ export class AddCryptoComponent implements OnInit {
     });
   }
 
-  private getCryptoById(coinMarketCapId: number): Crypto | undefined {
+  private getCryptoById(coinMarketCapId: number): ViewCryptoDto | undefined {
     return this.cryptoOptions().find((x) => x.coinMarketCapId == coinMarketCapId);
+  }
+
+  // here
+  isDropdownVisible = false;
+  selectedCrypto: any | null = null;
+
+  toggleDropdown() {
+    this.isDropdownVisible = !this.isDropdownVisible;
+  }
+
+  selectCrypto(crypto: any) {
+    this.selectedCrypto = crypto;
+    this.isDropdownVisible = false;
+  }
+
+  trackByFn(index: number, item: any) {
+    return item.coinMarketCapId;
   }
 }

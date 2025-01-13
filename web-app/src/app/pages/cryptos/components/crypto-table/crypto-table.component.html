@@ -18,7 +18,8 @@
       @for (element of cryptos(); track $index) {
       <tr class="hover:bg-gray-100">
         <td class="px-6 py-4">
-          <button type="button" (click)="cryptoDashboard(element.id)"
+          <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + element.image" alt="crypto logo"
+            class="w-6 h-6 rounded-full" /> <button type="button" (click)="cryptoDashboard(element.id)"
             class="text-indigo-600 font-semibold hover:underline focus:outline-none">
             {{ element.symbol | uppercase }}
           </button>
