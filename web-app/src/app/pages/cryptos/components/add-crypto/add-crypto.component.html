@@ -10,7 +10,7 @@
         <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + selectedCrypto.image + '-logo.png'"
           [alt]="selectedCrypto.image + ' logo'" class="w-6 h-6 rounded-full mr-2" />
         }
-        {{ selectedCrypto.name }}
+        {{ selectedCrypto.name | uppercase}} - {{ selectedCrypto.symbol | uppercase}}
       </span>
       }
       @if (!selectedCrypto) {
@@ -28,7 +28,7 @@
         <li (click)="selectCrypto(crypto)" class="cursor-pointer hover:bg-gray-100 px-4 py-2 flex items-center">
           <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + crypto.image + '-logo.png'"
             [alt]="crypto.image + ' logo'" class="w-6 h-6 rounded-full mr-2" />
-          {{ crypto.name }}
+          {{ crypto.name | uppercase}} - {{ crypto.symbol | uppercase}}
         </li>
         }
       </ul>

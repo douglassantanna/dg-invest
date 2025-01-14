@@ -5,12 +5,14 @@ import { ViewCryptoDto } from 'src/app/core/models/crypto';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { AccountService, AddCryptoAssetRequest } from 'src/app/core/services/account.service';
+import { UpperCasePipe } from '@angular/common';
 
 @Component({
   selector: 'app-add-crypto',
   imports: [
     FormsModule,
-    NgbDatepickerModule],
+    NgbDatepickerModule,
+    UpperCasePipe],
   standalone: true,
   templateUrl: './add-crypto.component.html',
 })
