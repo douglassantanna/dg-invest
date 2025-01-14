@@ -1,9 +1,7 @@
 import { Component, ElementRef, inject, output, ViewChild, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
-import { environment } from 'src/environments/environment.development';
 import { ViewCryptoDto } from 'src/app/core/models/crypto';
-import { CreateCryptoAssetCommand } from 'src/app/core/models/create-crypto-asset-command';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { AccountService, AddCryptoAssetRequest } from 'src/app/core/services/account.service';
@@ -23,20 +21,26 @@ export class AddCryptoComponent implements OnInit {
   private authService = inject(AuthService);
   cryptoCreated = output<AddCryptoAssetRequest>();
   loading = signal(false);
-  selectedCoinMarketCapId = 0;
-  btnColor = environment.btnColor;
   cryptoOptions = signal<ViewCryptoDto[]>([]);
+  selectedCrypto: ViewCryptoDto | null = null;
+  isDropdownVisible = false;
 
   ngOnInit(): void {
-    this.selectedCoinMarketCapId = 0;
     this.getCryptos();
+  }
+
+  toggleDropdown() {
+    this.isDropdownVisible = !this.isDropdownVisible;
+  }
+
+  selectCrypto(crypto: ViewCryptoDto) {
+    this.isDropdownVisible = false;
+    this.selectedCrypto = crypto;
   }
 
   createCryptoAsset(): void {
     this.loading.set(true);
-    const selectedCrypto = this.getCryptoById(this.selectedCoinMarketCapId);
-
-    if (!selectedCrypto) {
+    if (!this.selectedCrypto) {
       return;
     }
 
@@ -45,8 +49,8 @@ export class AddCryptoComponent implements OnInit {
       return;
 
     const command: AddCryptoAssetRequest = {
-      symbol: selectedCrypto.symbol,
-      coinMarketCapId: selectedCrypto.coinMarketCapId,
+      symbol: this.selectedCrypto.symbol,
+      coinMarketCapId: this.selectedCrypto.coinMarketCapId,
     };
 
     this.accountService.addCryptoAsset(command)
@@ -54,7 +58,6 @@ export class AddCryptoComponent implements OnInit {
         next: () => {
           this.cryptoCreated.emit(command);
           this.loading.set(false);
-          this.selectedCoinMarketCapId = 0;
         },
         error: (err) => {
           this.loading.set(false);
@@ -68,24 +71,4 @@ export class AddCryptoComponent implements OnInit {
     });
   }
 
-  private getCryptoById(coinMarketCapId: number): ViewCryptoDto | undefined {
-    return this.cryptoOptions().find((x) => x.coinMarketCapId == coinMarketCapId);
-  }
-
-  // here
-  isDropdownVisible = false;
-  selectedCrypto: any | null = null;
-
-  toggleDropdown() {
-    this.isDropdownVisible = !this.isDropdownVisible;
-  }
-
-  selectCrypto(crypto: any) {
-    this.selectedCrypto = crypto;
-    this.isDropdownVisible = false;
-  }
-
-  trackByFn(index: number, item: any) {
-    return item.coinMarketCapId;
-  }
 }

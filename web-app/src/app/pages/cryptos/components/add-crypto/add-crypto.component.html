@@ -1,22 +1,45 @@
-<div class="w-60 text-left flex flex-col justify-start">
+<div class="w-full text-left flex flex-col justify-start">
   <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Add crypto</h2>
 
-  <form class="space-y-4">
-    <select
-      class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      [(ngModel)]="selectedCoinMarketCapId" name="selectedValue" required>
-      @for (crypto of cryptoOptions(); track $index) {
-      <option [value]="crypto.coinMarketCapId"
-        [attr.data-img]="'https://dgistage.blob.core.windows.net/crypto-logos/' + crypto.image + '-logo.png'">
-        {{ crypto.symbol }}
-      </option>
+  <div class="relative inline-block w-64">
+    <button (click)="toggleDropdown()"
+      class="w-full bg-gray-100 text-gray-900 p-2 rounded-md flex justify-between items-center">
+      @if (selectedCrypto) {
+      <span class="flex items-center">
+        @if (selectedCrypto.image) {
+        <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + selectedCrypto.image + '-logo.png'"
+          [alt]="selectedCrypto.image + ' logo'" class="w-6 h-6 rounded-full mr-2" />
+        }
+        {{ selectedCrypto.name }}
+      </span>
       }
-    </select>
-  </form>
+      @if (!selectedCrypto) {
+      <span>Select Crypto</span>
+      }
+      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+
+    @if (isDropdownVisible) {
+    <div class="absolute left-0  w-full bg-white rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
+      <ul class="divide-y divide-gray-200">
+        @for (crypto of cryptoOptions(); track $index) {
+        <li (click)="selectCrypto(crypto)" class="cursor-pointer hover:bg-gray-100 px-4 py-2 flex items-center">
+          <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + crypto.image + '-logo.png'"
+            [alt]="crypto.image + ' logo'" class="w-6 h-6 rounded-full mr-2" />
+          {{ crypto.name }}
+        </li>
+        }
+      </ul>
+    </div>
+    }
+  </div>
+
 
   <button type="button"
     class="mt-4 w-full flex justify-center items-center py-2 px-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-    (click)="createCryptoAsset()" [disabled]="selectedCoinMarketCapId < 1 || loading()">
+    (click)="createCryptoAsset()" [disabled]="!selectedCrypto || loading()">
     Save
     @if (loading()) {
     <span class="ml-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent">
