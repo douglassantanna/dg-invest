@@ -1,7 +1,12 @@
 <div class="mx-auto p-6">
-  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-    {{ cryptoInfo.symbol | uppercase }}
-  </h1>
+  <div class="flex items-center mb-4">
+    <img
+      [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + cryptoInfo.symbol.toLocaleLowerCase() + '-logo.png'"
+      [alt]="cryptoInfo.symbol.toLocaleLowerCase() + ' logo'" class="w-8 h-8 rounded-full mr-2" />
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+      {{ cryptoInfo.symbol | uppercase }}
+    </h1>
+  </div>
 
   <div class="grid grid-cols-3 sm:grid-cols-2 gap-4 mb-4">
     @for (card of cryptoAssetData$ | async; track $index) {
