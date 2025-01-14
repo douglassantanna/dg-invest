@@ -18,9 +18,11 @@
               'bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-200': isOutgoing(transaction.transactionType)
             }">
             @if (transaction.cryptoSymbol) {
-            <span class="text-lg font-medium">{{transaction.cryptoSymbol | cryptoSymbol }}</span>
+            <img
+              [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + (transaction.cryptoSymbol.toLocaleLowerCase() | cryptoSymbol) + '-logo.png'"
+              class="w-8 h-8" />
             } @else {
-            <span class="text-lg font-medium">{{transaction.transactionType | transactionTypeLabel }}</span>
+            <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/usdt-logo.png'" class="w-8 h-8" />
             }
           </div>
 
