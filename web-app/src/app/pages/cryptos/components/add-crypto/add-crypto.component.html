@@ -6,9 +6,9 @@
       class="w-full bg-gray-100 text-gray-900 p-2 rounded-md flex justify-between items-center">
       @if (selectedCrypto) {
       <span class="flex items-center">
-        @if (selectedCrypto.image) {
-        <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + selectedCrypto.image + '-logo.png'"
-          [alt]="selectedCrypto.image + ' logo'" class="w-6 h-6 rounded-full mr-2" />
+        @if (selectedCrypto.symbol) {
+        <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + selectedCrypto.symbol + '-logo.png'"
+          [alt]="selectedCrypto.symbol + ' logo'" class="w-6 h-6 rounded-full mr-2" />
         }
         {{ selectedCrypto.name | uppercase}} - {{ selectedCrypto.symbol | uppercase}}
       </span>
@@ -26,8 +26,8 @@
       <ul class="divide-y divide-gray-200">
         @for (crypto of cryptoOptions(); track $index) {
         <li (click)="selectCrypto(crypto)" class="cursor-pointer hover:bg-gray-100 px-4 py-2 flex items-center">
-          <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + crypto.image + '-logo.png'"
-            [alt]="crypto.image + ' logo'" class="w-6 h-6 rounded-full mr-2" />
+          <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + crypto.symbol + '-logo.png'"
+            [alt]="crypto.symbol + ' logo'" class="w-6 h-6 rounded-full mr-2" />
           {{ crypto.name | uppercase}} - {{ crypto.symbol | uppercase}}
         </li>
         }
