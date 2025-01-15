@@ -35,6 +35,11 @@
               {{ transaction.cryptoSymbol | uppercase }}
             </span>
             }
+            @if(transaction.notes){
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              <strong>Note:</strong> {{ transaction.notes }}
+            </span>
+            }
           </div>
         </div>
 
