@@ -165,7 +165,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 date: date,
                 transactionType: accountTransactionType,
                 amount: request.Amount,
-                notes: string.Empty
+                notes: request.Notes
             );
         }
     }

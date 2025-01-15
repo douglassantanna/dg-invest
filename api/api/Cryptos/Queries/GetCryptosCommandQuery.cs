@@ -1,3 +1,4 @@
+using api.Cryptos.Dtos;
 using api.Cryptos.Repositories;
 using api.Shared;
 using MediatR;
@@ -19,7 +20,7 @@ public class GetCryptosCommandQueryHandler : IRequestHandler<GetCryptosCommandQu
     public async Task<Response> Handle(GetCryptosCommandQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("GetCryptosCommandQuery. Retrieving all cryptos.");
-        var cryptos = _cryptoRepository.GetAll();
+        var cryptos = _cryptoRepository.GetAll().Select(c => new ViewCryptoDto(c.Id, c.Symbol.ToLower(), c.Name, c.Symbol.ToLower(), c.CoinMarketCapId)).ToList();
         await Task.WhenAll();
         return new Response("", true, cryptos);
     }

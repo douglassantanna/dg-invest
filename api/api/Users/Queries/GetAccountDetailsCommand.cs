@@ -46,7 +46,7 @@ public class GetAccountDetailsCommandHandler : IRequestHandler<GetAccountDetails
                                                 at.ExchangeName,
                                                 at.Notes,
                                                 at.CryptoCurrentPrice,
-                                                at.CryptoAsset?.Symbol ?? "",
+                                                at.CryptoAsset?.Symbol.ToLower() ?? "",
                                                 at.Fee
                                             )).ToList()
                                         ))

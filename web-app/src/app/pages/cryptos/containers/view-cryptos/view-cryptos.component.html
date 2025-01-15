@@ -6,7 +6,7 @@
         <i class="material-icons bg-indigo-50 border border-indigo-300 text-indigo-200 p-2 rounded-lg w-10">savings</i>
         <span class="text-base font-normal mt-1 text-gray-900 dark:text-gray-100">{{ totalInvested() |
           currency:'USD':'symbol':'1.2-2'}}</span>
-        <span class="text-sm font-thin text-gray-900 dark:text-gray-100">Value Invested</span>
+        <span class="text-sm font-thin text-gray-900 dark:text-gray-100">Invested Value</span>
       </div>
       <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border shadow-md sm:p-2.5 order-2">
         <i
@@ -51,7 +51,7 @@
             </div>
             <div class="inline-block ml-1">
               <button type="button" (click)="toggleCreateCryptoModal()"
-                class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
+                class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">
                 Add <span class="ml-1">asset</span>
               </button>
             </div>
