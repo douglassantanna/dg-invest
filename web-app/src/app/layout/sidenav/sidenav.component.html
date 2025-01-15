@@ -2,10 +2,15 @@
   class="sidenav bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-x-2 sm:w-[20px] sm:justify-around sm:items-center"
   [class.collapsed]="isCollapsed()" [class.mobile]="isMobile()" [class.border-y-2]="isMobile()"
   [class.z-50]="isMobile()">
-  <img [src]="'https://dgistage.blob.core.windows.net/images/image__1_-removebg-preview.png'" alt="alt09 logo"
-    class="w-20 h-15 ml-2" [class.h-10]="isCollapsed()" [class.w-5]="isCollapsed()">
-  <div id="divider" [class.hidden]="isCollapsed()"
-    class="mx-4 w-10/12 border-b-2 border-gray-300 dark:border-gray-700 mb-2"></div>
+  @if (isCollapsed()) {
+  <img [src]="'https://dgistage.blob.core.windows.net/images/09-logo-v1.png'" alt="alt09 logo"
+    class="ml-1 mt-3 mb-2 w-18 h-10 transition-all duration-200">
+  <div id="divider" class="mx-2 w-10 border-b-2 border-gray-300 dark:border-gray-700 mb-2"></div>
+  }@else {
+  <img [src]="'https://dgistage.blob.core.windows.net/images/alt-09-logo-v1.png'" alt="09 logo"
+    class="ml-4 mt-1 mb-2 w-22 h-12 transition-all duration-200">
+  <div id="divider" class="mx-4 w-10/12 border-b-2 border-gray-300 dark:border-gray-700 mb-2"></div>
+  }
   @for (item of navItemsEnabled(); track $index) {
   <a (click)="logout(item)" [routerLink]="item?.path" routerLinkActive="text-blue-500 dark:text-blue-100"
     class="flex items-center w-full p-3 rounded-lg transition-all duration-200 group hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -57,7 +62,7 @@
   }
 
   .sidenav.collapsed {
-    width: 50px;
+    width: 60px;
   }
 
   .sidenav a {
