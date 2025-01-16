@@ -1,21 +1,25 @@
 <div class="mx-auto p-6">
   <div class="flex items-center mb-4">
-    <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + cryptoInfo.symbol + '-logo.png'"
-      [alt]="cryptoInfo.symbol + ' logo'" class="w-8 h-8 rounded-full mr-2" />
+    @if (isLoading()) {
+    <span class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
+    }@else {
+    <img [src]="'https://dgistage.blob.core.windows.net/crypto-logos/' + cryptoInfo().symbol + '-logo.png'"
+      [alt]="cryptoInfo().symbol + ' logo'" class="w-8 h-8 rounded-full mr-2" />
+    }
     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-      {{ cryptoInfo.symbol | uppercase }}
+      {{ cryptoInfo().symbol | uppercase }}
     </h1>
   </div>
 
   <div class="grid grid-cols-3 sm:grid-cols-2 gap-4 mb-4">
-    @for (card of cryptoAssetData$ | async; track $index) {
+    @for (card of cryptoAssetData(); track $index) {
     <app-stats-card [title]="card.title" [value]="card.value" [percentDifference]="card.percent ? card.percent : 0" />
     }
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div>
-      <app-add-transaction [cryptoAssetId]="cryptoAssetId" />
+      <app-add-transaction [cryptoAssetId]="cryptoAssetId()" />
     </div>
 
     <div class="sm:mb-12">
