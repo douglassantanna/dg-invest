@@ -1,3 +1,4 @@
+import { NgClass } from '@angular/common';
 import { Component, computed, HostListener, inject, input } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { NavItems } from 'src/app/core/models/nav-items';
@@ -10,7 +11,7 @@ import { LayoutService } from 'src/app/core/services/layout.service';
   templateUrl: './sidenav.component.html',
   styles: ``,
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, NgClass],
 })
 export class SidenavComponent {
   private authService = inject(AuthService);

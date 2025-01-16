@@ -6,7 +6,7 @@ import { environment } from 'src/environments/environment.development';
 import { AddTransactionCommand } from '../models/add-transaction-command';
 import { CreateCryptoAssetCommand } from '../models/create-crypto-asset-command';
 import { ViewCryptoAssetDto } from '../models/view-crypto-asset-dto';
-import { Crypto } from '../models/crypto';
+import { ViewCryptoDto } from '../models/crypto';
 import { Response } from '../models/response';
 import { CryptoAssetData } from '../models/crypto-asset-data';
 import { CryptoInformation } from '../models/crypto-information';
@@ -55,13 +55,13 @@ export class CryptoService {
     );
   }
 
-  getCryptos(): Observable<Response<Crypto>> {
-    return this.http.get<Response<Crypto>>(`${url}/get-cryptos`);
+  getCryptos(): Observable<Response<ViewCryptoDto>> {
+    return this.http.get<Response<ViewCryptoDto>>(`${url}/get-cryptos`);
   }
 
   getCryptoAssetById(id: number): Observable<Response<ViewCryptoAssetDto>> {
     return this.http.get<Response<ViewCryptoAssetDto>>(`${url}/get-crypto-asset-by-id/${id}`).pipe(
-      tap((response: Response<Crypto>) => {
+      tap((response: Response<ViewCryptoDto>) => {
         this._cryptoAssetData.next(response.data.cryptoAssetData);
         this._cryptoInformation.next(response.data.cryptoInformation);
         this._transactions.next(response.data.transactions);

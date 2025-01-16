@@ -59,7 +59,7 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
             new CryptoAssetData("Gain/Loss", cryptoAsset.GetInvestmentGainLossValue(currentPrice), cryptoAsset.GetInvestmentGainLossPercentage(currentPrice)),
         };
         var cryptoInfo = new ViewCryptoAssetDto(cryptoAsset.Id,
-                                                new ViewCryptoInformation(cryptoAsset.Symbol,
+                                                new ViewCryptoInformation(cryptoAsset.Symbol.ToLower(),
                                                                           cryptoAsset.CoinMarketCapId),
                                                 cards,
                                                 cryptoAsset.Transactions.Select(t => new ViewCryptoTransactionDto(t.Id,
