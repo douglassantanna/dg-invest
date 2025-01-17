@@ -31,28 +31,32 @@ export class CryptoDetailsComponent implements OnInit, OnDestroy {
   transactions = signal<CryptoTransactionHistory[]>([]);
   cryptoAssetData = signal<CryptoAssetData[]>([]);
   isLoading = signal(true);
+  isCryptoAssetsLoading = signal(false);
+  isTransactionDataLoading = signal(false);
 
   ngOnInit(): void {
     this.isLoading.set(true);
+    this.isCryptoAssetsLoading.set(true);
+    this.isTransactionDataLoading.set(true);
+
     this.route.params
       .pipe(
         map(params => params['cryptoId']),
         tap(id => (this.cryptoAssetId.set(id))),
         switchMap(id => this.cryptoService.getCryptoAssetById(id)),
-        takeUntil(this.unsubscribe$)
       ).subscribe(response => {
-        this.isLoading.set(false);
         this.cryptoInfo.set(response.data.cryptoInformation);
+        this.isLoading.set(false);
+        this.isTransactionDataLoading.set(false);
+        this.isCryptoAssetsLoading.set(false);
       });
 
     this.cryptoService.cryptoAssetData$
-      .pipe(takeUntil(this.unsubscribe$))
       .subscribe((responsee: CryptoAssetData[]) => {
         this.cryptoAssetData.set(responsee);
       });
 
     this.cryptoService.transactions$
-      .pipe(takeUntil(this.unsubscribe$))
       .subscribe(transactions => {
         this.transactions.set(transactions);
       });
