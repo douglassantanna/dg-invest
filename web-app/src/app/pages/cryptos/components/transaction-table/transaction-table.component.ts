@@ -25,7 +25,8 @@ export class TransactionTableComponent {
     'Order Type (Sell First)',
     'Exchange Name (A-Z)',
     'Exchange Name (Z-A)'
-  ]
+  ];
+  transactionDataLoading = input.required<boolean>();
   transactions = input<CryptoTransactionHistory[]>([]);
   transactionById(index: number, transaction: CryptoTransactionHistory) {
     return transaction.id;
