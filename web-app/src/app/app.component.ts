@@ -21,7 +21,7 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
     } @else {
       <router-outlet></router-outlet>
     }
-  <!-- <ngx-spinner type="ball-8bits"><h3>Loading...</h3></ngx-spinner> -->
+  <ngx-spinner type="ball-8bits"><h3>Loading...</h3></ngx-spinner>
   `,
   standalone: true,
   imports: [
