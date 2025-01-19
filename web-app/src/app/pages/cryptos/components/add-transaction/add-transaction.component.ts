@@ -1,10 +1,11 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AddTransactionCommand } from 'src/app/core/models/add-transaction-command';
 import { ETransactionType } from 'src/app/core/models/etransaction-type';
-import { AccountService } from 'src/app/core/services/account.service';
+import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
 import { CryptoService } from 'src/app/core/services/crypto.service';
-import { environment } from 'src/environments/environment.development';
+import { ModalComponent } from 'src/app/layout/modal/modal.component';
 
 @Component({
   selector: 'app-add-transaction',
@@ -12,16 +13,22 @@ import { environment } from 'src/environments/environment.development';
   standalone: true,
   imports: [
     FormsModule,
-    ReactiveFormsModule]
+    ReactiveFormsModule,
+    ModalComponent,
+    FormatCurrencyPipe,
+    DatePipe]
 })
 export class AddTransactionComponent {
   cryptoAssetId = input(0);
   private cryptoService = inject(CryptoService);
   fb = inject(FormBuilder);
   transactionForm!: FormGroup;
-  btnColor = environment.btnColor;
   loading = signal(false);
+  isConfirmationModalOpen = signal(false);
 
+  toggleConfirmTransaction() {
+    this.isConfirmationModalOpen.set(!this.isConfirmationModalOpen());
+  }
   constructor() {
     this.transactionForm = this.fb.group({
       amount: ['', [Validators.min(0)]],
@@ -50,6 +57,7 @@ export class AddTransactionComponent {
         next: (response) => {
           this.transactionForm.reset();
           this.loading.set(false);
+          this.toggleConfirmTransaction();
         },
         error: (err) => {
           this.loading.set(false);
