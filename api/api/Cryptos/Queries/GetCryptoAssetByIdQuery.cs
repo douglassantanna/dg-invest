@@ -8,31 +8,31 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
-public record GetCryptoAssetByIdCommandQuery(int CryptoAssetId) : IRequest<Response>;
-public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAssetByIdCommandQuery, Response>
+public record GetCryptoAssetByIdQuery(int CryptoAssetId) : IRequest<Response>;
+public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetByIdQuery, Response>
 {
     private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ICoinMarketCapService _coinMarketCapService;
-    private readonly ILogger<GetCryptoAssetByIdCommandQueryHandler> _logger;
+    private readonly ILogger<GetCryptoAssetByIdQueryHandler> _logger;
 
-    public GetCryptoAssetByIdCommandQueryHandler(
+    public GetCryptoAssetByIdQueryHandler(
         ICoinMarketCapService coinMarketCapService,
         ICryptoAssetRepository cryptoAssetRepository,
-        ILogger<GetCryptoAssetByIdCommandQueryHandler> logger)
+        ILogger<GetCryptoAssetByIdQueryHandler> logger)
     {
         _coinMarketCapService = coinMarketCapService;
         _cryptoAssetRepository = cryptoAssetRepository;
         _logger = logger;
     }
 
-    public async Task<Response> Handle(GetCryptoAssetByIdCommandQuery request, CancellationToken cancellationToken)
+    public async Task<Response> Handle(GetCryptoAssetByIdQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("GetCryptoAssetByIdCommandQuery. Retrieving CryptoAssetId: {0}", request.CryptoAssetId);
+        _logger.LogInformation("GetCryptoAssetByIdQuery. Retrieving CryptoAssetId: {0}", request.CryptoAssetId);
         var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId,
                                                                     x => x.Include(q => q.Transactions));
         if (cryptoAsset is null)
         {
-            _logger.LogError("GetCryptoAssetByIdCommandQuery. CryptoAssetId: {0} not found", request.CryptoAssetId);
+            _logger.LogError("GetCryptoAssetByIdQuery. CryptoAssetId: {0} not found", request.CryptoAssetId);
             return new Response("Crypto asset not found", false);
         }
 
@@ -43,7 +43,7 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
         }
         catch (FlurlHttpException ex)
         {
-            _logger.LogError(ex, "GetCryptoAssetByIdCommandQuery. Error getting quotes for CryptoAssetId: {0}", request.CryptoAssetId);
+            _logger.LogError(ex, "GetCryptoAssetByIdQuery. Error getting quotes for CryptoAssetId: {0}", request.CryptoAssetId);
             return new Response($"Error getting quotes for this crypto asset. Error: {ex.Message}", false);
         }
 
@@ -74,7 +74,7 @@ public class GetCryptoAssetByIdCommandQueryHandler : IRequestHandler<GetCryptoAs
                                                                                                      a.AddressName,
                                                                                                      a.AddressValue)).ToList());
 
-        _logger.LogInformation("GetCryptoAssetByIdCommandQuery. Retrieved CryptoAssetId: {0}", request.CryptoAssetId);
+        _logger.LogInformation("GetCryptoAssetByIdQuery. Retrieved CryptoAssetId: {0}", request.CryptoAssetId);
         return new Response("", true, cryptoInfo);
     }
 }
