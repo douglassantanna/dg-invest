@@ -4,9 +4,10 @@ using api.Shared;
 using api.Users.Dtos;
 using api.Users.Models;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
-public class ListUsersQueryCommand : IRequest<PageList<UserDto>>
+public class GetUsersQuery : IRequest<PageList<UserDto>>
 {
     public string? FullName { get; set; } = string.Empty;
     public string? Email { get; set; } = string.Empty;
@@ -15,18 +16,18 @@ public class ListUsersQueryCommand : IRequest<PageList<UserDto>>
     public int Page { get; set; } = 1;
     public int PageSize { get; set; }
 }
-public class ListUsersQueryCommandHandler : IRequestHandler<ListUsersQueryCommand, PageList<UserDto>>
+public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PageList<UserDto>>
 {
     private readonly DataContext _context;
 
-    public ListUsersQueryCommandHandler(DataContext context)
+    public GetUsersQueryHandler(DataContext context)
     {
         _context = context;
     }
 
-    public async Task<PageList<UserDto>> Handle(ListUsersQueryCommand request, CancellationToken cancellationToken)
+    public async Task<PageList<UserDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
-        IQueryable<User> userQuery = _context.Users;
+        IQueryable<User> userQuery = _context.Users.AsNoTracking();
 
         int maxPageSize = 20;
 
@@ -69,7 +70,7 @@ public class ListUsersQueryCommandHandler : IRequestHandler<ListUsersQueryComman
 
     }
 
-    private static Expression<Func<User, object>> GetSortProperty(ListUsersQueryCommand request)
+    private static Expression<Func<User, object>> GetSortProperty(GetUsersQuery request)
     {
         return request.SortColumn?.ToLower() switch
         {

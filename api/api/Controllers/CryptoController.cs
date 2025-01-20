@@ -50,7 +50,7 @@ public class CryptoController : ControllerBase
 
 
     [HttpGet("list-assets")]
-    public async Task<ActionResult> ListCryptoAssets([FromQuery] ListCryptoAssetsQuery command)
+    public async Task<ActionResult> ListCryptoAssets([FromQuery] GetCryptoAssetsQuery command)
     {
         var result = await _mediator.Send(command);
         return Ok(result);

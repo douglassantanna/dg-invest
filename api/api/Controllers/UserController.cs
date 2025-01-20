@@ -70,7 +70,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("list-users")]
-    public async Task<ActionResult> ListUsers([FromQuery] ListUsersQueryCommand command)
+    public async Task<ActionResult> ListUsers([FromQuery] GetUsersQuery command)
     {
         var result = await _mediator.Send(command);
         return Ok(result);
@@ -85,7 +85,7 @@ public class UserController : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetUserByIdCommand command = new(userId);
+        GetUserByIdQuery command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result.Message);

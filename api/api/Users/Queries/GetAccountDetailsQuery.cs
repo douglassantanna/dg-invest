@@ -5,23 +5,23 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Users.Queries;
-public record GetAccountDetailsCommand(int UserId) : IRequest<Response>;
-public class GetAccountDetailsCommandHandler : IRequestHandler<GetAccountDetailsCommand, Response>
+public record GetAccountDetailsQuery(int UserId) : IRequest<Response>;
+public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQuery, Response>
 {
     private readonly DataContext _context;
-    private readonly ILogger<GetAccountDetailsCommandHandler> _logger;
+    private readonly ILogger<GetAccountDetailsQueryHandler> _logger;
 
-    public GetAccountDetailsCommandHandler(
+    public GetAccountDetailsQueryHandler(
         DataContext context,
-        ILogger<GetAccountDetailsCommandHandler> logger)
+        ILogger<GetAccountDetailsQueryHandler> logger)
     {
         _context = context;
         _logger = logger;
     }
 
-    public async Task<Response> Handle(GetAccountDetailsCommand request, CancellationToken cancellationToken)
+    public async Task<Response> Handle(GetAccountDetailsQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("GetAccountDetailsCommandHandler: Handling request for user {UserId}", request.UserId);
+        _logger.LogInformation("GetAccountDetailsQueryHandler: Handling request for user {UserId}", request.UserId);
         var account = await _context.Accounts
                                     .AsNoTracking()
                                     .Where(u => u.UserId == request.UserId)
@@ -31,7 +31,7 @@ public class GetAccountDetailsCommandHandler : IRequestHandler<GetAccountDetails
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account is null)
         {
-            _logger.LogError("GetAccountDetailsCommandHandler: Account not found for user {UserId}", request.UserId);
+            _logger.LogError("GetAccountDetailsQueryHandler: Account not found for user {UserId}", request.UserId);
             return new Response("Account not found", false, 404);
         }
 

@@ -5,22 +5,22 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Users.Queries;
-public record GetUserAccountsQueryCommand(int UserId) : IRequest<Response>;
-public class GetUserAccountsQueryCommandHandler : IRequestHandler<GetUserAccountsQueryCommand, Response>
+public record GetUserAccountsQuery(int UserId) : IRequest<Response>;
+public class GetUserAccountsQueryHandler : IRequestHandler<GetUserAccountsQuery, Response>
 {
-    private readonly ILogger<GetUserAccountsQueryCommandHandler> _logger;
+    private readonly ILogger<GetUserAccountsQueryHandler> _logger;
     private readonly DataContext _context;
 
-    public GetUserAccountsQueryCommandHandler(
-        ILogger<GetUserAccountsQueryCommandHandler> logger,
+    public GetUserAccountsQueryHandler(
+        ILogger<GetUserAccountsQueryHandler> logger,
         DataContext context)
     {
         _logger = logger;
         _context = context;
     }
-    public async Task<Response> Handle(GetUserAccountsQueryCommand request, CancellationToken cancellationToken)
+    public async Task<Response> Handle(GetUserAccountsQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("GetUserAccountsQueryCommandHandler for UserId: {0}", request.UserId);
+        _logger.LogInformation("GetUserAccountsQueryHandler for UserId: {0}", request.UserId);
         try
         {
             var accounts = await _context.Accounts
@@ -28,12 +28,12 @@ public class GetUserAccountsQueryCommandHandler : IRequestHandler<GetUserAccount
                 .Where(x => x.UserId == request.UserId)
                 .OrderByDescending(x => x.IsSelected == true)
                 .Select(x => new SimpleAccountDto(x.Id, x.SubaccountTag, x.Balance, x.IsSelected))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
             return new Response("", true, accounts);
         }
         catch (Exception ex)
         {
-            _logger.LogError("GetUserAccountsQueryCommandHandler. Error getting accounts for UserId: {0}; Ex: {1}", request.UserId, ex.Message);
+            _logger.LogError("GetUserAccountsQueryHandler. Error getting accounts for UserId: {0}; Ex: {1}", request.UserId, ex.Message);
             return new Response("Error getting accounts", false);
         }
     }

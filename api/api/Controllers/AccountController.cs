@@ -26,7 +26,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetUserAccountsQueryCommand command = new(userId);
+        GetUserAccountsQuery command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return BadRequest(result.Message);
@@ -69,7 +69,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetAccountDetailsCommand command = new(userId);
+        GetAccountDetailsQuery command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result.Message);
