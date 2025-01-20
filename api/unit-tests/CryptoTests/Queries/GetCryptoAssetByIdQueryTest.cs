@@ -9,31 +9,31 @@ using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace unit_tests.CryptoTests.Queries;
-public class GetCryptoAssetByIdCommandQueryTest
+public class GetCryptoAssetByIdQueryTest
 {
     private readonly Mock<ICryptoAssetRepository> _cryptoAssetRepositoryMock;
     private readonly Mock<ICoinMarketCapService> _coinMarketCapServiceMock;
-    private readonly Mock<ILogger<GetCryptoAssetByIdCommandQueryHandler>> _loggerMock;
+    private readonly Mock<ILogger<GetCryptoAssetByIdQueryHandler>> _loggerMock;
 
-    public GetCryptoAssetByIdCommandQueryTest()
+    public GetCryptoAssetByIdQueryTest()
     {
         _cryptoAssetRepositoryMock = new Mock<ICryptoAssetRepository>();
         _coinMarketCapServiceMock = new Mock<ICoinMarketCapService>();
-        _loggerMock = new Mock<ILogger<GetCryptoAssetByIdCommandQueryHandler>>();
+        _loggerMock = new Mock<ILogger<GetCryptoAssetByIdQueryHandler>>();
     }
 
     [Fact]
     public async Task GetCryptoAssetById_WhenBalanceIsZero_ShouldReturnPercentPriceDifferenceZero()
     {
         // Arrange
-        var command = new GetCryptoAssetByIdCommandQuery(CryptoAssetId: 1);
+        var command = new GetCryptoAssetByIdQuery(CryptoAssetId: 1);
         _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), null))
                                   .ReturnsAsync(GetCryptoAsset());
 
         _coinMarketCapServiceMock.Setup(x => x.GetQuotesByIds(new[] { It.IsAny<string>() }))
                              .ReturnsAsync(It.IsAny<GetQuoteResponse>());
 
-        var handler = new GetCryptoAssetByIdCommandQueryHandler(_coinMarketCapServiceMock.Object,
+        var handler = new GetCryptoAssetByIdQueryHandler(_coinMarketCapServiceMock.Object,
                                                                 _cryptoAssetRepositoryMock.Object,
                                                                 _loggerMock.Object);
         // Act

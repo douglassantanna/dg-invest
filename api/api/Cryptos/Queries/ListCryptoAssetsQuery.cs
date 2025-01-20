@@ -9,7 +9,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
-public class ListCryptoAssetsQueryCommand : IRequest<PageList<UserCryptoAssetDto>>
+public class ListCryptoAssetsQuery : IRequest<PageList<UserCryptoAssetDto>>
 {
     public string? AssetName { get; set; } = string.Empty;
     public string? SortBy { get; set; } = "symbol";
@@ -20,25 +20,26 @@ public class ListCryptoAssetsQueryCommand : IRequest<PageList<UserCryptoAssetDto
     public int UserId { get; set; }
     public string SubAccountTag { get; set; } = string.Empty;
 }
-public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAssetsQueryCommand, PageList<UserCryptoAssetDto>>
+public class ListCryptoAssetsQueryHandler : IRequestHandler<ListCryptoAssetsQuery, PageList<UserCryptoAssetDto>>
 {
     private readonly DataContext _context;
     private readonly ICoinMarketCapService _coinMarketCapService;
-    private readonly ILogger<ListCryptoAssetsQueryCommandHandler> _logger;
-    public ListCryptoAssetsQueryCommandHandler(DataContext context,
-                                               ICoinMarketCapService coinMarketCapService,
-                                               ILogger<ListCryptoAssetsQueryCommandHandler> logger)
+    private readonly ILogger<ListCryptoAssetsQueryHandler> _logger;
+    public ListCryptoAssetsQueryHandler(DataContext context,
+                                        ICoinMarketCapService coinMarketCapService,
+                                        ILogger<ListCryptoAssetsQueryHandler> logger)
     {
         _context = context;
         _coinMarketCapService = coinMarketCapService;
         _logger = logger;
     }
 
-    public async Task<PageList<UserCryptoAssetDto>> Handle(ListCryptoAssetsQueryCommand request, CancellationToken cancellationToken)
+    public async Task<PageList<UserCryptoAssetDto>> Handle(ListCryptoAssetsQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("ListCryptoAssetsQueryCommand. Listing crypto assets.");
+        _logger.LogInformation("ListCryptoAssetsQuery. Listing crypto assets.");
 
         var account = await _context.Accounts
+            .AsNoTracking()
             .Include(x => x.CryptoAssets)
             .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId, cancellationToken);
 
@@ -130,7 +131,7 @@ public class ListCryptoAssetsQueryCommandHandler : IRequestHandler<ListCryptoAss
         return await _coinMarketCapService.GetQuotesByIds(ids);
     }
 
-    private static Func<ViewMinimalCryptoAssetDto, object> GetSortProperty(ListCryptoAssetsQueryCommand request) =>
+    private static Func<ViewMinimalCryptoAssetDto, object> GetSortProperty(ListCryptoAssetsQuery request) =>
     request.SortBy?.ToLower() switch
     {
         "symbol" => dto => dto.Symbol,
