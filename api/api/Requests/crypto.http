@@ -11,6 +11,17 @@ Authorization: Bearer {{token}}
     "coinMarketCapId": 825
 }
 
+###
+POST {{url}}/create-crypto
+Content-Type: application/json
+
+{
+    "name":"Algorand",
+    "symbol":"algo",
+    "image":"algo-logo.png",
+    "coinMarketCapId": 4030
+}
+
 
 ###
 POST {{url}}/add-transaction

@@ -30,6 +30,19 @@ public class CryptoController : ControllerBase
         return Created("", result);
     }
 
+    [HttpPost("create-crypto")]
+    [AllowAnonymous]
+    public async Task<ActionResult> CreateCrypto([FromBody] CreateCryptoCommand command)
+    {
+
+        var result = await _mediator.Send(command);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+        return Created("", result);
+    }
+
     [HttpPost("add-transaction")]
     public async Task<ActionResult<Response>> AddTransaction([FromBody] AddTransactionCommand command)
     {
