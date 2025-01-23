@@ -123,4 +123,3 @@ jobs:
           app_location: "/web-app"
           api_location: ""
           output_location: "dist/web-app"
-          deployment_environment: ${{ github.event.inputs.environment }}
