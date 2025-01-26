@@ -1,3 +1,4 @@
+using api.Cache;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
@@ -14,12 +15,14 @@ public class GetCryptoAssetByIdQueryTest
     private readonly Mock<ICryptoAssetRepository> _cryptoAssetRepositoryMock;
     private readonly Mock<ICoinMarketCapService> _coinMarketCapServiceMock;
     private readonly Mock<ILogger<GetCryptoAssetByIdQueryHandler>> _loggerMock;
+    private readonly Mock<ICacheService> _cacheServiceMock;
 
     public GetCryptoAssetByIdQueryTest()
     {
         _cryptoAssetRepositoryMock = new Mock<ICryptoAssetRepository>();
         _coinMarketCapServiceMock = new Mock<ICoinMarketCapService>();
         _loggerMock = new Mock<ILogger<GetCryptoAssetByIdQueryHandler>>();
+        _cacheServiceMock = new Mock<ICacheService>();
     }
 
     [Fact]
@@ -34,8 +37,9 @@ public class GetCryptoAssetByIdQueryTest
                              .ReturnsAsync(It.IsAny<GetQuoteResponse>());
 
         var handler = new GetCryptoAssetByIdQueryHandler(_coinMarketCapServiceMock.Object,
-                                                                _cryptoAssetRepositoryMock.Object,
-                                                                _loggerMock.Object);
+                                                         _cryptoAssetRepositoryMock.Object,
+                                                         _loggerMock.Object,
+                                                         _cacheServiceMock.Object);
         // Act
 
         var result = await handler.Handle(command, CancellationToken.None);
