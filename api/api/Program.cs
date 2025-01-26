@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
-using api.Data;
 using api.Shared;
 using MediatR;
 using Serilog;
@@ -8,8 +7,7 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
-
-builder.Services.AddMemoryCache();
+builder.Services.ConfiguraMemoryCache();
 builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 builder.Services.ConfigureJwt(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);

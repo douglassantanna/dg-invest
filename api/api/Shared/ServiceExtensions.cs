@@ -136,5 +136,9 @@ public static class ServiceExtensions
         var seedDataService = scope.ServiceProvider.GetRequiredService<ISeedDataService>();
         await seedDataService.SeedDataAsync();
     }
-
+    public static IServiceCollection ConfiguraMemoryCache(this IServiceCollection services)
+    {
+        services.AddMemoryCache();
+        return services;
+    }
 }

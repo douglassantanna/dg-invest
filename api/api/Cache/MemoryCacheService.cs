@@ -10,11 +10,11 @@ public class MemoryCacheService : ICacheService
         _cache = cache;
     }
 
-    public async Task<T> GetOrCreateAsync<T>(string cacheKey, Func<Task<T>> factory, TimeSpan? absoluteExpiration = null)
+    public async Task<T> GetOrCreateAsync<T>(string cacheKey, Func<CancellationToken, Task<T>> factory, TimeSpan? absoluteExpiration = null, CancellationToken cancellationToken = default)
     {
         if (!_cache.TryGetValue(cacheKey, out T value))
         {
-            value = await factory();
+            value = await factory(cancellationToken);
             _cache.Set(cacheKey, value, new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = absoluteExpiration ?? TimeSpan.FromMinutes(5)
