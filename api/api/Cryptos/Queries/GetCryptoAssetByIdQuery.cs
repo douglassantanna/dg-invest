@@ -16,7 +16,7 @@ public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetById
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ILogger<GetCryptoAssetByIdQueryHandler> _logger;
     private readonly ICacheService _cacheService;
-    private const string _cacheKey = "CryptoAsset_";
+    private const string _cacheKey = "cryptoAsset_";
 
     public GetCryptoAssetByIdQueryHandler(
         ICoinMarketCapService coinMarketCapService,
@@ -33,7 +33,7 @@ public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetById
     public async Task<Response> Handle(GetCryptoAssetByIdQuery request, CancellationToken cancellationToken)
     {
         var cacheKey = $"{_cacheKey}{request.CryptoAssetId}";
-        var absoluteExpiration = TimeSpan.FromMinutes(10);
+        var absoluteExpiration = TimeSpan.FromMinutes(1);
         var cryptoInfo = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
         {
             var cryptoAsset = await _cryptoAssetRepository.GetByIdAsync(request.CryptoAssetId,

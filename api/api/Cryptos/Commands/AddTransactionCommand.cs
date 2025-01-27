@@ -119,8 +119,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
 
-            var cacheKey = $"{request.UserId}_account_details";
-            _cacheService.Remove(cacheKey);
+            InvalidateCache(request.UserId.ToString(), cryptoAsset.Id.ToString());
 
             return new Response("ok", true);
         }
@@ -131,6 +130,15 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
     }
 
+    private void InvalidateCache(string userId, string cryptoAssetId)
+    {
+        var cachedAccountKey = $"account_details_user_id_{userId}";
+        var cachedCryptoAssetKey = $"cryptoAsset_{cryptoAssetId}";
+
+        _cacheService.Remove(cachedAccountKey);
+        _cacheService.Remove(cachedCryptoAssetKey);
+
+    }
     private EAccountTransactionType GetAccountTransactionType(ETransactionType transactionType)
     {
         return transactionType == ETransactionType.Buy ? EAccountTransactionType.Out : EAccountTransactionType.In;

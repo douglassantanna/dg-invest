@@ -26,7 +26,15 @@ public class MemoryCacheService : ICacheService
 
     public void Remove(string cacheKey)
     {
-        _cache.Remove(cacheKey);
+        if (_cache.TryGetValue<object>(cacheKey, out _))
+        {
+            _cache.Remove(cacheKey);
+            Console.WriteLine($"Cache key {cacheKey} found and removed.");
+        }
+        else
+        {
+            Console.WriteLine($"Cache key {cacheKey} not found.");
+        }
     }
 
     public bool TryGetValue<T>(string cacheKey, out T value)
