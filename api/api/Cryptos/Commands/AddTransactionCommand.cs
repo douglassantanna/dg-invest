@@ -132,8 +132,8 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
 
     private void InvalidateCache(string userId, string cryptoAssetId)
     {
-        var cachedAccountKey = $"account_details_user_id_{userId}";
-        var cachedCryptoAssetKey = $"cryptoAsset_{cryptoAssetId}";
+        var cachedAccountKey = $"{CacheKeyConstants.UserAccountDetails}{userId}";
+        var cachedCryptoAssetKey = $"{CacheKeyConstants.CryptoAsset}{cryptoAssetId}";
 
         _cacheService.Remove(cachedAccountKey);
         _cacheService.Remove(cachedCryptoAssetKey);

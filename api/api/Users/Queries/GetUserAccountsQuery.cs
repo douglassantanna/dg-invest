@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Data;
 using api.Shared;
 using api.Users.Dtos;
@@ -10,25 +11,35 @@ public class GetUserAccountsQueryHandler : IRequestHandler<GetUserAccountsQuery,
 {
     private readonly ILogger<GetUserAccountsQueryHandler> _logger;
     private readonly DataContext _context;
+    private readonly ICacheService _cacheService;
 
     public GetUserAccountsQueryHandler(
         ILogger<GetUserAccountsQueryHandler> logger,
-        DataContext context)
+        DataContext context,
+        ICacheService cacheService)
     {
         _logger = logger;
         _context = context;
+        _cacheService = cacheService;
     }
     public async Task<Response> Handle(GetUserAccountsQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("GetUserAccountsQueryHandler for UserId: {0}", request.UserId);
         try
         {
-            var accounts = await _context.Accounts
-                .AsNoTracking()
-                .Where(x => x.UserId == request.UserId)
-                .OrderByDescending(x => x.IsSelected == true)
-                .Select(x => new SimpleAccountDto(x.Id, x.SubaccountTag, x.Balance, x.IsSelected))
-                .ToListAsync(cancellationToken);
+            var cacheKey = $"user_accounts_{request.UserId}";
+            var absoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var accounts = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
+            {
+                return await _context.Accounts
+                    .AsNoTracking()
+                    .Where(x => x.UserId == request.UserId)
+                    .OrderByDescending(x => x.IsSelected == true)
+                    .Select(x => new SimpleAccountDto(x.Id, x.SubaccountTag, x.Balance, x.IsSelected))
+                    .ToListAsync(ct);
+            },
+            absoluteExpirationRelativeToNow,
+            cancellationToken);
+
             return new Response("", true, accounts);
         }
         catch (Exception ex)

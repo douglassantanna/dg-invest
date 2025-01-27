@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Data;
 using api.Shared;
 using FluentValidation;
@@ -21,11 +22,13 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
 {
     private readonly DataContext _context;
     private readonly ILogger<SelectAccountCommandHandler> _logger;
+    private readonly ICacheService _cacheService;
 
-    public SelectAccountCommandHandler(DataContext context, ILogger<SelectAccountCommandHandler> logger)
+    public SelectAccountCommandHandler(DataContext context, ILogger<SelectAccountCommandHandler> logger, ICacheService cacheService)
     {
         _context = context;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(SelectAccountCommand request, CancellationToken cancellationToken)
@@ -53,6 +56,8 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
         {
             _context.Users.Update(user);
             await _context.SaveChangesAsync(cancellationToken);
+            InvalidateCache(request);
+
             return new Response("Account selected successfully", true);
         }
         catch (Exception ex)
@@ -61,6 +66,17 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
             return new Response("Error selecting account", false);
         }
     }
+
+    private void InvalidateCache(SelectAccountCommand request)
+    {
+        var cachedUserAccountsKey = $"{CacheKeyConstants.UserAccounts}{request.UserId}";
+        var cachedAccountDetailsKey = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
+        var cachedCryptoAssetsKey = $"{CacheKeyConstants.CryptoAssets}{request.UserId}";
+        _cacheService.Remove(cachedUserAccountsKey);
+        _cacheService.Remove(cachedAccountDetailsKey);
+        _cacheService.Remove(cachedCryptoAssetsKey);
+    }
+
     private async Task<ValidationResult> ValidateRequestAsync(SelectAccountCommand request)
     {
         var validation = new SelectAccountCommandValidator();

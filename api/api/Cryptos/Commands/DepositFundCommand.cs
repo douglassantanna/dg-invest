@@ -108,7 +108,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
 
-            var cachedAccount = $"account_details_user_id_{request.UserId}";
+            var cachedAccount = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
             _cacheService.Remove(cachedAccount);
 
             return new Response("Deposit added succesfully", true);
