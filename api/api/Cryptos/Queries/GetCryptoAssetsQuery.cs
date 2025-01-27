@@ -40,7 +40,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
 
     public async Task<PageList<UserCryptoAssetDto>> Handle(GetCryptoAssetsQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"{request.UserId}_{request.Page}_{request.PageSize}_{request.AssetName}_{request.SortBy}_{request.SortOrder}_{request.HideZeroBalance}";
+        var cacheKey = CacheKeyConstants.GenerateCryptoAssetsCacheKey(request.UserId.ToString(), request.AssetName ?? "", request.SortBy ?? "", request.SortOrder ?? "", request.HideZeroBalance);
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
         {
