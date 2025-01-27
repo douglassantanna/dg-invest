@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
@@ -46,20 +47,21 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
     private readonly ILogger<AddTransactionCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
     private readonly DataContext _context;
+    private readonly ICacheService _cacheService;
 
     public AddTransactionCommandHandler(ILogger<AddTransactionCommandHandler> logger,
                                         ITransactionService transactionService,
-                                        DataContext context)
+                                        DataContext context,
+                                        ICacheService cacheService)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("AddTransactionCommandHandler for CryptoAssetId: {0}", request.CryptoAssetId);
-
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
         {
@@ -117,7 +119,9 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("AddTransactionCommandHandler. Transaction added for CryptoAssetId: {0}", request.CryptoAssetId);
+            var cacheKey = $"{request.UserId}_account_details";
+            _cacheService.Remove(cacheKey);
+
             return new Response("ok", true);
         }
         catch (CryptoAssetException ex)
