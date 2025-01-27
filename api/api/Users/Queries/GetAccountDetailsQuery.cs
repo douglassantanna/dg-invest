@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Data;
 using api.Shared;
 using api.Users.Dtos;
@@ -10,54 +11,65 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
 {
     private readonly DataContext _context;
     private readonly ILogger<GetAccountDetailsQueryHandler> _logger;
+    private readonly ICacheService _cacheService;
 
     public GetAccountDetailsQueryHandler(
         DataContext context,
-        ILogger<GetAccountDetailsQueryHandler> logger)
+        ILogger<GetAccountDetailsQueryHandler> logger,
+        ICacheService cacheService)
     {
         _context = context;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(GetAccountDetailsQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("GetAccountDetailsQueryHandler: Handling request for user {UserId}", request.UserId);
-        var account = await _context.Accounts
-                                    .AsNoTracking()
-                                    .Where(u => u.UserId == request.UserId)
-                                    .Where(x => x.IsSelected == true)
-                                    .Include(x => x.AccountTransactions)
-                                    .ThenInclude(x => x.CryptoAsset)
-                                    .FirstOrDefaultAsync(cancellationToken);
-        if (account is null)
+        var cacheKey = $"{request.UserId}_account_details";
+        var absoluteExpiration = TimeSpan.FromMinutes(5);
+
+
+        var accountDto = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
         {
-            _logger.LogError("GetAccountDetailsQueryHandler: Account not found for user {UserId}", request.UserId);
-            return new Response("Account not found", false, 404);
-        }
+            var account = await _context.Accounts
+                                        .AsNoTracking()
+                                        .Where(u => u.UserId == request.UserId)
+                                        .Where(x => x.IsSelected == true)
+                                        .Include(x => x.AccountTransactions)
+                                        .ThenInclude(x => x.CryptoAsset)
+                                        .FirstOrDefaultAsync(cancellationToken);
+            if (account is null)
+            {
+                _logger.LogError("GetAccountDetailsQueryHandler: Account not found for user {UserId}", request.UserId);
+                return null;
+            }
 
-        var groupedTransactions = account.AccountTransactions
-                                        .GroupBy(at => at.Date.Date)
-                                        .Select(g => new GroupedAccountTransactionsDto(
-                                            g.Key,
-                                            g.Select(at => new AccountTransactionDto(
-                                                at.Date,
-                                                at.TransactionType,
-                                                at.Amount,
-                                                at.ExchangeName,
-                                                at.Notes,
-                                                at.CryptoCurrentPrice,
-                                                at.CryptoAsset?.Symbol.ToLower() ?? "",
-                                                at.Fee
-                                            )).ToList()
-                                        ))
-                                        .OrderByDescending(g => g.Date)
-                                        .ToList();
+            var groupedTransactions = account.AccountTransactions
+                .GroupBy(at => at.Date.Date)
+                .Select(g => new GroupedAccountTransactionsDto(
+                    g.Key,
+                    g.Select(at => new AccountTransactionDto(
+                        at.Date,
+                        at.TransactionType,
+                        at.Amount,
+                        at.ExchangeName,
+                        at.Notes,
+                        at.CryptoCurrentPrice,
+                        at.CryptoAsset?.Symbol.ToLower() ?? "",
+                        at.Fee
+                    )).ToList()
+                ))
+                .OrderByDescending(g => g.Date)
+                .ToList();
 
-        var accountDto = new AccountDto(
-            account.Id,
-            account.Balance,
-            groupedTransactions
-        );
+            return new AccountDto(
+                account.Id,
+                account.Balance,
+                groupedTransactions
+            );
+        },
+        absoluteExpiration,
+        cancellationToken);
 
         return new Response("", true, accountDto);
     }
