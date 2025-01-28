@@ -72,7 +72,7 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
 
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
-            var cachedCryptoAssets = CacheKeyConstants.GetLastGeneratedCacheKey();
+            var cachedCryptoAssets = CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(request.UserId.ToString());
             _cacheService.Remove(cachedCryptoAssets);
             return new Response("", true);
         }

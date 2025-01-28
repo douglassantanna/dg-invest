@@ -31,7 +31,7 @@ public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetById
 
     public async Task<Response> Handle(GetCryptoAssetByIdQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"{CacheKeyConstants.CryptoAsset}{request.CryptoAssetId}";
+        var cacheKey = $"{CacheKeyConstants.UserCryptoAsset}{request.CryptoAssetId}";
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         var cryptoInfo = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
         {

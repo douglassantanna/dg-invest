@@ -71,7 +71,7 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
     {
         var cachedUserAccountsKey = $"{CacheKeyConstants.UserAccounts}{request.UserId}";
         var cachedAccountDetailsKey = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
-        var cachedCryptoAssetsKey = CacheKeyConstants.GetLastGeneratedCacheKey();
+        var cachedCryptoAssetsKey = CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(request.UserId.ToString());
         _cacheService.Remove(cachedUserAccountsKey);
         _cacheService.Remove(cachedAccountDetailsKey);
         _cacheService.Remove(cachedCryptoAssetsKey);
