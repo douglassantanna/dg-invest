@@ -11,7 +11,6 @@ public class GetAllCryptosQueryHandler : IRequestHandler<GetAllCryptosQuery, Res
 {
     private readonly DataContext _context;
     private readonly ICacheService _cacheService;
-    private const string _cacheKey = "AllCryptos";
 
     public GetAllCryptosQueryHandler(DataContext context,
                                      ICacheService cacheService)
@@ -23,7 +22,7 @@ public class GetAllCryptosQueryHandler : IRequestHandler<GetAllCryptosQuery, Res
     public async Task<Response> Handle(GetAllCryptosQuery request, CancellationToken cancellationToken)
     {
         var absoluteExpiration = TimeSpan.FromMinutes(10);
-        var cryptos = await _cacheService.GetOrCreateAsync(_cacheKey, async (ct) =>
+        var cryptos = await _cacheService.GetOrCreateAsync(CacheKeyConstants.AllCryptos, async (ct) =>
         {
             return await _context.Cryptos
                 .AsNoTracking()

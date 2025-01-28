@@ -4,7 +4,7 @@ public static class CacheKeyConstants
 {
   // Cache keys. DO NOT CHANGE THESE VALUES
   public const string UserAccounts = "user_accounts_";
-  public const string UserCryptoAssets = "user_crypto_assets_";
+  public const string AllCryptos = "all_cryptos";
   public const string CryptoAsset = "crypto_asset_";
   private const string CryptoAssets = "user_crypto_assets_";
   private static string _lastGeneratedCacheKey = "";

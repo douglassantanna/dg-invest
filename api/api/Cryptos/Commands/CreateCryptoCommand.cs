@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Cryptos.Models;
 using api.Data;
 using api.Shared;
@@ -36,13 +37,16 @@ public class CreateCryptoCommandHandler : IRequestHandler<CreateCryptoCommand, R
 {
     private readonly DataContext _context;
     private readonly ILogger<CreateCryptoCommandHandler> _logger;
+    private readonly ICacheService _cacheService;
 
     public CreateCryptoCommandHandler(
         DataContext context,
-        ILogger<CreateCryptoCommandHandler> logger)
+        ILogger<CreateCryptoCommandHandler> logger,
+        ICacheService cacheService)
     {
         _context = context;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(CreateCryptoCommand request, CancellationToken cancellationToken)
@@ -68,6 +72,7 @@ public class CreateCryptoCommandHandler : IRequestHandler<CreateCryptoCommand, R
         {
             await _context.Cryptos.AddAsync(crypto, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
+            _cacheService.Remove(CacheKeyConstants.AllCryptos);
             return new Response("Crypto created successfully", true);
         }
         catch (Exception ex)
