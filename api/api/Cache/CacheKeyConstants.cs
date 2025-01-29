@@ -33,12 +33,13 @@ public static class CacheKeyConstants
     if (!string.IsNullOrEmpty(request.SortOrder)) parts.Add(request.SortOrder);
 
     var cacheKey = string.Join("_", parts);
-    _cacheKeyHistory[$"{AllUsers}_{request.UserId}"] = cacheKey;
-
+    var key = $"{AllUsers}_{request.UserId}";
+    _cacheKeyHistory[key] = cacheKey;
     return cacheKey;
   }
   public static string GetLastUsersCacheKey(string userId)
   {
-    return _cacheKeyHistory.TryGetValue($"{AllUsers}_{userId}", out var cacheKey) ? cacheKey : "";
+    var cachedKey = _cacheKeyHistory.TryGetValue($"{AllUsers}_{userId}", out var cacheKey) ? cacheKey : "";
+    return cachedKey;
   }
 }

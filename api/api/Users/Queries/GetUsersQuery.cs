@@ -37,7 +37,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PageList<User
         {
             IQueryable<User> userQuery = _context.Users.AsNoTracking();
 
-            int maxPageSize = 20;
+            int maxPageSize = 50;
 
             if (request.PageSize > maxPageSize)
             {

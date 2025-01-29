@@ -21,8 +21,15 @@ public class UserController : ControllerBase
         _mediator = mediator;
     }
     [HttpPost("create")]
-    public async Task<ActionResult<Response>> Create([FromBody] CreateUserCommand command)
+    public async Task<ActionResult<Response>> Create([FromBody] CreateUserCommand request)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        CreateUserCommand command = request with { UserCreatorId = userId };
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {
