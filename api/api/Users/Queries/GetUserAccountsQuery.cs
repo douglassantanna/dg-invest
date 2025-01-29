@@ -26,7 +26,7 @@ public class GetUserAccountsQueryHandler : IRequestHandler<GetUserAccountsQuery,
     {
         try
         {
-            var cacheKey = $"user_accounts_{request.UserId}";
+            var cacheKey = $"{CacheKeyConstants.UserAccounts}{request.UserId}";
             var absoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             var accounts = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
             {

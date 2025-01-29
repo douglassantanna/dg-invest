@@ -25,7 +25,7 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
 
     public async Task<Response> Handle(GetAccountDetailsQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"account_details_user_id_{request.UserId}";
+        var cacheKey = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
         var absoluteExpiration = TimeSpan.FromMinutes(5);
 
 
