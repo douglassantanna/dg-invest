@@ -70,8 +70,15 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("list-users")]
-    public async Task<ActionResult> ListUsers([FromQuery] GetUsersQuery command)
+    public async Task<ActionResult> ListUsers([FromQuery] GetUsersQuery request)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        GetUsersQuery command = request with { UserId = userId };
         var result = await _mediator.Send(command);
         return Ok(result);
     }
