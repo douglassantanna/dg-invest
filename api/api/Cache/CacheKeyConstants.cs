@@ -15,7 +15,15 @@ public static class CacheKeyConstants
   private static readonly ConcurrentDictionary<string, string> _cacheKeyHistory = new();
   public static string GenerateCryptoAssetsCacheKey(string userId, string assetName, string sortBy, string sortOrder, bool hideZeroBalance)
   {
-    var cacheKey = $"{UserAllCryptoAssets}{userId}_{assetName}_{sortBy}_{sortOrder}_{hideZeroBalance}";
+    var parts = new List<string> { UserAllCryptoAssets, userId };
+
+    if (!string.IsNullOrEmpty(assetName)) parts.Add(assetName);
+    if (!string.IsNullOrEmpty(sortBy)) parts.Add(sortBy);
+    if (!string.IsNullOrEmpty(sortOrder)) parts.Add(sortOrder);
+
+    parts.Add(hideZeroBalance.ToString());
+
+    var cacheKey = string.Join("_", parts);
     _cacheKeyHistory[userId] = cacheKey;
     return cacheKey;
   }
@@ -33,13 +41,11 @@ public static class CacheKeyConstants
     if (!string.IsNullOrEmpty(request.SortOrder)) parts.Add(request.SortOrder);
 
     var cacheKey = string.Join("_", parts);
-    var key = $"{AllUsers}_{request.UserId}";
-    _cacheKeyHistory[key] = cacheKey;
+    _cacheKeyHistory[$"{AllUsers}_{request.UserId}"] = cacheKey;
     return cacheKey;
   }
   public static string GetLastUsersCacheKey(string userId)
   {
-    var cachedKey = _cacheKeyHistory.TryGetValue($"{AllUsers}_{userId}", out var cacheKey) ? cacheKey : "";
-    return cachedKey;
+    return _cacheKeyHistory.TryGetValue($"{AllUsers}_{userId}", out var cacheKey) ? cacheKey : "";
   }
 }
