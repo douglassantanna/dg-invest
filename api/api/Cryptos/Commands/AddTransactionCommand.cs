@@ -134,9 +134,11 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
     {
         var cachedAccountKey = $"{CacheKeyConstants.UserAccountDetails}{userId}";
         var cachedCryptoAssetKey = $"{CacheKeyConstants.UserCryptoAsset}{cryptoAssetId}";
+        var cachedCryptoAssetsKey = CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(userId);
 
         _cacheService.Remove(cachedAccountKey);
         _cacheService.Remove(cachedCryptoAssetKey);
+        _cacheService.Remove(cachedCryptoAssetsKey);
 
     }
     private EAccountTransactionType GetAccountTransactionType(ETransactionType transactionType)
