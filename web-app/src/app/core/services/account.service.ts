@@ -47,12 +47,12 @@ export class AccountService {
     );
   }
 
-  addTransaction(command: AddTransactionCommand): Observable<CustomRespose> {
-    return this.http.post<CustomRespose>(
-      `${this.apiUrl}/add-transaction`,
-      command
-    );
-  }
+  // addTransaction(command: AddTransactionCommand): Observable<CustomRespose> {
+  //   return this.http.post<CustomRespose>(
+  //     `${this.apiUrl}/add-transaction`,
+  //     command
+  //   );
+  // }
 
   depositFund(deposit: DepositFundCommand): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/deposit-fund`, deposit)

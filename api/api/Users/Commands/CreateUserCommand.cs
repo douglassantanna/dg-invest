@@ -6,12 +6,13 @@ using api.Users.Models;
 using MediatR;
 using api.Users.Events;
 using api.Users.Repositories;
-using api.Cryptos.Models;
+using api.Cache;
 
 namespace api.Users.Commands;
 public record CreateUserCommand(string FullName,
                                 string Email,
-                                Role Role) : IRequest<Response>;
+                                Role Role,
+                                int UserCreatorId) : IRequest<Response>;
 
 public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 {
@@ -35,15 +36,18 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
     private readonly IPasswordHelper _passwordHelper;
     private readonly IPublisher _publisher;
     private readonly IUserRepository _userRepository;
+    private readonly ICacheService _cacheService;
 
     public CreateUserCommandHandler(
         IPasswordHelper passwordHelper,
         IPublisher publisher,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICacheService cacheService)
     {
         _passwordHelper = passwordHelper;
         _publisher = publisher;
         _userRepository = userRepository;
+        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(CreateUserCommand request, CancellationToken cancellationToken)
@@ -65,6 +69,9 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         await _userRepository.AddAsync(user);
 
         await _publisher.Publish(new NewUserCreatedCommand(user, randomPassword), cancellationToken);
+
+        var cachedKey = CacheKeyConstants.GetLastUsersCacheKey(request.UserCreatorId.ToString());
+        _cacheService.Remove(cachedKey);
 
         return new Response("User created successfully. An email was sent to it.", true);
     }

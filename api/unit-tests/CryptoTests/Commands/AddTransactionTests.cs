@@ -8,6 +8,7 @@ using api.Shared;
 using api.Cryptos.Commands;
 using api.Data;
 using api.Cryptos.TransactionStrategies.Contracts;
+using api.Cache;
 
 namespace api.Tests.Cryptos.Commands;
 public class AddTransactionCommandTests
@@ -16,9 +17,11 @@ public class AddTransactionCommandTests
     private readonly Mock<ITransactionService> _transactionServiceMock;
     private readonly DataContext _context;
     private readonly AddTransactionCommand _validCommand;
+    private readonly Mock<ICacheService> _cacheServiceMock;
 
     public AddTransactionCommandTests()
     {
+        _cacheServiceMock = new Mock<ICacheService>();
         _loggerMock = new Mock<ILogger<AddTransactionCommandHandler>>();
         _transactionServiceMock = new Mock<ITransactionService>();
         var options = new DbContextOptionsBuilder<DataContext>()
@@ -87,7 +90,7 @@ public class AddTransactionCommandTests
     public async Task Handler_WhenAccountNotFound_ShouldReturnNotFound()
     {
         // Arrange
-        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context);
+        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
 
         // Act
         var result = await handler.Handle(_validCommand, CancellationToken.None);
@@ -110,7 +113,7 @@ public class AddTransactionCommandTests
             .Setup(x => x.ExecuteTransaction(It.IsAny<Account>(), It.IsAny<AccountTransaction>()))
             .Returns(new Response("Transaction failed", false));
 
-        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context);
+        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
 
         // Act
         var result = await handler.Handle(_validCommand, CancellationToken.None);
