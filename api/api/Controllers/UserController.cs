@@ -21,8 +21,15 @@ public class UserController : ControllerBase
         _mediator = mediator;
     }
     [HttpPost("create")]
-    public async Task<ActionResult<Response>> Create([FromBody] CreateUserCommand command)
+    public async Task<ActionResult<Response>> Create([FromBody] CreateUserCommand request)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        CreateUserCommand command = request with { UserCreatorId = userId };
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {
@@ -70,8 +77,15 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("list-users")]
-    public async Task<ActionResult> ListUsers([FromQuery] ListUsersQueryCommand command)
+    public async Task<ActionResult> ListUsers([FromQuery] GetUsersQuery request)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new Response("Invalid user ID", false));
+        }
+
+        GetUsersQuery command = request with { UserId = userId };
         var result = await _mediator.Send(command);
         return Ok(result);
     }
@@ -85,7 +99,7 @@ public class UserController : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetUserByIdCommand command = new(userId);
+        GetUserByIdQuery command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result.Message);

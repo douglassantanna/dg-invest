@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
@@ -30,20 +31,22 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
     private readonly ITransactionService _transactionService;
     private readonly ILogger<WithdrawFundCommandHandler> _logger;
     private readonly DataContext _context;
+    private readonly ICacheService _cacheService;
 
     public WithdrawFundCommandHandler(
         ILogger<WithdrawFundCommandHandler> logger,
         ITransactionService transactionService,
-        DataContext context)
+        DataContext context,
+        ICacheService cacheService)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(WithdrawFundCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("WithdrawFundCommandHandler for UserId: {0}", request.UserId);
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
         {
@@ -82,7 +85,9 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("WithdrawFundCommandHandler. Withdraw for UserId: {0}", request.UserId);
+            var cachedAccount = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
+            _cacheService.Remove(cachedAccount);
+
             return new Response("Withdraw succesfully", true);
         }
         catch (Exception ex)
@@ -91,7 +96,6 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
             return new Response(ex.Message, false, 500);
         }
     }
-
     private async Task<ValidationResult> ValidateRequestAsync(WithdrawFundCommand request)
     {
         var validation = new WithdrawFundCommandValidator();

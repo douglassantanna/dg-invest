@@ -26,7 +26,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetUserAccountsQueryCommand command = new(userId);
+        GetUserAccountsQuery command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return BadRequest(result.Message);
@@ -69,7 +69,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetAccountDetailsCommand command = new(userId);
+        GetAccountDetailsQuery command = new(userId);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result.Message);
@@ -101,23 +101,23 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Created("", result);
     }
 
-    [HttpPost("add-transaction")]
-    public async Task<ActionResult<Response>> AddTransaction([FromBody] AddTransactionCommand command)
-    {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            return Unauthorized(new Response("Invalid user ID", false));
-        }
+    // [HttpPost("add-transaction")]
+    // public async Task<ActionResult<Response>> AddTransaction([FromBody] AddTransactionCommand command)
+    // {
+    //     var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    //     if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+    //     {
+    //         return Unauthorized(new Response("Invalid user ID", false));
+    //     }
 
-        var commandWithUserId = command with { UserId = userId };
-        var result = await _mediator.Send(commandWithUserId);
-        if (!result.IsSuccess)
-        {
-            return BadRequest(result);
-        }
-        return Created("", result);
-    }
+    //     var commandWithUserId = command with { UserId = userId };
+    //     var result = await _mediator.Send(commandWithUserId);
+    //     if (!result.IsSuccess)
+    //     {
+    //         return BadRequest(result);
+    //     }
+    //     return Created("", result);
+    // }
 
     [HttpPost("deposit-fund")]
     public async Task<ActionResult<Response>> Depositfund([FromBody] DepositFundCommand command)

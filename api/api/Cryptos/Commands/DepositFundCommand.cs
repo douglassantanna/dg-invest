@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
@@ -52,19 +53,21 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
     private readonly DataContext _context;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
+    private readonly ICacheService _cacheService;
     public DepositFundCommandHandler(
         ILogger<DepositFundCommandHandler> logger,
         ITransactionService transactionService,
-        DataContext context)
+        DataContext context,
+        ICacheService cacheService)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(DepositFundCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("DepositFundCommandHandler for UserId: {0}", request.UserId);
         var validationResult = await ValidateRequestAsync(request);
         if (!validationResult.IsValid)
         {
@@ -105,7 +108,9 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("DepositFundCommandHandler. Deposit added for UserId: {0}", request.UserId);
+            var cachedAccount = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
+            _cacheService.Remove(cachedAccount);
+
             return new Response("Deposit added succesfully", true);
         }
         catch (Exception ex)

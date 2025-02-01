@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using api.Cache;
 
 namespace api.Shared;
 public static class ServiceExtensions
@@ -75,6 +76,8 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, FiatDepositTransaction>();
         services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
+
+        services.AddScoped<ICacheService, MemoryCacheService>();
         return services;
     }
     public static IServiceCollection ConfigureDatabase(this IServiceCollection services, IConfiguration config)
@@ -133,5 +136,9 @@ public static class ServiceExtensions
         var seedDataService = scope.ServiceProvider.GetRequiredService<ISeedDataService>();
         await seedDataService.SeedDataAsync();
     }
-
+    public static IServiceCollection ConfiguraMemoryCache(this IServiceCollection services)
+    {
+        services.AddMemoryCache();
+        return services;
+    }
 }
