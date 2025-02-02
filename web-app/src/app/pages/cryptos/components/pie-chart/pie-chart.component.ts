@@ -1,23 +1,31 @@
-import { Component, SimpleChanges, input } from '@angular/core';
+import { Component, SimpleChanges, input, signal } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { forEach } from 'cypress/types/lodash';
+import { NgStyle } from '@angular/common';
 @Component({
   selector: 'app-pie-chart',
   standalone: true,
-  imports: [],
+  imports: [NgStyle],
   templateUrl: './pie-chart.component.html',
 })
 export class PieChartComponent {
   cryptos = input<ViewCryptoInformation[]>([]);
   labels: string[] = [];
+  imagesAndColors: string[] = [];
   positionValues: number[] = [];
+  cryptoImages = signal<CryptoImageAux[]>([]);
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['cryptos']) {
       const cryptos = changes['cryptos'].currentValue;
-      this.labels = cryptos.map((x: any) => x.symbol.replace(/USD$/, ''));
+      this.imagesAndColors = cryptos.map((x: any) => {
+        let cryptoSymbol = x.symbol.replace(/USD$/, '');
+        return `https://dgistage.blob.core.windows.net/crypto-logos/${cryptoSymbol}-logo.png`;
+      });
+      this.labels = cryptos.map((x: any) => x.symbol);
       this.positionValues = cryptos.map((x: any) => x.currentWorth);
       const ctx = document.getElementById('chart') as HTMLCanvasElement;
 
@@ -25,15 +33,13 @@ export class PieChartComponent {
         Chart.getChart(ctx)?.destroy();
       }
 
-      const numColors = this.labels.length;
-      const colors = this.generateColors(numColors);
+      const colors = this.generateColors(this.imagesAndColors);
 
       new Chart(ctx, {
         type: 'doughnut',
         data: {
           labels: this.labels,
           datasets: [{
-            label: 'Position Value',
             data: this.positionValues,
             backgroundColor: colors,
             hoverOffset: 4
@@ -45,6 +51,7 @@ export class PieChartComponent {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
+            legend: { display: false },
             tooltip: {
               callbacks: {
                 label: function (tooltipItem: any) {
@@ -82,16 +89,21 @@ export class PieChartComponent {
     }
   }
 
-  private generateColors(numColors: number) {
+  private generateColors(imageUrls: string[]): string[] {
     const colors = [];
-    for (let i = 0; i < numColors; i++) {
+    for (let i = 0; i < imageUrls.length; i++) {
       const r = Math.floor(Math.random() * 256);
       const g = Math.floor(Math.random() * 256);
       const b = Math.floor(Math.random() * 256);
 
       const color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
       colors.push(color);
+      this.cryptoImages.set([...this.cryptoImages(), { imageUrl: imageUrls[i], color: color }]);
     }
     return colors;
   }
+}
+export interface CryptoImageAux {
+  imageUrl: string;
+  color: string;
 }

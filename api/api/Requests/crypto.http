@@ -16,9 +16,9 @@ POST {{url}}/create-crypto
 Content-Type: application/json
 
 {
-    "name":"Algorand",
-    "symbol":"algo",
-    "image":"algo-logo.png",
+    "name":"BNB",
+    "symbol":"BNB",
+    "image":"bnb-logo.png",
     "coinMarketCapId": 4030
 }
 
