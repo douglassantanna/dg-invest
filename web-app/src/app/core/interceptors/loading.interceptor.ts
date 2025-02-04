@@ -9,7 +9,7 @@ export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
   loadingService.show();
   return next(req)
     .pipe(
-      finalize(() => loadingService.hide()),
+      finalize(() => { loadingService.hide() }),
       catchError((error) => {
         loadingService.hide();
         throw error;
