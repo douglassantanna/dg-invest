@@ -1,18 +1,21 @@
-<h1 class="text-left font-bold sm:mb-4">Crypto Holdings Chart</h1>
-<div class="flex flex-col justify-center">
-  <div>
-    <canvas id="chart"></canvas>
-  </div>
+<div class="bg-white rounded-md border-gray-300 border shadow-md p-4 sm:w-full">
+  <div class="flex flex-col justify-center">
+    <h1 class="text-left font-bold text-xl mb-2">Crypto Holdings Chart</h1>
 
-  <div class="flex items-center justify-center overflow-auto pl-20">
-    @for (crypto of cryptoImages(); track $index) {
-    <div class="flex items-center justify-center">
-      <div class="min-w-4 min-h-4 rounded-full" [ngStyle]="{'backgroundColor': crypto.color}">
+    <div class="flex items-start gap-2">
+      <div class="sm:w-3/4 xl:w-4/5">
+        <canvas id="chart"></canvas>
       </div>
-      <div class="">
-        <img [src]="crypto.imageUrl" [alt]="crypto.imageUrl" class="min-w-6 min-h-6 rounded-full" />
+
+      <div class="grid grid-rows-9 grid-flow-col gap-2">
+        @for (crypto of cryptoImages(); track $index) {
+        <div class="flex items-center gap-2">
+          <div class="min-w-3 min-h-3 rounded-full" [ngStyle]="{'backgroundColor': crypto.color}"></div>
+          <img [src]="crypto.imageUrl" [alt]="crypto.imageUrl" class="w-6 h-6 mr-4 rounded-full sm:w-5 sm:h-5" />
+        </div>
+        }
       </div>
     </div>
-    }
+
   </div>
 </div>
