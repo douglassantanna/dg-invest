@@ -27,13 +27,32 @@ export class PieChartComponent {
       });
       this.labels = cryptos.map((x: any) => x.symbol);
       this.positionValues = cryptos.map((x: any) => x.currentWorth);
-      const ctx = document.getElementById('chart') as HTMLCanvasElement;
 
+      const ctx = document.getElementById('chart') as HTMLCanvasElement;
       if (Chart.getChart(ctx)) {
         Chart.getChart(ctx)?.destroy();
       }
 
       const colors = this.generateColors(this.imagesAndColors);
+
+      const centerTextPlugin = {
+        id: 'centerText',
+        beforeDraw: (chart: any) => {
+          const { width, height, ctx } = chart;
+          ctx.save();
+          ctx.fillStyle = "#333";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          const totalValue = this.positionValues.reduce((sum, val) => sum + val, 0);
+          const displayText = `$${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+
+          ctx.fillText("Market Value", width / 2, height / 2 - 18);
+          ctx.font = "bold 16px Arial";
+          ctx.fillText(displayText, width / 2, height / 2);
+          ctx.restore();
+        }
+      };
 
       new Chart(ctx, {
         type: 'doughnut',
@@ -45,7 +64,7 @@ export class PieChartComponent {
             hoverOffset: 4
           }]
         },
-        plugins: [ChartDataLabels],
+        plugins: [ChartDataLabels, centerTextPlugin],
         options: {
           locale: "en-US",
           responsive: true,

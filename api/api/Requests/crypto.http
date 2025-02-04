@@ -16,10 +16,10 @@ POST {{url}}/create-crypto
 Content-Type: application/json
 
 {
-    "name":"BNB",
-    "symbol":"BNB",
-    "image":"bnb-logo.png",
-    "coinMarketCapId": 4030
+    "name":"MultiversX",
+    "symbol":"EGLD",
+    "image":"egld-logo.png",
+    "coinMarketCapId": 6892
 }
 
 
