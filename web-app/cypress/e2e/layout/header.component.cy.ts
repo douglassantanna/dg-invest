@@ -31,22 +31,15 @@ describe('Header Component', () => {
   };
 
   const interceptListAssets = () => {
-    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets?page=1&pageSize=50&assetName=&sortBy=symbol&sortOrder=asc&hideZeroBalance=false&userId=2003', {
+    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets*', {
       statusCode: 200,
       fixture: 'list-assets.json'
     }).as('listAssets');
   };
 
-  const verifyHeaderLinks = (expectedLinks: string[]) => {
-    cy.get('app-header .navbar-nav .nav-link').should('have.length', expectedLinks.length);
-    expectedLinks.forEach(linkText => {
-      cy.get('app-header header').should('contain.text', linkText);
-    });
-  };
-
   it('should display hamburguer icon in header component', () => {
-    loginAndSetToken(fakeValidUserJwt);
     interceptListAssets();
+    loginAndSetToken(fakeValidUserJwt);
 
     cy.visit('http://localhost:4200/#/cryptos');
     cy.wait('@listAssets');
@@ -57,14 +50,14 @@ describe('Header Component', () => {
   });
 
   it('should display username initial letter in header component', () => {
-    loginAndSetToken(fakeValidAdminJwt);
     interceptListAssets();
+    loginAndSetToken(fakeValidUserJwt);
 
     cy.visit('http://localhost:4200/#/cryptos');
     cy.wait('@listAssets');
     cy.url().should('include', '/cryptos');
     cy.get('app-view-cryptos').should('exist');
 
-    cy.get('app-header header #username-initial-letter').should('contain', 'J');
+    cy.get('app-header header #username-initial-letter').should('contain', 'd');
   });
 });

@@ -20,7 +20,7 @@ describe('Auth Guard', () => {
       expect(window.localStorage.getItem(localStorageTokenKey)).to.exist;
     });
 
-    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets?page=1&pageSize=50&assetName=&sortBy=symbol&sortOrder=asc&hideZeroBalance=false&userId=2003', (req) => {
+    cy.intercept('GET', 'https://localhost:7204/api/Crypto/list-assets*', (req) => {
       req.reply({
         statusCode: 401,
         body: {

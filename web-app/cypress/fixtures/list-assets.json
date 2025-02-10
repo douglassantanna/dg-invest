@@ -1,23 +1,39 @@
 {
   "items": [
     {
-      "accountBalance": 334.86023254,
-      "cryptoAssetDto": {
-        "id": 9,
-        "symbol": "atomUSD",
-        "pricePerUnit": 4.749413347096044,
-        "balance": 71.24,
-        "investedAmount": 550.951272,
-        "currentWorth": 338.34820684712217456,
-        "investmentGainLossValue": -212.60306515287782544,
-        "investmentGainLossPercentage": -38.58836088736316148118449212,
-        "coinMarketCapId": 3794
-      }
+      "accountBalance": 878.0,
+      "accountTag": "main",
+      "cryptoAssetDto": [
+        {
+          "id": 6018,
+          "symbol": "btc",
+          "pricePerUnit": 96989.37776588004,
+          "balance": 0.0,
+          "investedAmount": 0.0,
+          "currentWorth": 0,
+          "investmentGainLossValue": 0,
+          "investmentGainLossPercentage": 0,
+          "coinMarketCapId": 1,
+          "image": "btc"
+        },
+        {
+          "id": 6019,
+          "symbol": "link",
+          "pricePerUnit": 18.473193107136392,
+          "balance": 11.0,
+          "investedAmount": 121.0,
+          "currentWorth": 203.205124178500312,
+          "investmentGainLossValue": 82.205124178500312,
+          "investmentGainLossPercentage": 67.93811915578538181818181818,
+          "coinMarketCapId": 1975,
+          "image": "link"
+        }
+      ]
     }
   ],
   "page": 1,
   "pageSize": 50,
-  "totalCount": 6,
+  "totalCount": 1,
   "hasNextPage": false,
   "hasPreviousPage": false
 }
