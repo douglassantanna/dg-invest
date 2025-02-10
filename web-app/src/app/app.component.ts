@@ -3,8 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { AuthService } from './core/services/auth.service';
 import { HeaderComponent } from './layout/header/header.component';
-import { NgxSpinnerModule } from 'ngx-spinner';
 import { SidenavComponent } from './layout/sidenav/sidenav.component';
+import { LoadingSpinnerComponent } from './layout/loading-spinner/loading-spinner.component';
 
 @Component({
   selector: 'app-root',
@@ -18,18 +18,18 @@ import { SidenavComponent } from './layout/sidenav/sidenav.component';
           <router-outlet></router-outlet>
         </div>
       </app-sidenav>
+      <app-loading-spinner />
     } @else {
       <router-outlet></router-outlet>
     }
-  <ngx-spinner type="ball-8bits"><h3>Loading...</h3></ngx-spinner>
   `,
   standalone: true,
   imports: [
     RouterModule,
     AsyncPipe,
     HeaderComponent,
-    NgxSpinnerModule,
-    SidenavComponent],
+    SidenavComponent,
+    LoadingSpinnerComponent],
 })
 export class AppComponent {
   authService = inject(AuthService);

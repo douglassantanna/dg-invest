@@ -30,7 +30,7 @@
 
   <div class="flex gap-4 justify-between items-start sm:flex-col w-full">
     <div
-      class="flex flex-col p-4 rounded-md bg-white border shadow-md border-gray-300 mb-5 w-[70%] sm:w-full sm:order-2">
+      class="flex flex-col p-4 rounded-md bg-white border shadow-md border-gray-300 mb-5 w-[65%] sm:w-full sm:order-2">
       <div class="overflow-auto">
         @if (loading()) {
         <div class="flex items-center justify-center">
@@ -41,7 +41,7 @@
         @else {
         @if (isCryptoAssetListEmpty()) {
         <div class="flex justify-between items-center sm:flex-col sm:justify-start sm:items-start">
-          <span class="text-base font-bold sm:mb-4">Cryptos</span>
+          <span class="text-left font-bold text-xl sm:mb-4">Cryptos</span>
           <div class="flex items-center justify-end sm:flex-row mb-2">
             <div class="mr-2 inline-block">
               <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
@@ -81,7 +81,7 @@
     }
     @else {
     @if (totalInvested() > 0) {
-    <div class="bg-white rounded-md p-2 border-gray-300 border shadow-md w-[30%] sm:w-full sm:order-1">
+    <div class="sm:order-1">
       <app-pie-chart [cryptos]="cryptoAssetList()" />
     </div>
     }
