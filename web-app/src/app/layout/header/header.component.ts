@@ -26,7 +26,7 @@ export class HeaderComponent implements AfterViewChecked {
   private layoutService = inject(LayoutService);
   private authService = inject(AuthService);
   private cryptoService = inject(CryptoService);
-  isCollapsed = signal(true);
+  isCollapsed = computed(() => this.layoutService.isCollapsed());
   showAccountModal = signal(false);
   navItems = signal<NavItems[]>([]);
   navbarColor = environment.navbarColor;
@@ -41,10 +41,6 @@ export class HeaderComponent implements AfterViewChecked {
 
   ngAfterViewChecked(): void {
     this.accountTag.set(this.cryptoService.accountTag());
-  }
-
-  toggleMenu() {
-    this.isCollapsed.set(!this.isCollapsed());
   }
 
   toggleAccountModal(accounts: SimpleAccountDto[]) {

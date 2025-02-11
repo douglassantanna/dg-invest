@@ -5,12 +5,13 @@ import { AuthService } from './core/services/auth.service';
 import { HeaderComponent } from './layout/header/header.component';
 import { SidenavComponent } from './layout/sidenav/sidenav.component';
 import { LoadingSpinnerComponent } from './layout/loading-spinner/loading-spinner.component';
+import { LayoutService } from './core/services/layout.service';
 
 @Component({
   selector: 'app-root',
   template: `
     @if (authService.isLoggedIn | async){
-      <app-sidenav [isCollapsed]="onToggleSidenav()">
+      <app-sidenav>
         <header>
           <app-header (toggleSidenavEvent)="toggleSidenavEvent()" />
         </header>
@@ -33,8 +34,9 @@ import { LoadingSpinnerComponent } from './layout/loading-spinner/loading-spinne
 })
 export class AppComponent {
   authService = inject(AuthService);
+  private layoutService = inject(LayoutService);
   onToggleSidenav = signal(false);
   toggleSidenavEvent() {
-    this.onToggleSidenav.set(!this.onToggleSidenav());
+    this.layoutService.toggleMenu();
   };
 }

@@ -1,14 +1,18 @@
 import { NgClass } from '@angular/common';
-import { Component, computed, ElementRef, model, signal, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, inject, model, signal, ViewChild } from '@angular/core';
 import * as echarts from 'echarts';
+import { LayoutService } from 'src/app/core/services/layout.service';
 
 @Component({
   selector: 'app-line-chart',
   templateUrl: './line-chart.component.html',
   standalone: true,
   imports: [NgClass],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LineChartComponent {
+  layoutService = inject(LayoutService);
+  private cd = inject(ChangeDetectorRef);
   @ViewChild('chartContainer', { static: false }) chartContainer!: ElementRef;
   timeArray = signal<TimeFilter[]>(['24h', '7d', '1m']);
   selectedTimeFilter = model<TimeFilter>('24h');
@@ -85,7 +89,11 @@ export class LineChartComponent {
   lineChartInstance: any = null;
   lineChartTitle = signal('');
   selectedTimeFilterSignal = computed(() => this.selectedTimeFilter());
-  isModileMode = computed(() => window.innerWidth < 640);
+  isMobileMode = computed(() => window.innerWidth < 640);
+  isMenuCollapsed = computed(() => {
+    this.lineChartInstance?.resize();
+    return this.layoutService.isCollapsed();
+  });
 
   ngAfterViewInit(): void {
     if (this.marketData) {
@@ -97,7 +105,6 @@ export class LineChartComponent {
     this.selectedTimeFilter.set(time);
     this.initLineChart(this.selectedTimeFilter());
   }
-
 
   initLineChart(selectedTime: TimeFilter) {
     const chartElement = this.chartContainer.nativeElement;
@@ -151,6 +158,7 @@ export class LineChartComponent {
     this.lineChartInstance.setOption(options);
   }
 }
+
 export type TimeFilter = '24h' | '7d' | '1m';
 
 export interface MarketData {

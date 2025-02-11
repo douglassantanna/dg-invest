@@ -17,6 +17,9 @@
       </div>
     </header>
 
-    <div #chartContainer class="min-h-[410px] w-[430px]"></div>
+    <div #chartContainer class="min-h-[410px]" [ngClass]="{
+      'w-[430px]' : !isMenuCollapsed(),
+      'w-[500px]' : isMenuCollapsed(),
+    }"></div>
   </div>
 </div>

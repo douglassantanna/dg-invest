@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { NavItems } from '../models/nav-items';
 import { Role } from '../models/user.model';
 
@@ -38,4 +38,11 @@ export class LayoutService {
       roles: [Role.Admin, Role.User],
     }
   ];
+  private isMenuCollapsed = signal(false);
+  toggleMenu() {
+    this.isMenuCollapsed.set(!this.isMenuCollapsed());
+  }
+  isCollapsed() {
+    return this.isMenuCollapsed();
+  }
 }
