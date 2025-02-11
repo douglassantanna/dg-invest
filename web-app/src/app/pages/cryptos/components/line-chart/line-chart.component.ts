@@ -136,8 +136,8 @@ export class LineChartComponent {
       grid: {
         left: '0%',
         right: '0%',
-        top: '10%',
-        bottom: '10%',
+        top: '5%',
+        bottom: '0%',
         containLabel: true
       },
       media: [

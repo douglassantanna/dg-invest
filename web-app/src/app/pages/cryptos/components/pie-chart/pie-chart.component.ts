@@ -56,7 +56,7 @@ export class PieChartComponent implements AfterViewInit {
         top: 'center',
         style: {
           text: `Total: ${totalSum.toFixed(2)}`,
-          fontSize: this.isMobileMode() ? 10 : 18,
+          fontSize: 14,
           fontWeight: 'bold',
           fill: '#333'
         }
@@ -65,14 +65,14 @@ export class PieChartComponent implements AfterViewInit {
         {
           name: '',
           type: 'pie',
-          radius: this.isMobileMode() ? ['40%', '60%'] : ['50%', '70%'],
+          radius: ['30%', '50%'],
           itemStyle: {
             borderRadius: 5,
             borderColor: '#fff',
             borderWidth: 0.5
           },
           labelLine: {
-            length: this.isMobileMode() ? 15 : 25,
+            length: this.isMobileMode() ? 15 : 15,
           },
           label: {
             formatter: (params: any) => `{b|${params.name}}: $${params.value.toFixed(2)} (${params.percent}%)`,

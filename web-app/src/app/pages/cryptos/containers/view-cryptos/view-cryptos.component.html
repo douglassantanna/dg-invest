@@ -1,21 +1,27 @@
 <main class="flex flex-col gap-4 p-6 sm:p-4 sm:z-10 sm:mb-10">
 
-  <app-portfolio-card [accountBalance]="accountBalance()" [investmentChangePercent]="investmentChangePercent()"
-    [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" />
-
   <div class="flex flex-col gap-4 items-start sm:flex-col w-full">
 
     @if (totalInvested() > 0) {
-    <div class="flex">
-      <div>
+    <div class="flex justify-between h-full bg-green-400 w-full gap-6">
+      <div class="w-full">
         <app-line-chart />
       </div>
-      <div class="">
-        <app-pie-chart [cryptos]="cryptoAssetList()" />
+
+      <div class="flex gap-4">
+        <div class="">
+          <app-pie-chart [cryptos]="cryptoAssetList()" />
+        </div>
+
+        <div>
+          <app-portfolio-card [accountBalance]="accountBalance()" [investmentChangePercent]="investmentChangePercent()"
+            [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" />
+        </div>
       </div>
     </div>
     }
 
+    <!-- table component -->
     <div class="flex flex-col p-4 rounded-md bg-white border shadow-md border-gray-300 mb-5 sm:w-full ">
       <div class="overflow-auto">
         @if (isCryptoAssetListEmpty()) {
