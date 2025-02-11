@@ -11,6 +11,8 @@ import { RouterModule } from '@angular/router';
 import { AddCryptoComponent } from '../../components/add-crypto/add-crypto.component';
 import { CurrencyPipe } from '@angular/common';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
+import { LineChartComponent } from '../../components/line-chart/line-chart.component';
+import { PortfolioCardComponent } from '../../components/portfolio-card/portfolio-card.component';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -18,12 +20,12 @@ import { ModalComponent } from 'src/app/layout/modal/modal.component';
   imports: [
     CryptoFilterComponent,
     CryptoTableComponent,
-    PercentDifferenceComponent,
     PieChartComponent,
     RouterModule,
     AddCryptoComponent,
-    CurrencyPipe,
-    ModalComponent],
+    ModalComponent,
+    LineChartComponent,
+    PortfolioCardComponent],
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
