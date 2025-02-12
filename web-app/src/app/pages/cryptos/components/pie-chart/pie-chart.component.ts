@@ -65,7 +65,7 @@ export class PieChartComponent implements AfterViewInit {
         {
           name: '',
           type: 'pie',
-          radius: ['30%', '50%'],
+          radius: ['30%', '40%'],
           itemStyle: {
             borderRadius: 5,
             borderColor: '#fff',
@@ -75,7 +75,7 @@ export class PieChartComponent implements AfterViewInit {
             length: this.isMobileMode() ? 15 : 15,
           },
           label: {
-            formatter: (params: any) => `{b|${params.name}}: $${params.value.toFixed(2)} (${params.percent}%)`,
+            formatter: (params: any) => `{b|${params.name}}: (${params.percent}%)`,
             backgroundColor: '#F6F8FC',
             borderColor: '#8C8D8E',
             rich: {
