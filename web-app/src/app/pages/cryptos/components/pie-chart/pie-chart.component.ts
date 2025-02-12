@@ -94,7 +94,7 @@ export class PieChartComponent implements AfterViewInit {
             },
             show: this.isMobileMode() ? true : true
           },
-          data: cryptoHoldingData
+          data: cryptoHoldingData.filter((item) => item.value > 0)
         }
       ]
     };
