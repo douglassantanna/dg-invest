@@ -90,17 +90,7 @@ export class LineChartComponent {
   lineChartTitle = signal('');
   selectedTimeFilterSignal = computed(() => this.selectedTimeFilter());
   isMobileMode = computed(() => window.innerWidth < 640);
-  isMenuCollapsed = computed(() => {
-    let isCollapsed = this.layoutService.isCollapsed();
-    if (isCollapsed) {
-
-    }
-    else {
-
-    }
-    // this.lineChartInstance?.resize();
-    return isCollapsed;
-  });
+  isMenuCollapsed = computed(() => this.layoutService.isCollapsed());
 
   ngAfterViewInit(): void {
     if (this.marketData) {

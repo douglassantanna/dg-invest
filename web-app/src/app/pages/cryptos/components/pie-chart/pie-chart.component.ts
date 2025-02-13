@@ -65,7 +65,7 @@ export class PieChartComponent implements AfterViewInit {
         {
           name: '',
           type: 'pie',
-          radius: ['30%', '40%'],
+          radius: ['40%', '50%'],
           itemStyle: {
             borderRadius: 5,
             borderColor: '#fff',

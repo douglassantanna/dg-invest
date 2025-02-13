@@ -13,6 +13,7 @@ import { CurrencyPipe } from '@angular/common';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
 import { LineChartComponent } from '../../components/line-chart/line-chart.component';
 import { PortfolioCardComponent } from '../../components/portfolio-card/portfolio-card.component';
+import { LayoutService } from 'src/app/core/services/layout.service';
 
 @Component({
   selector: 'app-view-cryptos',
