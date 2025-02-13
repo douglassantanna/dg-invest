@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
@@ -30,6 +30,7 @@ import { LayoutService } from 'src/app/core/services/layout.service';
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
+  private layoutService = inject(LayoutService);
   private cryptoService = inject(CryptoService);
   private localStorageService = inject(LocalStorageService);
   private unsubscribe$: Subject<void> = new Subject<void>();
@@ -42,6 +43,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   accountBalance = signal(0);
   isModalOpen = signal(false);
   loading = signal(false);
+  isMobileMode = computed(() => this.layoutService.isMobile());
 
   ngOnDestroy() {
     this.unsubscribe$.next();

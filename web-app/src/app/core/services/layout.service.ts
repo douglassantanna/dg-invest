@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 import { NavItems } from '../models/nav-items';
 import { Role } from '../models/user.model';
 
@@ -45,4 +45,10 @@ export class LayoutService {
   isCollapsed() {
     return this.isMenuCollapsed();
   }
+
+  private isMobileMode = signal(false);
+  toggleMobileMode(width: number) {
+    this.isMobileMode.set(width <= 640);
+  }
+  isMobile = computed(() => this.isMobileMode())
 }
