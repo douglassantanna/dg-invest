@@ -13,6 +13,7 @@ import { LayoutService } from 'src/app/core/services/layout.service';
 export class LineChartComponent implements OnChanges {
   layoutService = inject(LayoutService);
   chartWith = input.required<string>();
+  chartHeight = input.required<string>();
   @ViewChild('chartContainer', { static: false }) chartContainer!: ElementRef;
   timeArray = signal<TimeFilter[]>(['24h', '7d', '1m']);
   selectedTimeFilter = model<TimeFilter>('24h');
