@@ -1,11 +1,10 @@
-{{ isMobileMode()}}
 <div class="flex justify-center items-center flex-col gap-4 py-6 px-4 max-w-6xl mx-auto w-full">
   <app-portfolio-card [accountBalance]="accountBalance()" [investmentChangePercent]="investmentChangePercent()"
     [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" />
 
   @if (totalInvested() > 0) {
   <div class="flex justify-center items-center w-full gap-6 sm:flex-col sm:gap-4">
-    <app-line-chart class="mr-0.5" />
+    <app-line-chart class="mr-0.5" [chartWith]="isMobileMode() ? 'w-[370px]' : 'w-[635px]'" />
     <app-pie-chart [cryptos]="cryptoAssetList()" class="ml-0.5" />
   </div>
   }

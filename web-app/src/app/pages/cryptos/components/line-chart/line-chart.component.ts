@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, inject, model, signal, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, inject, input, model, OnChanges, signal, SimpleChanges, ViewChild } from '@angular/core';
 import * as echarts from 'echarts';
 import { LayoutService } from 'src/app/core/services/layout.service';
 
@@ -10,9 +10,9 @@ import { LayoutService } from 'src/app/core/services/layout.service';
   imports: [NgClass],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LineChartComponent {
+export class LineChartComponent implements OnChanges {
   layoutService = inject(LayoutService);
-  private cd = inject(ChangeDetectorRef);
+  chartWith = input.required<string>();
   @ViewChild('chartContainer', { static: false }) chartContainer!: ElementRef;
   timeArray = signal<TimeFilter[]>(['24h', '7d', '1m']);
   selectedTimeFilter = model<TimeFilter>('24h');
@@ -89,12 +89,17 @@ export class LineChartComponent {
   lineChartInstance: any = null;
   lineChartTitle = signal('');
   selectedTimeFilterSignal = computed(() => this.selectedTimeFilter());
-  isMobileMode = computed(() => window.innerWidth < 640);
   isMenuCollapsed = computed(() => this.layoutService.isCollapsed());
 
   ngAfterViewInit(): void {
     if (this.marketData) {
       this.initLineChart(this.selectedTimeFilter());
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['chartWith']) {
+      this.updateChartSize();
     }
   }
 
@@ -153,6 +158,12 @@ export class LineChartComponent {
       ]
     };
     this.lineChartInstance.setOption(options);
+  }
+
+  updateChartSize(): void {
+    setTimeout(() => {
+      this.lineChartInstance.resize();
+    }, 0);
   }
 }
 
