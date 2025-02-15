@@ -17,6 +17,10 @@
       </div>
     </header>
 
-    <div #chartContainer class="w-[555px] h-[300px]" [ngClass]="chartWith()" [ngClass]="chartHeight()"></div>
+    @if(isMobileMode()){
+    <div #chartContainer class="w-[325px] h-[200px]"></div>
+    } @else {
+    <div #chartContainer class="w-[555px] h-[300px]"></div>
+    }
   </div>
 </div>
