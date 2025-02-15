@@ -4,10 +4,9 @@
 
   @if (totalInvested() > 0) {
   <div class="flex justify-center items-center w-full gap-6 sm:flex-col sm:gap-4">
-    <app-line-chart/>
+    <app-line-chart />
 
-    <app-pie-chart [cryptos]="cryptoAssetList()" [chartWith]="isMobileMode() ? '' : ''"
-      [chartHeight]="isMobileMode() ? '' : ''" />
+    <app-pie-chart [cryptos]="cryptoAssetList()" />
   </div>
   }
 

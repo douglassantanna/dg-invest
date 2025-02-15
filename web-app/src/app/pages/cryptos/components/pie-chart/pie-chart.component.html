@@ -1,4 +1,8 @@
 <div class="flex flex-col p-4 border rounded-md border-gray-300 bg-white shadow-md">
   <h1 class="text-xl font-semibold sm:text-lg">{{ pieChartTitle() }}</h1>
-  <div #pieChartContainer class="h-[320px] w-[475px]" [ngClass]="chartWith()" [ngClass]="chartHeight()"></div>
+  @if (isMobileMode()) {
+  <div #pieChartContainer class="h-[250px] w-[325px]"></div>
+  }@else {
+  <div #pieChartContainer class="h-[320px] w-[475px]"></div>
+  }
 </div>
