@@ -1,6 +1,6 @@
 <div class="flex justify-center items-center flex-col gap-4 py-6 px-4 max-w-6xl mx-auto w-full mb-12">
   <app-portfolio-card [accountBalance]="accountBalance()" [investmentChangePercent]="investmentChangePercent()"
-    [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" />
+    [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" [totalDeposited]="totalDeposited()" />
 
   @if (totalInvested() > 0) {
   <div class="flex justify-center items-center w-full gap-6 sm:flex-col sm:gap-4">

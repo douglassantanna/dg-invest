@@ -13,4 +13,5 @@ export class PortfolioCardComponent {
   totalInvested = input.required<number>();
   totalMarketValue = input.required<number>();
   investmentChangePercent = input.required<number>();
+  totalDeposited = input.required<number>();
 }

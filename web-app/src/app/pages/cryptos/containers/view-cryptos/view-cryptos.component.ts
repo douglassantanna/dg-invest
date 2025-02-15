@@ -41,6 +41,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalMarketValue = signal(0);
   investmentChangePercent = signal(0);
   accountBalance = signal(0);
+  totalDeposited = signal(0);
   isModalOpen = signal(false);
   loading = signal(false);
   isMobileMode = computed(() => this.layoutService.isMobile());
@@ -85,6 +86,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.investmentChangePercent.set(this.calculatePercentDifference(portfolioArray));
           this.cryptoAssetList.set(portfolioArray);
           this.loading.set(false);
+          this.totalDeposited.set(response.items[0].totalDeposited);
         },
         error: (err) => {
           console.log('HTTP call failed:', err);
