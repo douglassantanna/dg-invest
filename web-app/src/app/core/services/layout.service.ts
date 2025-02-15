@@ -46,7 +46,7 @@ export class LayoutService {
     return this.isMenuCollapsed();
   }
 
-  private isMobileMode = signal(false);
+  private isMobileMode = signal(window.innerWidth <= 640);
   toggleMobileMode(width: number) {
     this.isMobileMode.set(width <= 640);
   }

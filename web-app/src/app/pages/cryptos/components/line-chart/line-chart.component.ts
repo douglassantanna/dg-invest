@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, inject, input, model, OnChanges, signal, SimpleChanges, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, model, OnChanges, signal, SimpleChanges, ViewChild } from '@angular/core';
 import * as echarts from 'echarts';
 import { LayoutService } from 'src/app/core/services/layout.service';
 
@@ -99,7 +99,7 @@ export class LineChartComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['chartWith']) {
+    if (changes['chartWith'] || changes['chartHeight']) {
       this.updateChartSize();
     }
   }

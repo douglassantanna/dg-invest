@@ -1,24 +1,32 @@
-import { AfterViewInit, Component, ElementRef, HostListener, ViewChild, computed, input, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnChanges, SimpleChanges, ViewChild, computed, input, signal } from '@angular/core';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
-import { NgStyle } from '@angular/common';
+import { NgClass } from '@angular/common';
 import * as echarts from 'echarts';
 
 @Component({
   selector: 'app-pie-chart',
   standalone: true,
-  imports: [NgStyle],
+  imports: [NgClass],
   templateUrl: './pie-chart.component.html',
 })
-export class PieChartComponent implements AfterViewInit {
+export class PieChartComponent implements AfterViewInit, OnChanges {
   cryptos = input<ViewCryptoInformation[]>([]);
   @ViewChild('pieChartContainer', { static: false }) pieChartContainer!: ElementRef;
   pieChartInstance: any = null;
   pieChartTitle = signal('Portfolio Holdings');
   isMobileMode = computed(() => window.innerWidth < 640);
+  chartWith = input.required<string>();
+  chartHeight = input.required<string>();
   @HostListener('window:resize', ['$event'])
   onResize() {
     if (this.pieChartInstance) {
       this.pieChartInstance.resize();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['chartWith']) {
+      this.updateChartSize();
     }
   }
 
@@ -65,7 +73,7 @@ export class PieChartComponent implements AfterViewInit {
         {
           name: '',
           type: 'pie',
-          radius: ['40%', '50%'],
+          radius: ['50%', '60%'],
           itemStyle: {
             borderRadius: 5,
             borderColor: '#fff',
@@ -99,6 +107,12 @@ export class PieChartComponent implements AfterViewInit {
       ]
     };
     this.pieChartInstance.setOption(option);
+  }
+
+  updateChartSize(): void {
+    setTimeout(() => {
+      this.pieChartInstance.resize();
+    }, 0);
   }
 }
 export interface DataValue {
