@@ -1,6 +1,7 @@
 
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
+using api.Cryptos.Models;
 using api.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -67,7 +68,7 @@ public class MarketDataBackgroundService : BackgroundService
 
                         if (marketDataPoints.Any())
                         {
-                            // await dbContext.MarketData.AddRangeAsync(marketDataPoints, stoppingToken);
+                            await dbContext.MarketData.AddRangeAsync(marketDataPoints, stoppingToken);
                             await dbContext.SaveChangesAsync(stoppingToken);
                         }
                     }
@@ -77,4 +78,3 @@ public class MarketDataBackgroundService : BackgroundService
         }
     }
 }
-public record MarketDataPoint(int UserId, int AccountId, string CoinSymbol, decimal Price, long Time);
