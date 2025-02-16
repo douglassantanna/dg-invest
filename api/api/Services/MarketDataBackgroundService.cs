@@ -25,6 +25,7 @@ public class MarketDataBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        using PeriodicTimer timer = new PeriodicTimer(_fetchInterval);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -84,6 +85,7 @@ public class MarketDataBackgroundService : BackgroundService
                         }
                         if (marketDataPoints.Any())
                         {
+                            // save all market data points per user
                             await dbContext.MarketDataPoint.AddRangeAsync(marketDataPoints, stoppingToken);
                             await dbContext.SaveChangesAsync(stoppingToken);
                         }
@@ -94,7 +96,8 @@ public class MarketDataBackgroundService : BackgroundService
             {
                 _logger.LogError(ex, "An error occurred while fetching market data.");
             }
-            await Task.Delay(_fetchInterval, stoppingToken);
+            if (!await timer.WaitForNextTickAsync(stoppingToken))
+                break;
         }
     }
 }
