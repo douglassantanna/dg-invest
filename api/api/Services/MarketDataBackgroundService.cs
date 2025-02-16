@@ -8,18 +8,15 @@ using Microsoft.EntityFrameworkCore;
 namespace api.Services;
 public class MarketDataBackgroundService : BackgroundService
 {
-    private readonly TimeSpan _fetchInterval = TimeSpan.FromMinutes(60);
+    private readonly TimeSpan _fetchInterval = TimeSpan.FromMinutes(3);
     private readonly ILogger<MarketDataBackgroundService> _logger;
-    private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
     public MarketDataBackgroundService(
         ILogger<MarketDataBackgroundService> logger,
-        ICoinMarketCapService coinMarketCapService,
         IServiceScopeFactory serviceScopeFactory)
     {
         _logger = logger;
-        _coinMarketCapService = coinMarketCapService;
         _serviceScopeFactory = serviceScopeFactory;
     }
 
@@ -61,7 +58,9 @@ public class MarketDataBackgroundService : BackgroundService
                         if (!allCoinIds.Any())
                             continue;
 
-                        GetQuoteResponse? marketData = await _coinMarketCapService.GetQuotesByIds(allCoinIds);
+                        var coinMarketCapService = scope.ServiceProvider.GetRequiredService<ICoinMarketCapService>();
+                        GetQuoteResponse? marketData = await coinMarketCapService.GetQuotesByIds(allCoinIds);
+
                         List<MarketDataPoint> marketDataPoints = [];
                         foreach (var account in user.Accounts)
                         {
@@ -71,7 +70,7 @@ public class MarketDataBackgroundService : BackgroundService
                             {
                                 var parsedId = int.Parse(id);
                                 var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
-                                var price = _coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
+                                var price = coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
                                 marketDataPoints.Add(new MarketDataPoint
                                 (
                                     user.Id,
@@ -81,13 +80,27 @@ public class MarketDataBackgroundService : BackgroundService
                                     DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                                 ));
                             }
-
                         }
                         if (marketDataPoints.Any())
                         {
-                            // save all market data points per user
-                            await dbContext.MarketDataPoint.AddRangeAsync(marketDataPoints, stoppingToken);
-                            await dbContext.SaveChangesAsync(stoppingToken);
+                            // using raw SQL for efficient batch upsert, reducing duplicate checks and DB round trips
+                            var values = string.Join(",", marketDataPoints.Select(m =>
+                                $"({m.UserId}, {m.AccountId}, '{m.CoinSymbol}', {m.CoinPrice}, {m.Time})"));
+
+                            var sql = $@"
+                                MERGE INTO MarketDataPoint AS Target
+                                USING (VALUES {values}) 
+                                AS Source (UserId, AccountId, CoinSymbol, CoinPrice, Time)
+                                ON Target.UserId = Source.UserId 
+                                AND Target.AccountId = Source.AccountId 
+                                AND Target.CoinSymbol = Source.CoinSymbol 
+                                AND Target.Time = Source.Time
+                                WHEN MATCHED THEN 
+                                    UPDATE SET Target.CoinPrice = Source.CoinPrice
+                                WHEN NOT MATCHED THEN 
+                                    INSERT (UserId, AccountId, CoinSymbol, CoinPrice, Time)
+                                    VALUES (Source.UserId, Source.AccountId, Source.CoinSymbol, Source.CoinPrice, Source.Time);";
+                            await dbContext.Database.ExecuteSqlRawAsync(sql);
                         }
                     }
                 }
