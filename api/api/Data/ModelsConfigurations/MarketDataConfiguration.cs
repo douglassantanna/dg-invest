@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace api.Data.ModelsConfigurations;
 
-public class MarketDataConfiguration : IEntityTypeConfiguration<MarketDataPoint>
+public class MarketDataPointConfiguration : IEntityTypeConfiguration<MarketDataPoint>
 {
     public void Configure(EntityTypeBuilder<MarketDataPoint> builder)
     {

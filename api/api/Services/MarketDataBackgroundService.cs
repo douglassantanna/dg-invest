@@ -68,7 +68,7 @@ public class MarketDataBackgroundService : BackgroundService
 
                         if (marketDataPoints.Any())
                         {
-                            await dbContext.MarketData.AddRangeAsync(marketDataPoints, stoppingToken);
+                            await dbContext.MarketDataPoint.AddRangeAsync(marketDataPoints, stoppingToken);
                             await dbContext.SaveChangesAsync(stoppingToken);
                         }
                     }
