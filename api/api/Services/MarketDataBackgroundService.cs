@@ -71,14 +71,17 @@ public class MarketDataBackgroundService : BackgroundService
                                 var parsedId = int.Parse(id);
                                 var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
                                 var price = coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
-                                marketDataPoints.Add(new MarketDataPoint
-                                (
-                                    user.Id,
-                                    account.Id,
-                                    symbol,
-                                    price,
-                                    DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                                ));
+                                if (!string.IsNullOrEmpty(symbol))
+                                {
+                                    marketDataPoints.Add(new MarketDataPoint
+                                    (
+                                        user.Id,
+                                        account.Id,
+                                        symbol,
+                                        price,
+                                        DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                                    ));
+                                }
                             }
                         }
                         if (marketDataPoints.Any())
