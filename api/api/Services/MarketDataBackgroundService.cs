@@ -50,17 +50,23 @@ public class MarketDataBackgroundService : BackgroundService
                     foreach (var user in users)
                     {
                         // get all the coinMarketCapIds for the user's accounts(portfolios)
+                        var allCoinIds = user.Accounts
+                            .SelectMany(x => x.CryptoAssets)
+                            .Select(x => x.CoinMarketCapId.ToString())
+                            .Distinct()
+                            .ToArray();
+
+                        // use 'continue' to skip the user with no crypto assets
+                        if (!allCoinIds.Any())
+                            continue;
+
+                        GetQuoteResponse? marketData = await _coinMarketCapService.GetQuotesByIds(allCoinIds);
+                        List<MarketDataPoint> marketDataPoints = [];
                         foreach (var account in user.Accounts)
                         {
-                            // get the coinMarketCapId for each crypto asset in the account
-                            var uniqueCoinIds = account.CryptoAssets.Select(x => x.CoinMarketCapId.ToString()).Distinct().ToArray();
-                            GetQuoteResponse? marketData = await _coinMarketCapService.GetQuotesByIds(uniqueCoinIds);
-
-                            List<MarketDataPoint> marketDataPoints = [];
                             // create a new marketDataPoint for each coinMarketCapId(user's asset)
-
                             var cryptoAssetsLookup = account.CryptoAssets.ToDictionary(x => x.CoinMarketCapId, x => x.Symbol);
-                            foreach (var id in uniqueCoinIds)
+                            foreach (var id in allCoinIds)
                             {
                                 var parsedId = int.Parse(id);
                                 var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
@@ -75,11 +81,11 @@ public class MarketDataBackgroundService : BackgroundService
                                 ));
                             }
 
-                            if (marketDataPoints.Any())
-                            {
-                                await dbContext.MarketDataPoint.AddRangeAsync(marketDataPoints, stoppingToken);
-                                await dbContext.SaveChangesAsync(stoppingToken);
-                            }
+                        }
+                        if (marketDataPoints.Any())
+                        {
+                            await dbContext.MarketDataPoint.AddRangeAsync(marketDataPoints, stoppingToken);
+                            await dbContext.SaveChangesAsync(stoppingToken);
                         }
                     }
                 }
