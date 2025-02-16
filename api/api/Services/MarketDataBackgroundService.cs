@@ -27,52 +27,66 @@ public class MarketDataBackgroundService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var scope = _serviceScopeFactory.CreateScope();
+            try
             {
-                // create a new scope to get the dbContext
-                var dbContext = scope.ServiceProvider.GetRequiredService<DataContext>();
-
-                // get all users and their accounts
-                var users = await dbContext.Users
-                .Include(x => x.Accounts)
-                .ThenInclude(x => x.CryptoAssets)
-                .ToListAsync(cancellationToken: stoppingToken);
-
-                foreach (var user in users)
+                using var scope = _serviceScopeFactory.CreateScope();
                 {
-                    // get all the coinMarketCapIds for the user's accounts(portfolios)
-                    foreach (var account in user.Accounts)
+                    // create a new scope to get the dbContext
+                    var dbContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+
+                    // get all users and their accounts
+                    var users = await dbContext.Users
+                    .Include(x => x.Accounts)
+                    .ThenInclude(x => x.CryptoAssets)
+                    .ToListAsync(cancellationToken: stoppingToken);
+
+                    if (!users.Any())
                     {
-                        // get the coinMarketCapId for each crypto asset in the account
-                        var uniqueCoinIds = account.CryptoAssets.Select(x => x.CoinMarketCapId.ToString()).Distinct().ToArray();
-                        GetQuoteResponse? marketData = await _coinMarketCapService.GetQuotesByIds(uniqueCoinIds);
+                        _logger.LogError("No users found. Skipping this execution cycle.");
+                        await Task.Delay(_fetchInterval, stoppingToken);
+                        continue;
+                    }
 
-                        List<MarketDataPoint> marketDataPoints = [];
-                        // create a new marketDataPoint for each coinMarketCapId(user's asset)
-
-                        var cryptoAssetsLookup = account.CryptoAssets.ToDictionary(x => x.CoinMarketCapId, x => x.Symbol);
-                        foreach (var id in uniqueCoinIds)
+                    foreach (var user in users)
+                    {
+                        // get all the coinMarketCapIds for the user's accounts(portfolios)
+                        foreach (var account in user.Accounts)
                         {
-                            var parsedId = int.Parse(id);
-                            var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
-                            var price = _coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
-                            marketDataPoints.Add(new MarketDataPoint
-                            (
-                                user.Id,
-                                account.Id,
-                                symbol,
-                                price,
-                                DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                            ));
-                        }
+                            // get the coinMarketCapId for each crypto asset in the account
+                            var uniqueCoinIds = account.CryptoAssets.Select(x => x.CoinMarketCapId.ToString()).Distinct().ToArray();
+                            GetQuoteResponse? marketData = await _coinMarketCapService.GetQuotesByIds(uniqueCoinIds);
 
-                        if (marketDataPoints.Any())
-                        {
-                            await dbContext.MarketDataPoint.AddRangeAsync(marketDataPoints, stoppingToken);
-                            await dbContext.SaveChangesAsync(stoppingToken);
+                            List<MarketDataPoint> marketDataPoints = [];
+                            // create a new marketDataPoint for each coinMarketCapId(user's asset)
+
+                            var cryptoAssetsLookup = account.CryptoAssets.ToDictionary(x => x.CoinMarketCapId, x => x.Symbol);
+                            foreach (var id in uniqueCoinIds)
+                            {
+                                var parsedId = int.Parse(id);
+                                var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
+                                var price = _coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
+                                marketDataPoints.Add(new MarketDataPoint
+                                (
+                                    user.Id,
+                                    account.Id,
+                                    symbol,
+                                    price,
+                                    DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                                ));
+                            }
+
+                            if (marketDataPoints.Any())
+                            {
+                                await dbContext.MarketDataPoint.AddRangeAsync(marketDataPoints, stoppingToken);
+                                await dbContext.SaveChangesAsync(stoppingToken);
+                            }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching market data.");
             }
             await Task.Delay(_fetchInterval, stoppingToken);
         }
