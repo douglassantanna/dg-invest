@@ -30,14 +30,14 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-var runMigrationsConfig = app.Configuration.GetSection("RunMigrations")?.Value;
-bool runMigrations = false;
-if (!string.IsNullOrEmpty(runMigrationsConfig)
-    && bool.TryParse(runMigrationsConfig, out runMigrations)
-    && runMigrations)
-{
-    await app.Services.SeedAsync();
-}
+// var runMigrationsConfig = app.Configuration.GetSection("RunMigrations")?.Value;
+// bool runMigrations = false;
+// if (!string.IsNullOrEmpty(runMigrationsConfig)
+//     && bool.TryParse(runMigrationsConfig, out runMigrations)
+//     && runMigrations)
+// {
+//     await app.Services.SeedAsync();
+// }
 
 app.UseCors("Policy");
 
