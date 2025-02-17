@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
+using api.Services;
 using api.Shared;
 using MediatR;
 using Serilog;
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.ConfiguraMemoryCache();
+builder.Services.AddHostedService<MarketDataBackgroundService>();
 builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 builder.Services.ConfigureJwt(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);

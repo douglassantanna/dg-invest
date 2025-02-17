@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CryptoService } from '../../../../core/services/crypto.service';
 import { Subject, takeUntil } from 'rxjs';
 import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
@@ -11,6 +11,9 @@ import { RouterModule } from '@angular/router';
 import { AddCryptoComponent } from '../../components/add-crypto/add-crypto.component';
 import { CurrencyPipe } from '@angular/common';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
+import { LineChartComponent } from '../../components/line-chart/line-chart.component';
+import { PortfolioCardComponent } from '../../components/portfolio-card/portfolio-card.component';
+import { LayoutService } from 'src/app/core/services/layout.service';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -18,15 +21,16 @@ import { ModalComponent } from 'src/app/layout/modal/modal.component';
   imports: [
     CryptoFilterComponent,
     CryptoTableComponent,
-    PercentDifferenceComponent,
     PieChartComponent,
     RouterModule,
     AddCryptoComponent,
-    CurrencyPipe,
-    ModalComponent],
+    ModalComponent,
+    LineChartComponent,
+    PortfolioCardComponent],
   templateUrl: 'view-cryptos.component.html'
 })
 export class ViewCryptosComponent implements OnInit, OnDestroy {
+  private layoutService = inject(LayoutService);
   private cryptoService = inject(CryptoService);
   private localStorageService = inject(LocalStorageService);
   private unsubscribe$: Subject<void> = new Subject<void>();
@@ -37,8 +41,10 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalMarketValue = signal(0);
   investmentChangePercent = signal(0);
   accountBalance = signal(0);
+  totalDeposited = signal(0);
   isModalOpen = signal(false);
   loading = signal(false);
+  isMobileMode = computed(() => this.layoutService.isMobile());
 
   ngOnDestroy() {
     this.unsubscribe$.next();
@@ -80,6 +86,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.investmentChangePercent.set(this.calculatePercentDifference(portfolioArray));
           this.cryptoAssetList.set(portfolioArray);
           this.loading.set(false);
+          this.totalDeposited.set(response.items[0].totalDeposited);
         },
         error: (err) => {
           console.log('HTTP call failed:', err);

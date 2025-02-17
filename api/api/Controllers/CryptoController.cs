@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using api.Cryptos.Commands;
+using api.Cryptos.Models;
 using api.Cryptos.Queries;
-using api.RateLimiterPolicies;
 using api.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -83,6 +83,31 @@ public class CryptoController : ControllerBase
     {
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    [HttpGet("get-marketData-by-timeframe")]
+    public async Task<ActionResult> GetMarketDataByTimeframe([FromQuery] ETimeframe timeframe)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized(new Response("Invalid user ID", false));
+            }
+            var query = new GetMarketDataByTimeframeQuery(userId, timeframe);
+            var marketData = await _mediator.Send(query);
+
+            if (marketData == null || !marketData.Any())
+            {
+                return NotFound("No market data found for the selected timeframe.");
+            }
+            return Ok(marketData);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"An error occurred: {ex.Message}");
+        }
     }
 }
 

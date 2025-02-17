@@ -16,9 +16,7 @@ import { LayoutService } from 'src/app/core/services/layout.service';
 export class SidenavComponent {
   private authService = inject(AuthService);
   private layoutService = inject(LayoutService);
-  private isOpen = false;
-  private isMobileView = false;
-  isCollapsed = input.required<boolean>();
+  isCollapsed = computed(() => this.layoutService.isCollapsed());
   navItemsEnabled = computed(() => {
     const userRole = this.authService.role as Role;
     const filteredNavItems = this.layoutService.navItems.filter(item => item.roles.some(role => role === userRole));
@@ -28,15 +26,7 @@ export class SidenavComponent {
 
   @HostListener('window:resize', ['$event'])
   onResize() {
-    this.isMobileView = window.innerWidth <= 600;
-  }
-
-  ngOnInit() {
-    this.isMobileView = window.innerWidth <= 600;
-  }
-
-  toggleMenu() {
-    this.isOpen = !this.isOpen;
+    this.layoutService.toggleMobileMode(window.innerWidth);
   }
 
   logout(item: NavItems) {
@@ -45,6 +35,6 @@ export class SidenavComponent {
   }
 
   isMobile() {
-    return this.isMobileView;
+    return this.layoutService.isMobile();
   }
 }

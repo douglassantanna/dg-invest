@@ -1,94 +1,50 @@
-<main class="flex flex-col gap-4 p-6 sm:p-4 sm:z-10 sm:mb-10">
+<div class="flex justify-center items-center flex-col gap-4 py-6 px-4 max-w-6xl mx-auto w-full mb-12">
+  <app-portfolio-card [accountBalance]="accountBalance()" [investmentChangePercent]="investmentChangePercent()"
+    [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" [totalDeposited]="totalDeposited()" />
 
-  <div class="flex w-full justify-between sm:flex-col gap-4">
-    <div class="grid grid-cols-4 gap-4 sm:grid-cols-2">
-      <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border shadow-md sm:p-2.5" style="order: 1;">
-        <i class="material-icons bg-indigo-50 border border-indigo-300 text-indigo-200 p-2 rounded-lg w-10">savings</i>
-        <span class="text-base font-normal mt-1 text-gray-900 dark:text-gray-100">{{ totalInvested() |
-          currency:'USD':'symbol':'1.2-2'}}</span>
-        <span class="text-sm font-thin text-gray-900 dark:text-gray-100">Invested Value</span>
-      </div>
-      <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border shadow-md sm:p-2.5 order-2">
-        <i
-          class="material-icons p-2 w-10 rounded-lg bg-green-50 dark:bg-green-900 text-green-400 dark:text-green-300 border border-green-300 dark:border-green-700'">show_chart</i>
-        <span class="flex w-full text-base font-normal mt-1 text-gray-900 dark:text-gray-100 sm:flex-col sm:mb-1">{{
-          totalMarketValue() |
-          currency:'USD':'symbol':'1.2-2'}}
-          <app-percent-difference class="ml-1" [percentDifference]="investmentChangePercent()"></app-percent-difference>
-        </span>
-        <span class="text-sm font-thin text-gray-900 dark:text-gray-100">Market Value</span>
-      </div>
-      <div class="bg-white rounded-md p-6 flex flex-col border-gray-300 border shadow-md sm:p-2.5 order-3">
-        <i
-          class="material-icons  bg-sky-50 border border-sky-300 text-sky-200 p-2 rounded-lg w-10">account_balance_wallet</i>
-        <span class="text-base font-normal mt-1 text-gray-900 dark:text-gray-100">{{ accountBalance() |
-          currency:'USD':'symbol':'1.2-2' }}</span>
-        <span class="text-sm font-thin text-gray-900 dark:text-gray-100">Available Funds</span>
-      </div>
-    </div>
+  @if (totalInvested() > 0) {
+  <div class="flex justify-center items-center w-full gap-6 sm:flex-col sm:gap-4">
+    <app-line-chart />
+
+    <app-pie-chart [cryptos]="cryptoAssetList()" />
   </div>
+  }
 
-  <div class="flex gap-4 justify-between items-start sm:flex-col w-full">
-    <div
-      class="flex flex-col p-4 rounded-md bg-white border shadow-md border-gray-300 mb-5 w-[65%] sm:w-full sm:order-2">
-      <div class="overflow-auto">
-        @if (loading()) {
-        <div class="flex items-center justify-center">
-          <span class=" inline-block h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent">
-          </span>
-        </div>
-        }
-        @else {
-        @if (isCryptoAssetListEmpty()) {
-        <div class="flex justify-between items-center sm:flex-col sm:justify-start sm:items-start">
-          <span class="text-left font-bold text-xl sm:mb-4">Cryptos</span>
-          <div class="flex items-center justify-end sm:flex-row mb-2">
-            <div class="mr-2 inline-block">
-              <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
-                (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
-                [setBalanceStatus]="setBalanceStatus">
-              </app-crypto-filter>
-            </div>
-            <div class="inline-block ml-1">
-              <button type="button" (click)="toggleCreateCryptoModal()"
-                class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">
-                Add <span class="ml-1">asset</span>
-              </button>
-            </div>
+  <!-- table component -->
+  <div class="flex justify-center w-full">
+    <div class="flex flex-col p-4 rounded-md bg-white max-w-6xl w-full border shadow-md border-gray-300 overflow-auto">
+      @if (isCryptoAssetListEmpty()) {
+      <div class="flex justify-between items-center sm:flex-col sm:justify-start sm:items-start">
+        <span class="text-left font-bold text-xl sm:mb-4">Cryptos</span>
+        <div class="flex items-center justify-end sm:flex-row mb-2">
+          <div class="mr-2 inline-block">
+            <app-crypto-filter (searchControlEvent)="search($event, hideZeroBalance)"
+              (hideZeroBalanceControlEvent)="search('', hideZeroBalance = $event)"
+              [setBalanceStatus]="setBalanceStatus">
+            </app-crypto-filter>
+          </div>
+          <div class="inline-block">
+            <button type="button" (click)="toggleCreateCryptoModal()"
+              class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">
+              Add <span class="ml-1">asset</span>
+            </button>
           </div>
         </div>
-        }@else {
-        <div class="text-right mb-1">
-          <h2 class="text-center">No assets found</h2>
-          <button type="button" (click)="toggleCreateCryptoModal()"
-            class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
-            Add <span class="ml-1">asset</span>
-          </button>
-        </div>
-        }
-        <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
-          [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
-        }
       </div>
+      }@else {
+      <div class="text-right mb-1">
+        <h2 class="text-center">No assets found</h2>
+        <button type="button" (click)="toggleCreateCryptoModal()"
+          class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
+          Add <span class="ml-1">asset</span>
+        </button>
+      </div>
+      }
+      <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
+        [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
     </div>
-
-    @if (loading()) {
-    <div
-      class="flex items-center justify-center bg-white rounded-md p-2 border-gray-300 border shadow-md w-[30%] sm:w-full sm:order-1">
-      <span class=" inline-block h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent">
-      </span>
-    </div>
-    }
-    @else {
-    @if (totalInvested() > 0) {
-    <div class="sm:order-1">
-      <app-pie-chart [cryptos]="cryptoAssetList()" />
-    </div>
-    }
-    }
   </div>
-
-</main>
+</div>
 
 @if (isModalOpen()) {
 <app-modal (close)="toggleCreateCryptoModal()">

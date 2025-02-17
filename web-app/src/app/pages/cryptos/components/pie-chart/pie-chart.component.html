@@ -1,21 +1,8 @@
-<div class="bg-white rounded-md border-gray-300 border shadow-md p-4 sm:w-full">
-  <div class="flex flex-col justify-center">
-    <h1 class="text-left font-bold text-xl mb-2">Crypto Holdings Chart</h1>
-
-    <div class="flex items-start gap-2">
-      <div class="sm:w-3/4 xl:w-4/5">
-        <canvas id="chart"></canvas>
-      </div>
-
-      <div class="grid grid-rows-9 grid-flow-col gap-2">
-        @for (crypto of cryptoImages(); track $index) {
-        <div class="flex items-center gap-2">
-          <div class="min-w-3 min-h-3 rounded-full" [ngStyle]="{'backgroundColor': crypto.color}"></div>
-          <img [src]="crypto.imageUrl" [alt]="crypto.imageUrl" class="w-6 h-6 mr-4 rounded-full sm:w-5 sm:h-5" />
-        </div>
-        }
-      </div>
-    </div>
-
-  </div>
+<div class="flex flex-col p-4 border rounded-md border-gray-300 bg-white shadow-md">
+  <h1 class="text-xl font-semibold sm:text-lg">{{ pieChartTitle() }}</h1>
+  @if (isMobileMode()) {
+  <div #pieChartContainer class="h-[250px] w-[325px]"></div>
+  }@else {
+  <div #pieChartContainer class="h-[320px] w-[475px]"></div>
+  }
 </div>
