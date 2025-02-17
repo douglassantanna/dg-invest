@@ -94,7 +94,10 @@ export class CryptoService {
       }));
   }
 
-
+  getMarketDataByTimeframe(timeFrame: string): Observable<any> {
+    const params = { timeframe: timeFrame }
+    return this.http.get<any>(`${url}/get-marketData-by-timeframe`, { params })
+  }
 
   private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {
     const transaction = {

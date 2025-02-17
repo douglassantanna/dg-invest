@@ -1,6 +1,7 @@
 import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, model, signal, ViewChild } from '@angular/core';
 import * as echarts from 'echarts';
+import { CryptoService } from 'src/app/core/services/crypto.service';
 import { LayoutService } from 'src/app/core/services/layout.service';
 
 @Component({
@@ -11,6 +12,7 @@ import { LayoutService } from 'src/app/core/services/layout.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LineChartComponent {
+  private cryptoService = inject(CryptoService);
   layoutService = inject(LayoutService);
   @ViewChild('chartContainer', { static: false }) chartContainer!: ElementRef;
   timeArray = signal<TimeFilter[]>(['24h', '7d', '1m']);
@@ -93,10 +95,21 @@ export class LineChartComponent {
     if (this.marketData) {
       this.initLineChart(this.selectedTimeFilter());
     }
+
+    this.fetchMarketData();
+  }
+
+  private fetchMarketData() {
+    this.cryptoService.getMarketDataByTimeframe('_24h')
+      .subscribe({
+        next: (result) => { console.log('line chart result', result); },
+        error: (err) => { console.log(err); }
+      });
   }
 
   setTimeFilter(time: TimeFilter) {
     this.selectedTimeFilter.set(time);
+    this.fetchMarketData();
     this.initLineChart(this.selectedTimeFilter());
   }
 
