@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace api.Services;
 public class MarketDataBackgroundService : BackgroundService
 {
-    private readonly TimeSpan _fetchInterval = TimeSpan.FromMinutes(10);
+    private readonly TimeSpan _fetchInterval = TimeSpan.FromMinutes(60);
     private readonly ILogger<MarketDataBackgroundService> _logger;
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
