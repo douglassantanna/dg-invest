@@ -63,7 +63,8 @@ public class MarketDataService : IMarketDataService
 
             if (marketDataPoints.Any())
             {
-                await SaveMarketDataPoints(marketDataPoints);
+                _context.MarketDataPoint.AddRangeAsync(marketDataPoints);
+                await _context.SaveChangesAsync();
             }
         }
     }
