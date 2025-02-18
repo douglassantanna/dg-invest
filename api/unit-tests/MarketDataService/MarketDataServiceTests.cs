@@ -1,6 +1,4 @@
-using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
-using api.Cryptos.Models;
 using api.Data;
 using api.Models.Cryptos;
 using api.Services;
@@ -72,8 +70,9 @@ public class MarketDataServiceTests
     _context.Users.Add(user);
     await _context.SaveChangesAsync();
 
+    var marketData = MockDbSetExtensions.CreateFakeGetQuoteResponse();
     _mockCoinMarketCapService.Setup(x => x.GetQuotesByIds(It.IsAny<string[]>()))
-        .ReturnsAsync(MockDbSetExtensions.CreateFakeGetQuoteResponse());
+        .ReturnsAsync(marketData);
 
     // Act
     await _sut.FetchAndProcessMarketDataAsync(CancellationToken.None);
@@ -81,5 +80,30 @@ public class MarketDataServiceTests
     // Assert
     _mockCoinMarketCapService.Verify(x => x.GetQuotesByIds(It.IsAny<string[]>()), Times.Once);
     _context.MarketDataPoint.Should().NotBeEmpty();
+  }
+
+  [Fact]
+  public async Task FetchAndProcessMarketDataAsync_ShouldSaveMarketDataPoints()
+  {
+    // Arrange
+    var user = new User("test name", "testEmail@test.com", "randonPassword", Role.Admin);
+    var account = user.Accounts.First();
+    account.AddCryptoAsset(new CryptoAsset("Bitcoin", "USD", "BTC", 1));
+    _context.Users.Add(user);
+    await _context.SaveChangesAsync();
+
+    var marketData = MockDbSetExtensions.CreateFakeGetQuoteResponse();
+    _mockCoinMarketCapService.Setup(x => x.GetQuotesByIds(It.IsAny<string[]>()))
+        .ReturnsAsync(marketData);
+
+    // Act
+    await _sut.FetchAndProcessMarketDataAsync(CancellationToken.None);
+
+    // Assert
+    _context.MarketDataPoint.Should().NotBeEmpty();
+    var marketDataPoint = _context.MarketDataPoint.First();
+    marketDataPoint.UserId.Should().Be(user.Id);
+    marketDataPoint.AccountId.Should().Be(account.Id);
+    marketDataPoint.CoinSymbol.Should().Be("BTC");
   }
 }
