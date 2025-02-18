@@ -1,6 +1,8 @@
 using api.CoinMarketCap.Service;
+using api.Cryptos.Models;
 using api.Data;
 using api.Services;
+using api.Users.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -35,4 +37,20 @@ public class MarketDataServiceTests
     // Assert
     _mockCoinMarketCapService.Verify(x => x.GetQuotesByIds(It.IsAny<string[]>()), Times.Never);
   }
+
+  [Fact]
+  public async Task FetchAndProcessMarketDataAsync_ShouldReturnEarly_WhenNoCryptoAssetsExist()
+  {
+    // Arrange
+    var user = new User("test name", "testEmail@test.com", "randonPassword", Role.Admin);
+    _context.Users.Add(user);
+    await _context.SaveChangesAsync();
+
+    // Act
+    await _sut.FetchAndProcessMarketDataAsync(CancellationToken.None);
+
+    // Assert
+    _mockCoinMarketCapService.Verify(x => x.GetQuotesByIds(It.IsAny<string[]>()), Times.Never);
+  }
+
 }
