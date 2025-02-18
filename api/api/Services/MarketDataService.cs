@@ -11,7 +11,10 @@ public class MarketDataService : IMarketDataService
     private readonly DataContext _context;
     private readonly ICoinMarketCapService _coinMarketCapService;
 
-    public MarketDataService(ILogger<MarketDataService> logger, DataContext context, ICoinMarketCapService coinMarketCapService)
+    public MarketDataService(
+        ILogger<MarketDataService> logger,
+        DataContext context,
+        ICoinMarketCapService coinMarketCapService)
     {
         _logger = logger;
         _context = context;
@@ -20,73 +23,74 @@ public class MarketDataService : IMarketDataService
 
     public async Task FetchAndProcessMarketDataAsync(CancellationToken cancellationToken)
     {
-        var users = await _context.Users
-            .Include(x => x.Accounts)
-            .ThenInclude(x => x.CryptoAssets)
-            .ToListAsync(cancellationToken);
-
-        if (!users.Any())
-            return;
-
-        foreach (var user in users)
+        try
         {
-            var allCoinIds = user.Accounts
-                .SelectMany(x => x.CryptoAssets)
-                .Select(x => x.CoinMarketCapId.ToString())
-                .Distinct()
-                .ToArray();
+            var users = await _context.Users
+                .Include(x => x.Accounts)
+                .ThenInclude(x => x.CryptoAssets)
+                .ToListAsync(cancellationToken);
 
-            if (!allCoinIds.Any())
-                continue;
+            if (!users.Any())
+                return;
 
-            var marketData = await _coinMarketCapService.GetQuotesByIds(allCoinIds);
-
-            List<MarketDataPoint> marketDataPoints = [];
-            foreach (var account in user.Accounts)
+            foreach (var user in users)
             {
-                var cryptoAssetsLookup = account.CryptoAssets.ToDictionary(x => x.CoinMarketCapId, x => x.Symbol);
-                foreach (var id in allCoinIds)
-                {
-                    var parsedId = int.Parse(id);
-                    var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
-                    var price = _coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
+                var allCoinIds = user.Accounts
+                    .SelectMany(x => x.CryptoAssets)
+                    .Select(x => x.CoinMarketCapId.ToString())
+                    .Distinct()
+                    .ToArray();
 
-                    if (!string.IsNullOrEmpty(symbol))
+                if (!allCoinIds.Any())
+                    continue;
+
+                var marketData = await _coinMarketCapService.GetQuotesByIds(allCoinIds);
+
+                List<MarketDataPoint> marketDataPoints = new List<MarketDataPoint>();
+                foreach (var account in user.Accounts)
+                {
+                    var cryptoAssetsLookup = account.CryptoAssets.ToDictionary(x => x.CoinMarketCapId, x => x.Symbol);
+                    foreach (var id in allCoinIds)
                     {
-                        marketDataPoints.Add(new MarketDataPoint
-                        (
-                            user.Id, account.Id, symbol, price, DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                        ));
+                        try
+                        {
+                            var parsedId = int.Parse(id);
+                            var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
+                            var price = _coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
+
+                            if (!string.IsNullOrEmpty(symbol))
+                            {
+                                marketDataPoints.Add(new MarketDataPoint
+                                (
+                                    user.Id, account.Id, symbol, price, DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                                ));
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error processing coin id {CoinId} for user {UserId} account {AccountId}", id, user.Id, account.Id);
+                        }
+                    }
+                }
+
+                if (marketDataPoints.Any())
+                {
+                    try
+                    {
+                        _context.MarketDataPoint.AddRange(marketDataPoints);
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error saving market data for user {UserId}", user.Id);
                     }
                 }
             }
-
-            if (marketDataPoints.Any())
-            {
-                _context.MarketDataPoint.AddRangeAsync(marketDataPoints);
-                await _context.SaveChangesAsync();
-            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching and processing market data");
         }
     }
-    private async Task SaveMarketDataPoints(List<MarketDataPoint> marketDataPoints)
-    {
-        var values = string.Join(",", marketDataPoints.Select(m =>
-            $"({m.UserId}, {m.AccountId}, '{m.CoinSymbol}', {m.CoinPrice}, {m.Time})"));
 
-        var sql = $@"
-            MERGE INTO MarketDataPoint AS Target
-            USING (VALUES {values}) 
-            AS Source (UserId, AccountId, CoinSymbol, CoinPrice, Time)
-            ON Target.UserId = Source.UserId 
-            AND Target.AccountId = Source.AccountId 
-            AND Target.CoinSymbol = Source.CoinSymbol 
-            AND Target.Time = Source.Time
-            WHEN MATCHED THEN 
-                UPDATE SET Target.CoinPrice = Source.CoinPrice
-            WHEN NOT MATCHED THEN 
-                INSERT (UserId, AccountId, CoinSymbol, CoinPrice, Time)
-                VALUES (Source.UserId, Source.AccountId, Source.CoinSymbol, Source.CoinPrice, Source.Time);";
-
-        await _context.Database.ExecuteSqlRawAsync(sql);
-    }
 }
