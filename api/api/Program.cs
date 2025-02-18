@@ -13,7 +13,7 @@ builder.Services.AddHostedService<MarketDataBackgroundService>();
 builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 builder.Services.ConfigureJwt(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);
-builder.Services.ConfigureServices(builder.Configuration);
+builder.Services.ConfigureServices();
 builder.Services.ConfigureDatabase(builder.Configuration);
 builder.Services.ConfigureCustomRateLimiter(builder.Configuration);
 builder.Services.ConfigureCORS();
