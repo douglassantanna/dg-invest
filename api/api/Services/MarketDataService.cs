@@ -77,8 +77,8 @@ public class MarketDataService : IMarketDataService
                 {
                     try
                     {
-                        _context.MarketDataPoint.AddRange(marketDataPoints);
-                        await _context.SaveChangesAsync();
+                        await _context.MarketDataPoint.AddRangeAsync(marketDataPoints, cancellationToken);
+                        await _context.SaveChangesAsync(cancellationToken);
                     }
                     catch (Exception ex)
                     {

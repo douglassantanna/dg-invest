@@ -80,12 +80,19 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
 
         services.AddScoped<ICacheService, MemoryCacheService>();
+        // services.AddTransient<IMarketDataService, MarketDataService>();
         return services;
     }
 
-    public static IServiceCollection ConfigureFunctionServices(this IServiceCollection services)
+    public static IServiceCollection ConfigureFunctionServices(this IServiceCollection services, string connectionString)
     {
         services.AddTransient<IMarketDataService, MarketDataService>();
+        services.AddDbContext<DataContext>(options =>
+        {
+            options.UseSqlServer(connectionString,
+                                x => x.EnableRetryOnFailure());
+        });
+        services.AddTransient<ICoinMarketCapService, CoinMarketCapService>();
         return services;
     }
 

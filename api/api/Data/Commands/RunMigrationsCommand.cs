@@ -1,3 +1,4 @@
+using api.Services.Contracts;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -8,18 +9,21 @@ public class RunMigrationsCommandHandler : IRequestHandler<RunMigrationsCommand,
 {
     private readonly DataContext _context;
     private readonly ILogger<RunMigrationsCommandHandler> _logger;
+    private readonly IMarketDataService _marketService;
 
-    public RunMigrationsCommandHandler(DataContext context, ILogger<RunMigrationsCommandHandler> logger)
+    public RunMigrationsCommandHandler(DataContext context, ILogger<RunMigrationsCommandHandler> logger, IMarketDataService marketService)
     {
         _context = context;
         _logger = logger;
+        _marketService = marketService;
     }
 
     public async Task<Response> Handle(RunMigrationsCommand request, CancellationToken cancellationToken)
     {
         try
         {
-            await _context.Database.MigrateAsync(cancellationToken);
+            // await _context.Database.MigrateAsync(cancellationToken);
+            await _marketService.FetchAndProcessMarketDataAsync(cancellationToken);
             return new Response("success", true);
         }
         catch (Exception ex)

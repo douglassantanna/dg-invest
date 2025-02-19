@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace api.Controllers;
 
 [ApiController]
-[Authorize(Roles = nameof(Role.Admin))]
+// [Authorize(Roles = nameof(Role.Admin))]
 [Route("api/[controller]")]
 public class MigrationsController : ControllerBase
 {
