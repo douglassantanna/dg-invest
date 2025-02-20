@@ -9,21 +9,18 @@ public class RunMigrationsCommandHandler : IRequestHandler<RunMigrationsCommand,
 {
     private readonly DataContext _context;
     private readonly ILogger<RunMigrationsCommandHandler> _logger;
-    private readonly IMarketDataService _marketService;
 
-    public RunMigrationsCommandHandler(DataContext context, ILogger<RunMigrationsCommandHandler> logger, IMarketDataService marketService)
+    public RunMigrationsCommandHandler(DataContext context, ILogger<RunMigrationsCommandHandler> logger)
     {
         _context = context;
         _logger = logger;
-        _marketService = marketService;
     }
 
     public async Task<Response> Handle(RunMigrationsCommand request, CancellationToken cancellationToken)
     {
         try
         {
-            // await _context.Database.MigrateAsync(cancellationToken);
-            await _marketService.FetchAndProcessMarketDataAsync(cancellationToken);
+            await _context.Database.MigrateAsync(cancellationToken);
             return new Response("success", true);
         }
         catch (Exception ex)
