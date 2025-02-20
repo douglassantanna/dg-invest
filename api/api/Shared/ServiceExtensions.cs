@@ -89,7 +89,7 @@ public static class ServiceExtensions
         services.AddTransient<ICoinMarketCapService, CoinMarketCapService>();
 
 
-        var connectionString = config.GetValue<string>("Values:DefaultConnection");
+        var connectionString = config.GetValue<string>("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))
             throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
 

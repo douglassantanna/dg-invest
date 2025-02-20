@@ -16,7 +16,7 @@ namespace functions
         }
 
         [Function("MarketData")]
-        public async Task Run([TimerTrigger("0 0 * * * *")] CancellationToken cancellationToken)
+        public async Task Run([TimerTrigger("0/10 * * * * *")] CancellationToken cancellationToken)
         {
             try
             {
