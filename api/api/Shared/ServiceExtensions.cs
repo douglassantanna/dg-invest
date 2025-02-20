@@ -80,19 +80,27 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
 
         services.AddScoped<ICacheService, MemoryCacheService>();
-        // services.AddTransient<IMarketDataService, MarketDataService>();
         return services;
     }
 
-    public static IServiceCollection ConfigureFunctionServices(this IServiceCollection services, string connectionString)
+    public static IServiceCollection ConfigureFunctionServices(this IServiceCollection services, IConfiguration config)
     {
         services.AddTransient<IMarketDataService, MarketDataService>();
+        services.AddTransient<ICoinMarketCapService, CoinMarketCapService>();
+
+
+        var connectionString = config.GetValue<string>("Values:DefaultConnection");
+        if (string.IsNullOrEmpty(connectionString))
+            throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+
         services.AddDbContext<DataContext>(options =>
         {
-            options.UseSqlServer(connectionString,
-                                x => x.EnableRetryOnFailure());
+            options.UseSqlServer(connectionString, x => x.EnableRetryOnFailure());
         });
-        services.AddTransient<ICoinMarketCapService, CoinMarketCapService>();
+
+        var coinMarketCapSettings = config.GetSection(nameof(CoinMarketCapSettings))
+            ?? throw new InvalidOperationException("coinMarketCapSettings are missing.");
+        services.Configure<CoinMarketCapSettings>(coinMarketCapSettings);
         return services;
     }
 
