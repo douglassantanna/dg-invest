@@ -18,6 +18,7 @@ public class DataContext : DbContext
     public virtual DbSet<Account> Accounts { get; set; } = null!;
     public virtual DbSet<AccountTransaction> AccountTransactions { get; set; } = null!;
     public virtual DbSet<MarketDataPoint> MarketDataPoint { get; set; } = null!;
+    public virtual DbSet<UserPortfolioSnapshot> UserPortfolioSnapshots { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

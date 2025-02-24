@@ -33,59 +33,58 @@ public class MarketDataService : IMarketDataService
             if (!users.Any())
                 return;
 
+            // get all CoinMarketCapId from the account assets
+            var allAssetIds = users.SelectMany(u => u.Accounts)
+                       .SelectMany(a => a.CryptoAssets)
+                       .Where(x => x.Balance > 0)
+                       .Select(x => x.CoinMarketCapId.ToString())
+                       .Distinct()
+                       .ToArray();
+
+            if (!allAssetIds.Any())
+                return;
+
+            // fetch all market prices **only once**
+            var coinPrices = await _coinMarketCapService.GetQuotesByIds(allAssetIds);
+            if (coinPrices == null)
+                return;
+
+            // process each user and their accounts
+            var portfolioRecords = new List<UserPortfolioSnapshot>();
+
             foreach (var user in users)
             {
-                var allCoinIds = user.Accounts
-                    .SelectMany(x => x.CryptoAssets)
-                    .Select(x => x.CoinMarketCapId.ToString())
-                    .Distinct()
-                    .ToArray();
-
-                if (!allCoinIds.Any())
-                    continue;
-
-                var marketData = await _coinMarketCapService.GetQuotesByIds(allCoinIds);
-
-                List<MarketDataPoint> marketDataPoints = new List<MarketDataPoint>();
                 foreach (var account in user.Accounts)
                 {
-                    var cryptoAssetsLookup = account.CryptoAssets.ToDictionary(x => x.CoinMarketCapId, x => x.Symbol);
-                    foreach (var id in allCoinIds)
-                    {
-                        try
-                        {
-                            var parsedId = int.Parse(id);
-                            var symbol = cryptoAssetsLookup.TryGetValue(parsedId, out var coinSymbol) ? coinSymbol : "";
-                            var price = _coinMarketCapService.GetCryptoCurrencyPriceById(parsedId, marketData);
+                    decimal accountValue = 0;
 
-                            if (!string.IsNullOrEmpty(symbol))
-                            {
-                                marketDataPoints.Add(new MarketDataPoint
-                                (
-                                    user.Id, account.Id, symbol, price, DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                                ));
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error processing coin id {CoinId} for user {UserId} account {AccountId}", id, user.Id, account.Id);
-                        }
-                    }
-                }
+                    // iterate the account assets to get their quantity
+                    foreach (var asset in account.CryptoAssets)
+                    {
+                        var assetFromCoinMarketCap = coinPrices.Data.Values.FirstOrDefault(x => x.Id == asset.CoinMarketCapId);
+                        if (assetFromCoinMarketCap == null)
+                            continue; // skip if no price data
 
-                if (marketDataPoints.Any())
-                {
-                    try
-                    {
-                        await _context.MarketDataPoint.AddRangeAsync(marketDataPoints, cancellationToken);
-                        await _context.SaveChangesAsync(cancellationToken);
+                        var assetTotalValue = asset.Balance * assetFromCoinMarketCap.Quote.USD.Price;
+                        accountValue = accountValue + assetTotalValue;
                     }
-                    catch (Exception ex)
+
+                    var portfolioRecord = new UserPortfolioSnapshot
                     {
-                        _logger.LogError(ex, "Error saving market data for user {UserId}", user.Id);
-                    }
+                        UserId = user.Id,
+                        AccountId = account.Id,
+                        Value = accountValue,
+                        Time = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    };
                 }
             }
+
+            if (portfolioRecords.Any())
+            {
+                await _context.UserPortfolioSnapshots.AddRangeAsync(portfolioRecords, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
         }
         catch (Exception ex)
         {
@@ -94,3 +93,5 @@ public class MarketDataService : IMarketDataService
     }
 
 }
+
+public record UserPortfolio(int UserId, int AccountId, decimal Value, long Time);

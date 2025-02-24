@@ -22,3 +22,15 @@ public class MarketDataPoint : Entity
         Time = time;
     }
 }
+
+public class UserPortfolioSnapshot : Entity
+{
+    public int UserId { get; set; }
+    public int AccountId { get; set; }
+    public decimal Value { get; set; }
+    public long Time { get; set; }
+    public UserPortfolioSnapshot()
+    {
+
+    }
+}
