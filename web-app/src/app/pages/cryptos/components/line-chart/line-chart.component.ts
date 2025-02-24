@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, model, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, computed, ElementRef, inject, model, signal, ViewChild } from '@angular/core';
 import * as echarts from 'echarts';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { LayoutService } from 'src/app/core/services/layout.service';
@@ -11,14 +11,14 @@ import { LayoutService } from 'src/app/core/services/layout.service';
   imports: [NgClass],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LineChartComponent {
+export class LineChartComponent implements AfterViewInit {
   private cryptoService = inject(CryptoService);
   layoutService = inject(LayoutService);
   @ViewChild('chartContainer', { static: false }) chartContainer!: ElementRef;
-  timeArray = signal<TimeFilter[]>(['24h', '7d', '1m']);
-  selectedTimeFilter = model<TimeFilter>('24h');
+  timeArray = signal<TimeFilter[]>(['_24h', '_7d', '_1m']);
+  selectedTimeFilter = model<TimeFilter>('_24h');
   marketData: MarketData = {
-    '24h': [
+    '_24h': [
       { time: 1640995200, value: 47000 },
       { time: 1640998800, value: 46000 },
       { time: 1641002400, value: 45000 },
@@ -45,7 +45,7 @@ export class LineChartComponent {
       { time: 1641078000, value: 129000 }
     ]
     ,
-    '7d': [
+    '_7d': [
       { time: 1640995200, value: 47000 },
       { time: 1641081600, value: 40000 },
       { time: 1641168000, value: 45500 },
@@ -54,7 +54,7 @@ export class LineChartComponent {
       { time: 1641427200, value: 44000 },
       { time: 1641513600, value: 41000 },
     ],
-    '1m': [
+    '_1m': [
       { time: 1640995200, value: 47000 },
       { time: 1641081600, value: 47500 },
       { time: 1641168000, value: 38000 },
@@ -87,10 +87,12 @@ export class LineChartComponent {
       { time: 1643500800, value: 51500 }
     ]
   };
+  marketDataNew: MarketData = { '_24h': [], '_7d': [], '_1m': [] };
   lineChartInstance: any = null;
   lineChartTitle = signal('');
   selectedTimeFilterSignal = computed(() => this.selectedTimeFilter());
   isMobileMode = computed(() => this.layoutService.isMobile());
+
   ngAfterViewInit(): void {
     if (this.marketData) {
       this.initLineChart(this.selectedTimeFilter());
@@ -100,9 +102,13 @@ export class LineChartComponent {
   }
 
   private fetchMarketData() {
-    this.cryptoService.getMarketDataByTimeframe('_24h')
+    this.cryptoService.getMarketDataByTimeframe(this.selectedTimeFilter())
       .subscribe({
-        next: (result) => { console.log('line chart result', result); },
+        next: (result) => {
+          console.log('line chart result', result);
+          this.marketDataNew[this.selectedTimeFilter()] = result;
+          this.initLineChart(this.selectedTimeFilter());
+        },
         error: (err) => { console.log(err); }
       });
   }
@@ -122,10 +128,11 @@ export class LineChartComponent {
 
     this.lineChartInstance = echarts.init(chartElement);
     const selectedData = this.marketData[selectedTime];
+    const selectedDataNew = this.marketDataNew[selectedTime];
     const axisLabelFormatter = (value: string) => {
       const date = new Date(value);
-      if (selectedTime === '24h') return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      if (selectedTime === '7d') return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      if (selectedTime === '_24h') return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (selectedTime === '_7d') return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
       return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
@@ -143,7 +150,7 @@ export class LineChartComponent {
       series: [{
         type: 'line',
         smooth: true,
-        data: selectedData.map(d => [d.time * 1000, d.value]),
+        data: selectedDataNew.map(d => [d.time * 1000, d.value]),
         itemStyle: { color: '#4F46E5' },
         areaStyle: { opacity: 0.2 }
       }],
@@ -166,12 +173,12 @@ export class LineChartComponent {
   }
 }
 
-export type TimeFilter = '24h' | '7d' | '1m';
+export type TimeFilter = '_24h' | '_7d' | '_1m';
 
 export interface MarketData {
-  '24h': TimeValue[],
-  '7d': TimeValue[],
-  '1m': TimeValue[],
+  '_24h': TimeValue[],
+  '_7d': TimeValue[],
+  '_1m': TimeValue[],
 }
 
 export interface TimeValue {
