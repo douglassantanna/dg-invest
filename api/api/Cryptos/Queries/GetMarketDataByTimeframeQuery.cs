@@ -26,10 +26,14 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             _ => throw new ArgumentException("Invalid timeframe")
         };
 
+        var user = await _dbContext.Users.Include(x => x.Accounts).FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+
+        var userAccount = user?.Accounts.Where(x => x.IsSelected).FirstOrDefault();
+
         var marketData = await _dbContext.MarketDataPoint
             .AsNoTracking()
             .Where(m => m.UserId == request.UserId && m.Time >= startTime)
-            .Where(x => x.AccountId == 2007)
+            .Where(x => x.AccountId == userAccount.Id)
             .ToListAsync(cancellationToken);
 
         var groupedData = marketData
