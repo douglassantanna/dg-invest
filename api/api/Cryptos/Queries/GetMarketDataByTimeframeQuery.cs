@@ -30,7 +30,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
 
         var userAccount = user?.Accounts.Where(x => x.IsSelected).FirstOrDefault();
 
-        var marketData = await _dbContext.MarketDataPoint
+        var marketData = await _dbContext.UserPortfolioSnapshots
             .AsNoTracking()
             .Where(m => m.UserId == request.UserId && m.Time >= startTime)
             .Where(x => x.AccountId == userAccount.Id)
@@ -41,7 +41,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             .Select(group => new
             {
                 time = group.Key,
-                value = group.Sum(m => m.CoinPrice)
+                value = group.Sum(m => m.Value)
             })
             .ToList();
 
