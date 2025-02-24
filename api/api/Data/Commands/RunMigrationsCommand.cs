@@ -1,3 +1,4 @@
+using api.Services.Contracts;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

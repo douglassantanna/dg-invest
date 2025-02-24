@@ -98,7 +98,7 @@ public class CryptoController : ControllerBase
             var query = new GetMarketDataByTimeframeQuery(userId, timeframe);
             var marketData = await _mediator.Send(query);
 
-            if (marketData == null || !marketData.Any())
+            if (marketData == null)
             {
                 return NotFound("No market data found for the selected timeframe.");
             }

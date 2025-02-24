@@ -9,11 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.ConfiguraMemoryCache();
-builder.Services.AddHostedService<MarketDataBackgroundService>();
+// builder.Services.AddHostedService<MarketDataBackgroundService>();
 builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 builder.Services.ConfigureJwt(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);
-builder.Services.ConfigureServices(builder.Configuration);
+builder.Services.ConfigureServices();
 builder.Services.ConfigureDatabase(builder.Configuration);
 builder.Services.ConfigureCustomRateLimiter(builder.Configuration);
 builder.Services.ConfigureCORS();
