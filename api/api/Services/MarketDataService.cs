@@ -61,6 +61,9 @@ public class MarketDataService : IMarketDataService
                     // iterate the account assets to get their quantity
                     foreach (var asset in account.CryptoAssets)
                     {
+                        if (asset.Balance == 0)
+                            continue;
+
                         var assetFromCoinMarketCap = coinPrices.Data.Values.FirstOrDefault(x => x.Id == asset.CoinMarketCapId);
                         if (assetFromCoinMarketCap == null)
                             continue; // skip if no price data
