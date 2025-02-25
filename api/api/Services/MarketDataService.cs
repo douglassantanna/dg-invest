@@ -76,6 +76,7 @@ public class MarketDataService : IMarketDataService
                         Value = accountValue,
                         Time = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                     };
+                    portfolioRecords.Add(portfolioRecord);
                 }
             }
 
