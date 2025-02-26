@@ -16,19 +16,17 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        long startTime = request.Timeframe switch
+        long startTime = CalculateStartTime(request.Timeframe);
+
+        var user = await _dbContext.Users
+        .Include(x => x.Accounts)
+        .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+
+        var userAccount = user?.Accounts.FirstOrDefault(x => x.IsSelected);
+        if (userAccount == null)
         {
-            ETimeframe._24h => now - (24 * 60 * 60),
-            ETimeframe._7d => now - (7 * 24 * 60 * 60),
-            ETimeframe._1m => now - (30 * 24 * 60 * 60),
-            ETimeframe._1y => now - (365 * 24 * 60 * 60),
-            ETimeframe.All => 0,
-            _ => throw new ArgumentException("Invalid timeframe")
-        };
-
-        var user = await _dbContext.Users.Include(x => x.Accounts).FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
-
-        var userAccount = user?.Accounts.Where(x => x.IsSelected).FirstOrDefault();
+            return Enumerable.Empty<object>();
+        }
 
         var marketData = await _dbContext.UserPortfolioSnapshots
             .AsNoTracking()
@@ -46,5 +44,19 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             .ToList();
 
         return groupedData;
+    }
+
+    private static long CalculateStartTime(ETimeframe timeframe)
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        return timeframe switch
+        {
+            ETimeframe._24h => now - (24 * 60 * 60),
+            ETimeframe._7d => now - (7 * 24 * 60 * 60),
+            ETimeframe._1m => now - (30 * 24 * 60 * 60),
+            ETimeframe._1y => now - (365 * 24 * 60 * 60),
+            ETimeframe.All => 0,
+            _ => throw new ArgumentException("Invalid timeframe")
+        };
     }
 }
