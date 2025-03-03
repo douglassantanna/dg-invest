@@ -1,9 +1,7 @@
 name: Run End-to-End Tests
 
 on:
-  push:
-    branches:
-      - feat/line-daily-chart
+  pull_request:
 
 env:
   NODE_VERSION: "20"
