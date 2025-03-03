@@ -1,5 +1,8 @@
+using System.Net;
+using System.Text.Json;
 using api.Services.Contracts;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 
 namespace functions
@@ -27,5 +30,14 @@ namespace functions
                 _logger.LogError(ex, "MarketDataFunction: error FetchAndProcessMarketDataAsync");
             }
         }
+        [Function("GetDummyData")]
+        public async Task<HttpResponseData> GetDummyData([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "dummy")] HttpRequestData req)
+        {
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            var dummyData = new { message = "Hello, world!", timestamp = DateTime.UtcNow };
+            await response.WriteStringAsync(JsonSerializer.Serialize(dummyData));
+            return response;
+        }
+
     }
 }
