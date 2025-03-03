@@ -2,11 +2,6 @@ name: Build and deploy Azure Function App
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to deploy"
-        type: environment
-        required: true
 
 env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: "." # set this to the path to your web app project, defaults to the repository root
