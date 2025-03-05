@@ -1,5 +1,6 @@
 using api.Cache;
 using api.Cryptos.Commands;
+using api.Cryptos.Models;
 using api.Data;
 using api.Users.Models;
 using FluentAssertions;
@@ -81,5 +82,24 @@ public class SelectAccountCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Message.Should().Be("Account selected successfully");
         user.Accounts.First().IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnSuccess_WhenAccountIsSelected()
+    {
+        // Arrange
+        var user = new User("Test User", "test@test.com", "password", Role.User);
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var command = new SelectAccountCommand(UserId: user.Id, AccountId: user.Accounts.First().Id);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be("Account selected successfully");
+        _mockCacheService.Verify(x => x.Remove(It.IsAny<string>()), Times.Exactly(3));
     }
 }
