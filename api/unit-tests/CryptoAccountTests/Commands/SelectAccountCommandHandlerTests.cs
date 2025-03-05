@@ -43,4 +43,20 @@ public class SelectAccountCommandHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("Validation failed");
     }
+
+    [Fact]
+    public async Task Handle_ShouldReturnUserNotFound_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var request = new SelectAccountCommand(1, 1);
+        var cancellationToken = new CancellationToken();
+
+        // Act
+        var result = await _handler.Handle(request, cancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+    }
 }
