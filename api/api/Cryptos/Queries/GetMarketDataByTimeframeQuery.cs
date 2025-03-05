@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Cryptos.Models;
 using api.Data;
 using MediatR;
@@ -8,13 +9,18 @@ public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : 
 public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
 {
     private readonly DataContext _context;
-    public GetMarketDataByTimeframeQueryHandler(DataContext context)
+    private readonly ICacheService _cache;
+    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
+        // var absoluteExpiration = TimeSpan.FromMinutes(1);
+        // var cacheKey = CacheKeyConstants.MarketData + request.UserId + "_" + request.Timeframe;
+        // var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request);
         long startTime = CalculateStartTime(request.Timeframe);
 
         var user = await _context.Users
