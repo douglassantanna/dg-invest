@@ -7,28 +7,26 @@ namespace api.Cryptos.Queries;
 public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<object>>;
 public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
 {
-    private readonly DataContext _dbContext;
-    public GetMarketDataByTimeframeQueryHandler(DataContext dbContext)
+    private readonly DataContext _context;
+    public GetMarketDataByTimeframeQueryHandler(DataContext context)
     {
-        _dbContext = dbContext;
+        _context = context;
     }
 
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         long startTime = CalculateStartTime(request.Timeframe);
 
-        var user = await _dbContext.Users
-        .Include(x => x.Accounts)
-        .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+        var user = await _context.Users
+                                 .AsNoTracking()
+                                 .Include(x => x.Accounts)
+                                 .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
 
-        var userAccount = user?.Accounts.FirstOrDefault(x => x.IsSelected);
-        if (userAccount == null)
-        {
+        if (user == null)
             return Enumerable.Empty<object>();
-        }
 
-        var marketData = await _dbContext.UserPortfolioSnapshots
+        var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
+        var marketData = await _context.UserPortfolioSnapshots
             .AsNoTracking()
             .Where(m => m.UserId == request.UserId && m.Time >= startTime)
             .Where(x => x.AccountId == userAccount.Id)
