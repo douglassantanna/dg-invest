@@ -18,36 +18,44 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
 
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
-        // var absoluteExpiration = TimeSpan.FromMinutes(1);
-        // var cacheKey = CacheKeyConstants.MarketData + request.UserId + "_" + request.Timeframe;
-        // var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request);
+        var absoluteExpiration = TimeSpan.FromMinutes(1);
         long startTime = CalculateStartTime(request.Timeframe);
 
-        var user = await _context.Users
-                                 .AsNoTracking()
-                                 .Include(x => x.Accounts)
-                                 .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+        var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request);
 
-        if (user == null)
-            return Enumerable.Empty<object>();
+        var cachedResults = await _cache.GetOrCreateAsync(cacheKey,
+        async (ct) =>
+        {
+            var user = await _context.Users
+                                     .AsNoTracking()
+                                     .Include(x => x.Accounts)
+                                     .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
 
-        var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
-        var marketData = await _context.UserPortfolioSnapshots
-            .AsNoTracking()
-            .Where(m => m.UserId == request.UserId && m.Time >= startTime)
-            .Where(x => x.AccountId == userAccount.Id)
-            .ToListAsync(cancellationToken);
+            if (user == null)
+                return Enumerable.Empty<object>();
 
-        var groupedData = marketData
-            .GroupBy(m => (m.Time / 3600) * 3600)
-            .Select(group => new
-            {
-                time = group.Key,
-                value = group.Sum(m => m.Value)
-            })
-            .ToList();
+            var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
+            var marketData = await _context.UserPortfolioSnapshots
+                                           .AsNoTracking()
+                                           .Where(m => m.UserId == request.UserId && m.Time >= startTime)
+                                           .Where(x => x.AccountId == userAccount.Id)
+                                           .ToListAsync(cancellationToken);
 
-        return groupedData;
+            var groupedData = marketData
+                            .GroupBy(m => (m.Time / 3600) * 3600)
+                            .Select(group => new
+                            {
+                                time = group.Key,
+                                value = group.Sum(m => m.Value)
+                            })
+                            .ToList();
+
+            return groupedData;
+        },
+        absoluteExpiration,
+        cancellationToken);
+
+        return cachedResults;
     }
 
     private static long CalculateStartTime(ETimeframe timeframe)
