@@ -1,6 +1,7 @@
 using api.Cache;
 using api.Cryptos.Commands;
 using api.Data;
+using api.Users.Models;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -58,5 +59,27 @@ public class SelectAccountCommandHandlerTests
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task Handle_ShouldSelectAccount_WhenRequestIsValid()
+    {
+        // Arrange
+        var request = new SelectAccountCommand(1, 1);
+        var cancellationToken = new CancellationToken();
+
+        var user = new User("test name", "emaill@test.com", "fakePassword", Role.Admin);
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.Handle(request, cancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be("Account selected successfully");
+        user.Accounts.First().IsSelected.Should().BeTrue();
     }
 }
