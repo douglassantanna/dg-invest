@@ -66,4 +66,23 @@ public static class CacheKeyConstants
   {
     return _cacheKeyHistory.TryGetValue($"{AllUsers}_{userId}", out var cacheKey) ? cacheKey : "";
   }
+
+  public static List<string> GetAllUserCacheKeys(int userId)
+  {
+    var keys = new List<string>();
+    var userIdPrefix = $"{userId}_";
+
+    foreach (var key in _cacheKeyHistory.Keys)
+    {
+      if (key.Contains(userIdPrefix))
+      {
+        if (_cacheKeyHistory.TryGetValue(key, out var cacheKey))
+        {
+          keys.Add(cacheKey);
+        }
+      }
+    }
+
+    return keys;
+  }
 }

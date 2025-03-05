@@ -9,21 +9,20 @@ public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : 
 public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
 {
     private readonly DataContext _context;
-    private readonly ICacheService _cache;
-    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cache)
+    private readonly ICacheService _cacheService;
+    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cacheService)
     {
         _context = context;
-        _cache = cache;
+        _cacheService = cacheService;
     }
 
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         long startTime = CalculateStartTime(request.Timeframe);
-
         var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request);
 
-        var cachedResults = await _cache.GetOrCreateAsync(cacheKey,
+        var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
         async (ct) =>
         {
             var user = await _context.Users
