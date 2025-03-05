@@ -70,7 +70,7 @@ public static class CacheKeyConstants
   public static List<string> GetAllUserCacheKeys(int userId)
   {
     var keys = new List<string>();
-    var userIdPrefix = $"{userId}_";
+    var userIdPrefix = $"{userId}";
 
     foreach (var key in _cacheKeyHistory.Keys)
     {
