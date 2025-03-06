@@ -20,7 +20,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         long startTime = CalculateStartTime(request.Timeframe);
-        var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request);
+        var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request, startTime);
 
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
         async (ct) =>
