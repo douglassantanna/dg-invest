@@ -57,17 +57,12 @@ public static class CacheKeyConstants
     _cacheKeyHistory[$"{MarketData}_{request.UserId}_{request.Timeframe}"] = cacheKey;
     return cacheKey;
   }
-
-  public static string GetMarketDataCacheKey(GetMarketDataByTimeframeQuery request)
-  {
-    return _cacheKeyHistory.TryGetValue($"{MarketData}_{request.UserId}_{request.Timeframe}", out var cacheKey) ? cacheKey : "";
-  }
   public static string GetLastUsersCacheKey(string userId)
   {
     return _cacheKeyHistory.TryGetValue($"{AllUsers}_{userId}", out var cacheKey) ? cacheKey : "";
   }
 
-  public static List<string> GetAllUserCacheKeys(int userId)
+  public static List<string> GetAllUserMarketDataCacheKeys(int userId)
   {
     var keys = new List<string>();
     var userIdPrefix = $"{userId}";
