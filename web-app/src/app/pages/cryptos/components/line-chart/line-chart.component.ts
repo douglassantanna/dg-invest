@@ -80,10 +80,9 @@ export class LineChartComponent implements AfterViewInit {
     if (!this.lineChartInstance) {
       this.lineChartInstance = echarts.init(chartElement);
     }
-    const selectedDataNew = this.marketDataNew[selectedTime];
+    const selectedData = this.marketDataNew[selectedTime];
     const axisLabelFormatter = (value: string) => this.axisLabelFormatter(value, selectedTime);
     this.lineChartInstance.clear();
-
     const selectedTimeTitle = this.timeArray().find(t => t.time === this.selectedTimeFilter());
     this.lineChartTitle.set(`${selectedTimeTitle?.description} Market Value`);
     const options = {
@@ -97,7 +96,7 @@ export class LineChartComponent implements AfterViewInit {
       series: [{
         type: 'line',
         smooth: true,
-        data: selectedDataNew.map(d => [d.time * 1000, d.value]),
+        data: selectedData.map(d => [d.time * 1000, d.value]),
         itemStyle: { color: '#4F46E5' },
         areaStyle: { opacity: 0.2 }
       }],
