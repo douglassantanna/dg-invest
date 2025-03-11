@@ -40,8 +40,9 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                                            .Where(x => x.AccountId == userAccount.Id)
                                            .ToListAsync(cancellationToken);
 
+            var interval = CalculateGroupingInterval(request.Timeframe);
             var groupedData = marketData
-                            .GroupBy(m => (m.Time / 3600) * 3600)
+                            .GroupBy(m => (m.Time / interval) * interval)
                             .Select(group => new
                             {
                                 time = group.Key,
@@ -67,6 +68,19 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             ETimeframe._1m => now - (30 * 24 * 60 * 60),
             ETimeframe._1y => now - (365 * 24 * 60 * 60),
             ETimeframe.All => 0,
+            _ => throw new ArgumentException("Invalid timeframe")
+        };
+    }
+
+    private static long CalculateGroupingInterval(ETimeframe timeframe)
+    {
+        return timeframe switch
+        {
+            ETimeframe._24h => 3600, // Group by hour
+            ETimeframe._7d => 86400, // Group by day
+            ETimeframe._1m => 86400, // Group by day
+            ETimeframe._1y => 2592000, // Group by month (approx 30 days)
+            ETimeframe.All => 31536000, // Group by year (approx 365 days)
             _ => throw new ArgumentException("Invalid timeframe")
         };
     }
