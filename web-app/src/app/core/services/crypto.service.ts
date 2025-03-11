@@ -95,7 +95,6 @@ export class CryptoService {
   }
 
   getMarketDataByTimeframe(timeFrame: ETimeframe): Observable<any> {
-    console.log('time', timeFrame)
     const params = { timeframe: timeFrame }
     return this.http.get<any>(`${url}/get-marketData-by-timeframe`, { params })
   }

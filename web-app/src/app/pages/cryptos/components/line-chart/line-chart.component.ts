@@ -62,6 +62,7 @@ export class LineChartComponent implements AfterViewInit {
     this.cryptoService.getMarketDataByTimeframe(this.selectedTimeFilter())
       .subscribe({
         next: (result) => {
+          this.marketDataNew[this.selectedTimeFilter()] = result;
           this.initLineChart(this.selectedTimeFilter());
         },
         error: (err) => { console.log(err); }
