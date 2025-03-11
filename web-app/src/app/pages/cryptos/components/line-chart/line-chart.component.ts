@@ -54,7 +54,6 @@ export class LineChartComponent implements AfterViewInit {
     if (this.marketDataNew) {
       this.initLineChart(this.selectedTimeFilter());
     }
-
     this.fetchMarketData();
   }
 
@@ -78,21 +77,12 @@ export class LineChartComponent implements AfterViewInit {
   initLineChart(selectedTime: ETimeframe) {
     const chartElement = this.chartContainer.nativeElement;
 
-    if (this.lineChartInstance) {
-      this.lineChartInstance.dispose();
+    if (!this.lineChartInstance) {
+      this.lineChartInstance = echarts.init(chartElement);
     }
-
-    this.lineChartInstance = echarts.init(chartElement);
-    const selectedDataNew = this.marketDataNew[selectedTime];
-    const axisLabelFormatter = (value: string) => {
-      const date = new Date(value);
-      if (selectedTime === ETimeframe._24h) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      if (selectedTime === ETimeframe._7d) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    };
-
+    const selectedData = this.marketDataNew[selectedTime];
+    const axisLabelFormatter = (value: string) => this.axisLabelFormatter(value, selectedTime);
     this.lineChartInstance.clear();
-
     const selectedTimeTitle = this.timeArray().find(t => t.time === this.selectedTimeFilter());
     this.lineChartTitle.set(`${selectedTimeTitle?.description} Market Value`);
     const options = {
@@ -106,7 +96,7 @@ export class LineChartComponent implements AfterViewInit {
       series: [{
         type: 'line',
         smooth: true,
-        data: selectedDataNew.map(d => [d.time * 1000, d.value]),
+        data: selectedData.map(d => [d.time * 1000, d.value]),
         itemStyle: { color: '#4F46E5' },
         areaStyle: { opacity: 0.2 }
       }],
@@ -126,6 +116,14 @@ export class LineChartComponent implements AfterViewInit {
       ]
     };
     this.lineChartInstance.setOption(options);
+    this.lineChartInstance.resize();
+  }
+
+  private axisLabelFormatter(value: string, selectedTime: ETimeframe): string {
+    const date = new Date(value);
+    if (selectedTime === ETimeframe._24h) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (selectedTime === ETimeframe._7d) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 }
 
