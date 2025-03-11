@@ -41,12 +41,21 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                                            .ToListAsync(cancellationToken);
 
             var interval = CalculateGroupingInterval(request.Timeframe);
-            var groupedData = marketData
-                            .GroupBy(m => (m.Time / interval) * interval)
+            var hourlyData = marketData
+                            .GroupBy(m => (m.Time / 3600) * 3600)
                             .Select(group => new
                             {
                                 time = group.Key,
                                 value = group.Sum(m => m.Value)
+                            })
+                            .ToList();
+
+            var groupedData = hourlyData
+                            .GroupBy(h => (h.time / interval) * interval)
+                            .Select(group => new
+                            {
+                                time = group.Key,
+                                value = group.Sum(h => h.value)
                             })
                             .ToList();
 
