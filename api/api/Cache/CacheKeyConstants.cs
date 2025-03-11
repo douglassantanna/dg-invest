@@ -6,6 +6,7 @@ namespace api.Cache;
 public static class CacheKeyConstants
 {
   // Cache keys. DO NOT CHANGE THESE VALUES
+  private const string MarketData = "market_data";
   public const string UserAccounts = "user_accounts_";
   public const string UserAccountDetails = "user_account_details_";
   private const string UserAllCryptoAssets = "user_all_crypto_assets_";
@@ -44,8 +45,41 @@ public static class CacheKeyConstants
     _cacheKeyHistory[$"{AllUsers}_{request.UserId}"] = cacheKey;
     return cacheKey;
   }
+
+  public static string GenerateMarketDataCacheKey(GetMarketDataByTimeframeQuery request, long startTime)
+  {
+    var parts = new List<string>
+    {
+        MarketData,
+        request.UserId.ToString(),
+        startTime.ToString()
+    };
+
+    var cacheKey = string.Join("_", parts);
+    _cacheKeyHistory[$"{MarketData}_{request.UserId}_{startTime}"] = cacheKey;
+    return cacheKey;
+  }
   public static string GetLastUsersCacheKey(string userId)
   {
     return _cacheKeyHistory.TryGetValue($"{AllUsers}_{userId}", out var cacheKey) ? cacheKey : "";
+  }
+
+  public static List<string> GetAllUserMarketDataCacheKeys(int userId)
+  {
+    var keys = new List<string>();
+    var userIdPrefix = $"{userId}";
+
+    foreach (var key in _cacheKeyHistory.Keys)
+    {
+      if (key.Contains(userIdPrefix))
+      {
+        if (_cacheKeyHistory.TryGetValue(key, out var cacheKey))
+        {
+          keys.Add(cacheKey);
+        }
+      }
+    }
+
+    return keys;
   }
 }

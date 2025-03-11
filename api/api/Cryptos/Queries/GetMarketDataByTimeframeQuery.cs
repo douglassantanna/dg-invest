@@ -1,3 +1,4 @@
+using api.Cache;
 using api.Cryptos.Models;
 using api.Data;
 using MediatR;
@@ -7,43 +8,53 @@ namespace api.Cryptos.Queries;
 public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<object>>;
 public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
 {
-    private readonly DataContext _dbContext;
-    public GetMarketDataByTimeframeQueryHandler(DataContext dbContext)
+    private readonly DataContext _context;
+    private readonly ICacheService _cacheService;
+    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cacheService)
     {
-        _dbContext = dbContext;
+        _context = context;
+        _cacheService = cacheService;
     }
 
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var absoluteExpiration = TimeSpan.FromMinutes(1);
         long startTime = CalculateStartTime(request.Timeframe);
+        var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request, startTime);
 
-        var user = await _dbContext.Users
-        .Include(x => x.Accounts)
-        .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
-
-        var userAccount = user?.Accounts.FirstOrDefault(x => x.IsSelected);
-        if (userAccount == null)
+        var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
+        async (ct) =>
         {
-            return Enumerable.Empty<object>();
-        }
+            var user = await _context.Users
+                                     .AsNoTracking()
+                                     .Include(x => x.Accounts)
+                                     .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
 
-        var marketData = await _dbContext.UserPortfolioSnapshots
-            .AsNoTracking()
-            .Where(m => m.UserId == request.UserId && m.Time >= startTime)
-            .Where(x => x.AccountId == userAccount.Id)
-            .ToListAsync(cancellationToken);
+            if (user == null)
+                return Enumerable.Empty<object>();
 
-        var groupedData = marketData
-            .GroupBy(m => (m.Time / 3600) * 3600)
-            .Select(group => new
-            {
-                time = group.Key,
-                value = group.Sum(m => m.Value)
-            })
-            .ToList();
+            var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
+            var marketData = await _context.UserPortfolioSnapshots
+                                           .AsNoTracking()
+                                           .Where(m => m.UserId == request.UserId && m.Time >= startTime)
+                                           .Where(x => x.AccountId == userAccount.Id)
+                                           .ToListAsync(cancellationToken);
 
-        return groupedData;
+            var groupedData = marketData
+                            .GroupBy(m => (m.Time / 3600) * 3600)
+                            .Select(group => new
+                            {
+                                time = group.Key,
+                                value = group.Sum(m => m.Value)
+                            })
+                            .ToList();
+
+            return groupedData;
+        },
+        absoluteExpiration,
+        cancellationToken);
+
+        return cachedResults;
     }
 
     private static long CalculateStartTime(ETimeframe timeframe)

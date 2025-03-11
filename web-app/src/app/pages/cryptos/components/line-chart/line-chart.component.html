@@ -5,12 +5,12 @@
 
       <div class="border rounded-md border-gray-300 bg-gray-50">
         <div class="flex flex-wrap gap-2 p-0.5">
-          @for (time of timeArray(); track $index) {
+          @for (item of timeArray(); track $index) {
           <button class="m-0.5 cursor-pointer rounded-md p-2 text-sm font-medium transition-all duration-300" [ngClass]="{
-          'bg-gray-200': selectedTimeFilter() === time,
-          'text-gray-600 hover:text-gray-700 hover:bg-gray-100': selectedTimeFilter() !== time
-         }" (click)="setTimeFilter(time)">
-            {{ time }}
+          'bg-gray-200': selectedTimeFilter() === item.time,
+          'text-gray-600 hover:text-gray-700 hover:bg-gray-100': selectedTimeFilter() !== item.time
+         }" (click)="setTimeFilter(item.time)">
+            {{ item.description }}
           </button>
           }
         </div>
