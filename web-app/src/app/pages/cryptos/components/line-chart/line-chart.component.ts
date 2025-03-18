@@ -127,8 +127,6 @@ export class LineChartComponent implements AfterViewInit {
   }
 }
 
-export type TimeFilter = '_24h' | '_7d' | '_1m';
-
 export interface MarketData {
   [key: number]: TimeValue[];
 }
