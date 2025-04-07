@@ -1,23 +1,21 @@
 using api.Cache;
 using api.Cryptos.Models;
-using api.Data;
 using api.Users.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
 public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<object>>;
 public record MarketDataPointDto(long Time, decimal Value);
 public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
 {
-    private readonly DataContext _context;
     private readonly ICacheService _cacheService;
     private readonly IUserRepository _userRepository;
-    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cacheService, IUserRepository userRepository)
+    private readonly IUserPortfolioSnapshotsRepository _userPortfolioSnapshotsRepository;
+    public GetMarketDataByTimeframeQueryHandler(ICacheService cacheService, IUserRepository userRepository, IUserPortfolioSnapshotsRepository userPortfolioSnapshotsRepository)
     {
-        _context = context;
         _cacheService = cacheService;
         _userRepository = userRepository;
+        _userPortfolioSnapshotsRepository = userPortfolioSnapshotsRepository;
     }
 
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
@@ -34,14 +32,19 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 return Enumerable.Empty<object>();
 
             var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
-            var marketData = await _context.UserPortfolioSnapshots
-                                           .AsNoTracking()
-                                           .Where(m => m.UserId == request.UserId && m.Time >= startTime)
-                                           .Where(x => x.AccountId == userAccount.Id)
-                                           .ToListAsync(cancellationToken);
+            var marketData = await _userPortfolioSnapshotsRepository.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrame(
+                request.UserId,
+                userAccount.Id,
+                startTime,
+                cancellationToken
+            );
+            if (!marketData.IsSuccess)
+                return Enumerable.Empty<object>();
 
             var interval = CalculateGroupingInterval(request.Timeframe);
-            var hourlyData = marketData
+            var marketData1 = marketData.Data as List<UserPortfolioSnapshotDto>;
+
+            var hourlyData = marketData1
                             .GroupBy(m => (m.Time / 3600) * 3600)
                             .Select(group => new
                             {

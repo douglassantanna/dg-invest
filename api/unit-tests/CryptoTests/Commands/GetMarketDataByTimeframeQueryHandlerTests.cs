@@ -14,6 +14,7 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
     private readonly DataContext _context;
     private readonly Mock<ICacheService> _mockCacheService;
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<IUserPortfolioSnapshotsRepository> _mockUserPortfolioSnapshotsRepository;
     private readonly GetMarketDataByTimeframeQueryHandler _handler;
 
     public GetMarketDataByTimeframeQueryHandlerTests()
@@ -28,7 +29,8 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
 
         _mockCacheService = new Mock<ICacheService>();
         _mockUserRepository = new Mock<IUserRepository>();
-        _handler = new GetMarketDataByTimeframeQueryHandler(_context, _mockCacheService.Object, _mockUserRepository.Object);
+        _mockUserPortfolioSnapshotsRepository = new Mock<IUserPortfolioSnapshotsRepository>();
+        _handler = new GetMarketDataByTimeframeQueryHandler(_mockCacheService.Object, _mockUserRepository.Object, _mockUserPortfolioSnapshotsRepository.Object);
     }
 
     public void Dispose()
