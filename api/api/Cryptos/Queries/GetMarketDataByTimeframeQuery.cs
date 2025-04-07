@@ -4,21 +4,24 @@ using api.Users.Repositories;
 using MediatR;
 
 namespace api.Cryptos.Queries;
-public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<object>>;
+public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<MarketDataPointDto>>;
 public record MarketDataPointDto(long Time, decimal Value);
-public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
+public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<MarketDataPointDto>>
 {
     private readonly ICacheService _cacheService;
     private readonly IUserRepository _userRepository;
     private readonly IUserPortfolioSnapshotsRepository _userPortfolioSnapshotsRepository;
-    public GetMarketDataByTimeframeQueryHandler(ICacheService cacheService, IUserRepository userRepository, IUserPortfolioSnapshotsRepository userPortfolioSnapshotsRepository)
+    public GetMarketDataByTimeframeQueryHandler(
+        ICacheService cacheService,
+        IUserRepository userRepository,
+        IUserPortfolioSnapshotsRepository userPortfolioSnapshotsRepository)
     {
         _cacheService = cacheService;
         _userRepository = userRepository;
         _userPortfolioSnapshotsRepository = userPortfolioSnapshotsRepository;
     }
 
-    public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
+    public async Task<IEnumerable<MarketDataPointDto>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         long startTime = CalculateStartTime(request.Timeframe);
@@ -29,22 +32,25 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         {
             var user = await _userRepository.GetByIdAsync(request.UserId);
             if (user == null)
-                return Enumerable.Empty<object>();
+                return [];
 
-            var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
-            var marketData = await _userPortfolioSnapshotsRepository.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+            var selectedAccount = user.Accounts.FirstOrDefault(x => x.IsSelected);
+            if (selectedAccount == null)
+                return Enumerable.Empty<MarketDataPointDto>();
+
+            var snapshotResult = await _userPortfolioSnapshotsRepository.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
                 request.UserId,
-                userAccount.Id,
+                selectedAccount.Id,
                 startTime,
                 cancellationToken
             );
-            if (!marketData.IsSuccess)
-                return Enumerable.Empty<object>();
+            if (!snapshotResult.IsSuccess)
+                return [];
 
             var interval = CalculateGroupingInterval(request.Timeframe);
-            var marketData1 = marketData.Data as List<UserPortfolioSnapshotDto>;
+            var snapshots = (List<UserPortfolioSnapshotDto>)snapshotResult.Data!;
 
-            var hourlyData = marketData1
+            var hourlyData = snapshots
                             .GroupBy(m => (m.Time / 3600) * 3600)
                             .Select(group => new
                             {
@@ -55,11 +61,10 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
 
             var groupedData = hourlyData
                             .GroupBy(h => (h.time / interval) * interval)
-                            .Select(group => new
-                            {
-                                time = group.Key,
-                                value = group.Sum(h => h.value)
-                            })
+                            .Select(group => new MarketDataPointDto(
+                                group.Key,
+                                group.Sum(h => h.value)
+                            ))
                             .ToList();
 
             return groupedData;
