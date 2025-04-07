@@ -3,6 +3,7 @@ using api.Cryptos.Models;
 using api.Cryptos.Queries;
 using api.Data;
 using api.Users.Models;
+using api.Users.Repositories;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -12,6 +13,7 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
 {
     private readonly DataContext _context;
     private readonly Mock<ICacheService> _mockCacheService;
+    private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly GetMarketDataByTimeframeQueryHandler _handler;
 
     public GetMarketDataByTimeframeQueryHandlerTests()
@@ -25,7 +27,8 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
         _context.Database.EnsureCreated();
 
         _mockCacheService = new Mock<ICacheService>();
-        _handler = new GetMarketDataByTimeframeQueryHandler(_context, _mockCacheService.Object);
+        _mockUserRepository = new Mock<IUserRepository>();
+        _handler = new GetMarketDataByTimeframeQueryHandler(_context, _mockCacheService.Object, _mockUserRepository.Object);
     }
 
     public void Dispose()
@@ -59,7 +62,6 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
         // Arrange
         var request = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
         var user = new User("test name", "testEmail@test.com", "randonPassword", Role.Admin);
-        var account = user.Accounts.First();
         var marketData = new List<UserPortfolioSnapshot>
             {
                 new UserPortfolioSnapshot { UserId = 1, AccountId = 1, Time = 3600, Value = 100 },
@@ -83,5 +85,42 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
 
         // Assert
         result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_ValidUserWithData_ReturnsGroupedData()
+    {
+        // Arrange
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var request = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
+        var user = new User("test name", "testEmail@test.com", "randonPassword", Role.Admin);
+        var marketData = new List<UserPortfolioSnapshot>
+            {
+                new() { UserId = 1, AccountId = 1, Time = 3600, Value = 200 },
+                new() { UserId = 1, AccountId = 1, Time = 7200, Value = 100 },
+            };
+
+        _context.Users.Add(user);
+        _context.UserPortfolioSnapshots.AddRange(marketData);
+        await _context.SaveChangesAsync();
+
+
+        var query = new GetMarketDataByTimeframeQuery(user.Id, ETimeframe._24h);
+        _mockCacheService.Setup(x => x.GetOrCreateAsync(
+            It.IsAny<string>(),
+            It.IsAny<Func<CancellationToken, Task<IEnumerable<object>>>>(),
+            TimeSpan.FromMinutes(1),
+            It.IsAny<CancellationToken>()
+        )).ReturnsAsync((string key, Func<CancellationToken, Task<IEnumerable<object>>> factory, TimeSpan _, CancellationToken ct) =>
+            factory(ct).Result);
+
+        // Act
+        var result = await _handler.Handle(request, CancellationToken.None);
+
+        // Assert
+        var groupedData = result.Cast<MarketDataPointDto>().ToList();
+        groupedData.Should().HaveCount(2); // Grouped by hour
+        groupedData.Should().Contain(x => x.Time == (now - 7200) / 3600 * 3600 && x.Value == 100);
+        groupedData.Should().Contain(x => x.Time == (now - 3600) / 3600 * 3600 && x.Value == 200);
     }
 }

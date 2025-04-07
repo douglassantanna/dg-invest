@@ -1,19 +1,23 @@
 using api.Cache;
 using api.Cryptos.Models;
 using api.Data;
+using api.Users.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
 public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<object>>;
+public record MarketDataPointDto(long Time, decimal Value);
 public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
 {
     private readonly DataContext _context;
     private readonly ICacheService _cacheService;
-    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cacheService)
+    private readonly IUserRepository _userRepository;
+    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cacheService, IUserRepository userRepository)
     {
         _context = context;
         _cacheService = cacheService;
+        _userRepository = userRepository;
     }
 
     public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
@@ -25,11 +29,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
         async (ct) =>
         {
-            var user = await _context.Users
-                                     .AsNoTracking()
-                                     .Include(x => x.Accounts)
-                                     .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
-
+            var user = await _userRepository.GetByIdAsync(request.UserId);
             if (user == null)
                 return Enumerable.Empty<object>();
 
