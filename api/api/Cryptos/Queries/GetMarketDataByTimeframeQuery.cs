@@ -32,7 +32,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 return Enumerable.Empty<object>();
 
             var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
-            var marketData = await _userPortfolioSnapshotsRepository.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrame(
+            var marketData = await _userPortfolioSnapshotsRepository.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
                 request.UserId,
                 userAccount.Id,
                 startTime,

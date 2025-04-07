@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace api.Users.Repositories;
 public interface IUserPortfolioSnapshotsRepository
 {
-    Task<Response> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrame(
+    Task<Response> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
             int userId,
             int accountId,
             long startTime,
@@ -25,7 +25,7 @@ public class UserPortfolioSnapshots : IUserPortfolioSnapshotsRepository
         _dataContext = dataContext;
     }
 
-    public async Task<Response> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrame(
+    public async Task<Response> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
         int userId,
         int accountId,
         long startTime,
