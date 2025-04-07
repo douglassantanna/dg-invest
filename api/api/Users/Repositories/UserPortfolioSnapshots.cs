@@ -34,22 +34,24 @@ public class UserPortfolioSnapshots : IUserPortfolioSnapshotsRepository
     {
         try
         {
-            var marketData = await _dataContext.UserPortfolioSnapshots
+            var snapshots = await _dataContext.UserPortfolioSnapshots
                                     .AsNoTracking()
-                                    .Where(m => m.UserId == userId && m.Time >= startTime)
-                                    .Where(x => x.AccountId == accountId)
+                                    .Where(
+                                        m => m.UserId == userId
+                                        && m.Time >= startTime
+                                        && m.AccountId == accountId)
                                     .ToListAsync(cancellationToken);
 
-            if (marketData == null || !marketData.Any())
+            if (snapshots == null || !snapshots.Any())
             {
-                return new Response("No data found", false);
+                return new Response("No portfolio snapshots found for the specified criteria.", false);
             }
 
-            return new Response("", true, marketData);
+            return new Response("", true, snapshots);
         }
         catch (Exception ex)
         {
-            return new Response("Error", false, ex.Message);
+            return new Response("Failed to retrieve portfolio snapshots.", false, ex.Message);
         }
     }
 }
