@@ -32,7 +32,7 @@ public class GetMarketDataByTimeframeQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ReturnsGroupedData_WhenUserAndSnapshotsExist()
+    public async Task WhenUserAndSnapshotsExist_ShouldReturnGroupedData()
     {
         // Arrange
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
