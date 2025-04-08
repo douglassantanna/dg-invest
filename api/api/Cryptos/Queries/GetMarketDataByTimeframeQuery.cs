@@ -1,13 +1,14 @@
 using api.Cache;
 using api.Cryptos.Models;
 using api.Services.Contracts;
+using api.Shared;
 using api.Users.Repositories;
 using MediatR;
 
 namespace api.Cryptos.Queries;
-public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<MarketDataPointDto>>;
+public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<Result<IEnumerable<MarketDataPointDto>>>;
 public record MarketDataPointDto(long Time, decimal Value);
-public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<MarketDataPointDto>>
+public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, Result<IEnumerable<MarketDataPointDto>>>
 {
     private readonly ICacheService _cacheService;
     private readonly IUserRepository _userRepository;
@@ -25,7 +26,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         _timeframeCalculator = timeframeCalculator;
     }
 
-    public async Task<IEnumerable<MarketDataPointDto>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
+    public async Task<Result<IEnumerable<MarketDataPointDto>>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         long startTime = _timeframeCalculator.CalculateStartTime(request.Timeframe);
@@ -34,13 +35,13 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
         async (ct) =>
         {
-            var user = await _userRepository.GetByIdAsync(request.UserId);
-            if (user == null)
-                return [];
+            var userResult = await _userRepository.GetByIdAsync(request.UserId);
+            if (!userResult.IsSuccess)
+                return Result<IEnumerable<MarketDataPointDto>>.Failure($"User not found: {userResult.Error}");
 
-            var selectedAccount = user.Accounts.FirstOrDefault(x => x.IsSelected);
+            var selectedAccount = userResult?.Value?.Accounts.FirstOrDefault(x => x.IsSelected);
             if (selectedAccount == null)
-                return Enumerable.Empty<MarketDataPointDto>();
+                return Result<IEnumerable<MarketDataPointDto>>.Failure("No selected account found for user");
 
             var snapshotResult = await _userPortfolioSnapshotsRepository.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
                 request.UserId,
@@ -49,19 +50,19 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 cancellationToken
             );
             if (!snapshotResult.IsSuccess)
-                return [];
+                return Result<IEnumerable<MarketDataPointDto>>.Failure($"Failed to fetch snapshots: {snapshotResult.Error}");
 
-            var snapshots = (List<UserPortfolioSnapshotDto>)snapshotResult.Data!;
+            var snapshots = snapshotResult.Value!;
             var groupedData = GroupSnapshots(snapshots, request.Timeframe);
 
-            return groupedData;
+            return Result<IEnumerable<MarketDataPointDto>>.Success(groupedData);
         },
         absoluteExpiration,
         cancellationToken);
 
         return cachedResults;
     }
-    private List<MarketDataPointDto> GroupSnapshots(List<UserPortfolioSnapshotDto> snapshots, ETimeframe timeframe)
+    private List<MarketDataPointDto> GroupSnapshots(List<UserPortfolioSnapshot> snapshots, ETimeframe timeframe)
     {
         var interval = _timeframeCalculator.CalculateGroupingInterval(timeframe);
 

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace api.Users.Repositories;
 public interface IUserPortfolioSnapshotsRepository
 {
-    Task<Response> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+    Task<Result<List<UserPortfolioSnapshot>>> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
             int userId,
             int accountId,
             long startTime,
@@ -25,7 +25,7 @@ public class UserPortfolioSnapshots : IUserPortfolioSnapshotsRepository
         _dataContext = dataContext;
     }
 
-    public async Task<Response> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+    public async Task<Result<List<UserPortfolioSnapshot>>> GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
         int userId,
         int accountId,
         long startTime,
@@ -44,14 +44,18 @@ public class UserPortfolioSnapshots : IUserPortfolioSnapshotsRepository
 
             if (snapshots == null || !snapshots.Any())
             {
-                return new Response("No portfolio snapshots found for the specified criteria.", false);
+                return Result<List<UserPortfolioSnapshot>>.Failure(
+                    "No portfolio snapshots found for the specified criteria."
+                );
             }
 
-            return new Response("", true, snapshots);
+            return Result<List<UserPortfolioSnapshot>>.Success(snapshots);
         }
         catch (Exception ex)
         {
-            return new Response("Failed to retrieve portfolio snapshots.", false, ex.Message);
+            return Result<List<UserPortfolioSnapshot>>.Failure(
+                $"An error occurred while retrieving portfolio snapshots: {ex.Message}"
+            );
         }
     }
 }

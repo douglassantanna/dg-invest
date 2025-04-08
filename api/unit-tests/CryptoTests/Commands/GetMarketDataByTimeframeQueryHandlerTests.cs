@@ -2,60 +2,55 @@ using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.Queries;
 using api.Data;
-using api.Users.Models;
+using api.Services.Contracts;
 using api.Users.Repositories;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace unit_tests.CryptoTests.Commands;
-public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
+public class GetMarketDataByTimeframeQueryHandlerTests
 {
-    private readonly DataContext _context;
     private readonly Mock<ICacheService> _mockCacheService;
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<IUserPortfolioSnapshotsRepository> _mockUserPortfolioSnapshotsRepository;
     private readonly GetMarketDataByTimeframeQueryHandler _handler;
+    private readonly Mock<ITimeframeCalculator> _mockTimeframeCalculator;
 
     public GetMarketDataByTimeframeQueryHandlerTests()
     {
-        var options = new DbContextOptionsBuilder<DataContext>()
-            .UseSqlite("DataSource=:memory:")
-            .Options;
-
-        _context = new DataContext(options);
-        _context.Database.OpenConnection();
-        _context.Database.EnsureCreated();
-
+        _mockTimeframeCalculator = new Mock<ITimeframeCalculator>();
         _mockCacheService = new Mock<ICacheService>();
         _mockUserRepository = new Mock<IUserRepository>();
         _mockUserPortfolioSnapshotsRepository = new Mock<IUserPortfolioSnapshotsRepository>();
-        _handler = new GetMarketDataByTimeframeQueryHandler(_mockCacheService.Object, _mockUserRepository.Object, _mockUserPortfolioSnapshotsRepository.Object);
-    }
-
-    public void Dispose()
-    {
-        _context.Database.CloseConnection();
-        _context.Dispose();
+        _handler = new GetMarketDataByTimeframeQueryHandler(
+            _mockCacheService.Object,
+            _mockUserRepository.Object,
+            _mockUserPortfolioSnapshotsRepository.Object,
+            _mockTimeframeCalculator.Object);
     }
 
     [Fact]
-    public async Task Handle_UserDoesNotExist_ReturnsEmptyEnumerable()
+    public async Task Handle_UserDoesNotExist_ReturnsFailure()
     {
         // Arrange
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
-        _mockCacheService.Setup(x => x.GetOrCreateAsync(
+        _mockUserRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((User?)null);
+        _mockTimeframeCalculator.Setup(c => c.CalculateStartTime(ETimeframe._24h)).Returns(1000);
+
+        _mockCacheService.Setup(c => c.GetOrCreateAsync(
             It.IsAny<string>(),
-            It.IsAny<Func<CancellationToken, Task<IEnumerable<object>>>>(),
+            It.IsAny<Func<CancellationToken, Task<Result<List<MarketDataPointDto>>>>>(),
             It.IsAny<TimeSpan>(),
-            It.IsAny<CancellationToken>()
-        )).ReturnsAsync(Enumerable.Empty<object>());
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<List<MarketDataPointDto>>.Failure("User not found."));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result.Should().BeEmpty();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Be("User not found.");
+        result.Value.Should().BeNull();
     }
 
     [Fact]
@@ -63,17 +58,7 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
     {
         // Arrange
         var request = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
-        var user = new User("test name", "testEmail@test.com", "randonPassword", Role.Admin);
-        var marketData = new List<UserPortfolioSnapshot>
-            {
-                new UserPortfolioSnapshot { UserId = 1, AccountId = 1, Time = 3600, Value = 100 },
-                new UserPortfolioSnapshot { UserId = 1, AccountId = 1, Time = 7200, Value = 200 },
-                new UserPortfolioSnapshot { UserId = 1, AccountId = 1, Time = 10800, Value = 300 }
-            };
 
-        _context.Users.Add(user);
-        _context.UserPortfolioSnapshots.AddRange(marketData);
-        await _context.SaveChangesAsync();
         _mockCacheService.Setup(x => x.GetOrCreateAsync(
             It.IsAny<string>(),
             It.IsAny<Func<CancellationToken, Task<IEnumerable<object>>>>(),
@@ -94,19 +79,6 @@ public class GetMarketDataByTimeframeQueryHandlerTests : IDisposable
     {
         // Arrange
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var request = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
-        var user = new User("test name", "testEmail@test.com", "randonPassword", Role.Admin);
-        var marketData = new List<UserPortfolioSnapshot>
-            {
-                new() { UserId = 1, AccountId = 1, Time = 3600, Value = 200 },
-                new() { UserId = 1, AccountId = 1, Time = 7200, Value = 100 },
-            };
-
-        _context.Users.Add(user);
-        _context.UserPortfolioSnapshots.AddRange(marketData);
-        await _context.SaveChangesAsync();
-
-
         var query = new GetMarketDataByTimeframeQuery(user.Id, ETimeframe._24h);
         _mockCacheService.Setup(x => x.GetOrCreateAsync(
             It.IsAny<string>(),
