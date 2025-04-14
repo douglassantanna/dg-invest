@@ -4,6 +4,7 @@ using api.Cryptos.Queries;
 using api.Data;
 using api.Services.Contracts;
 using api.Shared;
+using api.unit_tests.Helpers;
 using api.Users.Models;
 using api.Users.Repositories;
 using FluentAssertions;
@@ -79,48 +80,52 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         Assert.Equal(200m, data[1].Value);
     }
 
-    // [Fact]
-    // public async Task Handle_ValidUserWithNoData_ReturnsEmptyGroupedData()
-    // {
-    //     // Arrange
-    //     var request = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
+    [Fact]
+    public async Task When24hRequestedAndSnapshotsExist_ShouldReturn24HourlyDataPoints()
+    {
+        // Arrange
+        var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
+        var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
+        var snapshots = MarketDataHelper.GenerateDailySnapshots();
+        Assert.NotNull(snapshots);
+        Assert.NotEmpty(snapshots);
+        var startTime = snapshots.Last().Time - 24 * 3600; // Last 24 hours from latest snapshot
 
-    //     _mockCacheService.Setup(x => x.GetOrCreateAsync(
-    //         It.IsAny<string>(),
-    //         It.IsAny<Func<CancellationToken, Task<IEnumerable<object>>>>(),
-    //         TimeSpan.FromMinutes(1),
-    //         It.IsAny<CancellationToken>()
-    //     )).ReturnsAsync((string key, Func<CancellationToken, Task<IEnumerable<object>>> factory, TimeSpan _, CancellationToken ct) =>
-    //         factory(ct).Result);
+        // Generate expected data for 24 hours
+        var expectedData = new List<MarketDataPointDto>();
+        for (int i = 0; i < 24; i++)
+        {
+            var time = startTime + i * 3600;
+            var snapshotsInHour = snapshots.Where(s => s.Time >= time && s.Time < time + 3600).ToList();
+            var value = snapshotsInHour.Any() ? snapshotsInHour.Sum(s => s.Value) : 0m;
+            expectedData.Add(new MarketDataPointDto(time, value));
+        }
 
-    //     // Act
-    //     var result = await _handler.Handle(request, CancellationToken.None);
+        _mockTimeframeCalculator.Setup(t => t.CalculateStartTime(ETimeframe._24h)).Returns(startTime);
+        _mockTimeframeCalculator.Setup(t => t.CalculateGroupingInterval(ETimeframe._24h)).Returns(3600);
+        _mockUserRepository.Setup(r => r.GetByIdAsync(1, null)).ReturnsAsync(Result<User>.Success(user));
+        _mockUserPortfolioSnapshotsRepository.Setup(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+            1, 10, startTime, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<List<UserPortfolioSnapshot>>.Success(snapshots));
+        _mockCacheService.Setup(c => c.GetOrCreateAsync(
+            It.IsAny<string>(),
+            It.IsAny<Func<CancellationToken, Task<Result<IEnumerable<MarketDataPointDto>>>>>(),
+            TimeSpan.FromMinutes(1),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<IEnumerable<MarketDataPointDto>>.Success(expectedData));
 
-    //     // Assert
-    //     result.Should().BeEmpty();
-    // }
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
 
-    // [Fact]
-    // public async Task Handle_ValidUserWithData_ReturnsGroupedData()
-    // {
-    //     // Arrange
-    //     var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-    //     var query = new GetMarketDataByTimeframeQuery(user.Id, ETimeframe._24h);
-    //     _mockCacheService.Setup(x => x.GetOrCreateAsync(
-    //         It.IsAny<string>(),
-    //         It.IsAny<Func<CancellationToken, Task<IEnumerable<object>>>>(),
-    //         TimeSpan.FromMinutes(1),
-    //         It.IsAny<CancellationToken>()
-    //     )).ReturnsAsync((string key, Func<CancellationToken, Task<IEnumerable<object>>> factory, TimeSpan _, CancellationToken ct) =>
-    //         factory(ct).Result);
-
-    //     // Act
-    //     var result = await _handler.Handle(request, CancellationToken.None);
-
-    //     // Assert
-    //     var groupedData = result.Cast<MarketDataPointDto>().ToList();
-    //     groupedData.Should().HaveCount(2); // Grouped by hour
-    //     groupedData.Should().Contain(x => x.Time == (now - 7200) / 3600 * 3600 && x.Value == 100);
-    //     groupedData.Should().Contain(x => x.Time == (now - 3600) / 3600 * 3600 && x.Value == 200);
-    // }
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        var data = result.Value.ToList();
+        Assert.Equal(24, data.Count);
+        for (int i = 0; i < 24; i++)
+        {
+            Assert.Equal(expectedData[i].Time, data[i].Time);
+            Assert.Equal(expectedData[i].Value, data[i].Value);
+        }
+    }
 }
