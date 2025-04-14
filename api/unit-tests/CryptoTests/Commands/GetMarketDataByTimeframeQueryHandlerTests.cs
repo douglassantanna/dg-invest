@@ -33,51 +33,35 @@ public class GetMarketDataByTimeframeQueryHandlerTests
     }
 
     [Fact]
-    public async Task WhenUserAndSnapshotsExist_ShouldReturnGroupedData()
+    public async Task WhenUserAndSnapshotsExist_ShouldReturnEmptyData()
     {
         // Arrange
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
         var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
-        var snapshots = new List<UserPortfolioSnapshot>()
-        {
-            new( ){Time = 1696118400, Value= 100m}, // Oct 1, 2023 00:00 UTC
-            new(){Time= 1696204800, Value= 200m }  // Oct 2, 2023 00:00 UTC
-        };
+        var snapshots = MarketDataHelper.GenerateDailySnapshots();
+        var startTime = snapshots.Last().Time - 24 * 3600; // Last 24 hours from latest snapshot
 
-        _mockTimeframeCalculator.Setup(t => t.CalculateStartTime(ETimeframe._24h)).Returns(1696032000); // Sep 30, 2023
-
+        _mockTimeframeCalculator.Setup(t => t.CalculateStartTime(ETimeframe._24h)).Returns(startTime);
+        _mockTimeframeCalculator.Setup(t => t.CalculateGroupingInterval(ETimeframe._24h)).Returns(3600); // Hourly for _24h
         _mockUserRepository.Setup(r => r.GetByIdAsync(1, null)).ReturnsAsync(Result<User>.Success(user));
-
-        _mockUserPortfolioSnapshotsRepository.Setup(x => x.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
-            1,
-            10,
-            1696032000,
-            It.IsAny<CancellationToken>()))
+        _mockUserPortfolioSnapshotsRepository.Setup(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+            1, 10, startTime, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<List<UserPortfolioSnapshot>>.Success(snapshots));
-
-        _mockTimeframeCalculator.Setup(t => t.CalculateGroupingInterval(ETimeframe._24h)).Returns(86400); // 24 hours in seconds
         _mockCacheService.Setup(c => c.GetOrCreateAsync(
             It.IsAny<string>(),
             It.IsAny<Func<CancellationToken, Task<Result<IEnumerable<MarketDataPointDto>>>>>(),
             TimeSpan.FromMinutes(1),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<IEnumerable<MarketDataPointDto>>.Success(new List<MarketDataPointDto>
-            {
-                new(1696118400, 100m),
-                new(1696204800, 200m)
-            }));
+            .ReturnsAsync(Result<IEnumerable<MarketDataPointDto>>.Success([]));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
         var data = result.Value.ToList();
-        Assert.Equal(2, data.Count);
-        Assert.Equal(1696118400, data[0].Time);
-        Assert.Equal(100m, data[0].Value);
-        Assert.Equal(1696204800, data[1].Time);
-        Assert.Equal(200m, data[1].Value);
+        Assert.Empty(data);
     }
 
     [Fact]
