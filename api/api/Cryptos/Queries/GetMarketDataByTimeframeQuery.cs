@@ -4,6 +4,7 @@ using api.Services.Contracts;
 using api.Shared;
 using api.Users.Repositories;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
 public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<Result<IEnumerable<MarketDataPointDto>>>;
@@ -45,7 +46,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
         async (ct) =>
         {
-            var userResult = await _userRepository.GetByIdAsync(request.UserId);
+            var userResult = await _userRepository.GetByIdAsync(request.UserId, x => x.Include(u => u.Accounts));
             if (!userResult.IsSuccess)
                 return Result<IEnumerable<MarketDataPointDto>>.Failure($"User not found: {userResult.Error}");
 
