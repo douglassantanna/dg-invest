@@ -74,7 +74,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                               {
                                 var date = group.Key;
                                 var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
-                                return new MarketDataPointDto(group.Sum(y => y.Value), timestamp);
+                                return new MarketDataPointDto(timestamp,group.Sum(y => y.Value));
                               })
                               .OrderBy(x => x.Time)
                               .ToList();
@@ -82,7 +82,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
 
             groupedData = snapshots
                           .Where(x => x.Time >= startTime && x.Time <= now)
-                          .Select(x => new MarketDataPointDto(x.Value, x.Time))
+                          .Select(x => new MarketDataPointDto(x.Time, x.Value))
                           .ToList();
 
             // var groupedData = GroupSnapshots(snapshots, request.Timeframe);
