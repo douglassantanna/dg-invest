@@ -68,15 +68,15 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             if(request.Timeframe == ETimeframe._1y)
             {
                 groupedData = snapshots
-                              .Where(x => x.UnixTimestamp >= startTime && x.UnixTimestamp <= now)
-                              .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.UnixTimestamp).UtcDateTime.Date)
+                              .Where(x => x.Time >= startTime && x.Time <= now)
+                              .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime.Date)
                               .Select(group =>
                               {
                                 var date = group.Key;
                                 var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
                                 return new MarketDataPointDto(group.Sum(y => y.TotalValue), timestamp);
                               })
-                              .OrderBy(x => x.UnixTimestamp)
+                              .OrderBy(x => x.Time)
                               .ToList();
             }
 
