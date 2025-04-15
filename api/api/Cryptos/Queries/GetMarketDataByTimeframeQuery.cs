@@ -29,7 +29,16 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
     public async Task<Result<IEnumerable<MarketDataPointDto>>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
-        long startTime = _timeframeCalculator.CalculateStartTime(request.Timeframe);
+        // long startTime = _timeframeCalculator.CalculateStartTime(request.Timeframe);
+        var startTime = timeframe switch
+        {
+            ETimeframe._24h => now - 86400,
+            ETimeframe._7d => now - 604800,
+            ETimeframe._1m => now - 2592000,
+            ETimeframe._1y => now - 31104000,
+            _ => throw new ArgumentOutOfRangeException(nameof(timeframe), timeframe, null)
+        };
+
         var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request, startTime);
 
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
