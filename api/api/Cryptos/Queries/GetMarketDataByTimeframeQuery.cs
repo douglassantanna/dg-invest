@@ -37,7 +37,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             ETimeframe._7d => now - 604800,
             ETimeframe._1m => now - 2592000,
             ETimeframe._1y => now - 31104000,
-            _ => throw new ArgumentOutOfRangeException(nameof(timeframe), timeframe, null)
+            _ => throw new ArgumentOutOfRangeException("time frame not supported")
         };
 
         var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request, startTime);
