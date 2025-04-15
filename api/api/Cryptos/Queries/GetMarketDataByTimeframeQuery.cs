@@ -31,7 +31,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         // long startTime = _timeframeCalculator.CalculateStartTime(request.Timeframe);
-        var startTime = timeframe switch
+        var startTime = request.Timeframe switch
         {
             ETimeframe._24h => now - 86400,
             ETimeframe._7d => now - 604800,
