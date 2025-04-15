@@ -96,7 +96,7 @@ export class LineChartComponent implements AfterViewInit {
       series: [{
         type: 'line',
         smooth: true,
-        data: selectedData.map(d => [d.time * 1000, d.value]),
+        data: selectedData.map(d => [d.time * 1000, d.value.toFixed(2)]),
         itemStyle: { color: '#4F46E5' },
         areaStyle: { opacity: 0.2 }
       }],
@@ -126,8 +126,6 @@ export class LineChartComponent implements AfterViewInit {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 }
-
-export type TimeFilter = '_24h' | '_7d' | '_1m';
 
 export interface MarketData {
   [key: number]: TimeValue[];

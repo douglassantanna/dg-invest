@@ -23,20 +23,20 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
         _logger.LogInformation("CreateAccountCommandHandler for UserId: {0}", request.UserId);
         try
         {
-            var user = await _userRepository.GetByIdAsync(request.UserId, x => x.Include(x => x.Accounts));
-            if (user == null)
+            var userResult = await _userRepository.GetByIdAsync(request.UserId, x => x.Include(x => x.Accounts));
+            if (!userResult.IsSuccess)
             {
                 _logger.LogError("CreateAccountCommandHandler. User not found for UserId: {0}", request.UserId);
                 return new Response("User not found", false, 404);
             }
-            var createAccountResult = user.AddAccount(request.SubaccountTag);
+            var createAccountResult = userResult.Value.AddAccount(request.SubaccountTag);
             if (!createAccountResult.IsSuccess)
             {
                 _logger.LogError("CreateAccountCommandHandler. Error creating account for UserId: {0}; Error: {1}", request.UserId, createAccountResult.Message);
                 return new Response(createAccountResult.Message, false, 409);
             }
 
-            await _userRepository.UpdateAsync(user);
+            await _userRepository.UpdateAsync(userResult.Value);
             var cachedKey = $"{CacheKeyConstants.UserAccounts}{request.UserId}";
             _cacheService.Remove(cachedKey);
             return new Response("", true);

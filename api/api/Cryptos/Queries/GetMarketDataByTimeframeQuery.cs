@@ -1,87 +1,108 @@
 using api.Cache;
 using api.Cryptos.Models;
-using api.Data;
+using api.Services.Contracts;
+using api.Shared;
+using api.Users.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
-public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<IEnumerable<object>>;
-public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, IEnumerable<object>>
+public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<Result<IEnumerable<MarketDataPointDto>>>;
+public record MarketDataPointDto(long Time, decimal Value);
+public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, Result<IEnumerable<MarketDataPointDto>>>
 {
-    private readonly DataContext _context;
     private readonly ICacheService _cacheService;
-    public GetMarketDataByTimeframeQueryHandler(DataContext context, ICacheService cacheService)
+    private readonly IUserRepository _userRepository;
+    private readonly IUserPortfolioSnapshotsRepository _userPortfolioSnapshotsRepository;
+    private readonly ITimeframeCalculator _timeframeCalculator;
+    public GetMarketDataByTimeframeQueryHandler(
+        ICacheService cacheService,
+        IUserRepository userRepository,
+        IUserPortfolioSnapshotsRepository userPortfolioSnapshotsRepository,
+        ITimeframeCalculator timeframeCalculator)
     {
-        _context = context;
         _cacheService = cacheService;
+        _userRepository = userRepository;
+        _userPortfolioSnapshotsRepository = userPortfolioSnapshotsRepository;
+        _timeframeCalculator = timeframeCalculator;
     }
 
-    public async Task<IEnumerable<object>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
+    public async Task<Result<IEnumerable<MarketDataPointDto>>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
-        long startTime = CalculateStartTime(request.Timeframe);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        // long startTime = _timeframeCalculator.CalculateStartTime(request.Timeframe);
+        var startTime = timeframe switch
+        {
+            ETimeframe._24h => now - 86400,
+            ETimeframe._7d => now - 604800,
+            ETimeframe._1m => now - 2592000,
+            ETimeframe._1y => now - 31104000,
+            _ => throw new ArgumentOutOfRangeException(nameof(timeframe), timeframe, null)
+        };
+
         var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request, startTime);
 
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
         async (ct) =>
         {
-            var user = await _context.Users
-                                     .AsNoTracking()
-                                     .Include(x => x.Accounts)
-                                     .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+            var userResult = await _userRepository.GetByIdAsync(request.UserId);
+            if (!userResult.IsSuccess)
+                return Result<IEnumerable<MarketDataPointDto>>.Failure($"User not found: {userResult.Error}");
 
-            if (user == null)
-                return Enumerable.Empty<object>();
+            var selectedAccount = userResult?.Value?.Accounts.FirstOrDefault(x => x.IsSelected);
+            if (selectedAccount == null)
+                return Result<IEnumerable<MarketDataPointDto>>.Failure("No selected account found for user");
 
-            var userAccount = user.Accounts.FirstOrDefault(x => x.IsSelected)!;
-            var marketData = await _context.UserPortfolioSnapshots
-                                           .AsNoTracking()
-                                           .Where(m => m.UserId == request.UserId && m.Time >= startTime)
-                                           .Where(x => x.AccountId == userAccount.Id)
-                                           .ToListAsync(cancellationToken);
+            var snapshotResult = await _userPortfolioSnapshotsRepository.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+                request.UserId,
+                selectedAccount.Id,
+                startTime,
+                cancellationToken
+            );
+            if (!snapshotResult.IsSuccess)
+                return Result<IEnumerable<MarketDataPointDto>>.Failure($"Failed to fetch snapshots: {snapshotResult.Error}");
 
-            var interval = CalculateGroupingInterval(request.Timeframe);
-            var groupedData = marketData
-                            .GroupBy(m => (m.Time / interval) * interval)
-                            .Select(group => new
-                            {
-                                time = group.Key,
-                                value = group.Sum(m => m.Value)
-                            })
-                            .ToList();
+            var snapshots = snapshotResult.Value!;
+            IEnumerable<MarketDataPointDto> groupedData;
 
-            return groupedData;
+            if(request.Timeframe == ETimeframe._1y)
+            {
+                groupedData = snapshots
+                              .Where(x => x.UnixTimestamp >= startTime && x.UnixTimestamp <= now)
+                              .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.UnixTimestamp).UtcDateTime.Date)
+                              .Select(group =>
+                              {
+                                var date = group.Key;
+                                var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
+                                return new MarketDataPointDto(group.Sum(y => y.TotalValue), timestamp);
+                              })
+                              .OrderBy(x => x.UnixTimestamp)
+                              .ToList();
+            }
+
+            groupedData = snapshots
+                          .Where(x => x.UnixTimestamp >= startTime && x.UnixTimestamp <= now)
+                          .Select(x => new MarketDataPointDto(x.TotalValue, x.UnixTimestamp))
+                          .ToList();
+
+            // var groupedData = GroupSnapshots(snapshots, request.Timeframe);
+
+            return Result<IEnumerable<MarketDataPointDto>>.Success(groupedData);
         },
         absoluteExpiration,
         cancellationToken);
 
         return cachedResults;
     }
-
-    private static long CalculateStartTime(ETimeframe timeframe)
+    private List<MarketDataPointDto> GroupSnapshots(List<UserPortfolioSnapshot> snapshots, ETimeframe timeframe)
     {
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        return timeframe switch
-        {
-            ETimeframe._24h => now - (24 * 60 * 60),
-            ETimeframe._7d => now - (7 * 24 * 60 * 60),
-            ETimeframe._1m => now - (30 * 24 * 60 * 60),
-            ETimeframe._1y => now - (365 * 24 * 60 * 60),
-            ETimeframe.All => 0,
-            _ => throw new ArgumentException("Invalid timeframe")
-        };
-    }
+        var interval = _timeframeCalculator.CalculateGroupingInterval(timeframe);
 
-    private static long CalculateGroupingInterval(ETimeframe timeframe)
-    {
-        return timeframe switch
-        {
-            ETimeframe._24h => 3600, // Group by hour
-            ETimeframe._7d => 86400, // Group by day
-            ETimeframe._1m => 86400, // Group by day
-            ETimeframe._1y => 2592000, // Group by month (approx 30 days)
-            ETimeframe.All => 31536000, // Group by year (approx 365 days)
-            _ => throw new ArgumentException("Invalid timeframe")
-        };
+        return snapshots
+            .GroupBy(s => (s.Time / 3600) * 3600) // Group by hour initially
+            .Select(g => new { Time = g.Key, Value = g.Sum(s => s.Value) })
+            .GroupBy(h => (h.Time / interval) * interval) // Group by timeframe interval
+            .Select(g => new MarketDataPointDto(g.Key, g.Sum(h => h.Value)))
+            .ToList();
     }
 }
