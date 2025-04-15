@@ -63,18 +63,18 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 return Result<IEnumerable<MarketDataPointDto>>.Failure($"Failed to fetch snapshots: {snapshotResult.Error}");
 
             var snapshots = snapshotResult.Value!;
-            IEnumerable<MarketDataPointDto> groupedData;
+            List<MarketDataPointDto> groupedData;
 
-            if(request.Timeframe == ETimeframe._1y)
+            if (request.Timeframe == ETimeframe._1y)
             {
                 groupedData = snapshots
                               .Where(x => x.Time >= startTime && x.Time <= now)
                               .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime.Date)
                               .Select(group =>
                               {
-                                var date = group.Key;
-                                var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
-                                return new MarketDataPointDto(timestamp,group.Sum(y => y.Value));
+                                  var date = group.Key;
+                                  var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
+                                  return new MarketDataPointDto(timestamp, group.Sum(y => y.Value));
                               })
                               .OrderBy(x => x.Time)
                               .ToList();
@@ -94,15 +94,15 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
 
         return cachedResults;
     }
-    private List<MarketDataPointDto> GroupSnapshots(List<UserPortfolioSnapshot> snapshots, ETimeframe timeframe)
-    {
-        var interval = _timeframeCalculator.CalculateGroupingInterval(timeframe);
+    // private List<MarketDataPointDto> GroupSnapshots(List<UserPortfolioSnapshot> snapshots, ETimeframe timeframe)
+    // {
+    //     var interval = _timeframeCalculator.CalculateGroupingInterval(timeframe);
 
-        return snapshots
-            .GroupBy(s => (s.Time / 3600) * 3600) // Group by hour initially
-            .Select(g => new { Time = g.Key, Value = g.Sum(s => s.Value) })
-            .GroupBy(h => (h.Time / interval) * interval) // Group by timeframe interval
-            .Select(g => new MarketDataPointDto(g.Key, g.Sum(h => h.Value)))
-            .ToList();
-    }
+    //     return snapshots
+    //         .GroupBy(s => (s.Time / 3600) * 3600) // Group by hour initially
+    //         .Select(g => new { Time = g.Key, Value = g.Sum(s => s.Value) })
+    //         .GroupBy(h => (h.Time / interval) * interval) // Group by timeframe interval
+    //         .Select(g => new MarketDataPointDto(g.Key, g.Sum(h => h.Value)))
+    //         .ToList();
+    // }
 }

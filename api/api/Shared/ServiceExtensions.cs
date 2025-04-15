@@ -68,8 +68,10 @@ public static class ServiceExtensions
 
         services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserPortfolioSnapshotsRepository, UserPortfolioSnapshots>();
         services.AddScoped<ICryptoRepository, CryptoRepository>();
         services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
+        services.AddScoped<ITimeframeCalculator, TimeframeCalculator>();
 
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransactionStrategy, BuyTransaction>();
