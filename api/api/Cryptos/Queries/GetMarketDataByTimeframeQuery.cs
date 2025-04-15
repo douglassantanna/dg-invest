@@ -31,13 +31,13 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         // long startTime = _timeframeCalculator.CalculateStartTime(request.Timeframe);
-        var startTime = timeframe switch
+        var startTime = request.Timeframe switch
         {
             ETimeframe._24h => now - 86400,
             ETimeframe._7d => now - 604800,
             ETimeframe._1m => now - 2592000,
             ETimeframe._1y => now - 31104000,
-            _ => throw new ArgumentOutOfRangeException(nameof(timeframe), timeframe, null)
+            _ => throw new ArgumentOutOfRangeException("time frame not supported")
         };
 
         var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request, startTime);
@@ -68,21 +68,21 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             if(request.Timeframe == ETimeframe._1y)
             {
                 groupedData = snapshots
-                              .Where(x => x.UnixTimestamp >= startTime && x.UnixTimestamp <= now)
-                              .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.UnixTimestamp).UtcDateTime.Date)
+                              .Where(x => x.Time >= startTime && x.Time <= now)
+                              .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime.Date)
                               .Select(group =>
                               {
                                 var date = group.Key;
                                 var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
-                                return new MarketDataPointDto(group.Sum(y => y.TotalValue), timestamp);
+                                return new MarketDataPointDto(timestamp,group.Sum(y => y.Value));
                               })
-                              .OrderBy(x => x.UnixTimestamp)
+                              .OrderBy(x => x.Time)
                               .ToList();
             }
 
             groupedData = snapshots
-                          .Where(x => x.UnixTimestamp >= startTime && x.UnixTimestamp <= now)
-                          .Select(x => new MarketDataPointDto(x.TotalValue, x.UnixTimestamp))
+                          .Where(x => x.Time >= startTime && x.Time <= now)
+                          .Select(x => new MarketDataPointDto(x.Time, x.Value))
                           .ToList();
 
             // var groupedData = GroupSnapshots(snapshots, request.Timeframe);
