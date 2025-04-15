@@ -29,6 +29,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
     public async Task<Result<IEnumerable<MarketDataPointDto>>> Handle(GetMarketDataByTimeframeQuery request, CancellationToken cancellationToken)
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         // long startTime = _timeframeCalculator.CalculateStartTime(request.Timeframe);
         var startTime = timeframe switch
         {
@@ -62,7 +63,29 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 return Result<IEnumerable<MarketDataPointDto>>.Failure($"Failed to fetch snapshots: {snapshotResult.Error}");
 
             var snapshots = snapshotResult.Value!;
-            var groupedData = GroupSnapshots(snapshots, request.Timeframe);
+            IEnumerable<MarketDataPointDto> groupedData;
+
+            if(request.Timeframe == ETimeframe._1y)
+            {
+                groupedData = snapshots
+                              .Where(x => x.UnixTimestamp >= startTime && x.UnixTimestamp <= now)
+                              .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.UnixTimestamp).UtcDateTime.Date)
+                              .Select(group =>
+                              {
+                                var date = group.Key;
+                                var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
+                                return new MarketDataPointDto(group.Sum(y => y.TotalValue), timestamp);
+                              })
+                              .OrderBy(x => x.UnixTimestamp)
+                              .ToList();
+            }
+
+            groupedData = snapshots
+                          .Where(x => x.UnixTimestamp >= startTime && x.UnixTimestamp <= now)
+                          .Select(x => new MarketDataPointDto(x.TotalValue, x.UnixTimestamp))
+                          .ToList();
+
+            // var groupedData = GroupSnapshots(snapshots, request.Timeframe);
 
             return Result<IEnumerable<MarketDataPointDto>>.Success(groupedData);
         },
