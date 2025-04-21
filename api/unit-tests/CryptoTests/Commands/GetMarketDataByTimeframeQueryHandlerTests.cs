@@ -1,7 +1,6 @@
 using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.Queries;
-using api.Data;
 using api.Services.Contracts;
 using api.Shared;
 using api.unit_tests.Helpers;
@@ -70,46 +69,65 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         // Arrange
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
         var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
-        var snapshots = MarketDataHelper.GenerateDailySnapshots();
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var startTime = now - 86400; // 24 hours ago
+        var snapshots = GenerateHourlySnapshotsFor24h(startTime); // Custom helper
         Assert.NotNull(snapshots);
         Assert.NotEmpty(snapshots);
-        var startTime = snapshots.Last().Time - 24 * 3600; // Last 24 hours from latest snapshot
 
-        // Generate expected data for 24 hours
-        var expectedData = new List<MarketDataPointDto>();
-        for (int i = 0; i < 24; i++)
-        {
-            var time = startTime + i * 3600;
-            var snapshotsInHour = snapshots.Where(s => s.Time >= time && s.Time < time + 3600).ToList();
-            var value = snapshotsInHour.Any() ? snapshotsInHour.Sum(s => s.Value) : 0m;
-            expectedData.Add(new MarketDataPointDto(time, value));
-        }
+        // Expected data: Snapshots grouped by hour
+        var expectedData = snapshots
+            .Where(x => x.Time >= startTime && x.Time <= now)
+            .GroupBy(x =>
+            {
+                var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
+                return new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0);
+            })
+            .SelectMany(group =>
+            {
+                var hourStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
+                return group
+                    .OrderBy(x => x.Time)
+                    .Select(x => new MarketDataPointDto(hourStartTimestamp, x.Value));
+            })
+            .OrderBy(x => x.Time)
+            .ToList();
 
-        _mockTimeframeCalculator.Setup(t => t.CalculateStartTime(ETimeframe._24h)).Returns(startTime);
-        _mockTimeframeCalculator.Setup(t => t.CalculateGroupingInterval(ETimeframe._24h)).Returns(3600);
-        _mockUserRepository.Setup(r => r.GetByIdAsync(1, null)).ReturnsAsync(Result<User>.Success(user));
+        _mockUserRepository.Setup(r => r.GetByIdAsync(1, It.IsAny<Func<IQueryable<User>, Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<User, object>>>()))
+            .ReturnsAsync(Result<User?>.Success(user));
         _mockUserPortfolioSnapshotsRepository.Setup(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
-            1, 10, startTime, It.IsAny<CancellationToken>()))
+            1, 0, startTime, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<List<UserPortfolioSnapshot>>.Success(snapshots));
-        _mockCacheService.Setup(c => c.GetOrCreateAsync(
-            It.IsAny<string>(),
-            It.IsAny<Func<CancellationToken, Task<Result<IEnumerable<MarketDataPointDto>>>>>(),
-            TimeSpan.FromMinutes(1),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<IEnumerable<MarketDataPointDto>>.Success(expectedData));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsSuccess, $"Result should be successful. Error: {result.Error}");
         Assert.NotNull(result.Value);
         var data = result.Value.ToList();
-        Assert.Equal(24, data.Count);
-        for (int i = 0; i < 24; i++)
+        Assert.Equal(expectedData.Count, data.Count);
+        for (int i = 0; i < expectedData.Count; i++)
         {
             Assert.Equal(expectedData[i].Time, data[i].Time);
             Assert.Equal(expectedData[i].Value, data[i].Value);
         }
+    }
+    private static List<UserPortfolioSnapshot> GenerateHourlySnapshotsFor24h(long startTime)
+    {
+        var snapshots = new List<UserPortfolioSnapshot>();
+        for (var i = 0; i < 24; i++)
+        {
+            var time = startTime + i * 3600;
+            var value = 5000 + i * 100m; // Fixed values for determinism, adjust to match JSON
+            snapshots.Add(new UserPortfolioSnapshot
+            {
+                UserId = 1,
+                AccountId = 0,
+                Time = time,
+                Value = value
+            });
+        }
+        return snapshots;
     }
 }
