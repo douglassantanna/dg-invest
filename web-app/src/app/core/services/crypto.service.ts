@@ -94,7 +94,10 @@ export class CryptoService {
       }));
   }
 
-
+  getMarketDataByTimeframe(timeFrame: ETimeframe): Observable<any> {
+    const params = { timeframe: timeFrame }
+    return this.http.get<any>(`${url}/get-marketData-by-timeframe`, { params })
+  }
 
   private convertTransactionCommandToDto(command: AddTransactionCommand): CryptoTransactionHistory {
     const transaction = {
@@ -115,4 +118,11 @@ export class CryptoService {
   get cryptoAssetData$(): Observable<CryptoAssetData[]> {
     return this._cryptoAssetData.asObservable();
   }
+}
+export enum ETimeframe {
+  _24h = 1,
+  _7d = 2,
+  _1m = 3,
+  _1y = 4,
+  All = 5
 }

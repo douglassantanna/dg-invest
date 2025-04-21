@@ -19,6 +19,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using api.Cache;
+using api.Services;
+using api.Services.Contracts;
 
 namespace api.Shared;
 public static class ServiceExtensions
@@ -57,18 +59,19 @@ public static class ServiceExtensions
         services.Configure<RateLimiterSettings>(config.GetSection(nameof(RateLimiterSettings)));
         return services;
     }
-    public static IServiceCollection ConfigureServices(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection ConfigureServices(this IServiceCollection services)
     {
         services.AddScoped<IPasswordHelper, PasswordHelper>();
         services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IQueueService, QueueService>();
         services.AddSingleton<ITokenService, TokenService>();
-        services.AddScoped<ISeedDataService, SeedDataService>();
 
         services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserPortfolioSnapshotsRepository, UserPortfolioSnapshots>();
         services.AddScoped<ICryptoRepository, CryptoRepository>();
         services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
+        services.AddScoped<ITimeframeCalculator, TimeframeCalculator>();
 
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransactionStrategy, BuyTransaction>();
@@ -80,6 +83,28 @@ public static class ServiceExtensions
         services.AddScoped<ICacheService, MemoryCacheService>();
         return services;
     }
+
+    public static IServiceCollection ConfigureFunctionServices(this IServiceCollection services, IConfiguration config)
+    {
+        services.AddTransient<IMarketDataService, MarketDataService>();
+        services.AddTransient<ICoinMarketCapService, CoinMarketCapService>();
+
+
+        var connectionString = config.GetValue<string>("DefaultConnection");
+        if (string.IsNullOrEmpty(connectionString))
+            throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+
+        services.AddDbContext<DataContext>(options =>
+        {
+            options.UseSqlServer(connectionString, x => x.EnableRetryOnFailure());
+        });
+
+        var coinMarketCapSettings = config.GetSection(nameof(CoinMarketCapSettings))
+            ?? throw new InvalidOperationException("coinMarketCapSettings are missing.");
+        services.Configure<CoinMarketCapSettings>(coinMarketCapSettings);
+        return services;
+    }
+
     public static IServiceCollection ConfigureDatabase(this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<DataContext>(options =>
@@ -129,12 +154,6 @@ public static class ServiceExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
         return services;
-    }
-    public static async Task SeedAsync(this IServiceProvider services)
-    {
-        using var scope = services.CreateScope();
-        var seedDataService = scope.ServiceProvider.GetRequiredService<ISeedDataService>();
-        await seedDataService.SeedDataAsync();
     }
     public static IServiceCollection ConfiguraMemoryCache(this IServiceCollection services)
     {

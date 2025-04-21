@@ -14,4 +14,5 @@ export interface UserCryptoAssetDto {
   accountBalance: number;
   accountTag: string;
   cryptoAssetDto: ViewCryptoInformation[];
+  totalDeposited: number;
 }

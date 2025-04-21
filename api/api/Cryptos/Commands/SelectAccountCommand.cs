@@ -69,13 +69,21 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
 
     private void InvalidateCache(SelectAccountCommand request)
     {
-        var cachedUserAccountsKey = $"{CacheKeyConstants.UserAccounts}{request.UserId}";
-        var cachedAccountDetailsKey = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
-        var cachedCryptoAssetsKey = CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(request.UserId.ToString());
-        _cacheService.Remove(cachedUserAccountsKey);
-        _cacheService.Remove(cachedAccountDetailsKey);
-        _cacheService.Remove(cachedCryptoAssetsKey);
+        var keysToRemove = new List<string>
+        {
+            $"{CacheKeyConstants.UserAccounts}{request.UserId}",
+            $"{CacheKeyConstants.UserAccountDetails}{request.UserId}",
+            CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(request.UserId.ToString())
+        };
+
+        keysToRemove.AddRange(CacheKeyConstants.GetAllUserMarketDataCacheKeys(request.UserId));
+
+        foreach (var key in keysToRemove.Where(k => !string.IsNullOrEmpty(k)))
+        {
+            _cacheService.Remove(key);
+        }
     }
+
 
     private async Task<ValidationResult> ValidateRequestAsync(SelectAccountCommand request)
     {

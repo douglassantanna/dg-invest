@@ -42,8 +42,8 @@ public class UpdateUserProfileCommandHandler : IRequestHandler<UpdateUserProfile
       return new Response("Validation failed!", false, new { validationErrors = validationResult.Errors.Select(x => x.ErrorMessage).ToList(), HttpStatusCode = HttpStatusCode.BadRequest });
     }
 
-    var user = await _userRepository.GetByIdAsync(request.UserId);
-    if (user == null)
+    var userResult = await _userRepository.GetByIdAsync(request.UserId);
+    if (!userResult.IsSuccess)
     {
       _logger.LogInformation("UpdateUserProfileCommandHandler. User not found: {0}", request.UserId);
       return new Response("User not found!", false, new { HttpStatusCode = HttpStatusCode.NotFound });
@@ -51,8 +51,8 @@ public class UpdateUserProfileCommandHandler : IRequestHandler<UpdateUserProfile
 
     try
     {
-      user.Update(request.Fullname, request.Email);
-      await _userRepository.UpdateAsync(user);
+      userResult.Value.Update(request.Fullname, request.Email);
+      await _userRepository.UpdateAsync(userResult.Value);
       _logger.LogInformation("UpdateUserProfileCommandHandler. Profile updated for user: {0}", request.UserId);
     }
     catch (Exception ex)

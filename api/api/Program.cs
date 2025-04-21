@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
+using api.Services;
 using api.Shared;
 using MediatR;
 using Serilog;
@@ -11,7 +12,7 @@ builder.Services.ConfiguraMemoryCache();
 builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 builder.Services.ConfigureJwt(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);
-builder.Services.ConfigureServices(builder.Configuration);
+builder.Services.ConfigureServices();
 builder.Services.ConfigureDatabase(builder.Configuration);
 builder.Services.ConfigureCustomRateLimiter(builder.Configuration);
 builder.Services.ConfigureCORS();
@@ -27,15 +28,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
-var runMigrationsConfig = app.Configuration.GetSection("RunMigrations")?.Value;
-bool runMigrations = false;
-if (!string.IsNullOrEmpty(runMigrationsConfig)
-    && bool.TryParse(runMigrationsConfig, out runMigrations)
-    && runMigrations)
-{
-    await app.Services.SeedAsync();
-}
 
 app.UseCors("Policy");
 

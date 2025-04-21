@@ -1,0 +1,6 @@
+@token = 
+
+@url-dev = https://localhost:7204/api/Migrations
+
+POST {{url-dev}}/run
+Authorization: Bearer {{token}}

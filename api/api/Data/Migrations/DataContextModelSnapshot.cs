@@ -166,6 +166,38 @@ namespace api.Migrations
                     b.ToTable("Cryptos");
                 });
 
+            modelBuilder.Entity("api.Cryptos.Models.UserPortfolioSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("Time")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("Time");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPortfolioSnapshots");
+                });
+
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
                 {
                     b.Property<int>("Id")
