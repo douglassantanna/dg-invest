@@ -65,25 +65,82 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         var snapshots = snapshotResult.Value!;
         List<MarketDataPointDto> groupedData;
 
-        if (request.Timeframe == ETimeframe._1y)
+        if (request.Timeframe == ETimeframe._24h)
         {
             groupedData = snapshots
-                          .Where(x => x.Time >= startTime && x.Time <= now)
-                          .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime.Date)
-                          .Select(group =>
-                          {
-                              var date = group.Key;
-                              var timestamp = new DateTimeOffset(date).ToUnixTimeSeconds();
-                              return new MarketDataPointDto(timestamp, group.Sum(y => y.Value));
-                          })
-                          .OrderBy(x => x.Time)
-                          .ToList();
+                .Where(x => x.Time >= startTime && x.Time <= now)
+                .GroupBy(x =>
+                {
+                    var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
+                    // Start of the hour
+                    return new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0);
+                })
+                .SelectMany(group =>
+                {
+                    var hourStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
+                    return group
+                        .OrderBy(x => x.Time)
+                        .Select(x => new MarketDataPointDto(hourStartTimestamp, x.Value));
+                })
+                .OrderBy(x => x.Time)
+                .ToList();
         }
-
-        groupedData = snapshots
-                      .Where(x => x.Time >= startTime && x.Time <= now)
-                      .Select(x => new MarketDataPointDto(x.Time, x.Value))
-                      .ToList();
+        else if (request.Timeframe == ETimeframe._7d || request.Timeframe == ETimeframe._1m)
+        {
+            groupedData = snapshots
+                .Where(x => x.Time >= startTime && x.Time <= now)
+                .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime.Date)
+                .SelectMany(group =>
+                {
+                    var dayStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
+                    return group
+                        .OrderBy(x => x.Time)
+                        .Select(x => new MarketDataPointDto(dayStartTimestamp, x.Value));
+                })
+                .OrderBy(x => x.Time)
+                .ToList();
+        }
+        else if (request.Timeframe == ETimeframe._1y)
+        {
+            groupedData = snapshots
+                .Where(x => x.Time >= startTime && x.Time <= now)
+                .GroupBy(x =>
+                {
+                    var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
+                    int daysSinceMonday = ((int)date.DayOfWeek + 6) % 7;
+                    var weekStart = date.Date.AddDays(-daysSinceMonday);
+                    return weekStart;
+                })
+                .SelectMany(group =>
+                {
+                    var weekStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
+                    return group
+                        .OrderBy(x => x.Time)
+                        .Select(x => new MarketDataPointDto(weekStartTimestamp, x.Value));
+                })
+                .OrderBy(x => x.Time)
+                .ToList();
+        }
+        else // ETimeframe.All
+        {
+            groupedData = snapshots
+                .Where(x => x.Time >= startTime && x.Time <= now)
+                .GroupBy(x =>
+                {
+                    var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
+                    // Start of the month
+                    return new DateTime(date.Year, date.Month, 1);
+                })
+                .SelectMany(group =>
+                {
+                    var monthStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
+                    return group
+                        .OrderBy(x => x.Time)
+                        .Select(x => new MarketDataPointDto(monthStartTimestamp, x.Value));
+                })
+                .OrderBy(x => x.Time)
+                .ToList();
+        }
 
         return Result<IEnumerable<MarketDataPointDto>>.Success(groupedData);
         // },
