@@ -2,6 +2,7 @@ using api.CoinMarketCap.Service;
 using api.Cryptos.Models;
 using api.Data;
 using api.Services.Contracts;
+using api.Shared;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Services;
@@ -21,7 +22,7 @@ public class MarketDataService : IMarketDataService
         _coinMarketCapService = coinMarketCapService;
     }
 
-    public async Task FetchAndProcessMarketDataAsync(CancellationToken cancellationToken)
+    public async Task<Result<bool>> FetchAndProcessMarketDataAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -31,7 +32,7 @@ public class MarketDataService : IMarketDataService
                 .ToListAsync(cancellationToken);
 
             if (!users.Any())
-                return;
+                return Result<bool>.Failure("No users found");
 
             // get all CoinMarketCapId from the account assets
             var allAssetIds = users.SelectMany(u => u.Accounts)
@@ -42,12 +43,12 @@ public class MarketDataService : IMarketDataService
                        .ToArray();
 
             if (!allAssetIds.Any())
-                return;
+                return Result<bool>.Failure("No assets found");
 
             // fetch all market prices **only once**
             var coinPrices = await _coinMarketCapService.GetQuotesByIds(allAssetIds);
             if (coinPrices == null)
-                return;
+                return Result<bool>.Failure("Failed to fetch market prices");
 
             // process each user and their accounts
             var portfolioRecords = new List<UserPortfolioSnapshot>();
@@ -87,12 +88,14 @@ public class MarketDataService : IMarketDataService
             {
                 await _context.UserPortfolioSnapshots.AddRangeAsync(portfolioRecords, cancellationToken);
                 await _context.SaveChangesAsync(cancellationToken);
+                return Result<bool>.Success(true);
             }
-
+            return Result<bool>.Failure("No portfolio records to save");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching and processing market data");
+            return Result<bool>.Failure("Error fetching and processing market data");
         }
     }
 
