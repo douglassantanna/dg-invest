@@ -64,34 +64,28 @@ public class GetMarketDataByTimeframeQueryHandlerTests
     }
 
     [Fact]
-    public async Task When24hRequestedAndSnapshotsExist_ShouldReturn24HourlyDataPoints()
+    public async Task When24hRequestedAndSnapshotsExist_ShouldReturnHourlyGroupedDataWithOriginalValues()
     {
         // Arrange
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
         var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startTime = now - 86400; // 24 hours ago
-        var snapshots = GenerateHourlySnapshotsFor24h(startTime); // Custom helper
+        var startTime = now - 86400;
+        var snapshots = GenerateSnapshotsFor24h(startTime, 2); // 2 snapshots/hour
         Assert.NotNull(snapshots);
         Assert.NotEmpty(snapshots);
 
-        // Expected data: Snapshots grouped by hour
-        var expectedData = snapshots
-            .Where(x => x.Time >= startTime && x.Time <= now)
-            .GroupBy(x =>
-            {
-                var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
-                return new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0);
-            })
-            .SelectMany(group =>
-            {
-                var hourStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
-                return group
-                    .OrderBy(x => x.Time)
-                    .Select(x => new MarketDataPointDto(hourStartTimestamp, x.Value));
-            })
-            .OrderBy(x => x.Time)
-            .ToList();
+        var expectedData = new List<MarketDataPointDto>();
+        const long oneHourInterval = 3600;
+        for (var time = startTime; time < now; time += oneHourInterval)
+        {
+            var bucketStart = (time / oneHourInterval) * oneHourInterval;
+            var bucketEnd = bucketStart + oneHourInterval;
+            var snapshotsInBucket = snapshots
+                .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                .OrderBy(s => s.Time);
+            expectedData.AddRange(snapshotsInBucket.Select(s => new MarketDataPointDto(bucketStart, s.Value)));
+        }
 
         _mockUserRepository.Setup(r => r.GetByIdAsync(1, It.IsAny<Func<IQueryable<User>, Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<User, object>>>()))
             .ReturnsAsync(Result<User?>.Success(user));
@@ -113,21 +107,119 @@ public class GetMarketDataByTimeframeQueryHandlerTests
             Assert.Equal(expectedData[i].Value, data[i].Value);
         }
     }
-    private static List<UserPortfolioSnapshot> GenerateHourlySnapshotsFor24h(long startTime)
+    private static List<UserPortfolioSnapshot> GenerateSnapshotsFor24h(long startTime, int snapshotsPerHour)
     {
         var snapshots = new List<UserPortfolioSnapshot>();
-        for (var i = 0; i < 24; i++)
+        var random = new Random();
+        for (int hour = 0; hour < 24; hour++)
         {
-            var time = startTime + i * 3600;
-            var value = 5000 + i * 100m; // Fixed values for determinism, adjust to match JSON
-            snapshots.Add(new UserPortfolioSnapshot
+            var hourStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddHours(hour);
+            for (int i = 0; i < snapshotsPerHour; i++)
             {
-                UserId = 1,
-                AccountId = 0,
-                Time = time,
-                Value = value
-            });
+                var time = hourStart.AddMinutes(random.Next(0, 60)).ToUnixTimeSeconds();
+                var value = 118704.00208221m + (hour * 100) + (i * 10);
+                snapshots.Add(new UserPortfolioSnapshot
+                {
+                    UserId = 1,
+                    AccountId = 10,
+                    Time = time,
+                    Value = value
+                });
+            }
         }
         return snapshots;
     }
+
+    private static List<UserPortfolioSnapshot> GenerateSnapshotsFor7d(long startTime, int snapshotsPerDay)
+    {
+        var snapshots = new List<UserPortfolioSnapshot>();
+        var random = new Random();
+        for (int day = 0; day < 7; day++)
+        {
+            var dayStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddDays(day);
+            for (int i = 0; i < snapshotsPerDay; i++)
+            {
+                var time = dayStart.AddHours(i * (24.0 / snapshotsPerDay)).ToUnixTimeSeconds(); // Spread snapshots
+                var value = 118704.00208221m + (day * 100) + (i * 10);
+                snapshots.Add(new UserPortfolioSnapshot
+                {
+                    UserId = 1,
+                    AccountId = 10,
+                    Time = time,
+                    Value = value
+                });
+            }
+        }
+        return snapshots;
+    }
+
+    private static List<UserPortfolioSnapshot> GenerateSnapshotsFor1m(long startTime, int snapshotsPerDay)
+    {
+        var snapshots = new List<UserPortfolioSnapshot>();
+        var random = new Random();
+        for (int day = 0; day < 30; day++)
+        {
+            var dayStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddDays(day);
+            for (int i = 0; i < snapshotsPerDay; i++)
+            {
+                var time = dayStart.AddHours(random.Next(0, 24)).ToUnixTimeSeconds();
+                var value = 118704.00208221m + (day * 100) + (i * 10);
+                snapshots.Add(new UserPortfolioSnapshot
+                {
+                    UserId = 1,
+                    AccountId = 10,
+                    Time = time,
+                    Value = value
+                });
+            }
+        }
+        return snapshots;
+    }
+
+    private static List<UserPortfolioSnapshot> GenerateSnapshotsFor1y(long startTime, int snapshotsPerWeek)
+    {
+        var snapshots = new List<UserPortfolioSnapshot>();
+        var random = new Random();
+        for (int week = 0; week < 52; week++)
+        {
+            var weekStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddDays(week * 7);
+            for (int i = 0; i < snapshotsPerWeek; i++)
+            {
+                var time = weekStart.AddDays(random.Next(0, 7)).AddHours(random.Next(0, 24)).ToUnixTimeSeconds();
+                var value = 118704.00208221m + (week * 100) + (i * 10);
+                snapshots.Add(new UserPortfolioSnapshot
+                {
+                    UserId = 1,
+                    AccountId = 10,
+                    Time = time,
+                    Value = value
+                });
+            }
+        }
+        return snapshots;
+    }
+
+    private static List<UserPortfolioSnapshot> GenerateSnapshotsForAll(long startTime, int snapshotsPerMonth)
+    {
+        var snapshots = new List<UserPortfolioSnapshot>();
+        var random = new Random();
+        for (int month = 0; month < 60; month++)
+        {
+            var monthStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddMonths(month);
+            for (int i = 0; i < snapshotsPerMonth; i++)
+            {
+                var time = monthStart.AddDays(random.Next(0, 28)).AddHours(random.Next(0, 24)).ToUnixTimeSeconds();
+                var value = 118704.00208221m + (month * 100) + (i * 10);
+                snapshots.Add(new UserPortfolioSnapshot
+                {
+                    UserId = 1,
+                    AccountId = 10,
+                    Time = time,
+                    Value = value
+                });
+            }
+        }
+        return snapshots;
+    }
+
 }
