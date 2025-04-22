@@ -88,8 +88,8 @@ public static class ServiceExtensions
     public static IServiceCollection ConfigureFunctionServices(this IServiceCollection services, IConfiguration config)
     {
         services.AddTransient<IMarketDataService, MarketDataService>();
-        services.AddTransient<ICoinMarketCapService, CoinMarketCapService>();
-        services.AddTransient<IHealthCheckService, HealthCheckService>();
+        services.AddSingleton<ICoinMarketCapService, CoinMarketCapService>();
+        services.AddScoped<IHealthCheckService, HealthCheckService>();
 
         var connectionString = config.GetValue<string>("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))

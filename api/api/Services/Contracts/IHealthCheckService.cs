@@ -4,6 +4,6 @@ namespace api.Services.Contracts
 {
     public interface IHealthCheckService
     {
-        Task<Result<bool>> IsDatabaseHealthyAsync();
+        Task<Result<bool>> IsDatabaseHealthyAsync(CancellationToken cancellationToken);
     }
 }
