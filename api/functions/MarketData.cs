@@ -23,7 +23,9 @@ namespace functions
         {
             try
             {
-                await _marketDataService.FetchAndProcessMarketDataAsync(cancellationToken);
+                var result = await _marketDataService.FetchAndProcessMarketDataAsync(cancellationToken);
+                if (!result.IsSuccess)
+                    _logger.LogError("MarketDataFunction: Error fetching market data: {Error}", result.Error);
             }
             catch (System.Exception ex)
             {
