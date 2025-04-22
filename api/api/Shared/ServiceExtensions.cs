@@ -72,6 +72,7 @@ public static class ServiceExtensions
         services.AddScoped<ICryptoRepository, CryptoRepository>();
         services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
         services.AddScoped<ITimeframeCalculator, TimeframeCalculator>();
+        services.AddScoped<IHealthCheckService, HealthCheckService>();
 
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransactionStrategy, BuyTransaction>();
@@ -88,7 +89,7 @@ public static class ServiceExtensions
     {
         services.AddTransient<IMarketDataService, MarketDataService>();
         services.AddTransient<ICoinMarketCapService, CoinMarketCapService>();
-
+        services.AddTransient<IHealthCheckService, HealthCheckService>();
 
         var connectionString = config.GetValue<string>("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))
