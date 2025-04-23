@@ -32,7 +32,10 @@ public class MarketDataService : IMarketDataService
                 .ToListAsync(cancellationToken);
 
             if (!users.Any())
-                return Result<bool>.Failure("No users found");
+            {
+                _logger.LogError("No users found in the database");
+                return Result<bool>.Failure("No users found in the database");
+            }
 
             // get all CoinMarketCapId from the account assets
             var allAssetIds = users.SelectMany(u => u.Accounts)
@@ -43,12 +46,18 @@ public class MarketDataService : IMarketDataService
                        .ToArray();
 
             if (!allAssetIds.Any())
-                return Result<bool>.Failure("No assets found");
+            {
+                _logger.LogError("No assets with positive balance found across all user accounts");
+                return Result<bool>.Failure("No assets with positive balance found");
+            }
 
             // fetch all market prices **only once**
             var coinPrices = await _coinMarketCapService.GetQuotesByIds(allAssetIds);
             if (coinPrices == null)
-                return Result<bool>.Failure("Failed to fetch market prices");
+            {
+                _logger.LogError("Failed to fetch market prices from CoinMarketCap for asset IDs: {assetIds}", string.Join(",", allAssetIds));
+                return Result<bool>.Failure("Failed to fetch market prices from CoinMarketCap");
+            }
 
             // process each user and their accounts
             var portfolioRecords = new List<UserPortfolioSnapshot>();
@@ -84,18 +93,21 @@ public class MarketDataService : IMarketDataService
                 }
             }
 
-            if (portfolioRecords.Any())
+            if (!portfolioRecords.Any())
             {
-                await _context.UserPortfolioSnapshots.AddRangeAsync(portfolioRecords, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
-                return Result<bool>.Success(true);
+                _logger.LogError("No portfolio records generated for saving");
+                return Result<bool>.Failure("No portfolio records generated");
             }
-            return Result<bool>.Failure("No portfolio records to save");
+
+            await _context.UserPortfolioSnapshots.AddRangeAsync(portfolioRecords, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Successfully saved {count} portfolio snapshots", portfolioRecords.Count);
+            return Result<bool>.Success(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching and processing market data");
-            return Result<bool>.Failure("Error fetching and processing market data");
+            _logger.LogError(ex, "Error fetching and processing market data: {message}", ex.Message);
+            return Result<bool>.Failure($"Error fetching and processing market data: {ex.Message}");
         }
     }
 
