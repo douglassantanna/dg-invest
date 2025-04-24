@@ -214,6 +214,63 @@ public class GetMarketDataByTimeframeQueryHandlerTests
             It.IsAny<long>(),
             It.IsAny<CancellationToken>()), Times.Once());
     }
+
+    [Fact]
+    public async Task When1yRequestedAndSnapshotsExist_ShouldReturnLastSnapshotPerMonthFor12Months()
+    {
+        // Arrange
+        var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._1y);
+        var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var startTime = now - (365 * 86400);
+
+        var snapshots = GenerateSnapshotsFor1y(startTime, 24);
+        Assert.NotNull(snapshots);
+        Assert.NotEmpty(snapshots);
+        Assert.Equal(365 * 24, snapshots.Count);
+
+        var expectedData = new List<MarketDataPointDto>();
+        const long oneMonthInterval = 30 * 86400;
+        for (var time = now - (12 * oneMonthInterval); time < now; time += oneMonthInterval)
+        {
+            var bucketStart = (time / oneMonthInterval) * oneMonthInterval;
+            var bucketEnd = bucketStart + oneMonthInterval;
+            var lastSnapshot = snapshots
+                .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                .OrderByDescending(s => s.Time)
+                .FirstOrDefault();
+            if (lastSnapshot != null)
+            {
+                expectedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+            }
+        }
+
+        _mockUserRepository.Setup(r => r.GetByIdAsync(
+            1,
+            It.IsAny<Func<IQueryable<User>, Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<User, object>>>()))
+            .ReturnsAsync(Result<User?>.Success(user));
+        _mockUserPortfolioSnapshotsRepository.Setup(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<long>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<List<UserPortfolioSnapshot>>.Success(snapshots));
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        var data = result.Value.ToList();
+        Assert.Equal(expectedData.Count, data.Count);
+        Assert.Equal(12, data.Count);
+        _mockUserPortfolioSnapshotsRepository.Verify(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<long>(),
+            It.IsAny<CancellationToken>()), Times.Once());
+    }
     private static List<UserPortfolioSnapshot> GenerateSnapshotsFor24h(long startTime, int snapshotsPerHour)
     {
         var snapshots = new List<UserPortfolioSnapshot>();
@@ -283,17 +340,17 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         return snapshots;
     }
 
-    private static List<UserPortfolioSnapshot> GenerateSnapshotsFor1y(long startTime, int snapshotsPerWeek)
+    private static List<UserPortfolioSnapshot> GenerateSnapshotsFor1y(long startTime, int snapshotsPerDay)
     {
         var snapshots = new List<UserPortfolioSnapshot>();
         var random = new Random();
-        for (int week = 0; week < 52; week++)
+        for (int day = 0; day < 365; day++)
         {
-            var weekStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddDays(week * 7);
-            for (int i = 0; i < snapshotsPerWeek; i++)
+            var dayStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddDays(day);
+            for (int i = 0; i < snapshotsPerDay; i++)
             {
-                var time = weekStart.AddDays(random.Next(0, 7)).AddHours(random.Next(0, 24)).ToUnixTimeSeconds();
-                var value = 118704.00208221m + (week * 100) + (i * 10);
+                var time = dayStart.AddMinutes(i * (1440.0 / snapshotsPerDay)).ToUnixTimeSeconds();
+                var value = 118704.00208221m + (day * 100) + (i * 10);
                 snapshots.Add(new UserPortfolioSnapshot
                 {
                     UserId = 1,
