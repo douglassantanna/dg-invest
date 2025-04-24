@@ -103,6 +103,24 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 }
             }
         }
+        if (request.Timeframe == ETimeframe._1m)
+        {
+            const long oneDayInterval = 86400;
+            groupedData = new List<MarketDataPointDto>();
+            for (var time = startTime; time < now; time += oneDayInterval)
+            {
+                var bucketStart = (time / oneDayInterval) * oneDayInterval;
+                var bucketEnd = bucketStart + oneDayInterval;
+                var lastSnapshot = snapshots
+                    .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                    .OrderByDescending(s => s.Time)
+                    .FirstOrDefault();
+                if (lastSnapshot != null)
+                {
+                    groupedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+                }
+            }
+        }
         else if (request.Timeframe == ETimeframe._1y)
         {
             groupedData = snapshots
