@@ -85,41 +85,59 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 .OrderBy(x => x.Time)
                 .ToList();
         }
-        else if (request.Timeframe == ETimeframe._7d || request.Timeframe == ETimeframe._1m)
+        else if (request.Timeframe == ETimeframe._7d)
         {
-            groupedData = snapshots
-                .Where(x => x.Time >= startTime && x.Time <= now)
-                .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime.Date)
-                .SelectMany(group =>
+            const long oneDayInterval = 86400;
+            groupedData = new List<MarketDataPointDto>();
+            for (var time = startTime; time < now; time += oneDayInterval)
+            {
+                var bucketStart = (time / oneDayInterval) * oneDayInterval;
+                var bucketEnd = bucketStart + oneDayInterval;
+                var lastSnapshot = snapshots
+                    .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                    .OrderByDescending(s => s.Time)
+                    .FirstOrDefault();
+                if (lastSnapshot != null)
                 {
-                    var dayStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
-                    return group
-                        .OrderBy(x => x.Time)
-                        .Select(x => new MarketDataPointDto(dayStartTimestamp, x.Value));
-                })
-                .OrderBy(x => x.Time)
-                .ToList();
+                    groupedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+                }
+            }
+        }
+        else if (request.Timeframe == ETimeframe._1m)
+        {
+            const long oneDayInterval = 86400;
+            groupedData = new List<MarketDataPointDto>();
+            for (var time = startTime; time < now; time += oneDayInterval)
+            {
+                var bucketStart = (time / oneDayInterval) * oneDayInterval;
+                var bucketEnd = bucketStart + oneDayInterval;
+                var lastSnapshot = snapshots
+                    .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                    .OrderByDescending(s => s.Time)
+                    .FirstOrDefault();
+                if (lastSnapshot != null)
+                {
+                    groupedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+                }
+            }
         }
         else if (request.Timeframe == ETimeframe._1y)
         {
-            groupedData = snapshots
-                .Where(x => x.Time >= startTime && x.Time <= now)
-                .GroupBy(x =>
+            const long oneMonthInterval = 30 * 86400;
+            groupedData = new List<MarketDataPointDto>();
+            for (var time = startTime; time < now; time += oneMonthInterval)
+            {
+                var bucketStart = (time / oneMonthInterval) * oneMonthInterval;
+                var bucketEnd = bucketStart + oneMonthInterval;
+                var lastSnapshot = snapshots
+                    .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                    .OrderByDescending(s => s.Time)
+                    .FirstOrDefault();
+                if (lastSnapshot != null)
                 {
-                    var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
-                    int daysSinceMonday = ((int)date.DayOfWeek + 6) % 7;
-                    var weekStart = date.Date.AddDays(-daysSinceMonday);
-                    return weekStart;
-                })
-                .SelectMany(group =>
-                {
-                    var weekStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
-                    return group
-                        .OrderBy(x => x.Time)
-                        .Select(x => new MarketDataPointDto(weekStartTimestamp, x.Value));
-                })
-                .OrderBy(x => x.Time)
-                .ToList();
+                    groupedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+                }
+            }
         }
         else // ETimeframe.All
         {
