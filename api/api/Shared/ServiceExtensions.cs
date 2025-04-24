@@ -73,7 +73,6 @@ public static class ServiceExtensions
         services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
         services.AddScoped<ITimeframeCalculator, TimeframeCalculator>();
         services.AddScoped<IHealthCheckService, HealthCheckService>();
-        services.AddScoped<IMarketDataService, MarketDataService>();
 
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransactionStrategy, BuyTransaction>();
