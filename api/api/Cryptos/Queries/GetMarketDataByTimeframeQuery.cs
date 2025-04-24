@@ -85,20 +85,23 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 .OrderBy(x => x.Time)
                 .ToList();
         }
-        else if (request.Timeframe == ETimeframe._7d || request.Timeframe == ETimeframe._1m)
+        if (request.Timeframe == ETimeframe._7d)
         {
-            groupedData = snapshots
-                .Where(x => x.Time >= startTime && x.Time <= now)
-                .GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime.Date)
-                .SelectMany(group =>
+            const long oneDayInterval = 86400;
+            groupedData = new List<MarketDataPointDto>();
+            for (var time = startTime; time < now; time += oneDayInterval)
+            {
+                var bucketStart = (time / oneDayInterval) * oneDayInterval;
+                var bucketEnd = bucketStart + oneDayInterval;
+                var lastSnapshot = snapshots
+                    .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                    .OrderByDescending(s => s.Time)
+                    .FirstOrDefault();
+                if (lastSnapshot != null)
                 {
-                    var dayStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
-                    return group
-                        .OrderBy(x => x.Time)
-                        .Select(x => new MarketDataPointDto(dayStartTimestamp, x.Value));
-                })
-                .OrderBy(x => x.Time)
-                .ToList();
+                    groupedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+                }
+            }
         }
         else if (request.Timeframe == ETimeframe._1y)
         {

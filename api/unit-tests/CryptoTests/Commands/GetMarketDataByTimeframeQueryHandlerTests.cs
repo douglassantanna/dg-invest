@@ -100,6 +100,63 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         Assert.Equal(expectedData.Count, data.Count);
         Assert.Equal(24, data.Count);
     }
+
+    [Fact]
+    public async Task When7dRequestedAndSnapshotsExist_ShouldReturnLastSnapshotPerDay()
+    {
+        // Arrange
+        var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._7d);
+        var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var startTime = now - (7 * 86400);
+
+        var snapshots = GenerateSnapshotsFor7d(startTime, 24);
+        Assert.NotNull(snapshots);
+        Assert.NotEmpty(snapshots);
+        Assert.Equal(7 * 24, snapshots.Count);
+
+        var expectedData = new List<MarketDataPointDto>();
+        const long oneDayInterval = 86400;
+        for (var time = startTime; time < now; time += oneDayInterval)
+        {
+            var bucketStart = (time / oneDayInterval) * oneDayInterval;
+            var bucketEnd = bucketStart + oneDayInterval;
+            var lastSnapshot = snapshots
+                .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                .OrderByDescending(s => s.Time)
+                .FirstOrDefault();
+            if (lastSnapshot != null)
+            {
+                expectedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+            }
+        }
+
+        _mockUserRepository.Setup(r => r.GetByIdAsync(
+            1,
+            It.IsAny<Func<IQueryable<User>, Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<User, object>>>()))
+            .ReturnsAsync(Result<User?>.Success(user));
+        _mockUserPortfolioSnapshotsRepository.Setup(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<long>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<List<UserPortfolioSnapshot>>.Success(snapshots));
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        var data = result.Value.ToList();
+        Assert.Equal(expectedData.Count, data.Count);
+        Assert.Equal(7, data.Count);
+        _mockUserPortfolioSnapshotsRepository.Verify(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<long>(),
+            It.IsAny<CancellationToken>()), Times.Once());
+    }
     private static List<UserPortfolioSnapshot> GenerateSnapshotsFor24h(long startTime, int snapshotsPerHour)
     {
         var snapshots = new List<UserPortfolioSnapshot>();
@@ -132,8 +189,8 @@ public class GetMarketDataByTimeframeQueryHandlerTests
             var dayStart = DateTimeOffset.FromUnixTimeSeconds(startTime).AddDays(day);
             for (int i = 0; i < snapshotsPerDay; i++)
             {
-                var time = dayStart.AddHours(i * (24.0 / snapshotsPerDay)).ToUnixTimeSeconds(); // Spread snapshots
-                var value = 118704.00208221m + (day * 100) + (i * 10);
+                var time = dayStart.AddMinutes(i * (1440.0 / snapshotsPerDay)).ToUnixTimeSeconds();
+                var value = 118704.00208221m + (day * 1000) + (i * 10);
                 snapshots.Add(new UserPortfolioSnapshot
                 {
                     UserId = 1,
