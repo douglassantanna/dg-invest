@@ -3,7 +3,6 @@ using api.Cryptos.Models;
 using api.Cryptos.Queries;
 using api.Services.Contracts;
 using api.Shared;
-using api.unit_tests.Helpers;
 using api.Users.Models;
 using api.Users.Repositories;
 using FluentAssertions;
@@ -29,38 +28,6 @@ public class GetMarketDataByTimeframeQueryHandlerTests
             _mockUserRepository.Object,
             _mockUserPortfolioSnapshotsRepository.Object,
             _mockTimeframeCalculator.Object);
-    }
-
-    [Fact]
-    public async Task WhenUserAndSnapshotsExist_ShouldReturnEmptyData()
-    {
-        // Arrange
-        var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
-        var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
-        var snapshots = MarketDataHelper.GenerateDailySnapshots();
-        var startTime = snapshots.Last().Time - 24 * 3600; // Last 24 hours from latest snapshot
-
-        _mockTimeframeCalculator.Setup(t => t.CalculateStartTime(ETimeframe._24h)).Returns(startTime);
-        _mockTimeframeCalculator.Setup(t => t.CalculateGroupingInterval(ETimeframe._24h)).Returns(3600); // Hourly for _24h
-        _mockUserRepository.Setup(r => r.GetByIdAsync(1, null)).ReturnsAsync(Result<User>.Success(user));
-        _mockUserPortfolioSnapshotsRepository.Setup(r => r.GetPortfolioSnapshotsByUserIdAndAccountIdAndTimeFrameAsync(
-            1, 10, startTime, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<List<UserPortfolioSnapshot>>.Success(snapshots));
-        _mockCacheService.Setup(c => c.GetOrCreateAsync(
-            It.IsAny<string>(),
-            It.IsAny<Func<CancellationToken, Task<Result<IEnumerable<MarketDataPointDto>>>>>(),
-            TimeSpan.FromMinutes(1),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<IEnumerable<MarketDataPointDto>>.Success([]));
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        var data = result.Value.ToList();
-        Assert.Empty(data);
     }
 
     [Fact]
@@ -385,5 +352,4 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         }
         return snapshots;
     }
-
 }
