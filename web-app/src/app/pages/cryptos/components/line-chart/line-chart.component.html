@@ -1,12 +1,13 @@
 <div class="flex flex-col gap-2 sm:flex-row">
   <div class="w-full border rounded-md border-gray-300 bg-white shadow-md p-4">
     <header class="w-full flex items-center justify-between">
-      <h1 class="text-xl font-semibold sm:text-lg">{{ lineChartTitle() }}</h1>
+      <h1 class="text-xl font-semibold sm:text-sm">{{ lineChartTitle() }}</h1>
 
       <div class="border rounded-md border-gray-300 bg-gray-50">
         <div class="flex flex-wrap gap-2 p-0.5">
           @for (item of timeArray(); track $index) {
-          <button class="m-0.5 cursor-pointer rounded-md p-2 text-sm font-medium transition-all duration-300" [ngClass]="{
+          <button class="m-0.5 cursor-pointer rounded-md p-2 text-sm font-medium transition-all duration-300 sm:text-xs"
+            [ngClass]="{
           'bg-gray-200': selectedTimeFilter() === item.time,
           'text-gray-600 hover:text-gray-700 hover:bg-gray-100': selectedTimeFilter() !== item.time
          }" (click)="setTimeFilter(item.time)">

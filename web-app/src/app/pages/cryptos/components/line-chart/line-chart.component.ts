@@ -28,22 +28,12 @@ export class LineChartComponent implements AfterViewInit {
       description: '1M',
       time: ETimeframe._1m
     },
-    {
-      description: '1Y',
-      time: ETimeframe._1y
-    },
-    {
-      description: 'All',
-      time: ETimeframe.All
-    },
   ]);
   selectedTimeFilter = model<ETimeframe>(ETimeframe._24h);
   marketDataNew: MarketData = {
     [ETimeframe._24h]: [],
     [ETimeframe._7d]: [],
     [ETimeframe._1m]: [],
-    [ETimeframe._1y]: [],
-    [ETimeframe.All]: []
   };
   lineChartInstance: any = null;
   lineChartTitle = signal('');
