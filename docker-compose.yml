@@ -34,6 +34,8 @@ services:
     depends_on:
       - app
     restart: on-failure
+    environment:
+      - API_URL=http://localhost:8080
 
 volumes:
   sqlserver-data:
