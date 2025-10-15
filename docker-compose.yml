@@ -10,20 +10,21 @@ services:
     ports:
       - "8080:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=dg-invest;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+      - ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT}"
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=dg-invest;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
     restart: on-failure
 
   sqlserver:
     image: mcr.microsoft.com/azure-sql-edge:latest
     container_name: my-sqlserver
     environment:
-      MSSQL_SA_PASSWORD: YourStrong!Passw0rd
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
       ACCEPT_EULA: "1"
     ports:
       - "1434:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
+    restart: always
 
   angular-app:
     build:
