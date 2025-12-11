@@ -1,0 +1,34 @@
+// ...existing code...
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch Program",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dotnet: build",
+            "program": "${workspaceFolder}/api/bin/Debug/net8.0/api.dll",
+            "cwd": "${workspaceFolder}/api",
+            "args": [],
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://127.0.0.1:5062"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/api/Views"
+            }
+        },
+        {
+            "name": ".NET Core Launch",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/api/bin/Debug/net8.0/api.dll",
+            "cwd": "${workspaceFolder}/api"
+        }
+    ]
+}
