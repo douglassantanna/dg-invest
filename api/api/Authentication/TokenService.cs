@@ -31,7 +31,7 @@ public class TokenService : ITokenService
                 new(ClaimTypes.Name, user.FullName),
                 new(ClaimTypes.Role, user.Role.ToString()),
             }),
-            Expires = DateTime.UtcNow.AddDays(7),
+            Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
             Issuer = _jwtSettings.Issuer,
             Audience = null,
             SigningCredentials = new SigningCredentials(mySecurityKey, SecurityAlgorithms.HmacSha256Signature)
