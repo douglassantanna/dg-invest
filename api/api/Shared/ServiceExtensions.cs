@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using api.Cache;
+using api.Email;
 using api.Services;
 using api.Services.Contracts;
 
@@ -57,6 +58,7 @@ public static class ServiceExtensions
         services.Configure<CoinMarketCapSettings>(config.GetSection(nameof(CoinMarketCapSettings)));
         services.Configure<AzureStorageSettings>(config.GetSection(nameof(AzureStorageSettings)));
         services.Configure<RateLimiterSettings>(config.GetSection(nameof(RateLimiterSettings)));
+        services.Configure<MailtrapSettings>(config.GetSection(nameof(MailtrapSettings)));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
