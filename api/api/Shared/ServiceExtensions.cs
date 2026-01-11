@@ -22,6 +22,7 @@ using api.Cache;
 using api.Email;
 using api.Services;
 using api.Services.Contracts;
+using api.HealthCheck;
 
 namespace api.Shared;
 public static class ServiceExtensions
@@ -59,6 +60,7 @@ public static class ServiceExtensions
         services.Configure<AzureStorageSettings>(config.GetSection(nameof(AzureStorageSettings)));
         services.Configure<RateLimiterSettings>(config.GetSection(nameof(RateLimiterSettings)));
         services.Configure<MailtrapSettings>(config.GetSection(nameof(MailtrapSettings)));
+        services.Configure<DatabaseHealthCheckOptions>(config.GetSection(nameof(DatabaseHealthCheckOptions)));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)

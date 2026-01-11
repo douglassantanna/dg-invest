@@ -1,3 +1,4 @@
+using api.Services.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers;
@@ -6,9 +7,22 @@ namespace api.Controllers;
 [Route("api/[controller]")]
 public class HealthController : ControllerBase
 {
-    [HttpGet("ping")]
-    public IActionResult Ping()
+   private readonly IHealthCheckService _healthCheckService;
+
+    public HealthController(IHealthCheckService healthCheckService)
     {
-        return Ok("pong");
+        _healthCheckService = healthCheckService;
+    }
+
+    [HttpGet("database")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> CheckDatabase(CancellationToken cancellationToken)
+    {
+        var result = await _healthCheckService.IsDatabaseHealthyAsync(cancellationToken);
+
+        return result.IsSuccess
+            ? Ok(new { database = "healthy" })
+            : StatusCode(503, new { database = "unhealthy", error = result.Error });
     }
 }
