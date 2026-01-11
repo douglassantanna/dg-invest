@@ -4,11 +4,11 @@ using Microsoft.Extensions.Options;
 
 namespace api.Services;
 
-public class EmailService : IEmailService
+public class MailtrapEmailService : IEmailService
 {
     private readonly MailtrapSettings _mailtrapSettings;
 
-    public EmailService(IOptions<MailtrapSettings> mailtrapSettings)
+    public MailtrapEmailService(IOptions<MailtrapSettings> mailtrapSettings)
     {
         _mailtrapSettings = mailtrapSettings.Value;
     }

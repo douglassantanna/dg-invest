@@ -67,6 +67,7 @@ public static class ServiceExtensions
         services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IQueueService, QueueService>();
         services.AddSingleton<IJWTService, JWTService>();
+        services.AddSingleton<IEmailService, MailtrapEmailService>();
 
         services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
         services.AddScoped<IUserRepository, UserRepository>();
