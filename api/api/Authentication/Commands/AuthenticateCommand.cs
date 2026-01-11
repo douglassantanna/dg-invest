@@ -19,13 +19,13 @@ public class AuthenticateCommandValidator : AbstractValidator<AuthenticateComman
 public class AuthenticateHandler : IRequestHandler<AuthenticateCommand, Response>
 {
     private readonly DataContext _context;
-    private readonly ITokenService _tokenService;
+    private readonly IJWTService _tokenService;
     private readonly IPasswordHelper _passwordHelper;
     private readonly ILogger<AuthenticateHandler> _logger;
 
     public AuthenticateHandler(
         DataContext context,
-        ITokenService tokenService,
+        IJWTService tokenService,
         IPasswordHelper passwordHelper,
         ILogger<AuthenticateHandler> logger)
     {
@@ -51,7 +51,7 @@ public class AuthenticateHandler : IRequestHandler<AuthenticateCommand, Response
             return new Response("Login failed", false);
         }
 
-        var token = _tokenService.GenerateToken(user);
+        var token = _tokenService.GenerateJWT(user);
         _logger.LogInformation("User {0} authenticated", request.Email);
         return new Response("", true, new { token });
     }

@@ -64,7 +64,7 @@ public static class ServiceExtensions
         services.AddScoped<IPasswordHelper, PasswordHelper>();
         services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IQueueService, QueueService>();
-        services.AddSingleton<ITokenService, TokenService>();
+        services.AddSingleton<IJWTService, JWTService>();
 
         services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
         services.AddScoped<IUserRepository, UserRepository>();

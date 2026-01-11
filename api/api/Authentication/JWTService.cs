@@ -6,23 +6,23 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace api.Authentication;
-public interface ITokenService
+public interface IJWTService
 {
-    string GenerateToken(User user);
+    string GenerateJWT(User user);
 }
-public class TokenService : ITokenService
+public class JWTService : IJWTService
 {
     private readonly JWTSettings _jwtSettings;
-    public TokenService(IOptions<JWTSettings> jwtSettings)
+    public JWTService(IOptions<JWTSettings> jwtSettings)
     {
         _jwtSettings = jwtSettings.Value;
     }
-    public string GenerateToken(User user)
+    public string GenerateJWT(User user)
     {
         var mySecurityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_jwtSettings.Secret));
 
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var tokenDescriptor = new SecurityTokenDescriptor
+        var jwtHandler = new JwtSecurityTokenHandler();
+        var jwtDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new Claim[]
             {
@@ -31,13 +31,13 @@ public class TokenService : ITokenService
                 new(ClaimTypes.Name, user.FullName),
                 new(ClaimTypes.Role, user.Role.ToString()),
             }),
-            Expires = DateTime.UtcNow.AddDays(7),
+            Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
             Issuer = _jwtSettings.Issuer,
             Audience = null,
             SigningCredentials = new SigningCredentials(mySecurityKey, SecurityAlgorithms.HmacSha256Signature)
         };
 
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        var jwt = jwtHandler.CreateToken(jwtDescriptor);
+        return jwtHandler.WriteToken(jwt);
     }
 }
