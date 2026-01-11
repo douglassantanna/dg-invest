@@ -17,4 +17,9 @@ public class MailtrapEmailService : IEmailService
     {
       await Task.Delay(1);
     }
+
+    public Task SendApiDownAlertAsync(string subject, string body)
+    {
+        throw new NotImplementedException();
+    }
 }
