@@ -1,46 +1,51 @@
-using api.Services.Contracts;
+using api.HealthCheck;
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace functions
 {
     public class HealthCheck
     {
-        private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<HealthCheck> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly HealthPingOptions _options;
 
-        public HealthCheck(IServiceProvider serviceProvider, ILogger<HealthCheck> logger)
+        public HealthCheck(IServiceProvider serviceProvider,
+                           ILogger<HealthCheck> logger,
+                           IHttpClientFactory httpClientFactory,
+                           IOptions<HealthPingOptions> options)
         {
-            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _httpClientFactory = httpClientFactory;
+            _options = options.Value;
         }
 
         [Function("DatabaseKeepAlive")]
         public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo timer, FunctionContext context)
         {
-            _logger.LogInformation("Database keep-alive triggered at: {time}", DateTime.UtcNow);
-
-            using var scope = _serviceProvider.CreateScope();
-            var healthCheckService = scope.ServiceProvider.GetRequiredService<IHealthCheckService>();
+            if (string.IsNullOrWhiteSpace(_options.Endpoint))
+            {
+                _logger.LogError("Health ping endpoint is not configured.");
+                return;
+            }
 
             try
             {
-                var result = await healthCheckService.IsDatabaseHealthyAsync(context.CancellationToken);
-                if (result.IsSuccess)
+                var client = _httpClientFactory.CreateClient();
+                var response = await client.GetAsync(_options.Endpoint, context.CancellationToken);
+                if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation("Database health check succeeded.");
                 }
                 else
                 {
-                    _logger.LogError("Database health check failed: {error}", result.Error);
-                    throw new InvalidOperationException($"Database health check failed: {result.Error}");
+                    _logger.LogError("Database health check failed. StatusCode: {StatusCode}", (int)response.StatusCode);
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Database health check failed: {message}", ex.Message);
-                throw;
             }
         }
     }
