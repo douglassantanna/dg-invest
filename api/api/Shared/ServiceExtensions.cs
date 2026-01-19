@@ -98,6 +98,7 @@ public static class ServiceExtensions
         services.AddTransient<IMarketDataService, MarketDataService>();
         services.AddSingleton<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IHealthCheckService, HealthCheckService>();
+        services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
 
         var connectionString = config.GetValue<string>("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))

@@ -2,7 +2,6 @@ using api.Data;
 using api.HealthCheck;
 using api.Services.Contracts;
 using api.Shared;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace api.Services
