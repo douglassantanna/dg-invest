@@ -8,17 +8,19 @@ namespace functions
     public class HealthCheck
     {
         private readonly ILogger<HealthCheck> _logger;
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly HttpClient _httpClient;
         private readonly HealthPingOptions _options;
 
-        public HealthCheck(IServiceProvider serviceProvider,
-                           ILogger<HealthCheck> logger,
-                           IHttpClientFactory httpClientFactory,
+        public HealthCheck(ILogger<HealthCheck> logger,
+                           HttpClient httpClient,
                            IOptions<HealthPingOptions> options)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _httpClientFactory = httpClientFactory;
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _options = options.Value;
+
+            // Set reasonable timeout
+            _httpClient.Timeout = TimeSpan.FromSeconds(10);
         }
 
         [Function("DatabaseKeepAlive")]
@@ -32,20 +34,21 @@ namespace functions
 
             try
             {
-                var client = _httpClientFactory.CreateClient();
-                var response = await client.GetAsync(_options.Endpoint, context.CancellationToken);
-                if (response.IsSuccessStatusCode)
-                {
-                    _logger.LogInformation("Database health check succeeded.");
-                }
-                else
-                {
-                    _logger.LogError("Database health check failed. StatusCode: {StatusCode}", (int)response.StatusCode);
-                }
+                using var response = await _httpClient.GetAsync(_options.Endpoint, context.CancellationToken);
+                if (!response.IsSuccessStatusCode)
+                    _logger.LogError("Health check returned {StatusCode}", (int)response.StatusCode);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
             {
-                _logger.LogError(ex, "Database health check failed: {message}", ex.Message);
+                _logger.LogError("Health check was cancelled.");
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Health check request failed.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Health check failed with unexpected error.");
             }
         }
     }
