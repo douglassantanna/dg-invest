@@ -16,11 +16,11 @@ public class MailtrapEmailService : IEmailService
     public MailtrapEmailService(
         IOptions<MailtrapSettings> settings,
         ILogger<MailtrapEmailService> logger,
-        HealthAlertRecipientsOptions recipientsOptions)
+        IOptions<HealthAlertRecipientsOptions> recipientsOptions)
     {
         _settings = settings.Value;
         _logger = logger;
-        _recipientsOptions = recipientsOptions;
+        _recipientsOptions = recipientsOptions.Value;
     }
 
     public async Task SendApiDownAlertAsync(string subject, string body, CancellationToken ct = default)
