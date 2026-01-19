@@ -25,49 +25,27 @@ public class MailtrapEmailService : IEmailService
 
     public async Task SendApiDownAlertAsync(string subject, string body, CancellationToken ct = default)
     {
-        Dictionary<string, string> usersToNotify = new()
-        {
-            {"Douglas Sant'anna", "douglbb1@gmail.com"}
-        };
-        var message = new MimeMessage();
+        var recipients = _recipientsOptions.Recipients
+            .Where(recipient => !string.IsNullOrWhiteSpace(recipient.Email))
+            .Select(recipient => new MailboxAddress(recipient.Name, recipient.Email))
+            .ToList();
 
-        message.From.Add(new MailboxAddress(_settings.Username, _settings.From));
-
-        foreach (var user in usersToNotify)
+        if (recipients.Count == 0)
         {
-            message.To.Add(new MailboxAddress(user.Key, user.Value));
+            _logger.LogError("No recipients configured for health alert emails.");
+            return;
         }
 
-        message.Subject = subject;
-
-        var bodyBuilder = new BodyBuilder
-        {
-            TextBody = body,
-            HtmlBody = $"<pre style='font-family: monospace; white-space: pre-wrap;'>{body}</pre>"
-        };
-
-        message.Body = bodyBuilder.ToMessageBody();
+        var message = BuildMessage(recipients, subject, body);
 
         try
         {
-            using var client = new SmtpClient();
-
-            // For Mailtrap sandbox - disable certificate validation
-            // (DO NOT do this in production with real SMTP!)
-            await client.ConnectAsync(_settings.Host, _settings.Port, MailKit.Security.SecureSocketOptions.StartTls, ct);
-
-            await client.AuthenticateAsync(_settings.Username, _settings.Password, ct);
-
-            await client.SendAsync(message, ct);
-
-            await client.DisconnectAsync(true, ct);
-
-            _logger.LogInformation("Alert email sent successfully via Mailtrap. Subject: {Subject}", subject);
+            await SendMessageAsync(message, ct);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send alert email via Mailtrap. Subject: {Subject}", subject);
-            // Important: do NOT throw here — we don't want health check to fail just because alerting failed
+            // important: do NOT throw here (we don't want health check to fail just because alerting failed)
         }
     }
 
