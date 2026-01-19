@@ -30,10 +30,10 @@ namespace api.Services
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("SELECT 1", ct);
-                if (result != 1)
+                bool canConnect = await _context.Database.CanConnectAsync(ct);
+                if (!canConnect)
                 {
-                    string reason = $"Probe query returned unexpected result: {result}";
+                    const string reason = "Database connection check returned false";
                     await ReportFailureAsync(reason, exception: null, ct);
                     return Result<bool>.Failure(_options.FailureMessage);
                 }
@@ -42,7 +42,7 @@ namespace api.Services
             }
             catch (Exception ex) when (ex is not OperationCanceledException && ex is not TaskCanceledException)
             {
-                string reason = "Database probe failed";
+                const string reason = "Database connection check failed";
                 await ReportFailureAsync(reason, exception: ex, ct);
                 return Result<bool>.Failure(_options.FailureMessage);
             }
@@ -62,7 +62,7 @@ namespace api.Services
                 .Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC"))
                 .Replace("{EnvironmentName}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown");
 
-            await _alertService.AlertAsync(_options.AlertSubject, body, exception, ct);
+            await _alertService.AlertAsync(_options.AlertSubject, body, ct);
         }
     }
 }
