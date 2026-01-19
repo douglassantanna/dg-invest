@@ -1,6 +1,4 @@
-using System;
-
-namespace api.Email;
+namespace api.HealthCheck;
 
 public class HealthAlertRecipientsOptions
 {
