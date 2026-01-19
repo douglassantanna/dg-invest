@@ -112,7 +112,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         {
             const long oneDayInterval = 86400;
             groupedData = new List<MarketDataPointDto>();
-            for (var time = startTime; time < now; time += oneDayInterval)
+            for (var time = startTime; time < now_aligned; time += oneDayInterval)
             {
                 var bucketStart = (time / oneDayInterval) * oneDayInterval;
                 var bucketEnd = bucketStart + oneDayInterval;
