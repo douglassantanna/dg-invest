@@ -2,23 +2,25 @@ using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Data;
 using api.Models.Cryptos;
-using api.Services;
 using api.Users.Models;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using MarketDataServiceObj = api.Services.MarketDataService;
+
+namespace unit_tests.MarketDataService;
 
 public class MarketDataServiceTests
 {
-  private readonly Mock<ILogger<MarketDataService>> _mockLogger;
+  private readonly Mock<ILogger<MarketDataServiceObj>> _mockLogger;
   private readonly DataContext _context;
   private readonly Mock<ICoinMarketCapService> _mockCoinMarketCapService;
-  private readonly MarketDataService _sut;
+  private readonly MarketDataServiceObj _sut;
 
   public MarketDataServiceTests()
   {
-    _mockLogger = new Mock<ILogger<MarketDataService>>();
+    _mockLogger = new Mock<ILogger<MarketDataServiceObj>>();
 
     var options = new DbContextOptionsBuilder<DataContext>()
         .UseSqlite("DataSource=:memory:")
@@ -29,7 +31,7 @@ public class MarketDataServiceTests
     _context.Database.EnsureCreated();
 
     _mockCoinMarketCapService = new Mock<ICoinMarketCapService>();
-    _sut = new MarketDataService(_mockLogger.Object, _context, _mockCoinMarketCapService.Object);
+    _sut = new MarketDataServiceObj(_mockLogger.Object, _context, _mockCoinMarketCapService.Object);
   }
 
   [Theory]
