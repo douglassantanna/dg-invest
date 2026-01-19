@@ -24,4 +24,20 @@ public class HealthControllerTests
 
         result.Should().BeOfType<OkObjectResult>();
     }
+
+    [Fact]
+    public async Task CheckDatabase_WhenUnhealthy_ReturnsServiceUnavailable()
+    {
+        var healthCheckService = new Mock<IHealthCheckService>();
+        healthCheckService
+            .Setup(service => service.IsDatabaseHealthyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<bool>.Failure("Database down"));
+
+        var controller = new HealthController(healthCheckService.Object);
+
+        var result = await controller.CheckDatabase(CancellationToken.None);
+
+        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(503);
+    }
 }
