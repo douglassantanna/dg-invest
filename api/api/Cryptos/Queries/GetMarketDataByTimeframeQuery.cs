@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Cryptos.Queries;
+
 public record GetMarketDataByTimeframeQuery(int UserId, ETimeframe Timeframe) : IRequest<Result<IEnumerable<MarketDataPointDto>>>;
 public record MarketDataPointDto(long Time, decimal Value);
 public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDataByTimeframeQuery, Result<IEnumerable<MarketDataPointDto>>>
@@ -31,12 +32,16 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
     {
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var now_aligned = (now / 3600) * 3600;
+        const long oneMonthInterval = 30 * 86400;
+        var now_aligned_month = (now_aligned / oneMonthInterval) * oneMonthInterval;
+
         var startTime = request.Timeframe switch
         {
-            ETimeframe._24h => now - 86400,
-            ETimeframe._7d => now - 604800,
-            ETimeframe._1m => now - 2592000,
-            ETimeframe._1y => now - 31104000,
+            ETimeframe._24h => now_aligned - 86400,
+            ETimeframe._7d => (now_aligned - 604800) / 86400 * 86400,  // Align to day boundary
+            ETimeframe._1m => (now_aligned - 2592000) / 86400 * 86400,  // Align to day boundary
+            ETimeframe._1y => now_aligned_month - (12 * oneMonthInterval),  // Align to month boundary
             _ => throw new ArgumentOutOfRangeException("time frame not supported")
         };
 
@@ -68,7 +73,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         if (request.Timeframe == ETimeframe._24h)
         {
             groupedData = snapshots
-                .Where(x => x.Time >= startTime && x.Time <= now)
+                .Where(x => x.Time >= startTime && x.Time <= now_aligned)
                 .GroupBy(x =>
                 {
                     var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
@@ -89,7 +94,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         {
             const long oneDayInterval = 86400;
             groupedData = new List<MarketDataPointDto>();
-            for (var time = startTime; time < now; time += oneDayInterval)
+            for (var time = startTime; time < now_aligned; time += oneDayInterval)
             {
                 var bucketStart = (time / oneDayInterval) * oneDayInterval;
                 var bucketEnd = bucketStart + oneDayInterval;
@@ -123,9 +128,8 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         }
         else if (request.Timeframe == ETimeframe._1y)
         {
-            const long oneMonthInterval = 30 * 86400;
             groupedData = new List<MarketDataPointDto>();
-            for (var time = startTime; time < now; time += oneMonthInterval)
+            for (var time = startTime; time < now_aligned_month; time += oneMonthInterval)
             {
                 var bucketStart = (time / oneMonthInterval) * oneMonthInterval;
                 var bucketEnd = bucketStart + oneMonthInterval;
@@ -142,7 +146,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         else // ETimeframe.All
         {
             groupedData = snapshots
-                .Where(x => x.Time >= startTime && x.Time <= now)
+                .Where(x => x.Time >= startTime && x.Time <= now_aligned)
                 .GroupBy(x =>
                 {
                     var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;

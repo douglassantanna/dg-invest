@@ -9,6 +9,7 @@ using FluentAssertions;
 using Moq;
 
 namespace unit_tests.CryptoTests.Commands;
+
 public class GetMarketDataByTimeframeQueryHandlerTests
 {
     private readonly Mock<ICacheService> _mockCacheService;
@@ -37,11 +38,12 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._24h);
         var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startTime = now - 86400;
+        var now_aligned = (now / 3600) * 3600;
+        var startTime = now_aligned - 86400;
         var snapshots = GenerateSnapshotsFor24h(startTime, 1); // 2 snapshots/hour
         var expectedData = new List<MarketDataPointDto>();
         const long oneHourInterval = 3600;
-        for (var time = startTime; time < now; time += oneHourInterval)
+        for (var time = startTime; time < now_aligned; time += oneHourInterval)
         {
             var bucketStart = (time / oneHourInterval) * oneHourInterval;
             var bucketEnd = bucketStart + oneHourInterval;
@@ -75,7 +77,9 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._7d);
         var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startTime = now - (7 * 86400);
+        var now_aligned = (now / 3600) * 3600;
+        var startTime = now_aligned - (7 * 86400);
+        startTime = (startTime / 86400) * 86400;
 
         var snapshots = GenerateSnapshotsFor7d(startTime, 24);
         Assert.NotNull(snapshots);
@@ -132,7 +136,9 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._1m);
         var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startTime = now - (30 * 86400);
+        var now_aligned = (now / 3600) * 3600;
+        var startTime = now_aligned - (30 * 86400);
+        startTime = (startTime / 86400) * 86400;
 
         var snapshots = GenerateSnapshotsFor1m(startTime, 24);
         Assert.NotNull(snapshots);
@@ -141,7 +147,7 @@ public class GetMarketDataByTimeframeQueryHandlerTests
 
         var expectedData = new List<MarketDataPointDto>();
         const long oneDayInterval = 86400;
-        for (var time = startTime; time < now; time += oneDayInterval)
+        for (var time = startTime; time < now_aligned; time += oneDayInterval)
         {
             var bucketStart = (time / oneDayInterval) * oneDayInterval;
             var bucketEnd = bucketStart + oneDayInterval;
@@ -189,7 +195,11 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         var query = new GetMarketDataByTimeframeQuery(1, ETimeframe._1y);
         var user = new User("Douglas", "douglas@gmail.com", "12345678", Role.User);
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var startTime = now - (365 * 86400);
+        var now_aligned = (now / 3600) * 3600;
+        const long oneMonthInterval = 30 * 86400;
+        var now_aligned_month = (now_aligned / oneMonthInterval) * oneMonthInterval;
+        var startTime = now_aligned_month - (12 * oneMonthInterval);
+        startTime = (startTime / oneMonthInterval) * oneMonthInterval;
 
         var snapshots = GenerateSnapshotsFor1y(startTime, 24);
         Assert.NotNull(snapshots);
@@ -197,8 +207,7 @@ public class GetMarketDataByTimeframeQueryHandlerTests
         Assert.Equal(365 * 24, snapshots.Count);
 
         var expectedData = new List<MarketDataPointDto>();
-        const long oneMonthInterval = 30 * 86400;
-        for (var time = now - (12 * oneMonthInterval); time < now; time += oneMonthInterval)
+        for (var time = startTime; time < now_aligned_month; time += oneMonthInterval)
         {
             var bucketStart = (time / oneMonthInterval) * oneMonthInterval;
             var bucketEnd = bucketStart + oneMonthInterval;
