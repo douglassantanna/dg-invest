@@ -25,6 +25,7 @@ using api.Services.Contracts;
 using api.HealthCheck;
 
 namespace api.Shared;
+
 public static class ServiceExtensions
 {
     public const string DefaultPolicy = "DefaultPolicy";
@@ -61,6 +62,8 @@ public static class ServiceExtensions
         services.Configure<RateLimiterSettings>(config.GetSection(nameof(RateLimiterSettings)));
         services.Configure<MailtrapSettings>(config.GetSection(nameof(MailtrapSettings)));
         services.Configure<DatabaseHealthCheckOptions>(config.GetSection(nameof(DatabaseHealthCheckOptions)));
+        services.Configure<HealthAlertRecipientsOptions>(config.GetSection(nameof(HealthAlertRecipientsOptions)));
+        services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
