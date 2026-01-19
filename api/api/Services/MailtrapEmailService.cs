@@ -80,4 +80,24 @@ public class MailtrapEmailService : IEmailService
         await client.SendAsync(message, ct);
         await client.DisconnectAsync(true, ct);
     }
+
+    private MimeMessage BuildMessage(IEnumerable<MailboxAddress> recipients, string subject, string body)
+    {
+        var message = new MimeMessage();
+
+        foreach (var recipient in recipients)
+            message.To.Add(recipient);
+
+        message.Subject = subject;
+
+        var bodyBuilder = new BodyBuilder
+        {
+            TextBody = body,
+            HtmlBody = $"<pre style='font-family: monospace; white-space: pre-wrap;'>{body}</pre>"
+        };
+
+        message.Body = bodyBuilder.ToMessageBody();
+
+        return message;
+    }
 }
