@@ -3,6 +3,7 @@ using api.Services.Contracts;
 using Microsoft.Extensions.Options;
 using MailKit.Net.Smtp;
 using MimeKit;
+using api.HealthCheck;
 
 namespace api.Services;
 
@@ -10,13 +11,16 @@ public class MailtrapEmailService : IEmailService
 {
     private readonly MailtrapSettings _settings;
     private readonly ILogger<MailtrapEmailService> _logger;
+    private readonly HealthAlertRecipientsOptions _recipientsOptions;
 
     public MailtrapEmailService(
         IOptions<MailtrapSettings> settings,
-        ILogger<MailtrapEmailService> logger)
+        ILogger<MailtrapEmailService> logger,
+        HealthAlertRecipientsOptions recipientsOptions)
     {
         _settings = settings.Value;
         _logger = logger;
+        _recipientsOptions = recipientsOptions;
     }
 
     public async Task SendApiDownAlertAsync(string subject, string body, CancellationToken ct = default)
@@ -67,8 +71,13 @@ public class MailtrapEmailService : IEmailService
         }
     }
 
-    public Task SendEmailAsync(string to, string subject, string body)
+    public async Task SendMessageAsync(MimeMessage message, CancellationToken ct)
     {
-        throw new NotImplementedException();
+        using var client = new SmtpClient();
+
+        await client.ConnectAsync(_settings.Host, _settings.Port, MailKit.Security.SecureSocketOptions.StartTls, ct);
+        await client.AuthenticateAsync(_settings.Username, _settings.Password, ct);
+        await client.SendAsync(message, ct);
+        await client.DisconnectAsync(true, ct);
     }
 }
