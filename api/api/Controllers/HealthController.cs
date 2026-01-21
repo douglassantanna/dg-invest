@@ -7,14 +7,14 @@ namespace api.Controllers;
 [Route("api/[controller]")]
 public class HealthController : ControllerBase
 {
-   private readonly IHealthCheckService _healthCheckService;
+    private readonly IHealthCheckService _healthCheckService;
 
     public HealthController(IHealthCheckService healthCheckService)
     {
         _healthCheckService = healthCheckService;
     }
 
-    [HttpGet("database")]
+    [HttpGet("check-database")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> CheckDatabase(CancellationToken cancellationToken)
