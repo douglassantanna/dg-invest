@@ -8,10 +8,13 @@ namespace api.Controllers;
 public class HealthController : ControllerBase
 {
     private readonly IHealthCheckService _healthCheckService;
+    private readonly string _expectedFunctionKey;
+    private const string FunctionKeyHeaderName = "X-Function-Key";
 
-    public HealthController(IHealthCheckService healthCheckService)
+    public HealthController(IHealthCheckService healthCheckService, IConfiguration configuration)
     {
         _healthCheckService = healthCheckService;
+        _expectedFunctionKey = configuration["HealthCheck:FunctionKey"] ?? string.Empty;
     }
 
     [HttpGet("check-database")]
@@ -19,6 +22,13 @@ public class HealthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> CheckDatabase(CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(_expectedFunctionKey))
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Health check key not configured." });
+
+        if (!Request.Headers.TryGetValue(FunctionKeyHeaderName, out var providedKey) ||
+            !string.Equals(providedKey.ToString(), _expectedFunctionKey, StringComparison.Ordinal))
+            return Unauthorized();
+
         var result = await _healthCheckService.IsDatabaseHealthyAsync(cancellationToken);
 
         return result.IsSuccess

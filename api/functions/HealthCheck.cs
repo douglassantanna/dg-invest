@@ -10,6 +10,7 @@ namespace functions
         private readonly ILogger<HealthCheck> _logger;
         private readonly HttpClient _httpClient;
         private readonly HealthPingOptions _options;
+        private const string FunctionKeyHeaderName = "X-Function-Key";
 
         public HealthCheck(ILogger<HealthCheck> logger,
                            HttpClient httpClient,
@@ -32,9 +33,18 @@ namespace functions
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(_options.FunctionKey))
+            {
+                _logger.LogError("Health ping function key is not configured.");
+                return;
+            }
+
             try
             {
-                using var response = await _httpClient.GetAsync(_options.Endpoint, context.CancellationToken);
+                using var request = new HttpRequestMessage(HttpMethod.Get, _options.Endpoint);
+                request.Headers.Add(FunctionKeyHeaderName, _options.FunctionKey);
+
+                using var response = await _httpClient.SendAsync(request, context.CancellationToken);
                 if (!response.IsSuccessStatusCode)
                     _logger.LogError("Health check returned {StatusCode}", (int)response.StatusCode);
             }
