@@ -36,10 +36,15 @@ public class MailtrapEmailService : IEmailService
             return;
         }
 
-        var message = BuildMessage(recipients, subject, body);
+        if (string.IsNullOrWhiteSpace(_settings.From))
+        {
+            _logger.LogError("Mailtrap From address is not configured.");
+            return;
+        }
 
         try
         {
+            var message = BuildMessage(recipients, subject, body);
             await SendMessageAsync(message, ct);
         }
         catch (Exception ex)
@@ -51,17 +56,19 @@ public class MailtrapEmailService : IEmailService
 
     public async Task SendMessageAsync(MimeMessage message, CancellationToken ct)
     {
-        using var client = new SmtpClient();
+        using var smtp = new SmtpClient();
 
-        await client.ConnectAsync(_settings.Host, _settings.Port, MailKit.Security.SecureSocketOptions.StartTls, ct);
-        await client.AuthenticateAsync(_settings.Username, _settings.Password, ct);
-        await client.SendAsync(message, ct);
-        await client.DisconnectAsync(true, ct);
+        await smtp.ConnectAsync(_settings.Host, _settings.Port, MailKit.Security.SecureSocketOptions.StartTls, ct);
+        await smtp.AuthenticateAsync(_settings.Username, _settings.Password, ct);
+        await smtp.SendAsync(message, ct);
+        await smtp.DisconnectAsync(true, ct);
     }
 
     private MimeMessage BuildMessage(IEnumerable<MailboxAddress> recipients, string subject, string body)
     {
         var message = new MimeMessage();
+
+        message.From.Add(MailboxAddress.Parse(_settings.From));
 
         foreach (var recipient in recipients)
             message.To.Add(recipient);

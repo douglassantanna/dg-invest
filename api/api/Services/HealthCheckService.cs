@@ -12,6 +12,7 @@ namespace api.Services
         private readonly IHealthAlertService _alertService;
         private readonly ILogger<HealthCheckService> _logger;
         private readonly DatabaseHealthCheckOptions _options;
+        private readonly string _environmentName;
 
         public HealthCheckService(
             DataContext context,
@@ -23,6 +24,7 @@ namespace api.Services
             _alertService = alertService;
             _logger = logger;
             _options = optionsAccessor.Value;
+            _environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
         }
 
         public async Task<Result<bool>> IsDatabaseHealthyAsync(CancellationToken ct = default)
@@ -30,7 +32,7 @@ namespace api.Services
             try
             {
                 bool canConnect = await _context.Database.CanConnectAsync(ct);
-                if (!canConnect)
+                if (canConnect)
                 {
                     const string reason = "Database connection check returned false";
                     await ReportFailureAsync(reason, exception: null, ct);
@@ -55,11 +57,12 @@ namespace api.Services
                 ? $"\nException: {exception.GetType().Name}\nMessage: {exception.Message}"
                 : string.Empty;
 
+            string timestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss 'UTC'");
             string body = _options.AlertBodyTemplate
-                .Replace("{Reason}", reason)
-                .Replace("{ExceptionDetails}", exceptionDetails)
-                .Replace("{Timestamp}", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC"))
-                .Replace("{EnvironmentName}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown");
+                .Replace("{Reason}", reason, StringComparison.Ordinal)
+                .Replace("{ExceptionDetails}", exceptionDetails, StringComparison.Ordinal)
+                .Replace("{Timestamp}", timestamp, StringComparison.Ordinal)
+                .Replace("{EnvironmentName}", _environmentName, StringComparison.Ordinal);
 
             await _alertService.AlertAsync(_options.AlertSubject, body, ct);
         }
