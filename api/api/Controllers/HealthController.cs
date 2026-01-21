@@ -24,11 +24,15 @@ public class HealthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> CheckDatabase(CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_expectedFunctionKey))
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Health check key not configured." });
+        bool hasKeyHeader = Request.Headers.TryGetValue(FunctionKeyHeaderName, out var providedKey);
+        string providedKeyValue = providedKey.ToString();
+        bool isExpectedKeyConfigured = !string.IsNullOrWhiteSpace(_expectedFunctionKey);
+        bool isKeyValid = hasKeyHeader && string.Equals(providedKeyValue, _expectedFunctionKey, StringComparison.Ordinal);
 
-        if (!Request.Headers.TryGetValue(FunctionKeyHeaderName, out var providedKey) ||
-            !string.Equals(providedKey.ToString(), _expectedFunctionKey, StringComparison.Ordinal))
+        if (!isExpectedKeyConfigured)
+            return StatusCode(StatusCodes.Status500InternalServerError);
+
+        if (!isKeyValid)
             return Unauthorized();
 
         var result = await _healthCheckService.IsDatabaseHealthyAsync(cancellationToken);
