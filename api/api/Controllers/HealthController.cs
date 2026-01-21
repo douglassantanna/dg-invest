@@ -1,5 +1,7 @@
+using api.HealthCheck;
 using api.Services.Contracts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace api.Controllers;
 
@@ -11,10 +13,10 @@ public class HealthController : ControllerBase
     private readonly string _expectedFunctionKey;
     private const string FunctionKeyHeaderName = "X-Function-Key";
 
-    public HealthController(IHealthCheckService healthCheckService, IConfiguration configuration)
+    public HealthController(IHealthCheckService healthCheckService, IOptions<HealthPingOptions> options)
     {
         _healthCheckService = healthCheckService;
-        _expectedFunctionKey = configuration["HealthCheck:FunctionKey"] ?? string.Empty;
+        _expectedFunctionKey = options.Value.FunctionKey ?? string.Empty;
     }
 
     [HttpGet("check-database")]
