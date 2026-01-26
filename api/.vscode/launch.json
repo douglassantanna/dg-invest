@@ -29,6 +29,12 @@
             "request": "launch",
             "program": "${workspaceFolder}/api/bin/Debug/net8.0/api.dll",
             "cwd": "${workspaceFolder}/api"
+        },
+        {
+            "name": "Attach to .NET Functions",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:azureFunctions.pickProcess}"
         }
     ]
 }

@@ -19,10 +19,13 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using api.Cache;
+using api.Email;
 using api.Services;
 using api.Services.Contracts;
+using api.HealthCheck;
 
 namespace api.Shared;
+
 public static class ServiceExtensions
 {
     public const string DefaultPolicy = "DefaultPolicy";
@@ -57,6 +60,10 @@ public static class ServiceExtensions
         services.Configure<CoinMarketCapSettings>(config.GetSection(nameof(CoinMarketCapSettings)));
         services.Configure<AzureStorageSettings>(config.GetSection(nameof(AzureStorageSettings)));
         services.Configure<RateLimiterSettings>(config.GetSection(nameof(RateLimiterSettings)));
+        services.Configure<MailtrapSettings>(config.GetSection(nameof(MailtrapSettings)));
+        services.Configure<DatabaseHealthCheckOptions>(config.GetSection(nameof(DatabaseHealthCheckOptions)));
+        services.Configure<HealthAlertRecipientsOptions>(config.GetSection(nameof(HealthAlertRecipientsOptions)));
+        services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
@@ -65,6 +72,7 @@ public static class ServiceExtensions
         services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IQueueService, QueueService>();
         services.AddSingleton<IJWTService, JWTService>();
+        services.AddSingleton<IEmailService, MailtrapEmailService>();
 
         services.AddScoped(typeof(IBaseRepository<>), typeof(RepositoryBase<>));
         services.AddScoped<IUserRepository, UserRepository>();
@@ -73,6 +81,7 @@ public static class ServiceExtensions
         services.AddScoped<ICryptoAssetRepository, CryptoAssetRepository>();
         services.AddScoped<ITimeframeCalculator, TimeframeCalculator>();
         services.AddScoped<IHealthCheckService, HealthCheckService>();
+        services.AddScoped<IHealthAlertService, HealthAlertService>();
 
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransactionStrategy, BuyTransaction>();
@@ -90,6 +99,7 @@ public static class ServiceExtensions
         services.AddTransient<IMarketDataService, MarketDataService>();
         services.AddSingleton<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IHealthCheckService, HealthCheckService>();
+        services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
 
         var connectionString = config.GetValue<string>("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))
