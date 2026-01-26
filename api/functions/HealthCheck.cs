@@ -25,7 +25,7 @@ namespace functions
         }
 
         [Function("DatabaseKeepAlive")]
-        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo timer, FunctionContext context)
+        public async Task Run([TimerTrigger("0 */7 * * * *")] TimerInfo timer, FunctionContext context)
         {
             if (string.IsNullOrWhiteSpace(_options.Endpoint))
             {
