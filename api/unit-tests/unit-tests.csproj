@@ -32,4 +32,8 @@
     <ProjectReference Include="..\api\api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers/" />
+  </ItemGroup>
+
 </Project>

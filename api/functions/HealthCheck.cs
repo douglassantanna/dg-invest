@@ -1,46 +1,64 @@
-using api.Services.Contracts;
+using api.HealthCheck;
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace functions
 {
     public class HealthCheck
     {
-        private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<HealthCheck> _logger;
+        private readonly HttpClient _httpClient;
+        private readonly HealthPingOptions _options;
+        private const string FunctionKeyHeaderName = "X-Function-Key";
 
-        public HealthCheck(IServiceProvider serviceProvider, ILogger<HealthCheck> logger)
+        public HealthCheck(ILogger<HealthCheck> logger,
+                           HttpClient httpClient,
+                           IOptions<HealthPingOptions> options)
         {
-            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _options = options.Value;
+
+            // Set reasonable timeout
+            _httpClient.Timeout = TimeSpan.FromSeconds(10);
         }
 
         [Function("DatabaseKeepAlive")]
-        public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo timer, FunctionContext context)
+        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo timer, FunctionContext context)
         {
-            _logger.LogInformation("Database keep-alive triggered at: {time}", DateTime.UtcNow);
+            if (string.IsNullOrWhiteSpace(_options.Endpoint))
+            {
+                _logger.LogError("Health ping endpoint is not configured.");
+                return;
+            }
 
-            using var scope = _serviceProvider.CreateScope();
-            var healthCheckService = scope.ServiceProvider.GetRequiredService<IHealthCheckService>();
+            if (string.IsNullOrWhiteSpace(_options.FunctionKey))
+            {
+                _logger.LogError("Health ping function key is not configured.");
+                return;
+            }
 
             try
             {
-                var result = await healthCheckService.IsDatabaseHealthyAsync(context.CancellationToken);
-                if (result.IsSuccess)
-                {
-                    _logger.LogInformation("Database health check succeeded.");
-                }
-                else
-                {
-                    _logger.LogError("Database health check failed: {error}", result.Error);
-                    throw new InvalidOperationException($"Database health check failed: {result.Error}");
-                }
+                using var request = new HttpRequestMessage(HttpMethod.Get, _options.Endpoint);
+                request.Headers.Add(FunctionKeyHeaderName, _options.FunctionKey);
+
+                using var response = await _httpClient.SendAsync(request, context.CancellationToken);
+                if (!response.IsSuccessStatusCode)
+                    _logger.LogError("Health check returned {StatusCode}", (int)response.StatusCode);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
             {
-                _logger.LogError(ex, "Database health check failed: {message}", ex.Message);
-                throw;
+                _logger.LogError("Health check was cancelled.");
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Health check request failed.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Health check failed with unexpected error.");
             }
         }
     }
