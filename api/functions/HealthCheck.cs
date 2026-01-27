@@ -27,6 +27,10 @@ namespace functions
         [Function("DatabaseKeepAlive")]
         public async Task Run([TimerTrigger("0 */7 * * * *")] TimerInfo timer, FunctionContext context)
         {
+            var runFunction = _options.RunFunction;
+            if (!runFunction)
+                return;
+
             if (string.IsNullOrWhiteSpace(_options.Endpoint))
             {
                 _logger.LogError("Health ping endpoint is not configured.");
