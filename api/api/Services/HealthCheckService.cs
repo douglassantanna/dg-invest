@@ -32,7 +32,7 @@ namespace api.Services
             try
             {
                 bool canConnect = await _context.Database.CanConnectAsync(ct);
-                if (canConnect)
+                if (!canConnect)
                 {
                     const string reason = "Database connection check returned false";
                     await ReportFailureAsync(reason, exception: null, ct);
