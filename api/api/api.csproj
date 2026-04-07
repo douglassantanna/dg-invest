@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="unit-tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Storage.Queues" Version="12.17.1" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Dapper" Version="2.1.35" />
