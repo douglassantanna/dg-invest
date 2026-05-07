@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.ConfiguraMemoryCache();
 builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
-builder.Services.ConfigureJwt(builder.Configuration);
+builder.Services.ConfigureJwt(builder.Configuration, builder.Environment);
 builder.Services.ConfigureOptions(builder.Configuration);
 builder.Services.ConfigureServices();
 builder.Services.ConfigureDatabase(builder.Configuration);

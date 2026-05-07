@@ -29,7 +29,7 @@ namespace api.Shared;
 public static class ServiceExtensions
 {
     public const string DefaultPolicy = "DefaultPolicy";
-    public static IServiceCollection ConfigureJwt(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection ConfigureJwt(this IServiceCollection services, IConfiguration config, IWebHostEnvironment env)
     {
         var jwtSettings = config.GetSection(nameof(JWTSettings)).Get<JWTSettings>();
         var key = Encoding.ASCII.GetBytes(jwtSettings.Secret);
@@ -40,15 +40,16 @@ public static class ServiceExtensions
             })
             .AddJwtBearer(x =>
             {
-                x.RequireHttpsMetadata = false;
+                x.RequireHttpsMetadata = !env.IsDevelopment();
                 x.SaveToken = true;
                 x.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    ValidateIssuer = false,
+                    ValidateIssuer = true,
                     ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero,
                     ValidIssuer = jwtSettings.Issuer,
-                    ValidAudience = null,
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 };
             });
