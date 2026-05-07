@@ -15,7 +15,7 @@ builder.Host.UseSerilog((context, config) => config
     .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
     .WriteTo.Console()
     .WriteToBlobLogs(context.Configuration, "api"));
-builder.Services.ConfigureJwt(builder.Configuration);
+builder.Services.ConfigureJwt(builder.Configuration, builder.Environment);
 builder.Services.ConfigureOptions(builder.Configuration);
 builder.Services.ConfigureServices();
 builder.Services.ConfigureDatabase(builder.Configuration);
