@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using api.Authentication;
+using api.AzureKeyVault;
 using api.AzureStorage;
 using api.AzureStorage.Queue;
 using api.CoinMarketCap;
@@ -11,6 +12,7 @@ using api.Cryptos.TransactionStrategies.Contracts;
 using api.Cryptos.TransactionStrategies.Transactions;
 using api.Data;
 using api.Data.Repositories;
+using api.Exchanges.Bybit;
 using api.Shared.Interfaces;
 using api.RateLimiterPolicies;
 using api.Users.Repositories;
@@ -64,6 +66,7 @@ public static class ServiceExtensions
         services.Configure<DatabaseHealthCheckOptions>(config.GetSection(nameof(DatabaseHealthCheckOptions)));
         services.Configure<HealthAlertRecipientsOptions>(config.GetSection(nameof(HealthAlertRecipientsOptions)));
         services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
+        services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
@@ -91,6 +94,10 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
 
         services.AddScoped<ICacheService, MemoryCacheService>();
+
+        services.AddSingleton<IKeyVaultService, KeyVaultService>();
+        services.AddScoped<IBybitService, BybitService>();
+
         return services;
     }
 

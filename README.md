@@ -40,6 +40,9 @@ Before running the API you need to configure the settings file:
     "Issuer": "http://my-local-host.com",
     "Secret": "YourJwtSecretHere"
   },
+  "KeyVaultSettings": {
+    "VaultUri": "https://your-keyvault-name.vault.azure.net/"
+  },
   "RateLimiterSettings": {
     "RequestsPermitLimit": 320,
     "WindowLimitInMinutes": 10
@@ -138,6 +141,81 @@ ng s -o
 The frontend launches automatically. Access the application using the credentials
 - email: admin@admin.com
 - password: admin123
+
+---
+### Bybit auto-trade sync
+
+When an order is filled on Bybit it is automatically saved to the database — no manual entry required.
+
+#### How it works
+
+```
+Bybit (order filled)
+  └─ Webhook POST → /api/tradewebhook/bybit/{userId}/{accountId}
+       ├─ HMAC-SHA256 signature validated against Key Vault secret
+       ├─ Order status checked (only "Filled" orders are processed)
+       ├─ Duplicate guard via ExchangeOrderId (idempotent)
+       ├─ Crypto asset auto-created via CoinMarketCap if not yet tracked
+       └─ Transaction saved using the existing buy/sell strategy
+```
+
+#### Setup (per sub-account)
+
+**1. Save credentials**
+
+```http
+POST /api/exchange/bybit/credentials
+Authorization: Bearer <jwt>
+
+{
+  "accountId": 1,
+  "apiKey": "your-bybit-api-key",
+  "apiSecret": "your-bybit-api-secret",
+  "webhookSecret": "your-bybit-webhook-secret"
+}
+```
+
+Credentials are stored in **Azure Key Vault** (never in the database).  
+Key naming: `bybit-{userId}-{accountId}-{api-key|api-secret|webhook-secret}`.
+
+**2. Sync sub-accounts from Bybit**
+
+Reads sub-accounts from Bybit using the main account API key and maps them to existing app accounts by `SubaccountTag`. Creates new accounts for any that are not yet tracked.
+
+```http
+POST /api/exchange/bybit/sync-accounts
+Authorization: Bearer <jwt>
+```
+
+**3. Configure the webhook in Bybit**
+
+In Bybit → Account → API Management → Webhooks, set the endpoint URL to:
+
+```
+https://your-domain.com/api/tradewebhook/bybit/{userId}/{accountId}
+```
+
+Use a different URL for each sub-account so trades are routed to the correct portfolio account.
+
+#### Azure Key Vault configuration
+
+Add the following to `appsettings.json`:
+
+```json
+"KeyVaultSettings": {
+  "VaultUri": "https://your-keyvault-name.vault.azure.net/"
+}
+```
+
+The API uses `DefaultAzureCredential` to authenticate, which works with:
+- Managed Identity (Azure App Service / Azure Container Apps)
+- Azure CLI (`az login`) for local development
+
+#### Security
+
+- Webhook endpoint does **not** require JWT — it is protected exclusively by HMAC-SHA256 signature validation.
+- Invalid signatures return `401`. Processing errors return `200` to prevent Bybit retry storms.
+- `ExchangeOrderId` is stored with a unique index to prevent duplicate transactions if Bybit delivers the same webhook more than once.
 
 ---
 ### Project structure

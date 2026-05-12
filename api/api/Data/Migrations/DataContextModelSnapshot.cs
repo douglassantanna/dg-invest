@@ -275,6 +275,10 @@ namespace api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar");
 
+                    b.Property<string>("ExchangeOrderId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<decimal>("Fee")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
@@ -292,6 +296,10 @@ namespace api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CryptoAssetId");
+
+                    b.HasIndex("ExchangeOrderId")
+                        .IsUnique()
+                        .HasFilter("[ExchangeOrderId] IS NOT NULL");
 
                     b.ToTable("CryptoTransactions");
                 });
