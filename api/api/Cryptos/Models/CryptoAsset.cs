@@ -3,6 +3,7 @@ using api.Cryptos.Models;
 using api.Shared;
 
 namespace api.Models.Cryptos;
+
 public class CryptoAsset : Entity
 {
     public string CryptoCurrency { get; private set; } = string.Empty;
@@ -111,6 +112,9 @@ public class CryptoAsset : Entity
 
     private void HandleBuyTransaction(CryptoTransaction transaction)
     {
+        if (transaction.Amount <= 0)
+            throw new CryptoAssetException("Buy amount must be greater than zero");
+
         decimal totalCost = (transaction.Amount * transaction.Price) + transaction.Fee;
         Balance += transaction.Amount;
         TotalInvested += totalCost;
@@ -118,6 +122,9 @@ public class CryptoAsset : Entity
 
     private void HandleSellTransaction(CryptoTransaction transaction)
     {
+        if (transaction.Amount <= 0)
+            throw new CryptoAssetException("Sell amount must be greater than zero");
+
         if (transaction.Amount > Balance)
             throw new CryptoAssetException("Insufficient balance");
 
