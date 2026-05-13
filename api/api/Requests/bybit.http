@@ -1,0 +1,13 @@
+@url-dev = http://localhost:5062/api/Exchange/bybit
+@token = 
+###
+POST {{url-dev}}/credentials
+Content-Type: application/json  
+Authorization: Bearer {{token}}
+
+{
+    "accountId": 1,
+    "apiKey": "first-test-api-key",
+    "apiSecret": "first-test-api-secret",
+    "webhookSecret": "first-test-webhook-secret"
+}
