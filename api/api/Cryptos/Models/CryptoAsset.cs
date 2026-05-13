@@ -69,17 +69,6 @@ public class CryptoAsset : Entity
             Balance += amount;
     }
 
-    public void SubtractBalance(decimal amount)
-    {
-        if (amount <= 0.0m)
-            throw new CryptoAssetException("Amount must be greater than 0");
-
-        if (Balance < amount)
-            throw new CryptoAssetException("Insufficient funds");
-
-        Balance -= amount;
-    }
-
     public decimal GetPercentDifference(decimal currentPrice)
     {
         if (AveragePrice == 0 || Balance == 0)
