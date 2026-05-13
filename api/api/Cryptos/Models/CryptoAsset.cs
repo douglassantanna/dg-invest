@@ -7,18 +7,7 @@ public class CryptoAsset : Entity
 {
     public string CryptoCurrency { get; private set; } = string.Empty;
     public decimal Balance { get; private set; }
-    private decimal _averagePrice;
-    public decimal AveragePrice
-    {
-        get
-        {
-            return GetAveragePrice();
-        }
-        set
-        {
-            _averagePrice = value;
-        }
-    }
+    public decimal TotalInvested { get; private set; }
     public string Symbol { get; private set; } = string.Empty;
     public string CurrencyName { get; private set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
@@ -28,7 +17,8 @@ public class CryptoAsset : Entity
     public IReadOnlyCollection<Address> Addresses => _addresses.AsReadOnly();
     public bool Deleted { get; private set; }
     public int CoinMarketCapId { get; private set; }
-    public decimal TotalInvested { get; private set; }
+
+    public decimal AveragePrice => Balance == 0 ? 0 : TotalInvested / Balance;
 
     public CryptoAsset(string cryptoCurrency,
                        string currencyName,
@@ -40,17 +30,21 @@ public class CryptoAsset : Entity
         Symbol = symbol;
         CreatedAt = DateTimeOffset.UtcNow;
         Balance = 0;
+        TotalInvested = 0;
         Deleted = false;
         CoinMarketCapId = coinMarketCapId;
     }
+
     public void Delete()
     {
         Deleted = true;
     }
+
     public void AddAddress(Address address)
     {
         _addresses.Add(address);
     }
+
     public void AddTransaction(CryptoTransaction transaction)
     {
         switch (transaction.TransactionType)
@@ -73,107 +67,65 @@ public class CryptoAsset : Entity
         if (amount > 0.0m)
             Balance += amount;
     }
+
     public void SubtractBalance(decimal amount)
     {
         if (amount <= 0.0m)
-        {
             throw new CryptoAssetException("Amount must be greater than 0");
-        }
 
         if (Balance < amount)
-        {
             throw new CryptoAssetException("Insufficient funds");
-        }
 
         Balance -= amount;
     }
+
     public decimal GetPercentDifference(decimal currentPrice)
     {
-        decimal averagePrice = GetAveragePrice();
-
-        if (averagePrice == 0 || Balance == 0)
-        {
+        if (AveragePrice == 0 || Balance == 0)
             return 0;
-        }
-        else
-        {
-            decimal difference = currentPrice - averagePrice;
-            decimal percentDifference = (difference / averagePrice) * 100;
-            return percentDifference;
-        }
+
+        return ((currentPrice - AveragePrice) / AveragePrice) * 100;
     }
+
     internal decimal CurrentWorth(decimal currentPrice)
     {
         return Balance * currentPrice;
     }
+
     internal decimal GetInvestmentGainLossValue(decimal currentPrice)
     {
-        if (Balance == 0)
-        {
+        if (TotalInvested == 0)
             return 0;
-        }
-        var total = CurrentWorth(currentPrice) - TotalInvested;
-        return total;
+
+        return CurrentWorth(currentPrice) - TotalInvested;
     }
+
     internal decimal GetInvestmentGainLossPercentage(decimal currentPrice)
     {
-        if (Balance == 0)
-        {
+        if (TotalInvested == 0)
             return 0;
-        }
-        var currentWorth = CurrentWorth(currentPrice);
-        var gainOrLoss = currentWorth - TotalInvested;
 
-        var percentageDifference = (gainOrLoss / TotalInvested) * 100;
-        return percentageDifference;
+        var gainOrLoss = CurrentWorth(currentPrice) - TotalInvested;
+        return (gainOrLoss / TotalInvested) * 100;
     }
-    private decimal GetAveragePrice()
-    {
-        var enableTransactions = _transactions
-                                .Where(t => t.TransactionType == ETransactionType.Buy)
-                                .Where(t => t.Enabled)
-                                .Select(t => t.Price)
-                                .ToList();
 
-        if (enableTransactions.Any())
-        {
-            decimal averagePrice = enableTransactions.Average();
-            if (Balance == 0)
-            {
-                return 0;
-            }
-            return averagePrice;
-        }
-        return 0;
-    }
-    private void DisableActiveBuyTransactions()
-    {
-        var ativeBuyTransactions = _transactions.Where(x => x.Enabled).ToList();
-        if (ativeBuyTransactions.Any())
-        {
-            foreach (var item in ativeBuyTransactions)
-            {
-                item.Disable();
-            }
-        }
-    }
     private void HandleBuyTransaction(CryptoTransaction transaction)
     {
-        AddBalance(transaction.Amount);
-        TotalInvested += transaction.Price * transaction.Amount;
+        decimal totalCost = (transaction.Amount * transaction.Price) + transaction.Fee;
+        Balance += transaction.Amount;
+        TotalInvested += totalCost;
     }
 
     private void HandleSellTransaction(CryptoTransaction transaction)
     {
-        SubtractBalance(transaction.Amount);
+        if (transaction.Amount > Balance)
+            throw new CryptoAssetException("Insufficient balance");
+
+        decimal costBasisRemoved = transaction.Amount * AveragePrice;
+        Balance -= transaction.Amount;
+        TotalInvested -= costBasisRemoved;
 
         if (Balance == 0)
-        {
             TotalInvested = 0;
-            DisableActiveBuyTransactions();
-            return;
-        }
-
-        TotalInvested -= transaction.Amount * transaction.Price;
     }
 }
