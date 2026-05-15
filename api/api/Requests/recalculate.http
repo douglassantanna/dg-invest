@@ -1,0 +1,7 @@
+@url = https://dg-api-w.azurewebsites.net/api/Authentication
+@token = ''
+
+###
+POST {{url}}/recalculate
+Content-Type: application/json
+Authorization: Bearer {{token}}
