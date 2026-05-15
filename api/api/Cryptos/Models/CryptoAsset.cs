@@ -76,6 +76,34 @@ public class CryptoAsset : Entity
 
         return ((currentPrice - AveragePrice) / AveragePrice) * 100;
     }
+    public void RecalculateFromTransactions()
+    {
+        Balance = 0;
+        TotalInvested = 0;
+
+        var ordered = _transactions
+            .OrderBy(t => t.PurchaseDate)
+            .ToList();
+
+        foreach (var t in ordered)
+        {
+            switch (t.TransactionType)
+            {
+                case ETransactionType.Buy:
+                    Balance += t.Amount;
+                    TotalInvested += (t.Amount * t.Price) + t.Fee;
+                    break;
+
+                case ETransactionType.Sell:
+                    if (t.Amount > Balance) break; // skip corrupted sells
+                    decimal costBasisRemoved = t.Amount * (Balance == 0 ? 0 : TotalInvested / Balance);
+                    Balance -= t.Amount;
+                    TotalInvested -= costBasisRemoved;
+                    if (Balance == 0) TotalInvested = 0;
+                    break;
+            }
+        }
+    }
 
     internal decimal CurrentWorth(decimal currentPrice)
     {

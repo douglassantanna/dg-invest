@@ -1,6 +1,6 @@
 @url = https://dg-api-w.azurewebsites.net/api/Authentication
 @url-docker = http://localhost:8080/api/Authentication
-@url-dev = https://localhost:7204/api/Authentication
+@url-dev = https://dgi-api.azurewebsites.net/api/Authentication
 
 POST {{url-dev}}/login
 Content-Type: application/json
