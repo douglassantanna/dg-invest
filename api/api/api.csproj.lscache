@@ -83,6 +83,7 @@ Controllers/
  ExchangeController.cs
  HealthController.cs
  MigrationsController.cs
+ RecalculateController.cs
  TradeWebhookController.cs
  UserController.cs
 Cryptos/Commands/
@@ -176,6 +177,8 @@ Data/
   20250224232619_remove-marketDataPoints-table.cs
   20250224232619_remove-marketDataPoints-table.Designer.cs
   20250512000000_AddExchangeOrderIdToCryptoTransaction.cs
+  20260514000000_remove-average-price-column-from-crypto-asset.cs
+  20260514000000_remove-average-price-column-from-crypto-asset.Designer.cs
   DataContextModelSnapshot.cs
  ModelsConfigurations/
   AccountTransactionConfiguration.cs
@@ -225,6 +228,7 @@ Shared/
  Interfaces/IPasswordHelper.cs
  PageList.cs
  PasswordHelper.cs
+ RecalculationSettings.cs
  Response.cs
  ServiceExtensions.cs
  StringSanitizer.cs

@@ -66,6 +66,7 @@ public static class ServiceExtensions
         services.Configure<DatabaseHealthCheckOptions>(config.GetSection(nameof(DatabaseHealthCheckOptions)));
         services.Configure<HealthAlertRecipientsOptions>(config.GetSection(nameof(HealthAlertRecipientsOptions)));
         services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
+        services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
         services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
         return services;
     }
