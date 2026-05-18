@@ -1,8 +1,7 @@
-@url = https://dgi-api.azurewebsites.net/api/Recalculate
+@url = https://dg-api-w.azurewebsites.net/api/Recalculate
 @url-dev = http://localhost:5062/api/Recalculate
 @token =  
 ###
-POST {{url}}/recalculate
+POST {{url-dev}}/recalculate
 
 Content-Type: application/json
-Authorization: Bearer {{token}}

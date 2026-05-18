@@ -1,29 +1,36 @@
 using api.Cache;
 using api.Data;
-using api.Users.Models;
-using Microsoft.AspNetCore.Authorization;
+using api.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace api.Controllers;
 
 [ApiController]
-// [Authorize(Roles = nameof(Role.Admin))]
 [Route("api/[controller]")]
 public class RecalculateController : ControllerBase
 {
     private readonly DataContext _context;
     private readonly ICacheService _cacheService;
+    private readonly RecalculationSettings _settings;
 
-    public RecalculateController(DataContext context, ICacheService cacheService)
+    public RecalculateController(DataContext context, ICacheService cacheService, IOptions<RecalculationSettings> settings)
     {
         _context = context;
         _cacheService = cacheService;
+        _settings = settings.Value;
     }
 
     [HttpPost("recalculate")]
     public async Task<IActionResult> Recalculate()
     {
+        var isRecalculationEnabled = _settings.EnableRecalculation;
+        if (!isRecalculationEnabled)
+        {
+            return BadRequest("Recalculation is not enabled");
+        }
+
         var accounts = await _context.Accounts
             .Include(a => a.CryptoAssets)
                 .ThenInclude(ca => ca.Transactions)
