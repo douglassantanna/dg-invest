@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using api.Exchanges.Commands;
+using api.Exchanges.Queries;
 using api.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -51,6 +52,43 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Returns all Bybit sub-members with their UIDs and whether they are already
+    /// mapped to an app account. Use this to identify which Bybit UID belongs to
+    /// which sub-account before calling map-account.
+    /// </summary>
+    [HttpGet("bybit/sub-members")]
+    public async Task<ActionResult<Response>> GetBybitSubMembers()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetBybitSubMembersQuery(userId.Value));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Manually links an app account to a Bybit sub-account by UID.
+    /// Call GET bybit/sub-members first to get the list of UIDs.
+    /// </summary>
+    [HttpPost("bybit/map-account")]
+    public async Task<ActionResult<Response>> MapBybitAccount([FromBody] MapBybitAccountRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new MapBybitAccountCommand(userId.Value, request.AccountId, request.BybitUid));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -58,8 +96,5 @@ public class ExchangeController : ControllerBase
     }
 }
 
-public record SaveBybitCredentialsRequest(
-    int AccountId,
-    string ApiKey,
-    string ApiSecret,
-    string WebhookSecret);
+public record SaveBybitCredentialsRequest(int AccountId, string ApiKey, string ApiSecret, string WebhookSecret);
+public record MapBybitAccountRequest(int AccountId, string BybitUid);

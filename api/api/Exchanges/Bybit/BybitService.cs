@@ -1,21 +1,27 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Flurl;
 using Flurl.Http;
+using Microsoft.Extensions.Options;
 
 namespace api.Exchanges.Bybit;
+
 public class BybitService : IBybitService
 {
-    private const string BaseUrl = "https://api.bybit.com";
-    private const string SubMembersEndpoint = "/v5/user/sub-members";
+    private const string SubMembersEndpoint = "/v5/user/submembers";
     private const int RecvWindow = 5000;
 
+    private readonly string _tradingBaseUrl;
+    private readonly string _accountBaseUrl;
     private readonly ILogger<BybitService> _logger;
 
-    public BybitService(ILogger<BybitService> logger)
+    public BybitService(IOptions<BybitSettings> settings, ILogger<BybitService> logger)
     {
+        _tradingBaseUrl = settings.Value.TradingBaseUrl;
+        _accountBaseUrl = settings.Value.AccountBaseUrl;
         _logger = logger;
+        _logger.LogInformation("BybitService initialised — trading: {TradingUrl} | accounts: {AccountUrl}",
+            _tradingBaseUrl, _accountBaseUrl);
     }
 
     // Bybit webhook signature: HMAC-SHA256(webhookSecret, timestamp + rawBody), hex-encoded.
@@ -48,7 +54,7 @@ public class BybitService : IBybitService
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
             var signature = BuildApiSignature(apiKey, apiSecret, timestamp, string.Empty);
 
-            var response = await BaseUrl
+            var response = await _accountBaseUrl
                 .AppendPathSegment(SubMembersEndpoint)
                 .WithHeader("X-BAPI-API-KEY", apiKey)
                 .WithHeader("X-BAPI-TIMESTAMP", timestamp)

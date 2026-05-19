@@ -14,6 +14,9 @@ public class Account : Entity
     public IReadOnlyCollection<CryptoAsset> CryptoAssets => _cryptoAssets.AsReadOnly();
     public string SubaccountTag { get; private set; } = string.Empty;
     public DateTime CreatedAt { get; private set; }
+    // Bybit sub-account UID — set manually to link this account to a Bybit sub-account.
+    public string? BybitUid { get; private set; }
+
     public Account(string subaccountTag, int userId)
     {
         SubaccountTag = subaccountTag;
@@ -21,6 +24,8 @@ public class Account : Entity
         IsSelected = subaccountTag == "main" ? true : false;
         CreatedAt = DateTime.Now;
     }
+
+    public void SetBybitUid(string uid) => BybitUid = uid;
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;
     public decimal TotalDeposited() => _accountTransactions.Where(x => x.TransactionType == EAccountTransactionType.DepositFiat).Sum(x => x.Amount);

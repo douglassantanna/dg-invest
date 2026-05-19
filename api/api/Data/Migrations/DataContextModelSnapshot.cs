@@ -37,6 +37,10 @@ namespace api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("BybitUid")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<bool>("IsSelected")
                         .HasColumnType("bit");
 
@@ -49,6 +53,10 @@ namespace api.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BybitUid")
+                        .IsUnique()
+                        .HasFilter("[BybitUid] IS NOT NULL");
 
                     b.HasIndex("UserId");
 

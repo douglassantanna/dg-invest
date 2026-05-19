@@ -177,6 +177,7 @@ Data/
   20250224232619_remove-marketDataPoints-table.cs
   20250224232619_remove-marketDataPoints-table.Designer.cs
   20250512000000_AddExchangeOrderIdToCryptoTransaction.cs
+  20250519000000_AddBybitUidToAccount.cs
   20260514000000_remove-average-price-column-from-crypto-asset.cs
   20260514000000_remove-average-price-column-from-crypto-asset.Designer.cs
   DataContextModelSnapshot.cs
@@ -193,13 +194,16 @@ Data/
 Email/MailtrapSettings.cs
 Exchanges/Bybit/
  BybitService.cs
+ BybitSettings.cs
  BybitSubAccountResponse.cs
  BybitWebhookPayload.cs
  IBybitService.cs
 Exchanges/Commands/
+ MapBybitAccountCommand.cs
  ProcessBybitWebhookCommand.cs
  SaveBybitCredentialsCommand.cs
  SyncBybitAccountsCommand.cs
+Exchanges/Queries/GetBybitSubMembersQuery.cs
 HealthCheck/
  HealthAlertRecipientsOptions.cs
  HealthCheckOptions.cs

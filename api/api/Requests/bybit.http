@@ -7,7 +7,12 @@ Authorization: Bearer {{token}}
 
 {
     "accountId": 1,
-    "apiKey": "first-test-api-key",
-    "apiSecret": "first-test-api-secret",
+    "apiKey": "0",
+    "apiSecret": "0",
     "webhookSecret": "first-test-webhook-secret"
 }
+
+###
+POST {{url-dev}}/sync-accounts
+Content-Type: application/json  
+Authorization: Bearer {{token}}
