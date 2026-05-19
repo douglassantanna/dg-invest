@@ -180,6 +180,8 @@ Data/
   20250519000000_AddBybitUidToAccount.cs
   20260514000000_remove-average-price-column-from-crypto-asset.cs
   20260514000000_remove-average-price-column-from-crypto-asset.Designer.cs
+  20260519115952_AddMissingThing.cs
+  20260519115952_AddMissingThing.Designer.cs
   DataContextModelSnapshot.cs
  ModelsConfigurations/
   AccountTransactionConfiguration.cs
