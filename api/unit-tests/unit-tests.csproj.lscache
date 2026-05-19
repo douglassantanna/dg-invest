@@ -380,13 +380,14 @@ Validators/CommandValidatorTests.cs
  System.Xml.XPath.XDocument.dll
  WindowsBase.dll
 <NUGET>/
- azure.core/1.36.0/lib/net6.0/Azure.Core.dll
- azure.identity/1.10.3/lib/netstandard2.0/Azure.Identity.dll
+ azure.core/1.40.0/lib/net6.0/Azure.Core.dll
+ azure.identity/1.12.0/lib/netstandard2.0/Azure.Identity.dll
+ azure.security.keyvault.secrets/4.6.0/lib/netstandard2.0/Azure.Security.KeyVault.Secrets.dll
  azure.storage.blobs/12.18.0/lib/net6.0/Azure.Storage.Blobs.dll
  azure.storage.common/12.18.1/lib/net6.0/Azure.Storage.Common.dll
  azure.storage.queues/12.17.1/lib/net6.0/Azure.Storage.Queues.dll
  bcrypt.net-next/4.0.3/lib/net6.0/BCrypt.Net-Next.dll
- bouncycastle.cryptography/2.5.0/lib/net6.0/BouncyCastle.Cryptography.dll
+ bouncycastle.cryptography/2.6.2/lib/net6.0/BouncyCastle.Cryptography.dll
  castle.core/5.1.1/lib/net6.0/Castle.Core.dll
  dapper/2.1.35/lib/net7.0/Dapper.dll
  fluentassertions/6.12.0/lib/net6.0/FluentAssertions.dll
@@ -395,7 +396,7 @@ Validators/CommandValidatorTests.cs
  fluentvalidation/11.5.1/lib/net7.0/FluentValidation.dll
  flurl.http/3.2.4/lib/netstandard2.0/Flurl.Http.dll
  flurl/3.0.6/lib/netstandard2.0/Flurl.dll
- mailkit/4.10.0/lib/net8.0/MailKit.dll
+ mailkit/4.16.0/lib/net8.0/MailKit.dll
  mediatr.contracts/1.0.1/lib/netstandard2.0/MediatR.Contracts.dll
  mediatr.extensions.microsoft.dependencyinjection/11.1.0/lib/netstandard2.1/MediatR.Extensions.Microsoft.DependencyInjection.dll
  mediatr/11.0.0/lib/netstandard2.1/MediatR.dll
@@ -413,8 +414,8 @@ Validators/CommandValidatorTests.cs
  microsoft.entityframeworkcore.sqlserver/8.0.7/lib/net8.0/Microsoft.EntityFrameworkCore.SqlServer.dll
  microsoft.entityframeworkcore/8.0.11/lib/net8.0/Microsoft.EntityFrameworkCore.dll
  microsoft.extensions.dependencymodel/8.0.1/lib/net8.0/Microsoft.Extensions.DependencyModel.dll
- microsoft.identity.client.extensions.msal/4.56.0/lib/netstandard2.0/Microsoft.Identity.Client.Extensions.Msal.dll
- microsoft.identity.client/4.56.0/lib/net6.0/Microsoft.Identity.Client.dll
+ microsoft.identity.client.extensions.msal/4.61.3/lib/net6.0/Microsoft.Identity.Client.Extensions.Msal.dll
+ microsoft.identity.client/4.61.3/lib/net6.0/Microsoft.Identity.Client.dll
  microsoft.identitymodel.abstractions/7.1.2/lib/net8.0/Microsoft.IdentityModel.Abstractions.dll
  microsoft.identitymodel.jsonwebtokens/7.1.2/lib/net8.0/Microsoft.IdentityModel.JsonWebTokens.dll
  microsoft.identitymodel.logging/7.1.2/lib/net8.0/Microsoft.IdentityModel.Logging.dll
@@ -433,7 +434,7 @@ Validators/CommandValidatorTests.cs
   Microsoft.VisualStudio.TestPlatform.ObjectModel.dll
   testhost.dll
  microsoft.win32.systemevents/6.0.0/lib/net6.0/Microsoft.Win32.SystemEvents.dll
- mimekit/4.10.0/lib/net8.0/MimeKit.dll
+ mimekit/4.16.0/lib/net8.0/MimeKit.dll
  moq/4.20.69/lib/net6.0/Moq.dll
  newtonsoft.json/13.0.1/lib/netstandard2.0/Newtonsoft.Json.dll
  nuget.frameworks/6.5.0/lib/netstandard2.0/NuGet.Frameworks.dll
@@ -454,6 +455,7 @@ Validators/CommandValidatorTests.cs
  swashbuckle.aspnetcore.swagger/6.5.0/lib/net7.0/Swashbuckle.AspNetCore.Swagger.dll
  swashbuckle.aspnetcore.swaggergen/6.5.0/lib/net7.0/Swashbuckle.AspNetCore.SwaggerGen.dll
  swashbuckle.aspnetcore.swaggerui/6.5.0/lib/net7.0/Swashbuckle.AspNetCore.SwaggerUI.dll
+ system.clientmodel/1.0.0/lib/net6.0/System.ClientModel.dll
  system.configuration.configurationmanager/6.0.1/lib/net6.0/System.Configuration.ConfigurationManager.dll
  system.drawing.common/6.0.0/lib/net6.0/System.Drawing.Common.dll
  system.identitymodel.tokens.jwt/7.1.2/lib/net8.0/System.IdentityModel.Tokens.Jwt.dll
