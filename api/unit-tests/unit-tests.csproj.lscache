@@ -63,6 +63,18 @@ CryptoTests/Commands/
 CryptoTests/
  Models/CryptoAssetTests.cs
  Queries/GetCryptoAssetByIdQueryTest.cs
+ExchangesTests/Bybit/
+ BybitServiceTests.cs
+ BybitSettingsTests.cs
+ExchangesTests/Commands/
+ MapBybitAccountCommandHandlerTests.cs
+ MapBybitAccountCommandValidatorTests.cs
+ ProcessBybitWebhookCommandHandlerTests.cs
+ SaveBybitCredentialsCommandHandlerTests.cs
+ SaveBybitCredentialsCommandValidatorTests.cs
+ExchangesTests/Models/
+ SyncLogEntryTests.cs
+ SyncStatusTests.cs
 Extensions/MockDbSetExtensions.cs
 GlobalUsings.cs
 Helpers/MarketDataHelper.cs
