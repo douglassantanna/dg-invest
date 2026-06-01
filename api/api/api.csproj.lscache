@@ -185,7 +185,8 @@ Data/
   20260514000000_remove-average-price-column-from-crypto-asset.Designer.cs
   20260519115952_AddMissingThing.cs
   20260519115952_AddMissingThing.Designer.cs
-  20260601000000_AddSyncStatus.cs
+  20260601194826_AddSyncStatus.cs
+  20260601194826_AddSyncStatus.Designer.cs
   DataContextModelSnapshot.cs
  ModelsConfigurations/
   AccountTransactionConfiguration.cs
