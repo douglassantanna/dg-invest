@@ -1,5 +1,4 @@
 using api.Cryptos.Models;
-using api.Exchanges.Models;
 using api.Models.Cryptos;
 using api.Users.Models;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +18,6 @@ public class DataContext : DbContext
     public virtual DbSet<Account> Accounts { get; set; } = null!;
     public virtual DbSet<AccountTransaction> AccountTransactions { get; set; } = null!;
     public virtual DbSet<UserPortfolioSnapshot> UserPortfolioSnapshots { get; set; } = null!;
-    public virtual DbSet<SyncStatus> SyncStatuses { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);

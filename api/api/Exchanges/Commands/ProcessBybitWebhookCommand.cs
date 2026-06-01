@@ -1,17 +1,13 @@
 using api.AzureKeyVault;
-using api.AzureStorage;
-using api.AzureStorage.Blob;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
 using api.Exchanges.Bybit;
-using api.Exchanges.Models;
 using api.Models.Cryptos;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace api.Exchanges.Commands;
 
@@ -31,8 +27,6 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
     private readonly IKeyVaultService _keyVaultService;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ITransactionService _transactionService;
-    private readonly IBlobStorageService _blobStorageService;
-    private readonly AzureStorageSettings _storageSettings;
     private readonly DataContext _context;
     private readonly ILogger<ProcessBybitWebhookCommandHandler> _logger;
 
@@ -41,8 +35,6 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
         IKeyVaultService keyVaultService,
         ICoinMarketCapService coinMarketCapService,
         ITransactionService transactionService,
-        IBlobStorageService blobStorageService,
-        IOptions<AzureStorageSettings> storageSettings,
         DataContext context,
         ILogger<ProcessBybitWebhookCommandHandler> logger)
     {
@@ -50,8 +42,6 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
         _keyVaultService = keyVaultService;
         _coinMarketCapService = coinMarketCapService;
         _transactionService = transactionService;
-        _blobStorageService = blobStorageService;
-        _storageSettings = storageSettings.Value;
         _context = context;
         _logger = logger;
     }
@@ -86,13 +76,10 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
         if (account == null)
         {
             _logger.LogError("ProcessBybitWebhook: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
-            await MarkSyncStatusErrorAsync(request.UserId, request.AccountId, "Account not found", cancellationToken);
             return new Response("Account not found", false, 404);
         }
 
-        var filledOrders = request.Payload.Data.Where(o => o.OrderStatus == "Filled").ToList();
-
-        foreach (var order in filledOrders)
+        foreach (var order in request.Payload.Data.Where(o => o.OrderStatus == "Filled"))
         {
             await ProcessOrderAsync(order, account, request.UserId, cancellationToken);
         }
@@ -100,39 +87,31 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
         _context.Accounts.Update(account);
         await _context.SaveChangesAsync(cancellationToken);
 
-        var lastOrderId = filledOrders.LastOrDefault()?.OrderId;
-        await UpsertSyncStatusAsync(request.UserId, request.AccountId, lastOrderId, cancellationToken);
-
         return new Response("ok", true);
     }
 
     private async Task ProcessOrderAsync(BybitOrderData order, Account account, int userId, CancellationToken cancellationToken)
     {
-        var baseSymbol = ExtractBaseSymbol(order.Symbol);
-        var logId = Guid.NewGuid().ToString();
-
         // Skip duplicates — same order may arrive more than once.
         var alreadyProcessed = await _context.CryptoTransactions
             .AnyAsync(t => t.ExchangeOrderId == order.OrderId, cancellationToken);
         if (alreadyProcessed)
         {
             _logger.LogInformation("ProcessBybitWebhook: order {OrderId} already saved, skipping", order.OrderId);
-            await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Duplicate", null, logId, cancellationToken);
             return;
         }
 
         if (!TryParseOrderValues(order, out var price, out var qty, out var fee))
         {
             _logger.LogError("ProcessBybitWebhook: could not parse numeric values for order {OrderId}", order.OrderId);
-            await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", "Could not parse numeric values", logId, cancellationToken);
             return;
         }
 
+        var baseSymbol = ExtractBaseSymbol(order.Symbol);
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, baseSymbol, cancellationToken);
         if (cryptoAsset == null)
         {
             _logger.LogError("ProcessBybitWebhook: could not resolve crypto asset for symbol {Symbol}", baseSymbol);
-            await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", $"Could not resolve asset for symbol {baseSymbol}", logId, cancellationToken);
             return;
         }
 
@@ -162,66 +141,11 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
         if (!result.IsSuccess)
         {
             _logger.LogError("ProcessBybitWebhook: transaction strategy failed for order {OrderId}: {Message}", order.OrderId, result.Message);
-            await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", result.Message, logId, cancellationToken);
             return;
         }
 
         cryptoAsset.AddTransaction(cryptoTx);
-
-        await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Success", null, logId, cancellationToken);
         _logger.LogInformation("ProcessBybitWebhook: saved order {OrderId} ({Side} {Qty} {Symbol} @ {Price})", order.OrderId, order.Side, qty, baseSymbol, price);
-    }
-
-    private async Task WriteSyncLogAsync(BybitOrderData order, string symbol, int userId, int accountId, string status, string? errorMessage, string logId, CancellationToken cancellationToken)
-    {
-        var parsed = TryParseOrderValues(order, out var price, out var qty, out _);
-        var entry = new SyncLogEntry(
-            Id: logId,
-            UserId: userId,
-            AccountId: accountId,
-            ExchangeName: "Bybit",
-            OrderId: order.OrderId,
-            Symbol: symbol,
-            Side: order.Side,
-            Qty: parsed ? qty : 0,
-            Price: parsed ? price : 0,
-            Status: status,
-            ErrorMessage: errorMessage,
-            Timestamp: DateTime.UtcNow,
-            ImportSource: "Webhook");
-
-        var blobPath = $"{userId}/{accountId}/{DateTime.UtcNow:yyyy-MM-dd}.jsonl";
-        await _blobStorageService.AppendLogAsync(_storageSettings.SyncLogsContainer, blobPath, entry, cancellationToken);
-    }
-
-    private async Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken)
-    {
-        var status = await _context.SyncStatuses
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
-
-        if (status == null)
-        {
-            status = new SyncStatus(userId, accountId, "Bybit");
-            _context.SyncStatuses.Add(status);
-        }
-
-        status.MarkConnected(lastOrderId ?? string.Empty);
-        await _context.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task MarkSyncStatusErrorAsync(int userId, int accountId, string errorMessage, CancellationToken cancellationToken)
-    {
-        var status = await _context.SyncStatuses
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
-
-        if (status == null)
-        {
-            status = new SyncStatus(userId, accountId, "Bybit");
-            _context.SyncStatuses.Add(status);
-        }
-
-        status.MarkError(errorMessage);
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<CryptoAsset?> FindOrCreateCryptoAssetAsync(Account account, string symbol, CancellationToken cancellationToken)

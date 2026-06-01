@@ -383,7 +383,7 @@ Validators/CommandValidatorTests.cs
  azure.core/1.40.0/lib/net6.0/Azure.Core.dll
  azure.identity/1.12.0/lib/netstandard2.0/Azure.Identity.dll
  azure.security.keyvault.secrets/4.6.0/lib/netstandard2.0/Azure.Security.KeyVault.Secrets.dll
- azure.storage.blobs/12.19.1/lib/net6.0/Azure.Storage.Blobs.dll
+ azure.storage.blobs/12.18.0/lib/net6.0/Azure.Storage.Blobs.dll
  azure.storage.common/12.18.1/lib/net6.0/Azure.Storage.Common.dll
  azure.storage.queues/12.17.1/lib/net6.0/Azure.Storage.Queues.dll
  bcrypt.net-next/4.0.3/lib/net6.0/BCrypt.Net-Next.dll
