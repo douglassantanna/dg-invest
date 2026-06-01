@@ -1,5 +1,5 @@
 @url-dev = http://localhost:5062/api/Exchange/bybit
-@token = 
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZW1haWwuY29tIiwibmFtZWlkIjoiMSIsInVuaXF1ZV9uYW1lIjoiVGhlbyBHaXoiLCJyb2xlIjoiQWRtaW4iLCJuYmYiOjE3NzkxOTI3MzgsImV4cCI6MTc4MTc4NDczOCwiaWF0IjoxNzc5MTkyNzM4LCJpc3MiOiJodHRwOi8vbXktbG9jYWwtaG9zdC5jb20ifQ.iLNhyOOoKCwE3mWBKMKgY6cXeWcbisyCA9D-vxL6v9s
 ###
 POST {{url-dev}}/credentials
 Content-Type: application/json  
@@ -7,8 +7,8 @@ Authorization: Bearer {{token}}
 
 {
     "accountId": 1,
-    "apiKey": "0",
-    "apiSecret": "0",
+    "apiKey": "nnTizqzJILHwao9MVO",
+    "apiSecret": "DTlpF3Oq8RYQWS8dAkASOfym0IKS6OnZQVHF",
     "webhookSecret": "first-test-webhook-secret"
 }
 
