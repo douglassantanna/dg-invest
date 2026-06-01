@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using api.Authentication;
 using api.AzureKeyVault;
 using api.AzureStorage;
+using api.AzureStorage.Blob;
 using api.AzureStorage.Queue;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
@@ -99,6 +100,7 @@ public static class ServiceExtensions
 
         services.AddSingleton<IKeyVaultService, KeyVaultService>();
         services.AddScoped<IBybitService, BybitService>();
+        services.AddScoped<IBlobStorageService, BlobStorageService>();
 
         return services;
     }

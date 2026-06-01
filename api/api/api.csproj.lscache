@@ -63,6 +63,9 @@ AzureKeyVault/
  KeyVaultSettings.cs
 AzureStorage/
  AzureStorageSettings.cs
+ Blob/
+  BlobStorageService.cs
+  IBlobStorageService.cs
  Queue/
   IQueueService.cs
   QueueService.cs
@@ -182,12 +185,14 @@ Data/
   20260514000000_remove-average-price-column-from-crypto-asset.Designer.cs
   20260519115952_AddMissingThing.cs
   20260519115952_AddMissingThing.Designer.cs
+  20260601000000_AddSyncStatus.cs
   DataContextModelSnapshot.cs
  ModelsConfigurations/
   AccountTransactionConfiguration.cs
   CryptoAssetConfiguration.cs
   CryptoConfiguration.cs
   CryptoTransactionConfiguration.cs
+  SyncStatusConfiguration.cs
   UserConfiguration.cs
   UserPortfolioSnapshotConfiguration.cs
  Repositories/
@@ -205,6 +210,9 @@ Exchanges/Commands/
  ProcessBybitWebhookCommand.cs
  SaveBybitCredentialsCommand.cs
  SyncBybitAccountsCommand.cs
+Exchanges/Models/
+ SyncLogEntry.cs
+ SyncStatus.cs
 Exchanges/Queries/GetBybitSubMembersQuery.cs
 HealthCheck/
  HealthAlertRecipientsOptions.cs
@@ -567,7 +575,7 @@ Users/
  azure.core/1.40.0/lib/net6.0/Azure.Core.dll
  azure.identity/1.12.0/lib/netstandard2.0/Azure.Identity.dll
  azure.security.keyvault.secrets/4.6.0/lib/netstandard2.0/Azure.Security.KeyVault.Secrets.dll
- azure.storage.blobs/12.18.0/lib/net6.0/Azure.Storage.Blobs.dll
+ azure.storage.blobs/12.19.1/lib/net6.0/Azure.Storage.Blobs.dll
  azure.storage.common/12.18.1/lib/net6.0/Azure.Storage.Common.dll
  azure.storage.queues/12.17.1/lib/net6.0/Azure.Storage.Queues.dll
  bcrypt.net-next/4.0.3/lib/net6.0/BCrypt.Net-Next.dll
