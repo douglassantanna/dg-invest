@@ -75,6 +75,9 @@ ExchangesTests/Commands/
 ExchangesTests/Models/
  SyncLogEntryTests.cs
  SyncStatusTests.cs
+ExchangesTests/Queries/
+ GetSyncLogsQueryHandlerTests.cs
+ GetSyncStatusesQueryHandlerTests.cs
 Extensions/MockDbSetExtensions.cs
 GlobalUsings.cs
 Helpers/MarketDataHelper.cs

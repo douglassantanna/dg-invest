@@ -89,6 +89,28 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("bybit/sync-status")]
+    public async Task<ActionResult<Response>> GetSyncStatuses()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetSyncStatusesQuery(userId.Value));
+        return Ok(result);
+    }
+
+    [HttpGet("bybit/sync-logs/{accountId}")]
+    public async Task<ActionResult<Response>> GetSyncLogs(int accountId, [FromQuery] string? date)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetSyncLogsQuery(userId.Value, accountId, date));
+        return Ok(result);
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);

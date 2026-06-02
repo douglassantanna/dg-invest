@@ -16,3 +16,8 @@ Authorization: Bearer {{token}}
 POST {{url-dev}}/sync-accounts
 Content-Type: application/json  
 Authorization: Bearer {{token}}
+
+###
+GET {{url-dev}}/sync-status
+Content-Type: application/json  
+Authorization: Bearer {{token}}
