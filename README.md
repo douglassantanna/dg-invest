@@ -217,6 +217,17 @@ The API uses `DefaultAzureCredential` to authenticate, which works with:
 - Invalid signatures return `401`. Processing errors return `200` to prevent Bybit retry storms.
 - `ExchangeOrderId` is stored with a unique index to prevent duplicate transactions if Bybit delivers the same webhook more than once.
 
+#### Exchange Management UI
+
+The frontend provides a dedicated **Exchange Connections** page (`/exchanges`) for managing Bybit integration without touching the API directly. The page is organized into four sections:
+
+1. **Credentials form** — enter API key, secret, and webhook signing secret per internal account. Credentials are sent to the API and stored in Azure Key Vault — never in the database or browser.
+2. **Sub-account sync** — pull sub-accounts from Bybit via the REST API, see them listed with their UID, username, and remark. Each unmapped sub-account can be linked to an internal portfolio account with one click.
+3. **Sync status table** — shows the health of each exchange connection: status badge (Connected / Error / Disconnected), last sync timestamp, last processed order ID, and error count.
+4. **Sync log viewer** — expandable per account, displays every processed webhook order with its status (Success / Duplicate / Failed), symbol, side, quantity, price, and error message. Supports date filtering.
+
+The page is at `web-app/src/app/pages/exchanges/containers/exchange-management/` and uses the `ExchangeService` (`web-app/src/app/core/services/exchange.service.ts`) which talks to the `ExchangeController` endpoints.
+
 ---
 ### Project structure
 ```bash
