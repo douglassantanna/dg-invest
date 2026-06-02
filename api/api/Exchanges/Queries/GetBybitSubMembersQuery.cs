@@ -14,7 +14,8 @@ public record BybitSubMemberDto(
     string Uid,
     string Username,
     string Remark,
-    string? MappedAccountTag);
+    string? MappedAccountTag,
+    int? AccountId);
 
 public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembersQuery, Response>
 {
@@ -67,17 +68,21 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
         // Load existing account BybitUid mappings to show which are already linked.
         var mappedAccounts = await _context.Accounts
             .Where(a => a.UserId == request.UserId && a.BybitUid != null)
-            .Select(a => new { a.BybitUid, a.SubaccountTag })
+            .Select(a => new { a.Id, a.BybitUid, a.SubaccountTag })
             .ToListAsync(cancellationToken);
 
-        var mappingLookup = mappedAccounts.ToDictionary(a => a.BybitUid!, a => a.SubaccountTag);
+        var mappingLookup = mappedAccounts.ToDictionary(a => a.BybitUid!, a => a);
 
-        var result = subMembers.Select(m => new BybitSubMemberDto(
-            Uid: m.Uid,
-            Username: m.Username,
-            Remark: m.Remark,
-            MappedAccountTag: mappingLookup.TryGetValue(m.Uid, out var tag) ? tag : null
-        )).ToList();
+        var result = subMembers.Select(m =>
+        {
+            var mapped = mappingLookup.TryGetValue(m.Uid, out var entry) ? entry : null;
+            return new BybitSubMemberDto(
+                Uid: m.Uid,
+                Username: m.Username,
+                Remark: m.Remark,
+                MappedAccountTag: mapped?.SubaccountTag,
+                AccountId: mapped?.Id);
+        }).ToList();
 
         return new Response("ok", true, result);
     }

@@ -3,4 +3,5 @@ export interface BybitSubMemberDto {
   username: string;
   remark: string;
   mappedAccountTag: string | null;
+  accountId: number | null;
 }
