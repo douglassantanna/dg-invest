@@ -89,6 +89,31 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("bybit/credentials-status")]
+    public async Task<ActionResult<Response>> GetCredentialsStatus()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetCredentialsStatusQuery(userId.Value));
+        return Ok(result);
+    }
+
+    [HttpDelete("bybit/credentials/{accountId}")]
+    public async Task<ActionResult<Response>> DeleteCredentials(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new DeleteCredentialsCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
     [HttpGet("bybit/sync-status")]
     public async Task<ActionResult<Response>> GetSyncStatuses()
     {

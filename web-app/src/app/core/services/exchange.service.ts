@@ -6,6 +6,7 @@ import { Response } from '../models/response';
 import { SyncStatusDto } from '../models/sync-status';
 import { SyncLogEntry } from '../models/sync-log-entry';
 import { BybitSubMemberDto } from '../models/bybit-sub-member';
+import { CredentialsStatusDto } from '../models/credentials-status';
 
 const url = `${environment.apiUrl}/Exchange`;
 
@@ -27,6 +28,14 @@ export class ExchangeService {
 
   mapBybitAccount(accountId: number, bybitUid: string): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/map-account`, { accountId, bybitUid });
+  }
+
+  getCredentialsStatus(): Observable<Response<CredentialsStatusDto[]>> {
+    return this.http.get<Response<CredentialsStatusDto[]>>(`${url}/bybit/credentials-status`);
+  }
+
+  deleteCredentials(accountId: number): Observable<Response<any>> {
+    return this.http.delete<Response<any>>(`${url}/bybit/credentials/${accountId}`);
   }
 
   getSyncStatuses(): Observable<Response<SyncStatusDto[]>> {

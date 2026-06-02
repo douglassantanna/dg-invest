@@ -207,6 +207,7 @@ Exchanges/Bybit/
  BybitWebhookPayload.cs
  IBybitService.cs
 Exchanges/Commands/
+ DeleteCredentialsCommand.cs
  MapBybitAccountCommand.cs
  ProcessBybitWebhookCommand.cs
  SaveBybitCredentialsCommand.cs
@@ -216,6 +217,7 @@ Exchanges/Models/
  SyncStatus.cs
 Exchanges/Queries/
  GetBybitSubMembersQuery.cs
+ GetCredentialsStatusQuery.cs
  GetSyncLogsQuery.cs
  GetSyncStatusesQuery.cs
 HealthCheck/

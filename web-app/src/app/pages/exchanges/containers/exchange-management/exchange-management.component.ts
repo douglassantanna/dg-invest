@@ -6,6 +6,7 @@ import { AccountService } from 'src/app/core/services/account.service';
 import { SyncStatusDto } from 'src/app/core/models/sync-status';
 import { SyncLogEntry } from 'src/app/core/models/sync-log-entry';
 import { BybitSubMemberDto } from 'src/app/core/models/bybit-sub-member';
+import { CredentialsStatusDto } from 'src/app/core/models/credentials-status';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
 
 @Component({
@@ -28,6 +29,11 @@ export class ExchangeManagementComponent implements OnInit {
   savingCredentials = false;
   credentialsMessage = '';
 
+  // Saved credentials
+  credentialsStatuses: CredentialsStatusDto[] = [];
+  loadingCredentialsStatus = false;
+  deletingCredentialAccountId: number | null = null;
+
   // Sync accounts
   syncing = false;
   syncMessage = '';
@@ -49,6 +55,7 @@ export class ExchangeManagementComponent implements OnInit {
   ngOnInit(): void {
     this.loadAccounts();
     this.loadSyncStatuses();
+    this.loadCredentialsStatus();
   }
 
   private loadAccounts(): void {
@@ -85,6 +92,28 @@ export class ExchangeManagementComponent implements OnInit {
           this.savingCredentials = false;
         },
       });
+  }
+
+  loadCredentialsStatus(): void {
+    this.loadingCredentialsStatus = true;
+    this.exchangeService.getCredentialsStatus().subscribe({
+      next: (res) => {
+        this.credentialsStatuses = res.data ?? [];
+        this.loadingCredentialsStatus = false;
+      },
+      error: () => this.loadingCredentialsStatus = false,
+    });
+  }
+
+  deleteCredentials(accountId: number): void {
+    this.deletingCredentialAccountId = accountId;
+    this.exchangeService.deleteCredentials(accountId).subscribe({
+      next: () => {
+        this.deletingCredentialAccountId = null;
+        this.loadCredentialsStatus();
+      },
+      error: () => this.deletingCredentialAccountId = null,
+    });
   }
 
   syncAccounts(): void {

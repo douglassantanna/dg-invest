@@ -46,7 +46,71 @@
     </div>
   </section>
 
-  <!-- Section 2: Sync + Sub-members -->
+  <!-- Section 2: Saved Credentials -->
+  <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Saved Credentials</h2>
+    @if (loadingCredentialsStatus) {
+      <p class="text-sm text-gray-500">Loading...</p>
+    } @else if (credentialsStatuses.length === 0) {
+      <p class="text-sm text-gray-500 dark:text-gray-400">No accounts configured.</p>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
+              <th class="pb-2 pr-4 font-medium">Account</th>
+              <th class="pb-2 pr-4 font-medium">API Key</th>
+              <th class="pb-2 pr-4 font-medium">Webhook Secret</th>
+              <th class="pb-2 pr-4 font-medium">Webhook URL</th>
+              <th class="pb-2 font-medium">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of credentialsStatuses; track c.accountId) {
+              <tr class="border-b border-gray-100 dark:border-gray-700">
+                <td class="py-2 pr-4 text-gray-900 dark:text-gray-100">{{ c.accountTag }}</td>
+                <td class="py-2 pr-4">
+                  @if (c.hasApiKey) {
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Configured</span>
+                  } @else {
+                    <span class="text-gray-400">Not set</span>
+                  }
+                </td>
+                <td class="py-2 pr-4">
+                  @if (c.hasWebhookSecret) {
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Configured</span>
+                  } @else {
+                    <span class="text-gray-400">Not set</span>
+                  }
+                </td>
+                <td class="py-2 pr-4">
+                  @if (c.hasWebhookSecret) {
+                    <code class="text-xs text-gray-500 dark:text-gray-400 break-all font-mono">
+                      /api/tradewebhook/bybit/{{ '{' }}userId{{ '}' }}/{{ c.accountId }}
+                    </code>
+                  } @else {
+                    <span class="text-gray-400">-</span>
+                  }
+                </td>
+                <td class="py-2">
+                  @if (c.hasApiKey || c.hasWebhookSecret) {
+                    <button (click)="deleteCredentials(c.accountId)" [disabled]="deletingCredentialAccountId === c.accountId"
+                      class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors">
+                      {{ deletingCredentialAccountId === c.accountId ? 'Deleting...' : 'Delete' }}
+                    </button>
+                  } @else {
+                    <span class="text-gray-400">-</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- Section 3: Sync + Sub-members -->
   <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Bybit Sub-Accounts</h2>
@@ -121,7 +185,7 @@
     }
   </section>
 
-  <!-- Section 3: Sync Status -->
+  <!-- Section 4: Sync Status -->
   <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Sync Status</h2>
     @if (loadingStatuses) {
