@@ -204,6 +204,7 @@ Exchanges/Bybit/
  BybitService.cs
  BybitSettings.cs
  BybitSubAccountResponse.cs
+ BybitSubMember.cs
  BybitWebhookPayload.cs
  IBybitService.cs
 Exchanges/Commands/

@@ -180,10 +180,7 @@ Validators/CommandValidatorTests.cs
  Microsoft.AspNetCore.WebUtilities.dll
  Microsoft.Extensions.Caching.Abstractions.dll
  Microsoft.Extensions.Caching.Memory.dll
- Microsoft.Extensions.Configuration.Abstractions.dll
- Microsoft.Extensions.Configuration.Binder.dll
  Microsoft.Extensions.Configuration.CommandLine.dll
- Microsoft.Extensions.Configuration.dll
  Microsoft.Extensions.Configuration.EnvironmentVariables.dll
  Microsoft.Extensions.Configuration.FileExtensions.dll
  Microsoft.Extensions.Configuration.Ini.dll
@@ -191,10 +188,6 @@ Validators/CommandValidatorTests.cs
  Microsoft.Extensions.Configuration.KeyPerFile.dll
  Microsoft.Extensions.Configuration.UserSecrets.dll
  Microsoft.Extensions.Configuration.Xml.dll
- Microsoft.Extensions.DependencyInjection.Abstractions.dll
- Microsoft.Extensions.DependencyInjection.dll
- Microsoft.Extensions.Diagnostics.Abstractions.dll
- Microsoft.Extensions.Diagnostics.dll
  Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions.dll
  Microsoft.Extensions.Diagnostics.HealthChecks.dll
  Microsoft.Extensions.Features.dll
@@ -205,29 +198,22 @@ Validators/CommandValidatorTests.cs
  Microsoft.Extensions.FileSystemGlobbing.dll
  Microsoft.Extensions.Hosting.Abstractions.dll
  Microsoft.Extensions.Hosting.dll
- Microsoft.Extensions.Http.dll
  Microsoft.Extensions.Identity.Core.dll
  Microsoft.Extensions.Identity.Stores.dll
  Microsoft.Extensions.Localization.Abstractions.dll
  Microsoft.Extensions.Localization.dll
- Microsoft.Extensions.Logging.Abstractions.dll
  Microsoft.Extensions.Logging.Configuration.dll
  Microsoft.Extensions.Logging.Console.dll
  Microsoft.Extensions.Logging.Debug.dll
- Microsoft.Extensions.Logging.dll
  Microsoft.Extensions.Logging.EventLog.dll
  Microsoft.Extensions.Logging.EventSource.dll
  Microsoft.Extensions.Logging.TraceSource.dll
  Microsoft.Extensions.ObjectPool.dll
- Microsoft.Extensions.Options.ConfigurationExtensions.dll
  Microsoft.Extensions.Options.DataAnnotations.dll
- Microsoft.Extensions.Options.dll
- Microsoft.Extensions.Primitives.dll
  Microsoft.Extensions.WebEncoders.dll
  Microsoft.JSInterop.dll
  Microsoft.Net.Http.Headers.dll
  System.Diagnostics.EventLog.dll
- System.IO.Pipelines.dll
  System.Security.Cryptography.Xml.dll
  System.Threading.RateLimiting.dll
 <DOTNET>/packs/Microsoft.NETCore.App.Ref/8.0.22/ref/net8.0/
@@ -259,7 +245,6 @@ Validators/CommandValidatorTests.cs
  System.Data.dll
  System.Diagnostics.Contracts.dll
  System.Diagnostics.Debug.dll
- System.Diagnostics.DiagnosticSource.dll
  System.Diagnostics.FileVersionInfo.dll
  System.Diagnostics.Process.dll
  System.Diagnostics.StackTrace.dll
@@ -365,10 +350,7 @@ Validators/CommandValidatorTests.cs
  System.Text.Encoding.CodePages.dll
  System.Text.Encoding.dll
  System.Text.Encoding.Extensions.dll
- System.Text.Encodings.Web.dll
- System.Text.Json.dll
  System.Text.RegularExpressions.dll
- System.Threading.Channels.dll
  System.Threading.dll
  System.Threading.Overlapped.dll
  System.Threading.Tasks.Dataflow.dll
@@ -403,7 +385,9 @@ Validators/CommandValidatorTests.cs
  azure.storage.queues/12.17.1/lib/net6.0/Azure.Storage.Queues.dll
  bcrypt.net-next/4.0.3/lib/net6.0/BCrypt.Net-Next.dll
  bouncycastle.cryptography/2.6.2/lib/net6.0/BouncyCastle.Cryptography.dll
+ bybit.net/6.13.0/lib/net8.0/Bybit.Net.dll
  castle.core/5.1.1/lib/net6.0/Castle.Core.dll
+ cryptoexchange.net/11.2.0/lib/net8.0/CryptoExchange.Net.dll
  dapper/2.1.35/lib/net7.0/Dapper.dll
  fluentassertions/6.12.0/lib/net6.0/FluentAssertions.dll
  fluentvalidation.aspnetcore/11.3.0/lib/net6.0/FluentValidation.AspNetCore.dll
@@ -428,7 +412,20 @@ Validators/CommandValidatorTests.cs
  microsoft.entityframeworkcore.sqlite.core/8.0.2/lib/net8.0/Microsoft.EntityFrameworkCore.Sqlite.dll
  microsoft.entityframeworkcore.sqlserver/8.0.7/lib/net8.0/Microsoft.EntityFrameworkCore.SqlServer.dll
  microsoft.entityframeworkcore/8.0.11/lib/net8.0/Microsoft.EntityFrameworkCore.dll
+ microsoft.extensions.configuration.abstractions/10.0.1/lib/net8.0/Microsoft.Extensions.Configuration.Abstractions.dll
+ microsoft.extensions.configuration.binder/10.0.1/lib/net8.0/Microsoft.Extensions.Configuration.Binder.dll
+ microsoft.extensions.configuration/10.0.1/lib/net8.0/Microsoft.Extensions.Configuration.dll
+ microsoft.extensions.dependencyinjection.abstractions/10.0.1/lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+ microsoft.extensions.dependencyinjection/10.0.1/lib/net8.0/Microsoft.Extensions.DependencyInjection.dll
  microsoft.extensions.dependencymodel/8.0.1/lib/net8.0/Microsoft.Extensions.DependencyModel.dll
+ microsoft.extensions.diagnostics.abstractions/10.0.1/lib/net8.0/Microsoft.Extensions.Diagnostics.Abstractions.dll
+ microsoft.extensions.diagnostics/10.0.1/lib/net8.0/Microsoft.Extensions.Diagnostics.dll
+ microsoft.extensions.http/10.0.1/lib/net8.0/Microsoft.Extensions.Http.dll
+ microsoft.extensions.logging.abstractions/10.0.1/lib/net8.0/Microsoft.Extensions.Logging.Abstractions.dll
+ microsoft.extensions.logging/10.0.1/lib/net8.0/Microsoft.Extensions.Logging.dll
+ microsoft.extensions.options.configurationextensions/10.0.1/lib/net8.0/Microsoft.Extensions.Options.ConfigurationExtensions.dll
+ microsoft.extensions.options/10.0.1/lib/net8.0/Microsoft.Extensions.Options.dll
+ microsoft.extensions.primitives/10.0.1/lib/net8.0/Microsoft.Extensions.Primitives.dll
  microsoft.identity.client.extensions.msal/4.61.3/lib/net6.0/Microsoft.Identity.Client.Extensions.Msal.dll
  microsoft.identity.client/4.61.3/lib/net6.0/Microsoft.Identity.Client.dll
  microsoft.identitymodel.abstractions/7.1.2/lib/net8.0/Microsoft.IdentityModel.Abstractions.dll
@@ -452,6 +449,7 @@ Validators/CommandValidatorTests.cs
  mimekit/4.16.0/lib/net8.0/MimeKit.dll
  moq/4.20.69/lib/net6.0/Moq.dll
  newtonsoft.json/13.0.1/lib/netstandard2.0/Newtonsoft.Json.dll
+ nsec.cryptography/25.4.0/lib/net8.0/NSec.Cryptography.dll
  nuget.frameworks/6.5.0/lib/netstandard2.0/NuGet.Frameworks.dll
  serilog.aspnetcore/8.0.2/lib/net8.0/Serilog.AspNetCore.dll
  serilog.extensions.hosting/8.0.0/lib/net8.0/Serilog.Extensions.Hosting.dll
@@ -472,13 +470,18 @@ Validators/CommandValidatorTests.cs
  swashbuckle.aspnetcore.swaggerui/6.5.0/lib/net7.0/Swashbuckle.AspNetCore.SwaggerUI.dll
  system.clientmodel/1.0.0/lib/net6.0/System.ClientModel.dll
  system.configuration.configurationmanager/6.0.1/lib/net6.0/System.Configuration.ConfigurationManager.dll
+ system.diagnostics.diagnosticsource/10.0.1/lib/net8.0/System.Diagnostics.DiagnosticSource.dll
  system.drawing.common/6.0.0/lib/net6.0/System.Drawing.Common.dll
  system.identitymodel.tokens.jwt/7.1.2/lib/net8.0/System.IdentityModel.Tokens.Jwt.dll
  system.io.hashing/6.0.0/lib/net6.0/System.IO.Hashing.dll
+ system.io.pipelines/10.0.1/lib/net8.0/System.IO.Pipelines.dll
  system.memory.data/1.0.2/lib/netstandard2.0/System.Memory.Data.dll
  system.security.cryptography.pkcs/8.0.1/lib/net8.0/System.Security.Cryptography.Pkcs.dll
  system.security.cryptography.protecteddata/6.0.0/lib/net6.0/System.Security.Cryptography.ProtectedData.dll
  system.security.permissions/6.0.0/lib/net6.0/System.Security.Permissions.dll
+ system.text.encodings.web/10.0.1/lib/net8.0/System.Text.Encodings.Web.dll
+ system.text.json/10.0.1/lib/net8.0/System.Text.Json.dll
+ system.threading.channels/10.0.1/lib/net8.0/System.Threading.Channels.dll
  system.windows.extensions/6.0.0/lib/net6.0/System.Windows.Extensions.dll
  xunit.abstractions/2.0.3/lib/netstandard2.0/xunit.abstractions.dll
  xunit.assert/2.4.2/lib/netstandard1.1/xunit.assert.dll
@@ -490,21 +493,20 @@ Validators/CommandValidatorTests.cs
  Microsoft.AspNetCore.App.Analyzers.dll
  Microsoft.AspNetCore.App.CodeFixes.dll
  Microsoft.AspNetCore.Components.Analyzers.dll
-<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.22/analyzers/dotnet/roslyn4.4/cs/
- Microsoft.Extensions.Logging.Generators.dll
- Microsoft.Extensions.Options.SourceGeneration.dll
 <DOTNET>/packs/Microsoft.NETCore.App.Ref/8.0.22/analyzers/dotnet/cs/
  Microsoft.Interop.ComInterfaceGenerator.dll
  Microsoft.Interop.JavaScript.JSImportGenerator.dll
  Microsoft.Interop.LibraryImportGenerator.dll
  Microsoft.Interop.SourceGeneration.dll
- System.Text.Json.SourceGeneration.dll
  System.Text.RegularExpressions.Generator.dll
 <DOTNET>/sdk/10.0.100/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
 <NUGET>/
  microsoft.entityframeworkcore.analyzers/8.0.11/analyzers/dotnet/cs/Microsoft.EntityFrameworkCore.Analyzers.dll
+ microsoft.extensions.logging.abstractions/10.0.1/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Logging.Generators.dll
+ microsoft.extensions.options/10.0.1/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Options.SourceGeneration.dll
+ system.text.json/10.0.1/analyzers/dotnet/roslyn4.4/cs/System.Text.Json.SourceGeneration.dll
  xunit.analyzers/1.0.0/analyzers/dotnet/cs/
   xunit.analyzers.dll
   xunit.analyzers.fixes.dll
