@@ -9,14 +9,16 @@ namespace api.Exchanges.Bybit;
 public class BybitService : IBybitService
 {
     private const string SubMembersEndpoint = "/v5/user/submembers";
-    private const int RecvWindow = 5000;
+    private const string OrderHistoryEndpoint = "/v5/order/history";
+    private const int RecvWindow = 60000;
 
     private readonly string _accountBaseUrl;
     private readonly ILogger<BybitService> _logger;
 
     public BybitService(IOptions<BybitSettings> settings, ILogger<BybitService> logger)
     {
-        _accountBaseUrl = "https://api.bybit.com";
+        var bybitSettings = settings.Value;
+        _accountBaseUrl = bybitSettings.UseTestnet ? "https://api-testnet.bybit.com" : "https://api.bybit.com";
         _logger = logger;
     }
 
@@ -73,6 +75,44 @@ public class BybitService : IBybitService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching Bybit sub-accounts");
+            throw;
+        }
+    }
+
+    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, int? limit = 50)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var queryParams = $"category=spot&limit={limit}";
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(paramBytes);
+            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            var response = await _accountBaseUrl
+                .AppendPathSegment(OrderHistoryEndpoint)
+                .SetQueryParams(new { category = "spot", limit })
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<BybitOrderHistoryResponse>();
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogError("Bybit GetOrderHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
+                return new List<BybitOrderData>();
+            }
+
+            return response.Result.List;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit order history");
             throw;
         }
     }

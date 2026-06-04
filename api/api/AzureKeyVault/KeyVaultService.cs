@@ -21,6 +21,10 @@ public class KeyVaultService : IKeyVaultService
             var response = await _client.GetSecretAsync(secretName);
             return response.Value.Value;
         }
+        catch (Azure.RequestFailedException)
+        {
+            return null;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve secret {SecretName} from Key Vault", secretName);

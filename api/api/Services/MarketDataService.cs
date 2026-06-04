@@ -78,7 +78,7 @@ public class MarketDataService : IMarketDataService
                         if (assetFromCoinMarketCap == null)
                             continue; // skip if no price data
 
-                        var assetTotalValue = asset.Balance * assetFromCoinMarketCap.Quote.USD.Price;
+                        var assetTotalValue = asset.Balance * (assetFromCoinMarketCap.Quote.USD.Price ?? 0);
                         accountValue = accountValue + assetTotalValue;
                     }
 

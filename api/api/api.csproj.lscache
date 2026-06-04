@@ -201,6 +201,7 @@ Data/
   RepositoryBase.cs
 Email/MailtrapSettings.cs
 Exchanges/Bybit/
+ BybitOrderHistoryResponse.cs
  BybitService.cs
  BybitSettings.cs
  BybitSubAccountResponse.cs
@@ -210,6 +211,7 @@ Exchanges/Bybit/
 Exchanges/Commands/
  DeleteCredentialsCommand.cs
  MapBybitAccountCommand.cs
+ ProcessBybitOrdersCommand.cs
  ProcessBybitWebhookCommand.cs
  SaveBybitCredentialsCommand.cs
  SyncBybitAccountsCommand.cs
@@ -221,6 +223,9 @@ Exchanges/Queries/
  GetCredentialsStatusQuery.cs
  GetSyncLogsQuery.cs
  GetSyncStatusesQuery.cs
+Exchanges/Services/
+ BybitOrderSyncService.cs
+ IBybitOrderSyncService.cs
 HealthCheck/
  HealthAlertRecipientsOptions.cs
  HealthCheckOptions.cs

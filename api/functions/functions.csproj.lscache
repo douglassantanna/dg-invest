@@ -60,6 +60,7 @@ obj/Debug/net8.0/
  functions.AssemblyInfo.cs
  functions.GlobalUsings.g.cs
 Program.cs
+SyncBybitOrders.cs
 
 [metadataReferences]
 ../api/obj/Debug/net8.0/ref/api.dll

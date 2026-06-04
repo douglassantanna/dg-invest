@@ -1,6 +1,7 @@
 using Flurl;
 using Flurl.Http;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 
 namespace api.CoinMarketCap.Service;
 public class CoinMarketCapService : ICoinMarketCapService
@@ -18,17 +19,27 @@ public class CoinMarketCapService : ICoinMarketCapService
     {
         try
         {
-            var response = await _coinMarketCapSettings.BaseUrl
+            var raw = await _coinMarketCapSettings.BaseUrl
                                 .AppendPathSegment(quotesLatestEndpoint)
                                 .WithHeader(_coinMarketCapSettings.Header, _coinMarketCapSettings.ApiKey)
                                 .SetQueryParam("symbol", symbol)
-                                .GetJsonAsync<GetQuoteResponse>();
+                                .GetStringAsync();
 
-            return response;
+            var jObject = JObject.Parse(raw);
+            var data = new Dictionary<string, Coin>();
+            foreach (var kvp in (JObject)jObject["data"]!)
+            {
+                var first = kvp.Value!.First;
+                var coin = first!.ToObject<Coin>()!;
+                data[kvp.Key] = coin;
+            }
+            var status = jObject["status"]!.ToObject<Status>()!;
+            return new GetQuoteResponse(status, data);
         }
         catch (FlurlHttpException ex)
         {
-            _logger.LogError(ex, "GetQuoteBySymbol. Error trying to call CoinMarketCap. Error: {0}", ex.Message);
+            var body = await ex.GetResponseStringAsync();
+            _logger.LogError(ex, "GetQuoteBySymbol. Error calling CoinMarketCap. Status: {Status}, Body: {Body}", ex.StatusCode, body);
             throw;
         }
     }
@@ -39,14 +50,14 @@ public class CoinMarketCapService : ICoinMarketCapService
         {
             string idList = FormatSymbolList(ids);
 
-            var response = await _coinMarketCapSettings.BaseUrl
+            var raw = await _coinMarketCapSettings.BaseUrl
                                 .AppendPathSegment(quotesLatestEndpoint)
                                 .WithHeader(_coinMarketCapSettings.Header, _coinMarketCapSettings.ApiKey)
                                 .SetQueryParam("id", idList)
-                                .GetJsonAsync<GetQuoteResponse>();
+                                .GetStringAsync();
 
-            return response;
-
+            var response = Newtonsoft.Json.JsonConvert.DeserializeObject<GetQuoteResponse>(raw);
+            return response!;
         }
         catch (FlurlHttpException ex)
         {
@@ -68,12 +79,11 @@ public class CoinMarketCapService : ICoinMarketCapService
 
     public decimal GetCryptoCurrencyPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse)
     {
-        if (cmpResponse != null)
+        if (cmpResponse?.Data != null)
         {
-            var coin = cmpResponse.Data.FirstOrDefault(coin => coin.Key.ToString() == coinMarketCapId.ToString());
-            if (coin.Value != null)
+            if (cmpResponse.Data.TryGetValue(coinMarketCapId.ToString(), out var coin))
             {
-                return coin.Value.Quote.USD.Price;
+                return coin.Quote.USD.Price ?? 0;
             }
         }
         return 0;
