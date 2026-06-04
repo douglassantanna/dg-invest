@@ -96,6 +96,7 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, FiatDepositTransaction>();
         services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
+        services.AddScoped<ITransactionStrategy, WithdrawCryptoTransaction>();
 
         services.AddScoped<ICacheService, MemoryCacheService>();
 
@@ -121,6 +122,7 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, FiatDepositTransaction>();
         services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
+        services.AddScoped<ITransactionStrategy, WithdrawCryptoTransaction>();
         services.AddSingleton<IJWTService, JWTService>();
         services.AddScoped<ICacheService, MemoryCacheService>();
         services.AddScoped<IKeyVaultService, KeyVaultService>();

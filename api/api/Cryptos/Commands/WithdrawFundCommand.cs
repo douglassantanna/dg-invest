@@ -2,6 +2,7 @@ using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
+using api.Models.Cryptos;
 using api.Shared;
 using FluentValidation;
 using FluentValidation.Results;
@@ -12,17 +13,38 @@ namespace api.Cryptos.Commands;
 public record WithdrawFundCommand(decimal Amount,
                                  DateTime Date,
                                  int UserId,
-                                 string Notes) : IRequest<Response>;
+                                 string Notes,
+                                 EAccountTransactionType TransactionType = EAccountTransactionType.WithdrawToBank,
+                                 decimal? CurrentPrice = null,
+                                 string? CryptoAssetId = null,
+                                 string? ExchangeName = null) : IRequest<Response>;
 
 
 public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundCommand>
 {
     public WithdrawFundCommandValidator()
     {
-        RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Deposit amount must be greater than zero");
+        RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Withdrawal amount must be greater than zero");
         RuleFor(x => x.Notes)
             .MaximumLength(255)
             .WithMessage("Notes must be between 1 and 255 characters");
+
+        When(x => x.TransactionType == EAccountTransactionType.WithdrawCrypto, () =>
+        {
+            RuleFor(x => x.CurrentPrice)
+                .NotNull()
+                .GreaterThan(0)
+                .WithMessage("Crypto Current Price must be greater than zero");
+
+            RuleFor(x => x.CryptoAssetId)
+                .NotNull()
+                .WithMessage("Crypto Asset Id must be provided");
+
+            RuleFor(x => x.ExchangeName)
+                .Length(1, 255)
+                .NotEmpty()
+                .WithMessage("Please provide an Exchange Name");
+        });
     }
 }
 
@@ -69,17 +91,60 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
         {
             var currentServerTime = DateTime.Now;
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day, currentServerTime.Hour, currentServerTime.Minute, currentServerTime.Second);
-            var accountTransaction = new AccountTransaction(date: date,
-                                                            transactionType: EAccountTransactionType.WithdrawToBank,
-                                                            amount: request.Amount,
-                                                            notes: request.Notes);
-            // still need to implement account transaction type withdraw for crypto
 
-            var response = _transactionService.ExecuteTransaction(account, accountTransaction);
-            if (!response.IsSuccess)
+            if (request.TransactionType == EAccountTransactionType.WithdrawCrypto)
             {
-                _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
-                return response;
+                _ = int.TryParse(request.CryptoAssetId, out var cryptoId);
+                var cryptoAsset = account.CryptoAssets.FirstOrDefault(c => c.Id == cryptoId);
+                if (cryptoAsset == null)
+                {
+                    _logger.LogError("WithdrawFundCommandHandler. Crypto asset {CryptoAssetId} not found.", request.CryptoAssetId);
+                    return new Response("Crypto asset not found", false, 404);
+                }
+
+                var sellTransaction = new CryptoTransaction(
+                    request.Amount,
+                    request.CurrentPrice ?? 0,
+                    date,
+                    request.ExchangeName ?? string.Empty,
+                    ETransactionType.Sell,
+                    0
+                );
+
+                cryptoAsset.AddTransaction(sellTransaction);
+
+                var accountTransaction = new AccountTransaction(
+                    date: date,
+                    transactionType: EAccountTransactionType.WithdrawCrypto,
+                    amount: request.Amount,
+                    cryptoCurrentPrice: request.CurrentPrice ?? 0,
+                    exchangeName: request.ExchangeName ?? string.Empty,
+                    notes: request.Notes,
+                    cryptoAssetId: cryptoAsset.Id,
+                    cryptoAsset: cryptoAsset,
+                    fee: 0
+                );
+
+                var response = _transactionService.ExecuteTransaction(account, accountTransaction);
+                if (!response.IsSuccess)
+                {
+                    _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
+                    return response;
+                }
+            }
+            else
+            {
+                var accountTransaction = new AccountTransaction(date: date,
+                                                                transactionType: EAccountTransactionType.WithdrawToBank,
+                                                                amount: request.Amount,
+                                                                notes: request.Notes);
+
+                var response = _transactionService.ExecuteTransaction(account, accountTransaction);
+                if (!response.IsSuccess)
+                {
+                    _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
+                    return response;
+                }
             }
 
             _context.Accounts.Update(account);

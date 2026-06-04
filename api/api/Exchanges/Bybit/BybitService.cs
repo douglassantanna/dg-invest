@@ -10,6 +10,8 @@ public class BybitService : IBybitService
 {
     private const string SubMembersEndpoint = "/v5/user/submembers";
     private const string OrderHistoryEndpoint = "/v5/order/history";
+    private const string DepositHistoryEndpoint = "/v5/asset/deposit/query-record";
+    private const string WithdrawalHistoryEndpoint = "/v5/asset/withdraw/query-record";
     private const int RecvWindow = 60000;
 
     private readonly string _accountBaseUrl;
@@ -113,6 +115,82 @@ public class BybitService : IBybitService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching Bybit order history");
+            throw;
+        }
+    }
+
+    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, int? limit = 50)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var queryParams = $"limit={limit}";
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(paramBytes);
+            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            var response = await _accountBaseUrl
+                .AppendPathSegment(DepositHistoryEndpoint)
+                .SetQueryParams(new { limit })
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<BybitDepositHistoryResponse>();
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogError("Bybit GetDepositHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
+                return new List<BybitDepositWithdrawalRow>();
+            }
+
+            return response.Result.Rows;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit deposit history");
+            throw;
+        }
+    }
+
+    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, int? limit = 50)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var queryParams = $"limit={limit}";
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(paramBytes);
+            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            var response = await _accountBaseUrl
+                .AppendPathSegment(WithdrawalHistoryEndpoint)
+                .SetQueryParams(new { limit })
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<BybitWithdrawalHistoryResponse>();
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogError("Bybit GetWithdrawalHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
+                return new List<BybitDepositWithdrawalRow>();
+            }
+
+            return response.Result.Rows;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit withdrawal history");
             throw;
         }
     }

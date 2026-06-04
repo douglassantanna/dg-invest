@@ -89,21 +89,32 @@ public class SyncBybitOrders
             }
 
             var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
-            if (filledOrders.Count == 0)
+            if (filledOrders.Count > 0)
             {
-                _logger.LogInformation("SyncBybitOrders: no filled orders for account {AccountId}", accountId);
-                return;
+                foreach (var order in filledOrders)
+                {
+                    await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken);
+                }
+
+                var lastOrderId = filledOrders.Last().OrderId;
+                await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
+
+                _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
             }
 
-            foreach (var order in filledOrders)
+            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, limit: 50);
+            foreach (var deposit in deposits.Where(d => d.Status == "Success"))
             {
-                await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken);
+                await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken);
             }
+            _logger.LogInformation("SyncBybitOrders: processed {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
-            var lastOrderId = filledOrders.Last().OrderId;
-            await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
-
-            _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
+            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey, apiSecret, limit: 50);
+            foreach (var withdrawal in withdrawals.Where(w => w.Status == "Success"))
+            {
+                await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken);
+            }
+            _logger.LogInformation("SyncBybitOrders: processed {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
         }
         catch (Exception ex)
         {

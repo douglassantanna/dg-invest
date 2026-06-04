@@ -59,10 +59,15 @@ Controllers/HealthControllerTests.cs
 CryptoAccountTests/Commands/SelectAccountCommandHandlerTests.cs
 CryptoTests/Commands/
  AddTransactionTests.cs
+ DepositFundCommandHandlerTests.cs
  GetMarketDataByTimeframeQueryHandlerTests.cs
+ WithdrawFundCommandHandlerTests.cs
 CryptoTests/
  Models/CryptoAssetTests.cs
  Queries/GetCryptoAssetByIdQueryTest.cs
+ TransactionStrategies/
+  CryptoDepositTransactionTest.cs
+  WithdrawCryptoTransactionTest.cs
 ExchangesTests/Bybit/
  BybitServiceTests.cs
  BybitSettingsTests.cs

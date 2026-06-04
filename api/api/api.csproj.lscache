@@ -130,6 +130,7 @@ Cryptos/
    CryptoDepositTransaction.cs
    FiatDepositTransaction.cs
    SellTransaction.cs
+   WithdrawCryptoTransaction.cs
    WithdrawDepositTransaction.cs
 Data/
  Commands/RunMigrationsCommand.cs
@@ -187,6 +188,8 @@ Data/
   20260519115952_AddMissingThing.Designer.cs
   20260601194826_AddSyncStatus.cs
   20260601194826_AddSyncStatus.Designer.cs
+  20260604214422_AddExchangeTransactionId.cs
+  20260604214422_AddExchangeTransactionId.Designer.cs
   DataContextModelSnapshot.cs
  ModelsConfigurations/
   AccountTransactionConfiguration.cs
@@ -201,6 +204,7 @@ Data/
   RepositoryBase.cs
 Email/MailtrapSettings.cs
 Exchanges/Bybit/
+ BybitDepositWithdrawalResponse.cs
  BybitOrderHistoryResponse.cs
  BybitService.cs
  BybitSettings.cs
