@@ -15,7 +15,7 @@ namespace api.Exchanges.Services;
 
 public class BybitOrderSyncService : IBybitOrderSyncService
 {
-    private static readonly string[] KnownQuoteCurrencies = ["USDT", "USDC", "BUSD", "USD", "BTC", "ETH", "BNB"];
+    private List<string>? _knownQuoteCurrencies;
 
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ITransactionService _transactionService;
@@ -42,7 +42,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
     public async Task ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
     {
-        var baseSymbol = ExtractBaseSymbol(order.Symbol);
+        var quoteCurrencies = await GetQuoteCurrenciesAsync();
+        var baseSymbol = ExtractBaseSymbol(order.Symbol, quoteCurrencies);
         var logId = Guid.NewGuid().ToString();
 
         var alreadyProcessed = await _context.CryptoTransactions
@@ -117,11 +118,16 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return;
         }
 
-        var alreadyProcessed = await _context.AccountTransactions
-            .AnyAsync(t => t.ExchangeTransactionId == deposit.TxId, cancellationToken);
-        if (alreadyProcessed)
+        var existingTx = await _context.AccountTransactions
+            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == deposit.TxId, cancellationToken);
+        if (existingTx != null)
         {
-            _logger.LogInformation("Bybit sync: deposit {TxId} already saved, skipping", deposit.TxId);
+            if (existingTx.ExchangeStatus != deposit.Status)
+            {
+                existingTx.UpdateExchangeStatus(deposit.Status);
+                await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Bybit sync: updated deposit {TxId} status {OldStatus} -> {NewStatus}", deposit.TxId, existingTx.ExchangeStatus, deposit.Status);
+            }
             await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Duplicate", null, "BybitDeposit", logId, cancellationToken);
             return;
         }
@@ -138,7 +144,20 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? parsed.DateTime
             : DateTime.UtcNow;
 
-        var depositPrice = await GetMarketPriceAsync(symbol, cancellationToken);
+        var depositPrice = deposit.Status == "Success"
+            ? await GetMarketPriceAsync(symbol, cancellationToken)
+            : 0;
+
+        var depositCryptoTx = new CryptoTransaction(
+            amount,
+            depositPrice,
+            successAt,
+            "Bybit",
+            ETransactionType.TransferIn,
+            0);
+
+        if (deposit.Status == "Success")
+            cryptoAsset.AddTransaction(depositCryptoTx);
 
         var accountTx = new AccountTransaction(
             date: successAt,
@@ -150,7 +169,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
             fee: 0,
-            exchangeTransactionId: deposit.TxId);
+            exchangeTransactionId: deposit.TxId,
+            exchangeStatus: deposit.Status);
 
         var result = _transactionService.ExecuteTransaction(account, accountTx);
         if (!result.IsSuccess)
@@ -161,7 +181,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
 
         await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Success", null, "BybitDeposit", logId, cancellationToken);
-        _logger.LogInformation("Bybit sync: saved deposit {TxId} ({Amount} {Symbol})", deposit.TxId, amount, symbol);
+        _logger.LogInformation("Bybit sync: saved deposit {TxId} ({Amount} {Symbol}, Status: {Status})", deposit.TxId, amount, symbol, deposit.Status);
     }
 
     public async Task ProcessWithdrawalAsync(BybitDepositWithdrawalRow withdrawal, Account account, int userId, CancellationToken cancellationToken)
@@ -181,11 +201,16 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             fee = 0;
         }
 
-        var alreadyProcessed = await _context.AccountTransactions
-            .AnyAsync(t => t.ExchangeTransactionId == withdrawal.TxId, cancellationToken);
-        if (alreadyProcessed)
+        var existingTx = await _context.AccountTransactions
+            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == withdrawal.TxId, cancellationToken);
+        if (existingTx != null)
         {
-            _logger.LogInformation("Bybit sync: withdrawal {TxId} already saved, skipping", withdrawal.TxId);
+            if (existingTx.ExchangeStatus != withdrawal.Status)
+            {
+                existingTx.UpdateExchangeStatus(withdrawal.Status);
+                await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Bybit sync: updated withdrawal {TxId} status {OldStatus} -> {NewStatus}", withdrawal.TxId, existingTx.ExchangeStatus, withdrawal.Status);
+            }
             await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Duplicate", null, "BybitWithdrawal", logId, cancellationToken);
             return;
         }
@@ -202,7 +227,20 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? parsed.DateTime
             : DateTime.UtcNow;
 
-        var withdrawalPrice = await GetMarketPriceAsync(symbol, cancellationToken);
+        var withdrawalPrice = withdrawal.Status == "Success"
+            ? await GetMarketPriceAsync(symbol, cancellationToken)
+            : 0;
+
+        var withdrawalCryptoTx = new CryptoTransaction(
+            amount,
+            withdrawalPrice,
+            successAt,
+            "Bybit",
+            ETransactionType.TransferOut,
+            fee);
+
+        if (withdrawal.Status == "Success")
+            cryptoAsset.AddTransaction(withdrawalCryptoTx);
 
         var accountTx = new AccountTransaction(
             date: successAt,
@@ -214,7 +252,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
             fee: fee,
-            exchangeTransactionId: withdrawal.TxId);
+            exchangeTransactionId: withdrawal.TxId,
+            exchangeStatus: withdrawal.Status);
 
         var result = _transactionService.ExecuteTransaction(account, accountTx);
         if (!result.IsSuccess)
@@ -225,7 +264,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
 
         await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Success", null, "BybitWithdrawal", logId, cancellationToken);
-        _logger.LogInformation("Bybit sync: saved withdrawal {TxId} ({Amount} {Symbol})", withdrawal.TxId, amount, symbol);
+        _logger.LogInformation("Bybit sync: saved withdrawal {TxId} ({Amount} {Symbol}, Status: {Status})", withdrawal.TxId, amount, symbol, withdrawal.Status);
     }
 
     public async Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken)
@@ -319,10 +358,25 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
     }
 
-    internal static string ExtractBaseSymbol(string tradingPair)
+    private async Task<List<string>> GetQuoteCurrenciesAsync()
+    {
+        if (_knownQuoteCurrencies != null)
+            return _knownQuoteCurrencies;
+
+        var symbols = await _context.Cryptos
+            .Select(c => c.Symbol)
+            .ToListAsync();
+
+        _knownQuoteCurrencies = symbols
+            .OrderByDescending(s => s.Length)
+            .ToList();
+        return _knownQuoteCurrencies;
+    }
+
+    internal static string ExtractBaseSymbol(string tradingPair, IEnumerable<string> quoteCurrencies)
     {
         var upper = tradingPair.ToUpperInvariant();
-        foreach (var quote in KnownQuoteCurrencies)
+        foreach (var quote in quoteCurrencies)
         {
             if (upper.EndsWith(quote))
                 return upper[..^quote.Length];

@@ -2,6 +2,7 @@ using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
+using api.Models.Cryptos;
 using api.Shared;
 using FluentValidation;
 using FluentValidation.Results;
@@ -100,6 +101,17 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                     _logger.LogError("WithdrawFundCommandHandler. Crypto asset {CryptoAssetId} not found.", request.CryptoAssetId);
                     return new Response("Crypto asset not found", false, 404);
                 }
+
+                var transferTx = new CryptoTransaction(
+                    request.Amount,
+                    request.CurrentPrice ?? 0,
+                    date,
+                    request.ExchangeName ?? string.Empty,
+                    ETransactionType.TransferOut,
+                    0
+                );
+
+                cryptoAsset.AddTransaction(transferTx);
 
                 var accountTransaction = new AccountTransaction(
                     date: date,

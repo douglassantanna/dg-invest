@@ -103,14 +103,14 @@ public class SyncBybitOrders
             }
 
             var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, limit: 50);
-            foreach (var deposit in deposits.Where(d => d.Status == "Success"))
+            foreach (var deposit in deposits)
             {
                 await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken);
             }
             _logger.LogInformation("SyncBybitOrders: processed {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
             var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey, apiSecret, limit: 50);
-            foreach (var withdrawal in withdrawals.Where(w => w.Status == "Success"))
+            foreach (var withdrawal in withdrawals)
             {
                 await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken);
             }

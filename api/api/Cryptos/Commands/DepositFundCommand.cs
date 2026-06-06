@@ -140,6 +140,16 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             if (cryptoAsset == null)
                 return null;
 
+            var transferTx = new CryptoTransaction(
+                request.Amount,
+                request.CurrentPrice ?? 0,
+                request.Date,
+                request.ExchangeName ?? string.Empty,
+                ETransactionType.TransferIn,
+                0
+            );
+
+            cryptoAsset.AddTransaction(transferTx);
 
             return new AccountTransaction(
                 date: date,
