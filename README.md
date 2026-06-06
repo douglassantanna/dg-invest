@@ -252,3 +252,8 @@ dg-invest/
 ├── docker-compose.yml           # Full stack environment
 └── README.md
 ```
+
+## Roadmap / Future Work
+
+- **Notification System** — in-app badge notifications + email alerts for actionable events (e.g., CMC coin lookup failure during Bybit sync, sync errors, unsupported deposit/withdrawal coins). Users can manually create missing assets when notified.
+```

@@ -138,23 +138,13 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? parsed.DateTime
             : DateTime.UtcNow;
 
-        var cryptoCurrentPrice = cryptoAsset.AveragePrice;
-
-        var cryptoTx = new CryptoTransaction(
-            amount,
-            cryptoCurrentPrice,
-            successAt,
-            "Bybit",
-            ETransactionType.Buy,
-            0);
-
-        cryptoAsset.AddTransaction(cryptoTx);
+        var depositPrice = await GetMarketPriceAsync(symbol, cancellationToken);
 
         var accountTx = new AccountTransaction(
             date: successAt,
             transactionType: EAccountTransactionType.DepositCrypto,
             amount: amount,
-            cryptoCurrentPrice: cryptoCurrentPrice,
+            cryptoCurrentPrice: depositPrice,
             exchangeName: "Bybit",
             notes: $"Auto-synced from Bybit deposit {deposit.TxId}",
             cryptoAssetId: cryptoAsset.Id,
@@ -212,23 +202,13 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? parsed.DateTime
             : DateTime.UtcNow;
 
-        var cryptoCurrentPrice = cryptoAsset.AveragePrice;
-
-        var cryptoTx = new CryptoTransaction(
-            amount,
-            cryptoCurrentPrice,
-            successAt,
-            "Bybit",
-            ETransactionType.Sell,
-            fee);
-
-        cryptoAsset.AddTransaction(cryptoTx);
+        var withdrawalPrice = await GetMarketPriceAsync(symbol, cancellationToken);
 
         var accountTx = new AccountTransaction(
             date: successAt,
             transactionType: EAccountTransactionType.WithdrawCrypto,
             amount: amount,
-            cryptoCurrentPrice: cryptoCurrentPrice,
+            cryptoCurrentPrice: withdrawalPrice,
             exchangeName: "Bybit",
             notes: $"Auto-synced from Bybit withdrawal {withdrawal.TxId}",
             cryptoAssetId: cryptoAsset.Id,
@@ -383,5 +363,23 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     private static bool TryParseDepositWithdrawalAmount(BybitDepositWithdrawalRow row, out decimal amount)
     {
         return decimal.TryParse(row.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount);
+    }
+
+    private async Task<decimal> GetMarketPriceAsync(string symbol, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var quote = await _coinMarketCapService.GetQuoteBySymbol(symbol.ToUpperInvariant());
+            if (quote?.Data != null && quote.Data.Any())
+            {
+                var coin = quote.Data.First().Value;
+                return coin.Quote?.USD?.Price ?? 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not fetch market price for {Symbol}, using 0", symbol);
+        }
+        return 0;
     }
 }

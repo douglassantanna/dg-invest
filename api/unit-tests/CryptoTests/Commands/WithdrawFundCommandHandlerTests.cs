@@ -66,7 +66,6 @@ public class WithdrawFundCommandHandlerTests
     {
         var account = new Account("main", 1);
         var cryptoAsset = new CryptoAsset("BTC", "USD", "Bitcoin", 1);
-        cryptoAsset.AddTransaction(new CryptoTransaction(1m, 50000m, DateTimeOffset.Now.AddDays(-1), "Initial", ETransactionType.Buy, 0));
         account.AddCryptoAsset(cryptoAsset);
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
