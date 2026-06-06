@@ -7,6 +7,7 @@ import { UpperCasePipe } from '@angular/common';
 import { tap } from 'rxjs';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { AccountService } from 'src/app/core/services/account.service';
+import { CryptoService } from 'src/app/core/services/crypto.service';
 
 @Component({
   selector: 'app-deposit',
@@ -19,6 +20,7 @@ export class DepositComponent implements OnInit {
   private fb = inject(FormBuilder);
   private toastService = inject(ToastService);
   private accountService = inject(AccountService);
+  private cryptoService = inject(CryptoService);
 
   depositEvent = output<DepositFundCommand | null>();
   cryptoAssets = signal<ViewCryptoInformation[]>([]);
@@ -39,6 +41,17 @@ export class DepositComponent implements OnInit {
 
   ngOnInit(): void {
     this.addConditionalValidation();
+    this.loadCryptoAssets();
+  }
+
+  private loadCryptoAssets() {
+    this.cryptoService.getCryptoAssets().subscribe({
+      next: (response) => {
+        const assets = response.items[0]?.cryptoAssetDto ?? [];
+        this.cryptoAssets.set(assets);
+      },
+      error: () => this.cryptoAssets.set([])
+    });
   }
 
   onSubmit() {
