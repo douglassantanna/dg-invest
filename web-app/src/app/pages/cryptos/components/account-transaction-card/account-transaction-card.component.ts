@@ -65,8 +65,12 @@ export class AccountTransactionCardComponent {
 
   getTransactionTotalValue(accountTransaction: AccountTransactionDto): number {
     switch (accountTransaction.transactionType) {
+      case AccountTransactionType.DepositFiat:
+      case AccountTransactionType.DepositCrypto:
       case AccountTransactionType.In:
         return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) - accountTransaction.fee;
+      case AccountTransactionType.WithdrawToBank:
+      case AccountTransactionType.WithdrawCrypto:
       case AccountTransactionType.Out:
         return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) + accountTransaction.fee;
       default:
@@ -76,6 +80,7 @@ export class AccountTransactionCardComponent {
 
   isCryptoTransaction(accountTransaction: AccountTransactionType): boolean {
     return accountTransaction === AccountTransactionType.DepositCrypto
+      || accountTransaction === AccountTransactionType.WithdrawCrypto
       || accountTransaction === AccountTransactionType.In
       || accountTransaction === AccountTransactionType.Out;
   }
@@ -87,6 +92,7 @@ export class AccountTransactionCardComponent {
 
   isOutgoing(transactionType: AccountTransactionType): boolean {
     return transactionType === AccountTransactionType.WithdrawToBank ||
+      transactionType === AccountTransactionType.WithdrawCrypto ||
       transactionType === AccountTransactionType.Out;
   }
 

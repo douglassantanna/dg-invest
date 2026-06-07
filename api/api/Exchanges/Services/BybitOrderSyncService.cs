@@ -367,7 +367,10 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             .Select(c => c.Symbol)
             .ToListAsync();
 
+        var hardcoded = new[] { "USDT", "USDC", "BUSD", "USD", "BTC", "ETH", "BNB" };
         _knownQuoteCurrencies = symbols
+            .Concat(hardcoded)
+            .Distinct()
             .OrderByDescending(s => s.Length)
             .ToList();
         return _knownQuoteCurrencies;

@@ -190,6 +190,8 @@ Data/
   20260601194826_AddSyncStatus.Designer.cs
   20260604214422_AddExchangeTransactionId.cs
   20260604214422_AddExchangeTransactionId.Designer.cs
+  20260606123228_AddExchangeStatusToAccountTransaction.cs
+  20260606123228_AddExchangeStatusToAccountTransaction.Designer.cs
   DataContextModelSnapshot.cs
  ModelsConfigurations/
   AccountTransactionConfiguration.cs

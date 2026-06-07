@@ -27,11 +27,19 @@ public class CoinMarketCapService : ICoinMarketCapService
 
             var jObject = JObject.Parse(raw);
             var data = new Dictionary<string, Coin>();
-            foreach (var kvp in (JObject)jObject["data"]!)
+            var dataToken = jObject["data"];
+            if (dataToken is JObject dataObj)
             {
-                var first = kvp.Value!.First;
-                var coin = first!.ToObject<Coin>()!;
-                data[kvp.Key] = coin;
+                foreach (var kvp in dataObj)
+                {
+                    var first = kvp.Value?.First;
+                    if (first != null)
+                    {
+                        var coin = first.ToObject<Coin>();
+                        if (coin != null)
+                            data[kvp.Key] = coin;
+                    }
+                }
             }
             var status = jObject["status"]!.ToObject<Status>()!;
             return new GetQuoteResponse(status, data);
