@@ -103,18 +103,24 @@ public class SyncBybitOrders
             }
 
             var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, limit: 50);
+            _logger.LogInformation("SyncBybitOrders: received {Count} deposits from Bybit for account {AccountId}: {TxIds}",
+                deposits.Count, accountId, string.Join(", ", deposits.Select(d => $"{d.TxId}({d.Status})")));
+
             foreach (var deposit in deposits)
             {
                 await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken);
             }
-            _logger.LogInformation("SyncBybitOrders: processed {Count} deposits for account {AccountId}", deposits.Count, accountId);
+            _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
             var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey, apiSecret, limit: 50);
+            _logger.LogInformation("SyncBybitOrders: received {Count} withdrawals from Bybit for account {AccountId}: {TxIds}",
+                withdrawals.Count, accountId, string.Join(", ", withdrawals.Select(w => $"{w.TxId}({w.Status})")));
+
             foreach (var withdrawal in withdrawals)
             {
                 await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken);
             }
-            _logger.LogInformation("SyncBybitOrders: processed {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
+            _logger.LogInformation("SyncBybitOrders: finished processing {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
         }
         catch (Exception ex)
         {

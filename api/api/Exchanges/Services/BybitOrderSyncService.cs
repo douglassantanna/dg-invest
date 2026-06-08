@@ -104,12 +104,15 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Success", null, importSource, logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved order {OrderId} ({Side} {Qty} {Symbol} @ {Price})", order.OrderId, order.Side, qty, baseSymbol, price);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task ProcessDepositAsync(BybitDepositWithdrawalRow deposit, Account account, int userId, CancellationToken cancellationToken)
     {
         var logId = Guid.NewGuid().ToString();
         var symbol = deposit.Coin;
+        _logger.LogInformation("Bybit sync: processing deposit {TxId} (Coin: {Coin}, Amount: {Amount}, Status: {Status})",
+            deposit.TxId, deposit.Coin, deposit.Amount, deposit.Status);
 
         if (!TryParseDepositWithdrawalAmount(deposit, out var amount))
         {
@@ -182,12 +185,15 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Success", null, "BybitDeposit", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved deposit {TxId} ({Amount} {Symbol}, Status: {Status})", deposit.TxId, amount, symbol, deposit.Status);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task ProcessWithdrawalAsync(BybitDepositWithdrawalRow withdrawal, Account account, int userId, CancellationToken cancellationToken)
     {
         var logId = Guid.NewGuid().ToString();
         var symbol = withdrawal.Coin;
+        _logger.LogInformation("Bybit sync: processing withdrawal {TxId} (Coin: {Coin}, Amount: {Amount}, Status: {Status})",
+            withdrawal.TxId, withdrawal.Coin, withdrawal.Amount, withdrawal.Status);
 
         if (!TryParseDepositWithdrawalAmount(withdrawal, out var amount))
         {
@@ -265,6 +271,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Success", null, "BybitWithdrawal", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved withdrawal {TxId} ({Amount} {Symbol}, Status: {Status})", withdrawal.TxId, amount, symbol, withdrawal.Status);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken)
