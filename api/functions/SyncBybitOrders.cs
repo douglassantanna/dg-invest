@@ -6,6 +6,7 @@ using api.Exchanges.Commands;
 using api.Exchanges.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace functions;
@@ -17,25 +18,35 @@ public class SyncBybitOrders
     private readonly IKeyVaultService _keyVaultService;
     private readonly DataContext _context;
     private readonly ILogger<SyncBybitOrders> _logger;
+    private readonly IConfiguration _configuration;
 
     public SyncBybitOrders(
         IBybitService bybitService,
         IBybitOrderSyncService orderSyncService,
         IKeyVaultService keyVaultService,
         DataContext context,
-        ILogger<SyncBybitOrders> logger)
+        ILogger<SyncBybitOrders> logger,
+        IConfiguration configuration)
     {
         _bybitService = bybitService;
         _orderSyncService = orderSyncService;
         _keyVaultService = keyVaultService;
         _context = context;
         _logger = logger;
+        _configuration = configuration;
     }
 
     [Function("SyncBybitOrders")]
     public async Task Run([TimerTrigger("*/30 * * * * *")] TimerInfo timer, FunctionContext context)
     {
         var cancellationToken = context.CancellationToken;
+
+        var syncEnabled = _configuration.GetValue<bool>("BybitSync:Enabled");
+        if (!syncEnabled)
+        {
+            _logger.LogInformation("SyncBybitOrders: feature flag BybitSync:Enabled is false, skipping");
+            return;
+        }
 
         try
         {
