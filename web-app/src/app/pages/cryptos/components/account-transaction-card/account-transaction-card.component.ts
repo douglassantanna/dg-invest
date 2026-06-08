@@ -101,4 +101,20 @@ export class AccountTransactionCardComponent {
   getTransactionSign(transactionType: AccountTransactionType): string {
     return this.isIncoming(transactionType) ? '+' : '-';
   }
+
+  getStatusLabel(status: string): string {
+    switch (status) {
+      case '3': return 'Completed';
+      case '4': return 'Failed';
+      default: return 'Pending';
+    }
+  }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case '3': return 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100';
+      case '4': return 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100';
+      default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100';
+    }
+  }
 }
