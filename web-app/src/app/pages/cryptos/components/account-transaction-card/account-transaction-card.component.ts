@@ -37,6 +37,8 @@ export class AccountTransactionCardComponent {
         return 'Money In';
       case AccountTransactionType.Out:
         return 'Money Out';
+      case AccountTransactionType.WithdrawCrypto:
+        return 'Withdraw Crypto';
       default:
         return 'Unknown';
     }
