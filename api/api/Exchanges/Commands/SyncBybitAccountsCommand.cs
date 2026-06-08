@@ -99,12 +99,15 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
                 if (existingTags.Contains(tag.ToLowerInvariant()))
                 {
+                    var existingAccount = existingAccounts.First(a => a.SubaccountTag.Equals(tag, StringComparison.OrdinalIgnoreCase));
+                    existingAccount.SetBybitUid(member.Uid);
                     matched++;
-                    _logger.LogInformation("SyncBybitAccounts: sub-account '{Tag}' matched by name for user {UserId}", tag, request.UserId);
+                    _logger.LogInformation("SyncBybitAccounts: sub-account '{Tag}' matched by name, set BybitUid {Uid} for user {UserId}", tag, member.Uid, request.UserId);
                     continue;
                 }
 
                 var newAccount = new Account(tag, request.UserId);
+                newAccount.SetBybitUid(member.Uid);
                 _context.Accounts.Add(newAccount);
                 created++;
                 _logger.LogInformation("SyncBybitAccounts: created account '{Tag}' (Bybit UID: {Uid}) for user {UserId}",
