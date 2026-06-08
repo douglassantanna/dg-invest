@@ -28,15 +28,15 @@ export class AccountTransactionCardComponent {
   getTransactionTypeLabel(transactionType: AccountTransactionType): string {
     switch (transactionType) {
       case AccountTransactionType.DepositFiat:
-        return 'Deposit Fiat';
+        return 'Deposit';
       case AccountTransactionType.DepositCrypto:
         return 'Deposit Crypto';
       case AccountTransactionType.WithdrawToBank:
-        return 'Bank Withdraw';
+        return 'Withdraw to Bank';
       case AccountTransactionType.In:
-        return 'Money In';
+        return 'Sell';
       case AccountTransactionType.Out:
-        return 'Money Out';
+        return 'Buy';
       case AccountTransactionType.WithdrawCrypto:
         return 'Withdraw Crypto';
       default:
