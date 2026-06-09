@@ -34,6 +34,9 @@ namespace api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
+                    b.Property<string>("BybitUid")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -52,7 +55,7 @@ namespace api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Accounts");
+                    b.ToTable("Accounts", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.AccountTransaction", b =>
@@ -85,6 +88,14 @@ namespace api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar");
 
+                    b.Property<string>("ExchangeStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("ExchangeTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar");
+
                     b.Property<decimal>("Fee")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
@@ -103,7 +114,9 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("AccountTransactions");
+                    b.HasIndex("ExchangeTransactionId");
+
+                    b.ToTable("AccountTransactions", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Address", b =>
@@ -132,7 +145,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("Address");
+                    b.ToTable("Address", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Crypto", b =>
@@ -163,7 +176,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cryptos");
+                    b.ToTable("Cryptos", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.UserPortfolioSnapshot", b =>
@@ -195,7 +208,53 @@ namespace api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserPortfolioSnapshots");
+                    b.ToTable("UserPortfolioSnapshots", (string)null);
+                });
+
+            modelBuilder.Entity("api.Exchanges.Models.SyncStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExchangeName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("LastErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("LastOrderId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar");
+
+                    b.Property<DateTime?>("LastSyncAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "AccountId", "ExchangeName")
+                        .IsUnique();
+
+                    b.ToTable("SyncStatuses", (string)null);
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
@@ -245,7 +304,7 @@ namespace api.Migrations
 
                     b.HasIndex("AccountId");
 
-                    b.ToTable("CryptoAssets");
+                    b.ToTable("CryptoAssets", (string)null);
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoTransaction", b =>
@@ -271,6 +330,9 @@ namespace api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar");
 
+                    b.Property<string>("ExchangeOrderId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("Fee")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
@@ -289,7 +351,7 @@ namespace api.Migrations
 
                     b.HasIndex("CryptoAssetId");
 
-                    b.ToTable("CryptoTransactions");
+                    b.ToTable("CryptoTransactions", (string)null);
                 });
 
             modelBuilder.Entity("api.Users.Models.User", b =>
@@ -326,7 +388,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("api.Cryptos.Models.Account", b =>

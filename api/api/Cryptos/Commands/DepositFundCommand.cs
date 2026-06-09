@@ -91,7 +91,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             var currentServerTime = DateTime.Now;
             var date = new DateTime(request.Date.Year, request.Date.Month, request.Date.Day, currentServerTime.Hour, currentServerTime.Minute, currentServerTime.Second);
             var accountTransactionType = GetAccountTransactionType(request.AccountTransactionType);
-            var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, []);
+            var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, account.CryptoAssets);
             if (newAccountTransaction == null)
             {
                 _logger.LogError("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
@@ -140,17 +140,16 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             if (cryptoAsset == null)
                 return null;
 
-
-            var buyTransaction = new CryptoTransaction(
+            var transferTx = new CryptoTransaction(
                 request.Amount,
                 request.CurrentPrice ?? 0,
                 request.Date,
                 request.ExchangeName ?? string.Empty,
-                ETransactionType.Buy,
+                ETransactionType.TransferIn,
                 0
             );
 
-            cryptoAsset.AddTransaction(buyTransaction);
+            cryptoAsset.AddTransaction(transferTx);
 
             return new AccountTransaction(
                 date: date,

@@ -28,15 +28,17 @@ export class AccountTransactionCardComponent {
   getTransactionTypeLabel(transactionType: AccountTransactionType): string {
     switch (transactionType) {
       case AccountTransactionType.DepositFiat:
-        return 'Deposit Fiat';
+        return 'Deposit';
       case AccountTransactionType.DepositCrypto:
         return 'Deposit Crypto';
       case AccountTransactionType.WithdrawToBank:
-        return 'Bank Withdraw';
+        return 'Withdraw to Bank';
       case AccountTransactionType.In:
-        return 'Money In';
+        return 'Sell';
       case AccountTransactionType.Out:
-        return 'Money Out';
+        return 'Buy';
+      case AccountTransactionType.WithdrawCrypto:
+        return 'Withdraw Crypto';
       default:
         return 'Unknown';
     }
@@ -65,8 +67,12 @@ export class AccountTransactionCardComponent {
 
   getTransactionTotalValue(accountTransaction: AccountTransactionDto): number {
     switch (accountTransaction.transactionType) {
+      case AccountTransactionType.DepositFiat:
+      case AccountTransactionType.DepositCrypto:
       case AccountTransactionType.In:
         return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) - accountTransaction.fee;
+      case AccountTransactionType.WithdrawToBank:
+      case AccountTransactionType.WithdrawCrypto:
       case AccountTransactionType.Out:
         return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) + accountTransaction.fee;
       default:
@@ -76,6 +82,7 @@ export class AccountTransactionCardComponent {
 
   isCryptoTransaction(accountTransaction: AccountTransactionType): boolean {
     return accountTransaction === AccountTransactionType.DepositCrypto
+      || accountTransaction === AccountTransactionType.WithdrawCrypto
       || accountTransaction === AccountTransactionType.In
       || accountTransaction === AccountTransactionType.Out;
   }
@@ -87,10 +94,27 @@ export class AccountTransactionCardComponent {
 
   isOutgoing(transactionType: AccountTransactionType): boolean {
     return transactionType === AccountTransactionType.WithdrawToBank ||
+      transactionType === AccountTransactionType.WithdrawCrypto ||
       transactionType === AccountTransactionType.Out;
   }
 
   getTransactionSign(transactionType: AccountTransactionType): string {
     return this.isIncoming(transactionType) ? '+' : '-';
+  }
+
+  getStatusLabel(status: string): string {
+    switch (status) {
+      case '3': return 'Completed';
+      case '4': return 'Failed';
+      default: return 'Pending';
+    }
+  }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case '3': return 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100';
+      case '4': return 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100';
+      default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100';
+    }
   }
 }

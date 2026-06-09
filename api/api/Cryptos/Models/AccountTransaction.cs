@@ -18,7 +18,9 @@ public class AccountTransaction : Entity
             string notes,
             int? cryptoAssetId,
             CryptoAsset? cryptoAsset,
-            decimal? fee)
+            decimal? fee,
+            string? exchangeTransactionId = null,
+            string? exchangeStatus = null)
     {
         Date = date;
         TransactionType = transactionType;
@@ -29,6 +31,8 @@ public class AccountTransaction : Entity
         CryptoAssetId = cryptoAssetId;
         CryptoAsset = cryptoAsset;
         Fee = fee ?? 0;
+        ExchangeTransactionId = exchangeTransactionId;
+        ExchangeStatus = exchangeStatus;
     }
     public AccountTransaction(
             DateTime date,
@@ -51,4 +55,11 @@ public class AccountTransaction : Entity
     public int? CryptoAssetId { get; private set; }
     public CryptoAsset? CryptoAsset { get; set; }
     public decimal Fee { get; private set; }
+    public string? ExchangeTransactionId { get; private set; }
+    public string? ExchangeStatus { get; private set; }
+
+    public void UpdateExchangeStatus(string status)
+    {
+        ExchangeStatus = status;
+    }
 }
