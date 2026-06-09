@@ -145,23 +145,55 @@ The frontend launches automatically. Access the application using the credential
 ---
 ### Bybit auto-trade sync
 
-When an order is filled on Bybit it is automatically saved to the database — no manual entry required.
+Orders, deposits, and withdrawals from your Bybit account are automatically synced to the app — no manual entry required. This works through two complementary mechanisms:
 
-#### How it works
+| Method | When | What it syncs |
+|--------|------|---------------|
+| **Webhook** (real-time) | An order is filled | Orders only |
+| **REST polling** (every 30s) | Runs continuously in the background | Orders, deposits, and withdrawals |
+
+The webhook catches trades instantly. The REST poll catches anything the webhook missed, including deposits and withdrawals Bybit doesn't send webhooks for. Both paths pass through the same dedup logic, so nothing is ever double-counted.
+
+#### What gets synced
+
+| Data | How it's recorded |
+|------|------------------|
+| **Buy** | Deducts cost (qty × price + fee) from your account balance. Adds coins to the crypto asset. |
+| **Sell** | Adds proceeds (qty × price − fee) to your account balance. Removes coins from the crypto asset. |
+| **Deposit** (crypto) | Adds coins to the crypto asset balance. Updates account balance by deposit value (qty × price). |
+| **Withdrawal** (crypto) | Removes coins from the crypto asset balance. Deducts withdrawal value from account balance. |
+
+If a coin doesn't exist in your portfolio yet, the sync automatically creates it by looking up the symbol on CoinMarketCap. Unknown coins will appear in the sync logs as failed — you can create them manually from the app.
+
+Deposits and withdrawals go through multiple statuses (Pending → Processing → Success / Failed). The sync tracks each status change and only affects your balances when the status reaches **Success**. Pending/failed transactions appear in your account history with a status badge so you always know what's happening.
+
+#### Data flow
 
 ```
 Bybit (order filled)
-  └─ Webhook POST → /api/tradewebhook/bybit/{userId}/{accountId}
-       ├─ HMAC-SHA256 signature validated against Key Vault secret
-       ├─ Order status checked (only "Filled" orders are processed)
-       ├─ Duplicate guard via ExchangeOrderId (idempotent)
-       ├─ Crypto asset auto-created via CoinMarketCap if not yet tracked
-       └─ Transaction saved using the existing buy/sell strategy
+  │
+  ├─ Webhook POST → /api/tradewebhook/bybit/{userId}/{accountId}
+  │    ├─ HMAC-SHA256 signature validated against your Key Vault secret
+  │    ├─ Dedup check via ExchangeOrderId (idempotent)
+  │    ├─ Coin auto-created via CoinMarketCap if new
+  │    └─ Order saved + balance updated
+  │
+  └─ (missed webhook / deposit / withdrawal)
+       │
+       └─ Timer function (every 30s)
+            ├─ Fetch recent orders from Bybit REST API
+            ├─ Fetch recent deposits & withdrawals from Bybit REST API
+            ├─ Dedup check via ExchangeOrderId / ExchangeTransactionId
+            ├─ Status tracked (Pending / Success / Failed)
+            └─ Saved to database + balance updated
+
+     Sync logs are written to Azure Blob Storage (JSONL format)
+     and can be viewed in the Exchange Management UI.
 ```
 
-#### Setup (per sub-account)
+#### Setup
 
-**1. Save credentials**
+**1. Save your Bybit API credentials**
 
 ```http
 POST /api/exchange/bybit/credentials
@@ -171,23 +203,23 @@ Authorization: Bearer <jwt>
   "accountId": 1,
   "apiKey": "your-bybit-api-key",
   "apiSecret": "your-bybit-api-secret",
-  "webhookSecret": "your-bybit-webhook-secret"
+  "webhookSecret": "your-bybit-webhook-signing-secret"
 }
 ```
 
-Credentials are stored in **Azure Key Vault** (never in the database).  
+Credentials are stored in **Azure Key Vault** — never in the database.  
 Key naming: `bybit-{userId}-{accountId}-{api-key|api-secret|webhook-secret}`.
 
-**2. Sync sub-accounts from Bybit**
-
-Reads sub-accounts from Bybit using the main account API key and maps them to existing app accounts by `SubaccountTag`. Creates new accounts for any that are not yet tracked.
+**2. Sync your sub-accounts**
 
 ```http
 POST /api/exchange/bybit/sync-accounts
 Authorization: Bearer <jwt>
 ```
 
-**3. Configure the webhook in Bybit**
+This reads all sub-accounts from Bybit, matches them to your internal portfolio accounts by their `SubaccountTag`, and links them via the Bybit UID. Any unmatched sub-accounts are created as new portfolio accounts automatically.
+
+**3. Set up the webhook (optional — for instant order sync)**
 
 In Bybit → Account → API Management → Webhooks, set the endpoint URL to:
 
@@ -195,7 +227,17 @@ In Bybit → Account → API Management → Webhooks, set the endpoint URL to:
 https://your-domain.com/api/tradewebhook/bybit/{userId}/{accountId}
 ```
 
-Use a different URL for each sub-account so trades are routed to the correct portfolio account.
+Use a different URL for each sub-account so trades are routed to the correct portfolio account. If you skip this step, orders are still picked up by the REST poller within 30 seconds.
+
+#### Feature flag
+
+The background sync can be turned off without deploying code. Set the following in your Azure Function app settings:
+
+```
+BybitSync:Enabled = false
+```
+
+It defaults to `true` if not set.
 
 #### Azure Key Vault configuration
 
@@ -215,18 +257,44 @@ The API uses `DefaultAzureCredential` to authenticate, which works with:
 
 - Webhook endpoint does **not** require JWT — it is protected exclusively by HMAC-SHA256 signature validation.
 - Invalid signatures return `401`. Processing errors return `200` to prevent Bybit retry storms.
-- `ExchangeOrderId` is stored with a unique index to prevent duplicate transactions if Bybit delivers the same webhook more than once.
+- `ExchangeOrderId` and `ExchangeTransactionId` provide idempotency — if Bybit delivers the same event more than once, it's silently skipped.
+- API credentials are stored in Azure Key Vault, never in the database or browser.
 
 #### Exchange Management UI
 
-The frontend provides a dedicated **Exchange Connections** page (`/exchanges`) for managing Bybit integration without touching the API directly. The page is organized into four sections:
+The frontend provides a dedicated **Exchange Connections** page (`/exchanges`) for managing your Bybit integration without touching the API. The page is organized into four sections:
 
-1. **Credentials form** — enter API key, secret, and webhook signing secret per internal account. Credentials are sent to the API and stored in Azure Key Vault — never in the database or browser.
-2. **Sub-account sync** — pull sub-accounts from Bybit via the REST API, see them listed with their UID, username, and remark. Each unmapped sub-account can be linked to an internal portfolio account with one click.
-3. **Sync status table** — shows the health of each exchange connection: status badge (Connected / Error / Disconnected), last sync timestamp, last processed order ID, and error count.
-4. **Sync log viewer** — expandable per account, displays every processed webhook order with its status (Success / Duplicate / Failed), symbol, side, quantity, price, and error message. Supports date filtering.
+1. **Credentials form** — enter API key, secret, and webhook signing secret per internal account.
+2. **Sub-account sync** — pull sub-accounts from Bybit, see them listed with their UID, username, and remark. Unmapped sub-accounts can be linked to an internal portfolio account with one click.
+3. **Sync status table** — shows the health of each exchange connection: status badge (Connected / Error / Disconnected), last sync timestamp, last processed order/transaction ID, and error count.
+4. **Sync log viewer** — expandable per account, displays every processed event (order, deposit, withdrawal) with its status (Success / Duplicate / Failed), symbol, type (Buy / Sell / Deposit / Withdraw), quantity, price, and error message. Supports date filtering.
 
-The page is at `web-app/src/app/pages/exchanges/containers/exchange-management/` and uses the `ExchangeService` (`web-app/src/app/core/services/exchange.service.ts`) which talks to the `ExchangeController` endpoints.
+#### Monitoring
+
+Every synced event is recorded in two places:
+
+| Where | What's stored |
+|-------|--------------|
+| **Sync logs** (Azure Blob Storage) | JSONL log per day per account with full event details |
+| **Sync status** (database) | Current health of each exchange connection (last sync time, error state, last processed ID) |
+| **Account transactions** (database) | Your account history with status badges (Pending / Completed / Failed) |
+| **Crypto transactions** (database) | Per-coin trade history with type badges (Buy / Sell / Deposit / Withdraw) |
+
+#### Troubleshooting
+
+**Transactions not appearing in the app**
+1. Check the Exchange Management UI → Sync Logs — every event is logged with its status
+2. Verify `BybitSync:Enabled` is not set to `false` in your function app settings
+3. Confirm your API key has the required permissions (account transfer + spot trade history)
+4. For deposits/withdrawals, only `Success` status affects your balance; pending ones display with a yellow badge
+
+**Sync log errors**
+- `Could not resolve asset for symbol` — the coin is not in your portfolio and CoinMarketCap returned no data. Create it manually from the app.
+- `Transaction strategy failed` — check the error message in the log detail. Usually indicates an inconsistent balance (e.g., trying to withdraw more than you hold).
+- `Failed to fetch` — your Bybit API credentials may be invalid or expired. Re-save them from the Credentials form.
+
+**Duplicate transactions**
+The sync is idempotent — running it multiple times will never create duplicates. If you see duplicates, check the `ExchangeOrderId` or `ExchangeTransactionId` values in the database for collisions.
 
 ---
 ### Project structure
