@@ -12,6 +12,7 @@ public class SyncStatus : Entity
     public string Status { get; private set; } = "Disconnected";
     public int ErrorCount { get; private set; }
     public string? LastErrorMessage { get; private set; }
+    public DateTime? BybitCredentialsSetAt { get; private set; }
 
     private SyncStatus() { }
 
@@ -42,5 +43,10 @@ public class SyncStatus : Entity
     {
         Status = "Disconnected";
         LastErrorMessage = errorMessage;
+    }
+
+    public void MarkCredentialsSet()
+    {
+        BybitCredentialsSetAt ??= DateTime.UtcNow;
     }
 }

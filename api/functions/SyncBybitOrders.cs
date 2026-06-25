@@ -92,7 +92,13 @@ public class SyncBybitOrders
                 return;
             }
 
-            var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, limit: 50);
+            var syncStatus = await _context.SyncStatuses
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
+            var startTime = syncStatus?.BybitCredentialsSetAt is { } dt
+                ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                : (long?)null;
+
+            var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
             if (orders.Count == 0)
             {
                 _logger.LogInformation("SyncBybitOrders: no orders for account {AccountId}", accountId);
@@ -113,7 +119,7 @@ public class SyncBybitOrders
                 _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
             }
 
-            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, limit: 50);
+            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
             _logger.LogInformation("SyncBybitOrders: received {Count} deposits from Bybit for account {AccountId}: {TxIds}",
                 deposits.Count, accountId, string.Join(", ", deposits.Select(d => $"{d.TxId}({d.Status})")));
 
@@ -123,7 +129,7 @@ public class SyncBybitOrders
             }
             _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
-            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey, apiSecret, limit: 50);
+            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
             _logger.LogInformation("SyncBybitOrders: received {Count} withdrawals from Bybit for account {AccountId}: {TxIds}",
                 withdrawals.Count, accountId, string.Join(", ", withdrawals.Select(w => $"{w.TxId}({w.Status})")));
 
