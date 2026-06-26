@@ -106,6 +106,8 @@ public class SyncBybitOrders
                 : (long?)null;
 
             var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
+            var hasFailures = false;
+
             if (orders.Count > 0)
             {
                 var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
@@ -113,7 +115,8 @@ public class SyncBybitOrders
                 {
                     foreach (var order in filledOrders)
                     {
-                        await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken);
+                        if (!await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken))
+                            hasFailures = true;
                     }
                     _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
                 }
@@ -129,7 +132,8 @@ public class SyncBybitOrders
 
             foreach (var deposit in deposits)
             {
-                await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken);
+                if (!await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken))
+                    hasFailures = true;
             }
             _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
@@ -139,12 +143,20 @@ public class SyncBybitOrders
 
             foreach (var withdrawal in withdrawals)
             {
-                await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken);
+                if (!await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken))
+                    hasFailures = true;
             }
             _logger.LogInformation("SyncBybitOrders: finished processing {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
 
-            var lastOrderId = orders.Count > 0 ? orders.Last().OrderId : null;
-            await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
+            if (hasFailures)
+            {
+                _logger.LogWarning("SyncBybitOrders: one or more items failed for account {AccountId}, cursor not advanced", accountId);
+            }
+            else
+            {
+                var lastOrderId = orders.Count > 0 ? orders.Last().OrderId : null;
+                await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
+            }
         }
         catch (Exception ex)
         {

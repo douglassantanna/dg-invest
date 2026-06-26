@@ -40,7 +40,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _logger = logger;
     }
 
-    public async Task ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
+    public async Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
     {
         var quoteCurrencies = await GetQuoteCurrenciesAsync();
         var baseSymbol = ExtractBaseSymbol(order.Symbol, quoteCurrencies);
@@ -52,14 +52,14 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogInformation("Bybit sync: order {OrderId} already saved, skipping", order.OrderId);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Duplicate", null, importSource, logId, cancellationToken);
-            return;
+            return true;
         }
 
         if (!TryParseOrderValues(order, out var price, out var qty, out var fee))
         {
             _logger.LogError("Bybit sync: could not parse numeric values for order {OrderId}", order.OrderId);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", "Could not parse numeric values", importSource, logId, cancellationToken);
-            return;
+            return false;
         }
 
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, baseSymbol, cancellationToken);
@@ -67,7 +67,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: could not resolve crypto asset for symbol {Symbol}", baseSymbol);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", $"Could not resolve asset for symbol {baseSymbol}", importSource, logId, cancellationToken);
-            return;
+            return false;
         }
 
         var transactionType = order.Side.Equals("Buy", StringComparison.OrdinalIgnoreCase)
@@ -97,7 +97,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: transaction strategy failed for order {OrderId}: {Message}", order.OrderId, result.Message);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", result.Message, importSource, logId, cancellationToken);
-            return;
+            return false;
         }
 
         cryptoAsset.AddTransaction(cryptoTx);
@@ -105,9 +105,10 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Success", null, importSource, logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved order {OrderId} ({Side} {Qty} {Symbol} @ {Price})", order.OrderId, order.Side, qty, baseSymbol, price);
         await _context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
-    public async Task ProcessDepositAsync(BybitDepositWithdrawalRow deposit, Account account, int userId, CancellationToken cancellationToken)
+    public async Task<bool> ProcessDepositAsync(BybitDepositWithdrawalRow deposit, Account account, int userId, CancellationToken cancellationToken)
     {
         var logId = Guid.NewGuid().ToString();
         var symbol = deposit.Coin;
@@ -118,7 +119,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: could not parse amount for deposit {TxId}", deposit.TxId);
             await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Failed", "Could not parse amount", "BybitDeposit", logId, cancellationToken);
-            return;
+            return false;
         }
 
         var existingTx = await _context.AccountTransactions
@@ -132,14 +133,14 @@ public class BybitOrderSyncService : IBybitOrderSyncService
                 _logger.LogInformation("Bybit sync: updated deposit {TxId} status {OldStatus} -> {NewStatus}", deposit.TxId, existingTx.ExchangeStatus, deposit.Status);
             }
             await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Duplicate", null, "BybitDeposit", logId, cancellationToken);
-            return;
+            return true;
         }
 
         if (deposit.Status != "3")
         {
             _logger.LogInformation("Bybit sync: skipping non-success deposit {TxId} (Status: {Status})", deposit.TxId, deposit.Status);
             await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Skipped", $"Non-success status: {deposit.Status}", "BybitDeposit", logId, cancellationToken);
-            return;
+            return true;
         }
 
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, symbol, cancellationToken);
@@ -147,7 +148,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: could not resolve crypto asset for deposit symbol {Symbol}", symbol);
             await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Failed", $"Could not resolve asset for symbol {symbol}", "BybitDeposit", logId, cancellationToken);
-            return;
+            return false;
         }
 
         var successAt = DateTimeOffset.TryParse(deposit.SuccessAt, out var parsed)
@@ -184,15 +185,16 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: transaction strategy failed for deposit {TxId}: {Message}", deposit.TxId, result.Message);
             await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Failed", result.Message, "BybitDeposit", logId, cancellationToken);
-            return;
+            return false;
         }
 
         await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Success", null, "BybitDeposit", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved deposit {TxId} ({Amount} {Symbol}, Status: {Status})", deposit.TxId, amount, symbol, deposit.Status);
         await _context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
-    public async Task ProcessWithdrawalAsync(BybitDepositWithdrawalRow withdrawal, Account account, int userId, CancellationToken cancellationToken)
+    public async Task<bool> ProcessWithdrawalAsync(BybitDepositWithdrawalRow withdrawal, Account account, int userId, CancellationToken cancellationToken)
     {
         var logId = Guid.NewGuid().ToString();
         var symbol = withdrawal.Coin;
@@ -203,7 +205,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: could not parse amount for withdrawal {TxId}", withdrawal.TxId);
             await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Failed", "Could not parse amount", "BybitWithdrawal", logId, cancellationToken);
-            return;
+            return false;
         }
 
         if (!decimal.TryParse(withdrawal.WithdrawFee, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var fee))
@@ -222,14 +224,14 @@ public class BybitOrderSyncService : IBybitOrderSyncService
                 _logger.LogInformation("Bybit sync: updated withdrawal {TxId} status {OldStatus} -> {NewStatus}", withdrawal.TxId, existingTx.ExchangeStatus, withdrawal.Status);
             }
             await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Duplicate", null, "BybitWithdrawal", logId, cancellationToken);
-            return;
+            return true;
         }
 
         if (!withdrawal.Status.Equals("success", StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogInformation("Bybit sync: skipping non-success withdrawal {TxId} (Status: {Status})", withdrawal.TxId, withdrawal.Status);
             await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Skipped", $"Non-success status: {withdrawal.Status}", "BybitWithdrawal", logId, cancellationToken);
-            return;
+            return true;
         }
 
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, symbol, cancellationToken);
@@ -237,7 +239,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: could not resolve crypto asset for withdrawal symbol {Symbol}", symbol);
             await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Failed", $"Could not resolve asset for symbol {symbol}", "BybitWithdrawal", logId, cancellationToken);
-            return;
+            return false;
         }
 
         var successAt = DateTimeOffset.TryParse(withdrawal.SuccessAt, out var parsed)
@@ -274,12 +276,13 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         {
             _logger.LogError("Bybit sync: transaction strategy failed for withdrawal {TxId}: {Message}", withdrawal.TxId, result.Message);
             await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Failed", result.Message, "BybitWithdrawal", logId, cancellationToken);
-            return;
+            return false;
         }
 
         await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Success", null, "BybitWithdrawal", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved withdrawal {TxId} ({Amount} {Symbol}, Status: {Status})", withdrawal.TxId, amount, symbol, withdrawal.Status);
         await _context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken)
