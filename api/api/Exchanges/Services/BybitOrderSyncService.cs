@@ -282,6 +282,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Success", null, "BybitWithdrawal", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved withdrawal {TxId} ({Amount} {Symbol}, Status: {Status})", withdrawal.TxId, amount, symbol, withdrawal.Status);
         await _context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken)
