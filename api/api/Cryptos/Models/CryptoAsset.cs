@@ -56,6 +56,12 @@ public class CryptoAsset : Entity
             case ETransactionType.Sell:
                 HandleSellTransaction(transaction);
                 break;
+            case ETransactionType.TransferIn:
+                HandleTransferIn(transaction);
+                break;
+            case ETransactionType.TransferOut:
+                HandleTransferOut(transaction);
+                break;
             default:
                 throw new CryptoAssetException("Invalid transaction type");
         }
@@ -125,6 +131,28 @@ public class CryptoAsset : Entity
 
         var gainOrLoss = CurrentWorth(currentPrice) - TotalInvested;
         return (gainOrLoss / TotalInvested) * 100;
+    }
+
+    private void HandleTransferIn(CryptoTransaction transaction)
+    {
+        if (transaction.Amount <= 0)
+            throw new CryptoAssetException("Transfer amount must be greater than zero");
+
+        Balance += transaction.Amount;
+    }
+
+    private void HandleTransferOut(CryptoTransaction transaction)
+    {
+        if (transaction.Amount <= 0)
+            throw new CryptoAssetException("Transfer amount must be greater than zero");
+
+        if (transaction.Amount > Balance)
+            throw new CryptoAssetException("Insufficient balance");
+
+        Balance -= transaction.Amount;
+
+        if (Balance == 0)
+            TotalInvested = 0;
     }
 
     private void HandleBuyTransaction(CryptoTransaction transaction)

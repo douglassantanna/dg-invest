@@ -9,7 +9,8 @@ public class CryptoTransaction : Entity
                              DateTimeOffset purchaseDate,
                              string exchangeName,
                              ETransactionType transactionType,
-                             decimal fee)
+                             decimal fee,
+                             string? exchangeOrderId = null)
     {
         Amount = amount;
         Price = price;
@@ -18,6 +19,7 @@ public class CryptoTransaction : Entity
         TransactionType = transactionType;
         Enabled = true;
         Fee = fee;
+        ExchangeOrderId = exchangeOrderId;
     }
     public decimal Amount { get; private set; }
     public decimal Price { get; private set; }
@@ -26,6 +28,8 @@ public class CryptoTransaction : Entity
     public ETransactionType TransactionType { get; private set; }
     public bool Enabled { get; private set; }
     public decimal Fee { get; set; }
+    // Null for manual entries; set for exchange-synced trades (used for deduplication).
+    public string? ExchangeOrderId { get; private set; }
 
     internal void Disable()
     {

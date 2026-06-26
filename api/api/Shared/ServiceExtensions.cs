@@ -1,7 +1,9 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using api.Authentication;
+using api.AzureKeyVault;
 using api.AzureStorage;
+using api.AzureStorage.Blob;
 using api.AzureStorage.Queue;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
@@ -11,6 +13,8 @@ using api.Cryptos.TransactionStrategies.Contracts;
 using api.Cryptos.TransactionStrategies.Transactions;
 using api.Data;
 using api.Data.Repositories;
+using api.Exchanges.Bybit;
+using api.Exchanges.Services;
 using api.Shared.Interfaces;
 using api.RateLimiterPolicies;
 using api.Users.Repositories;
@@ -65,6 +69,8 @@ public static class ServiceExtensions
         services.Configure<HealthAlertRecipientsOptions>(config.GetSection(nameof(HealthAlertRecipientsOptions)));
         services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
         services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
+        services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
+        services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
@@ -90,8 +96,15 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, FiatDepositTransaction>();
         services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
+        services.AddScoped<ITransactionStrategy, WithdrawCryptoTransaction>();
 
         services.AddScoped<ICacheService, MemoryCacheService>();
+
+        services.AddSingleton<IKeyVaultService, KeyVaultService>();
+        services.AddScoped<IBybitService, BybitService>();
+        services.AddScoped<IBlobStorageService, BlobStorageService>();
+        services.AddScoped<IBybitOrderSyncService, BybitOrderSyncService>();
+
         return services;
     }
 
@@ -100,7 +113,25 @@ public static class ServiceExtensions
         services.AddTransient<IMarketDataService, MarketDataService>();
         services.AddSingleton<ICoinMarketCapService, CoinMarketCapService>();
         services.AddScoped<IHealthCheckService, HealthCheckService>();
+        services.AddScoped<IBybitService, BybitService>();
+        services.AddScoped<IBlobStorageService, BlobStorageService>();
+        services.AddScoped<IBybitOrderSyncService, BybitOrderSyncService>();
+        services.AddScoped<ITransactionService, TransactionService>();
+        services.AddScoped<ITransactionStrategy, BuyTransaction>();
+        services.AddScoped<ITransactionStrategy, SellTransaction>();
+        services.AddScoped<ITransactionStrategy, FiatDepositTransaction>();
+        services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
+        services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
+        services.AddScoped<ITransactionStrategy, WithdrawCryptoTransaction>();
+        services.AddSingleton<IJWTService, JWTService>();
+        services.AddScoped<ICacheService, MemoryCacheService>();
+        services.AddScoped<IKeyVaultService, KeyVaultService>();
         services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
+        services.Configure<CoinMarketCapSettings>(config.GetSection(nameof(CoinMarketCapSettings)));
+        services.Configure<AzureStorageSettings>(config.GetSection(nameof(AzureStorageSettings)));
+        services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
+        services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
+        services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
 
         var connectionString = config.GetValue<string>("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))
@@ -111,9 +142,6 @@ public static class ServiceExtensions
             options.UseSqlServer(connectionString, x => x.EnableRetryOnFailure());
         });
 
-        var coinMarketCapSettings = config.GetSection(nameof(CoinMarketCapSettings))
-            ?? throw new InvalidOperationException("coinMarketCapSettings are missing.");
-        services.Configure<CoinMarketCapSettings>(coinMarketCapSettings);
         return services;
     }
 

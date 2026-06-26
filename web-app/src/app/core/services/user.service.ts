@@ -21,6 +21,7 @@ export interface AccountTransactionDto {
   cryptoCurrentPrice: number;
   cryptoSymbol: string;
   fee: number;
+  exchangeStatus?: string;
 }
 
 export interface GroupedAccountTransactionsDto {

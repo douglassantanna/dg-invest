@@ -20,6 +20,12 @@ export class LayoutService {
       roles: [Role.Admin, Role.User],
     },
     {
+      label: 'Exchanges',
+      path: 'exchanges',
+      icon: 'sync_alt',
+      roles: [Role.Admin, Role.User],
+    },
+    {
       label: 'Profile',
       path: 'user-profile',
       icon: 'manage_accounts',

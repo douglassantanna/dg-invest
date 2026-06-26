@@ -7,6 +7,7 @@ import { roleGuard } from './core/guards/role.guard';
 import { AccountComponent } from './pages/cryptos/containers/account/account.component';
 import { DepositComponent } from './pages/cryptos/containers/deposit/deposit.component';
 import { WithdrawComponent } from './pages/cryptos/containers/withdraw/withdraw.component';
+import { ExchangeManagementComponent } from './pages/exchanges/containers/exchange-management/exchange-management.component';
 
 export const routes: Routes = [
   {
@@ -38,6 +39,11 @@ export const routes: Routes = [
     path: "account/withdraw",
     canActivate: [authGuard],
     component: WithdrawComponent,
+  },
+  {
+    path: "exchanges",
+    canActivate: [authGuard],
+    component: ExchangeManagementComponent,
   },
   {
     path: "login",

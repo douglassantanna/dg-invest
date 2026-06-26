@@ -34,6 +34,9 @@ namespace api.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
+                    b.Property<string>("BybitUid")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -85,6 +88,14 @@ namespace api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar");
 
+                    b.Property<string>("ExchangeStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("ExchangeTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar");
+
                     b.Property<decimal>("Fee")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
@@ -102,6 +113,8 @@ namespace api.Migrations
                     b.HasIndex("AccountId");
 
                     b.HasIndex("CryptoAssetId");
+
+                    b.HasIndex("ExchangeTransactionId");
 
                     b.ToTable("AccountTransactions");
                 });
@@ -198,6 +211,55 @@ namespace api.Migrations
                     b.ToTable("UserPortfolioSnapshots");
                 });
 
+            modelBuilder.Entity("api.Exchanges.Models.SyncStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("BybitCredentialsSetAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExchangeName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("LastErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("LastOrderId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar");
+
+                    b.Property<DateTime?>("LastSyncAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "AccountId", "ExchangeName")
+                        .IsUnique();
+
+                    b.ToTable("SyncStatuses", (string)null);
+                });
+
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
                 {
                     b.Property<int>("Id")
@@ -270,6 +332,9 @@ namespace api.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar");
+
+                    b.Property<string>("ExchangeOrderId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Fee")
                         .HasPrecision(18, 8)
