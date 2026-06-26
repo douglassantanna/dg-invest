@@ -239,6 +239,23 @@ BybitSync:Enabled = false
 
 It defaults to `true` if not set.
 
+#### Sync cutoff (preventing manual-entry duplicates)
+
+When you enable Bybit sync on an account that already has manual entries, the sync must avoid importing the same trades again and doubling your balances. The system uses a sliding time-window cutoff:
+
+| Scenario | `startTime` sent to Bybit | Result |
+|----------|--------------------------|--------|
+| First sync after credentials saved | `BybitCredentialsSetAt` (time credentials were saved) | Manual entries before this timestamp are untouched |
+| Every subsequent sync | `LastSyncAt` (time of the last successful sync) | Only new Bybit orders are fetched; the window slides forward naturally |
+
+`BybitCredentialsSetAt` is stamped exactly once (never overwritten) when you save your credentials in the UI. `LastSyncAt` updates after every successful sync run, keeping the window within Bybit's 7-day order-history limit. Deposits and withdrawals use the same sliding window.
+
+#### Migrating existing accounts
+
+If you saved Bybit credentials **before** this cutoff mechanism was introduced, your account lacks a `SyncStatus` row in the database. The sync **skips** these accounts to prevent accidental full-history imports.
+
+To enable sync on these accounts, **re-save your credentials** in the Exchange Management UI. This creates the `SyncStatus` row with a fresh `BybitCredentialsSetAt` timestamp, and the next sync run will only import orders after that moment — leaving your manual entries intact.
+
 #### Azure Key Vault configuration
 
 Add the following to `appsettings.json`:
@@ -292,6 +309,7 @@ Every synced event is recorded in two places:
 - `Could not resolve asset for symbol` — the coin is not in your portfolio and CoinMarketCap returned no data. Create it manually from the app.
 - `Transaction strategy failed` — check the error message in the log detail. Usually indicates an inconsistent balance (e.g., trying to withdraw more than you hold).
 - `Failed to fetch` — your Bybit API credentials may be invalid or expired. Re-save them from the Credentials form.
+- `no sync status for account` — your credentials were saved before the sync cutoff mechanism was introduced. Re-save them in the Exchange Management UI to enable sync.
 
 **Duplicate transactions**
 The sync is idempotent — running it multiple times will never create duplicates. If you see duplicates, check the `ExchangeOrderId` or `ExchangeTransactionId` values in the database for collisions.
