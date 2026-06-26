@@ -94,29 +94,27 @@ public class SyncBybitOrders
 
             var syncStatus = await _context.SyncStatuses
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
-            var startTime = syncStatus?.BybitCredentialsSetAt is { } dt
+            var cutoff = syncStatus?.LastSyncAt ?? syncStatus?.BybitCredentialsSetAt;
+            var startTime = cutoff is { } dt
                 ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
 
             var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
-            if (orders.Count == 0)
+            if (orders.Count > 0)
+            {
+                var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
+                if (filledOrders.Count > 0)
+                {
+                    foreach (var order in filledOrders)
+                    {
+                        await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken);
+                    }
+                    _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
+                }
+            }
+            else
             {
                 _logger.LogInformation("SyncBybitOrders: no orders for account {AccountId}", accountId);
-                return;
-            }
-
-            var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
-            if (filledOrders.Count > 0)
-            {
-                foreach (var order in filledOrders)
-                {
-                    await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken);
-                }
-
-                var lastOrderId = filledOrders.Last().OrderId;
-                await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
-
-                _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
             }
 
             var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
@@ -138,6 +136,9 @@ public class SyncBybitOrders
                 await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken);
             }
             _logger.LogInformation("SyncBybitOrders: finished processing {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
+
+            var lastOrderId = orders.Count > 0 ? orders.Last().OrderId : null;
+            await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
         }
         catch (Exception ex)
         {
