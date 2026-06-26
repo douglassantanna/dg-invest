@@ -167,6 +167,21 @@ If a coin doesn't exist in your portfolio yet, the sync automatically creates it
 
 Deposits and withdrawals go through multiple statuses (Pending → Processing → Success / Failed). The sync tracks each status change and only affects your balances when the status reaches **Success**. Pending/failed transactions appear in your account history with a status badge so you always know what's happening.
 
+#### Bybit API status reference
+
+Non-Success entries are **skipped entirely** — no database records are created until Success is reached. This is intentional: creating a pending record would block the full creation path when Success arrives later (the dedup check would match the existing `ExchangeTransactionId` and return early without crediting the asset or updating balances).
+
+Status values as returned by the Bybit V5 API:
+
+| Operation | Success value | Type | Bybit docs |
+|-----------|--------------|------|------------|
+| **Deposit** | `"3"` (integer in JSON) | Numeric enum | [depositStatus](https://bybit-exchange.github.io/docs/v5/enum#depositstatus) |
+| **Withdrawal** | `"success"` (string literal) | String enum | [withdrawStatus](https://bybit-exchange.github.io/docs/v5/enum#withdrawstatus) |
+| **Order** | `"Filled"` (string literal) | String enum | [orderStatus](https://bybit-exchange.github.io/docs/v5/enum#orderstatus) |
+
+Deposit statuses: `0`=unknown, `1`=toBeConfirmed, `2`=processing, `3`=success, `4`=failed, `7`=rollback processing, plus sub-statuses `70011`–`10012`.  
+Withdrawal statuses: `SecurityCheck`, `Pending`, `success`, `CancelByUser`, `Reject`, `Fail`, `BlockchainConfirmed`, `MoreInformationRequired`.
+
 #### Data flow
 
 ```
