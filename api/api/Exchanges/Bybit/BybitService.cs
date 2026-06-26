@@ -81,12 +81,16 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, int? limit = 50)
+    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null)
     {
         try
         {
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryParams = $"category=spot&limit={limit}";
+            var queryDict = new Dictionary<string, object> { ["category"] = "spot", ["limit"] = limit!.Value };
+            if (startTime.HasValue)
+                queryDict["startTime"] = startTime.Value;
+
+            var queryParams = BuildQueryString(queryDict);
             var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
             var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
             var paramBytes = Encoding.UTF8.GetBytes(paramStr);
@@ -97,7 +101,7 @@ public class BybitService : IBybitService
 
             var response = await _accountBaseUrl
                 .AppendPathSegment(OrderHistoryEndpoint)
-                .SetQueryParams(new { category = "spot", limit })
+                .SetQueryParams(queryDict)
                 .WithHeader("X-BAPI-API-KEY", apiKey)
                 .WithHeader("X-BAPI-TIMESTAMP", timestamp)
                 .WithHeader("X-BAPI-SIGN", signature)
@@ -119,12 +123,16 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, int? limit = 50)
+    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null)
     {
         try
         {
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryParams = $"limit={limit}";
+            var queryDict = new Dictionary<string, object> { ["limit"] = limit!.Value };
+            if (startTime.HasValue)
+                queryDict["startTime"] = startTime.Value;
+
+            var queryParams = BuildQueryString(queryDict);
             var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
             var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
             var paramBytes = Encoding.UTF8.GetBytes(paramStr);
@@ -135,7 +143,7 @@ public class BybitService : IBybitService
 
             var response = await _accountBaseUrl
                 .AppendPathSegment(DepositHistoryEndpoint)
-                .SetQueryParams(new { limit })
+                .SetQueryParams(queryDict)
                 .WithHeader("X-BAPI-API-KEY", apiKey)
                 .WithHeader("X-BAPI-TIMESTAMP", timestamp)
                 .WithHeader("X-BAPI-SIGN", signature)
@@ -157,12 +165,16 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, int? limit = 50)
+    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null)
     {
         try
         {
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryParams = $"limit={limit}";
+            var queryDict = new Dictionary<string, object> { ["limit"] = limit!.Value };
+            if (startTime.HasValue)
+                queryDict["startTime"] = startTime.Value;
+
+            var queryParams = BuildQueryString(queryDict);
             var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
             var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
             var paramBytes = Encoding.UTF8.GetBytes(paramStr);
@@ -173,7 +185,7 @@ public class BybitService : IBybitService
 
             var response = await _accountBaseUrl
                 .AppendPathSegment(WithdrawalHistoryEndpoint)
-                .SetQueryParams(new { limit })
+                .SetQueryParams(queryDict)
                 .WithHeader("X-BAPI-API-KEY", apiKey)
                 .WithHeader("X-BAPI-TIMESTAMP", timestamp)
                 .WithHeader("X-BAPI-SIGN", signature)
@@ -193,5 +205,10 @@ public class BybitService : IBybitService
             _logger.LogError(ex, "Error fetching Bybit withdrawal history");
             throw;
         }
+    }
+
+    private static string BuildQueryString(Dictionary<string, object> parameters)
+    {
+        return string.Join("&", parameters.OrderBy(p => p.Key).Select(p => $"{p.Key}={p.Value}"));
     }
 }

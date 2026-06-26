@@ -1,5 +1,6 @@
 using api.AzureKeyVault;
 using api.Data;
+using api.Exchanges.Models;
 using api.Shared;
 using FluentValidation;
 using MediatR;
@@ -65,6 +66,16 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
 
         try
         {
+            var syncStatus = await _context.SyncStatuses
+                .FirstOrDefaultAsync(s => s.UserId == request.UserId && s.AccountId == request.AccountId && s.ExchangeName == "Bybit", cancellationToken);
+            if (syncStatus == null)
+            {
+                syncStatus = new SyncStatus(request.UserId, request.AccountId, "Bybit");
+                _context.SyncStatuses.Add(syncStatus);
+            }
+            syncStatus.MarkCredentialsSet();
+            await _context.SaveChangesAsync(cancellationToken);
+
             await _keyVaultService.SetSecretAsync(BuildKey(request.UserId, request.AccountId, "api-key"), request.ApiKey);
             await _keyVaultService.SetSecretAsync(BuildKey(request.UserId, request.AccountId, "api-secret"), request.ApiSecret);
             await _keyVaultService.SetSecretAsync(BuildKey(request.UserId, request.AccountId, "webhook-secret"), request.WebhookSecret);
