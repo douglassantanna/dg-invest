@@ -94,7 +94,13 @@ public class SyncBybitOrders
 
             var syncStatus = await _context.SyncStatuses
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
-            var cutoff = syncStatus?.LastSyncAt ?? syncStatus?.BybitCredentialsSetAt;
+            if (syncStatus == null)
+            {
+                _logger.LogInformation("SyncBybitOrders: no sync status for account {AccountId} (credentials may predate safeguard), skipping", accountId);
+                return;
+            }
+
+            var cutoff = syncStatus.LastSyncAt ?? syncStatus.BybitCredentialsSetAt;
             var startTime = cutoff is { } dt
                 ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
