@@ -135,6 +135,13 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return;
         }
 
+        if (deposit.Status != "3")
+        {
+            _logger.LogInformation("Bybit sync: skipping non-success deposit {TxId} (Status: {Status})", deposit.TxId, deposit.Status);
+            await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Skipped", $"Non-success status: {deposit.Status}", "BybitDeposit", logId, cancellationToken);
+            return;
+        }
+
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, symbol, cancellationToken);
         if (cryptoAsset == null)
         {
@@ -147,9 +154,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? parsed.DateTime
             : DateTime.UtcNow;
 
-        var depositPrice = deposit.Status == "Success"
-            ? await GetMarketPriceAsync(symbol, cancellationToken)
-            : 0;
+        var depositPrice = await GetMarketPriceAsync(symbol, cancellationToken);
 
         var depositCryptoTx = new CryptoTransaction(
             amount,
@@ -159,8 +164,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ETransactionType.TransferIn,
             0);
 
-        if (deposit.Status == "Success")
-            cryptoAsset.AddTransaction(depositCryptoTx);
+        cryptoAsset.AddTransaction(depositCryptoTx);
 
         var accountTx = new AccountTransaction(
             date: successAt,
@@ -221,6 +225,13 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return;
         }
 
+        if (withdrawal.Status != "4")
+        {
+            _logger.LogInformation("Bybit sync: skipping non-success withdrawal {TxId} (Status: {Status})", withdrawal.TxId, withdrawal.Status);
+            await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Skipped", $"Non-success status: {withdrawal.Status}", "BybitWithdrawal", logId, cancellationToken);
+            return;
+        }
+
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, symbol, cancellationToken);
         if (cryptoAsset == null)
         {
@@ -233,9 +244,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? parsed.DateTime
             : DateTime.UtcNow;
 
-        var withdrawalPrice = withdrawal.Status == "Success"
-            ? await GetMarketPriceAsync(symbol, cancellationToken)
-            : 0;
+        var withdrawalPrice = await GetMarketPriceAsync(symbol, cancellationToken);
 
         var withdrawalCryptoTx = new CryptoTransaction(
             amount,
@@ -245,8 +254,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ETransactionType.TransferOut,
             fee);
 
-        if (withdrawal.Status == "Success")
-            cryptoAsset.AddTransaction(withdrawalCryptoTx);
+        cryptoAsset.AddTransaction(withdrawalCryptoTx);
 
         var accountTx = new AccountTransaction(
             date: successAt,
