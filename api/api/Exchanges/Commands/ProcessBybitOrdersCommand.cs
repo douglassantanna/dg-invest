@@ -46,16 +46,26 @@ public class ProcessBybitOrdersCommandHandler : IRequestHandler<ProcessBybitOrde
         if (filledOrders.Count == 0)
             return new Response("No filled orders to process", true);
 
+        var hasFailures = false;
+
         foreach (var order in filledOrders)
         {
-            await _orderSyncService.ProcessOrderAsync(order, account, request.UserId, "REST", cancellationToken);
+            if (!await _orderSyncService.ProcessOrderAsync(order, account, request.UserId, "REST", cancellationToken))
+                hasFailures = true;
         }
 
         _context.Accounts.Update(account);
         await _context.SaveChangesAsync(cancellationToken);
 
-        var lastOrderId = filledOrders.LastOrDefault()?.OrderId;
-        await _orderSyncService.UpsertSyncStatusAsync(request.UserId, request.AccountId, lastOrderId, cancellationToken);
+        if (hasFailures)
+        {
+            _logger.LogWarning("ProcessBybitOrders: one or more orders failed for account {AccountId}, cursor not advanced", request.AccountId);
+        }
+        else
+        {
+            var lastOrderId = filledOrders.LastOrDefault()?.OrderId;
+            await _orderSyncService.UpsertSyncStatusAsync(request.UserId, request.AccountId, lastOrderId, cancellationToken);
+        }
 
         return new Response($"Processed {filledOrders.Count} order(s)", true);
     }
