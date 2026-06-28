@@ -93,7 +93,7 @@ describe('Exchange Management', () => {
           },
         });
       }
-    }).as('subMembers');
+    });
 
     cy.intercept('POST', '**/map-account', {
       statusCode: 200,
@@ -104,12 +104,12 @@ describe('Exchange Management', () => {
     cy.get('app-exchange-management', { timeout: 10000 }).should('exist');
 
     cy.contains('Refresh List').click();
-    cy.wait('@subMembers');
+    cy.contains('Map to main', { timeout: 5000 }).should('exist');
 
     cy.contains('Map to main').click();
     cy.wait('@mapAccount');
-    cy.wait('@subMembers');
 
+    // After mapping, the button should be replaced by a badge with the tag name
     cy.contains('main').should('exist');
     cy.contains('Map to main').should('not.exist');
   });
