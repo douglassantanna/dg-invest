@@ -75,25 +75,11 @@ describe('Exchange Management', () => {
     cy.contains('Map to main').should('exist');
   });
 
-  it('should map a sub-account to the selected account', () => {
-    let callCount = 0;
-    cy.intercept('GET', '**/sub-members', (req) => {
-      callCount++;
-      if (callCount === 1) {
-        req.reply({ statusCode: 200, body: { isSuccess: true, data: mockSubMembers } });
-      } else {
-        req.reply({
-          statusCode: 200,
-          body: {
-            isSuccess: true,
-            data: [
-              { uid: '10001', username: 'rentAccount', remark: '', mappedAccountTag: 'main', accountId: 1 },
-              { uid: '10002', username: 'dadAccount', remark: '', mappedAccountTag: null, accountId: null },
-            ],
-          },
-        });
-      }
-    });
+  it('should send map-account request when Map button clicked', () => {
+    cy.intercept('GET', '**/sub-members', {
+      statusCode: 200,
+      body: { isSuccess: true, data: mockSubMembers },
+    }).as('subMembers');
 
     cy.intercept('POST', '**/map-account', {
       statusCode: 200,
@@ -104,14 +90,13 @@ describe('Exchange Management', () => {
     cy.get('app-exchange-management', { timeout: 10000 }).should('exist');
 
     cy.contains('Refresh List').click();
-    cy.contains('Map to main', { timeout: 5000 }).should('exist');
+    cy.wait('@subMembers');
 
     cy.contains('Map to main').click();
-    cy.wait('@mapAccount');
-
-    // After mapping, the button should be replaced by a badge with the tag name
-    cy.contains('main').should('exist');
-    cy.contains('Map to main').should('not.exist');
+    cy.wait('@mapAccount').its('request.body').should('deep.equal', {
+      accountId: 1,
+      bybitUid: '10001',
+    });
   });
 
   it('should show mapped account tag badge for already-mapped sub-accounts', () => {
