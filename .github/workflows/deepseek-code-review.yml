@@ -1,0 +1,162 @@
+name: DeepSeek Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git diff origin/${{ github.base_ref }}..HEAD > pr.diff
+          echo "diff_lines=$(wc -l < pr.diff)" >> $GITHUB_OUTPUT
+
+      - name: Skip if no changes
+        if: steps.diff.outputs.diff_lines == '0'
+        run: echo "No diff found, skipping review."
+
+      - name: Run DeepSeek Code Review
+        if: steps.diff.outputs.diff_lines != '0'
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          MAX_DIFF_LINES: '800'
+        run: |
+          DIFF=$(cat pr.diff | head -c 60000)
+          if [ $(wc -l < pr.diff) -gt 800 ]; then
+            echo "Diff too large (over 800 lines), reviewing first portion only."
+          fi
+
+          cat > review.js << 'SCRIPT'
+          const fs = require("fs");
+
+          const diff = fs.readFileSync("pr.diff", "utf8").slice(0, 60000);
+          const prNumber = process.env.PR_NUMBER;
+          const repo = process.env.REPO;
+
+          const systemPrompt = `You are a senior software engineer performing a code review on a pull request.
+          Review the following git diff. Focus on:
+          - Security vulnerabilities (SQL injection, XSS, insecure deserialization, hardcoded secrets, missing auth checks)
+          - Logic errors, race conditions, null reference risks
+          - Performance issues (N+1 queries, memory leaks, blocking calls)
+          - Code quality (duplicate code, unclear naming, missing error handling)
+          - Breaking changes or API contract violations
+
+          Respond with a JSON array of review comments. Each object must have:
+          - "path": the file path (from the diff headers)
+          - "line": the line number in the NEW file (or null for general comments)
+          - "body": the review comment (concise, actionable, max 300 chars)
+          - "severity": "error" | "warning" | "suggestion"
+
+          If there are no issues, return an empty array [].
+          Do NOT include any markdown formatting, code blocks, or extra text — just the raw JSON array.`;
+
+          const userPrompt = `Review this pull request diff for a .NET 8 / Angular / Azure Functions project:\n\n${diff}`;
+
+          (async () => {
+            const res = await fetch("https://api.deepseek.com/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: "deepseek-chat",
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: userPrompt },
+                ],
+                temperature: 0.1,
+                max_tokens: 4096,
+              }),
+            });
+
+            const data = await res.json();
+            const content = data.choices?.[0]?.message?.content || "[]";
+
+            // Extract JSON from possible markdown wrapping
+            let json = content.trim();
+            if (json.startsWith("```")) {
+              json = json.replace(/```\w*\n?/g, "").trim();
+            }
+
+            let comments;
+            try {
+              comments = JSON.parse(json);
+            } catch {
+              console.error("Failed to parse DeepSeek response:", content.slice(0, 500));
+              process.exit(0);
+            }
+
+            if (!Array.isArray(comments) || comments.length === 0) {
+              console.log("No review comments from DeepSeek.");
+              process.exit(0);
+            }
+
+            console.log(`Posting ${comments.length} review comments...`);
+
+            for (const c of comments.slice(0, 20)) {
+              const icon = c.severity === "error" ? "🔴" : c.severity === "warning" ? "🟡" : "💡";
+              const body = `${icon} **${c.severity}**: ${c.body}`;
+
+              try {
+                if (c.path && c.line) {
+                  await fetch(
+                    `https://api.github.com/repos/${repo}/pulls/${prNumber}/comments`,
+                    {
+                      method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        body,
+                        path: c.path,
+                        line: c.line,
+                        commit_id: process.env.GITHUB_SHA,
+                      }),
+                    }
+                  );
+                } else {
+                  await fetch(
+                    `https://api.github.com/repos/${repo}/issues/${prNumber}/comments`,
+                    {
+                      method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ body }),
+                    }
+                  );
+                }
+              } catch (err) {
+                console.error("Failed to post comment:", err.message);
+              }
+            }
+
+            console.log("Code review complete.");
+          })();
+          SCRIPT
+
+          node review.js
