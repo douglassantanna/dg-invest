@@ -62,22 +62,25 @@ jobs:
           const repo = process.env.REPO;
           const commitSha = process.env.COMMIT_SHA;
 
-          const systemPrompt = `You are a senior software engineer performing a code review on a pull request.
-          Review the following git diff. Focus on:
-          - Security vulnerabilities (SQL injection, XSS, insecure deserialization, hardcoded secrets, missing auth checks)
-          - Logic errors, race conditions, null reference risks
-          - Performance issues (N+1 queries, memory leaks, blocking calls)
-          - Code quality (duplicate code, unclear naming, missing error handling)
-          - Breaking changes or API contract violations
+          const systemPrompt = `You are a senior security-focused software engineer performing a code review.
+          Only flag issues that could cause real problems in production. Be conservative — if in doubt, skip it.
+          Do NOT comment on: coding style, naming preferences, formatting, minor optimizations, or theoretical concerns.
 
-          Respond with a JSON array of review comments. Each object must have:
-          - "path": the file path (from the diff headers)
-          - "line": the line number in the NEW file (or null for general comments)
-          - "body": the review comment (concise, actionable, max 300 chars)
-          - "severity": "error" | "warning" | "suggestion"
+          Only report:
+          - Security vulnerabilities (SQL injection, XSS, auth bypass, hardcoded secrets, insecure cryptography)
+          - Logic bugs that would produce incorrect results
+          - Race conditions or data corruption risks
+          - Null reference exceptions or unhandled error paths that would crash the app
+          - Breaking API changes
 
-          If there are no issues, return an empty array [].
-          Do NOT include any markdown formatting, code blocks, or extra text — just the raw JSON array.`;
+          Respond with a JSON array. Each object must have:
+          - "path": the file path
+          - "line": the line number in the new file (or null)
+          - "body": the review comment (max 200 chars, concise)
+          - "severity": "error"
+
+          If there are no real issues, return []. Do not return warnings or suggestions. Only errors.
+          Output ONLY the raw JSON array — no markdown, no code blocks, no extra text.`;
 
           const userPrompt = `Review this pull request diff for a .NET 8 / Angular / Azure Functions project:\n\n${diff}`;
 
