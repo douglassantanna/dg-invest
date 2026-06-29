@@ -136,9 +136,13 @@ jobs:
 
             console.log(`Posting ${comments.length} review comments...`);
 
+            const seen = new Set();
             for (const c of comments.slice(0, 20)) {
               const icon = c.severity === "error" ? "🔴" : c.severity === "warning" ? "🟡" : "💡";
               const body = `${icon} **${c.severity}**: ${c.body}`;
+              const dedupKey = `${c.path || ""}:${c.line || 0}:${body}`;
+              if (seen.has(dedupKey)) continue;
+              seen.add(dedupKey);
 
               try {
                 if (c.path && c.line) {
