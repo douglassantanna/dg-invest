@@ -38,8 +38,9 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           MAX_DIFF_LINES: '800'
         run: |
           DIFF=$(cat pr.diff | head -c 60000)
@@ -50,9 +51,16 @@ jobs:
           cat > review.js << 'SCRIPT'
           const fs = require("fs");
 
+          const apiKey = process.env.DEEPSEEK_API_KEY;
+          if (!apiKey) {
+            console.error("DEEPSEEK_API_KEY is not set");
+            process.exit(0);
+          }
+
           const diff = fs.readFileSync("pr.diff", "utf8").slice(0, 60000);
           const prNumber = process.env.PR_NUMBER;
           const repo = process.env.REPO;
+          const commitSha = process.env.COMMIT_SHA;
 
           const systemPrompt = `You are a senior software engineer performing a code review on a pull request.
           Review the following git diff. Focus on:
@@ -74,27 +82,40 @@ jobs:
           const userPrompt = `Review this pull request diff for a .NET 8 / Angular / Azure Functions project:\n\n${diff}`;
 
           (async () => {
-            const res = await fetch("https://api.deepseek.com/chat/completions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-              },
-              body: JSON.stringify({
-                model: "deepseek-chat",
-                messages: [
-                  { role: "system", content: systemPrompt },
-                  { role: "user", content: userPrompt },
-                ],
-                temperature: 0.1,
-                max_tokens: 4096,
-              }),
-            });
+            let data;
+            try {
+              const res = await fetch("https://api.deepseek.com/chat/completions", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                  model: "deepseek-chat",
+                  messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userPrompt },
+                  ],
+                  temperature: 0.1,
+                  max_tokens: 4096,
+                }),
+              });
 
-            const data = await res.json();
+              const contentType = res.headers.get("content-type") || "";
+              if (!res.ok) {
+                const errBody = await res.text();
+                console.error(`DeepSeek API error (${res.status}): ${errBody.slice(0, 500)}`);
+                process.exit(0);
+              }
+
+              data = await res.json();
+            } catch (err) {
+              console.error("DeepSeek API request failed:", err.message);
+              process.exit(0);
+            }
+
             const content = data.choices?.[0]?.message?.content || "[]";
 
-            // Extract JSON from possible markdown wrapping
             let json = content.trim();
             if (json.startsWith("```")) {
               json = json.replace(/```\w*\n?/g, "").trim();
@@ -121,34 +142,44 @@ jobs:
 
               try {
                 if (c.path && c.line) {
-                  await fetch(
+                  const res = await fetch(
                     `https://api.github.com/repos/${repo}/pulls/${prNumber}/comments`,
                     {
                       method: "POST",
                       headers: {
-                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                        Authorization: `Bearer ${process.env.GH_TOKEN}`,
                         "Content-Type": "application/json",
+                        Accept: "application/vnd.github+json",
                       },
                       body: JSON.stringify({
                         body,
                         path: c.path,
                         line: c.line,
-                        commit_id: process.env.GITHUB_SHA,
+                        commit_id: commitSha,
                       }),
                     }
                   );
+                  if (!res.ok) {
+                    const err = await res.text();
+                    console.error(`Failed to post inline comment: ${res.status} ${err.slice(0, 200)}`);
+                  }
                 } else {
-                  await fetch(
+                  const res = await fetch(
                     `https://api.github.com/repos/${repo}/issues/${prNumber}/comments`,
                     {
                       method: "POST",
                       headers: {
-                        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                        Authorization: `Bearer ${process.env.GH_TOKEN}`,
                         "Content-Type": "application/json",
+                        Accept: "application/vnd.github+json",
                       },
                       body: JSON.stringify({ body }),
                     }
                   );
+                  if (!res.ok) {
+                    const err = await res.text();
+                    console.error(`Failed to post general comment: ${res.status} ${err.slice(0, 200)}`);
+                  }
                 }
               } catch (err) {
                 console.error("Failed to post comment:", err.message);
