@@ -75,15 +75,13 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             var existingAccounts = user.Accounts.ToList();
             var existingBybitUids = existingAccounts.Where(a => a.BybitUid != null)
                                                     .ToDictionary(a => a.BybitUid!, a => a);
-            var existingTags = existingAccounts.Select(a => a.SubaccountTag.ToLowerInvariant())
-                                               .ToHashSet();
 
             int created = 0;
             int matched = 0;
 
             foreach (var member in subMembers)
             {
-                // 1st priority: match by BybitUid (most reliable — set manually via map-account endpoint).
+                // Only match by BybitUid — already manually mapped via the UI.
                 if (existingBybitUids.TryGetValue(member.Uid, out var mappedAccount))
                 {
                     matched++;
@@ -92,30 +90,20 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                     continue;
                 }
 
-                // 2nd priority: match by remark, 3rd: fall back to auto-generated username.
+                // Unmatched: create a new account for the user to map manually.
                 var tag = string.IsNullOrWhiteSpace(member.Remark)
                     ? member.Username.Trim()
                     : member.Remark.Trim();
 
-                if (existingTags.Contains(tag.ToLowerInvariant()))
-                {
-                    var existingAccount = existingAccounts.First(a => a.SubaccountTag.Equals(tag, StringComparison.OrdinalIgnoreCase));
-                    existingAccount.SetBybitUid(member.Uid);
-                    matched++;
-                    _logger.LogInformation("SyncBybitAccounts: sub-account '{Tag}' matched by name, set BybitUid {Uid} for user {UserId}", tag, member.Uid, request.UserId);
-                    continue;
-                }
-
                 var newAccount = new Account(tag, request.UserId);
-                newAccount.SetBybitUid(member.Uid);
                 _context.Accounts.Add(newAccount);
                 created++;
-                _logger.LogInformation("SyncBybitAccounts: created account '{Tag}' (Bybit UID: {Uid}) for user {UserId}",
+                _logger.LogInformation("SyncBybitAccounts: created account '{Tag}' (Bybit UID: {Uid}) for user {UserId} — not yet mapped",
                     tag, member.Uid, request.UserId);
             }
             await _context.SaveChangesAsync(cancellationToken);
 
-            return new Response($"Sync complete. {matched} matched, {created} created.", true);
+            return new Response($"Sync complete. {matched} matched, {created} new — use 'Map to' button to link them.", true);
         }
         catch (Exception ex)
         {
