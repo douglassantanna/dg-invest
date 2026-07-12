@@ -7,6 +7,9 @@ import { SyncStatusDto } from '../models/sync-status';
 import { SyncLogEntry } from '../models/sync-log-entry';
 import { BybitSubMemberDto } from '../models/bybit-sub-member';
 import { CredentialsStatusDto } from '../models/credentials-status';
+import { ExchangeAccountDto } from '../models/exchange-account';
+import { ExchangeAccountDetailDto } from '../models/exchange-detail';
+import { ExchangeTransactionDto } from '../models/exchange-transaction';
 
 const url = `${environment.apiUrl}/Exchange`;
 
@@ -14,6 +17,21 @@ const url = `${environment.apiUrl}/Exchange`;
 export class ExchangeService {
   private http = inject(HttpClient);
 
+  // Exchange-agnostic endpoints
+  getExchangeAccounts(): Observable<Response<ExchangeAccountDto[]>> {
+    return this.http.get<Response<ExchangeAccountDto[]>>(`${url}/accounts`);
+  }
+
+  getExchangeAccountDetail(accountId: number): Observable<Response<ExchangeAccountDetailDto>> {
+    return this.http.get<Response<ExchangeAccountDetailDto>>(`${url}/${accountId}`);
+  }
+
+  getExchangeTransactions(accountId: number, limit: number = 20): Observable<Response<ExchangeTransactionDto[]>> {
+    const params = new HttpParams().set('limit', limit.toString());
+    return this.http.get<Response<ExchangeTransactionDto[]>>(`${url}/${accountId}/transactions`, { params });
+  }
+
+  // Bybit-specific endpoints
   saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret });
   }
