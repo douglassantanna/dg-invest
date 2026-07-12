@@ -17,6 +17,42 @@ public class ExchangeController : ControllerBase
 
     public ExchangeController(IMediator mediator) => _mediator = mediator;
 
+    [HttpGet("accounts")]
+    public async Task<ActionResult<Response>> GetExchangeAccounts()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetExchangeAccountsQuery(userId.Value));
+        return Ok(result);
+    }
+
+    [HttpGet("{accountId:int}")]
+    public async Task<ActionResult<Response>> GetExchangeAccountDetail(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetExchangeAccountDetailQuery(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpGet("{accountId:int}/transactions")]
+    public async Task<ActionResult<Response>> GetExchangeTransactions(int accountId, [FromQuery] int limit = 20)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetExchangeTransactionsQuery(userId.Value, accountId, limit));
+        return Ok(result);
+    }
+
     [HttpPost("bybit/credentials")]
     public async Task<ActionResult<Response>> SaveBybitCredentials([FromBody] SaveBybitCredentialsRequest request)
     {
