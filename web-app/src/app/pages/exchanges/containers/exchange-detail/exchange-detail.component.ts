@@ -5,7 +5,6 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
 import { ExchangeAccountDetailDto, ExchangeConnectionDto } from 'src/app/core/models/exchange-detail';
 import { ExchangeTransactionDto } from 'src/app/core/models/exchange-transaction';
-import { BybitSubMemberDto } from 'src/app/core/models/bybit-sub-member';
 import { SyncLogEntry } from 'src/app/core/models/sync-log-entry';
 
 @Component({
@@ -31,12 +30,6 @@ export class ExchangeDetailComponent implements OnInit {
   deletingCredentials = false;
   credentialsMessage = '';
   credentialsError = false;
-
-  // Sub-accounts
-  subMembers: BybitSubMemberDto[] = [];
-  loadingSubMembers = false;
-  syncing = false;
-  syncMessage = '';
 
   // Transactions
   transactions: ExchangeTransactionDto[] = [];
@@ -100,41 +93,6 @@ export class ExchangeDetailComponent implements OnInit {
         this.loadDetail();
       },
       error: () => this.deletingCredentials = false,
-    });
-  }
-
-  syncAccounts(): void {
-    this.syncing = true;
-    this.syncMessage = '';
-    this.exchangeService.syncBybitAccounts().subscribe({
-      next: (res) => {
-        this.syncMessage = res.message;
-        this.syncing = false;
-        this.loadSubMembers();
-      },
-      error: () => {
-        this.syncMessage = 'Sync failed';
-        this.syncing = false;
-      },
-    });
-  }
-
-  loadSubMembers(): void {
-    this.loadingSubMembers = true;
-    this.exchangeService.getBybitSubMembers().subscribe({
-      next: (res) => {
-        this.subMembers = res.data ?? [];
-        this.loadingSubMembers = false;
-      },
-      error: () => this.loadingSubMembers = false,
-    });
-  }
-
-  mapAccount(member: BybitSubMemberDto): void {
-    this.exchangeService.mapBybitAccount(this.accountId, member.uid).subscribe({
-      next: (res) => {
-        if (res.isSuccess) this.loadSubMembers();
-      },
     });
   }
 

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
 import { ExchangeAccountDto } from 'src/app/core/models/exchange-account';
+import { BybitSubMemberDto } from 'src/app/core/models/bybit-sub-member';
 
 @Component({
   selector: 'app-exchange-list',
@@ -16,6 +17,12 @@ export class ExchangeListComponent implements OnInit {
   accounts: ExchangeAccountDto[] = [];
   loading = true;
 
+  // Sub-accounts
+  subMembers: BybitSubMemberDto[] = [];
+  loadingSubMembers = false;
+  syncing = false;
+  syncMessage = '';
+
   ngOnInit(): void {
     this.loadAccounts();
   }
@@ -28,6 +35,34 @@ export class ExchangeListComponent implements OnInit {
         this.loading = false;
       },
       error: () => this.loading = false,
+    });
+  }
+
+  syncAccounts(): void {
+    this.syncing = true;
+    this.syncMessage = '';
+    this.exchangeService.syncBybitAccounts().subscribe({
+      next: (res) => {
+        this.syncMessage = res.message;
+        this.syncing = false;
+        this.loadSubMembers();
+        this.loadAccounts();
+      },
+      error: () => {
+        this.syncMessage = 'Sync failed';
+        this.syncing = false;
+      },
+    });
+  }
+
+  loadSubMembers(): void {
+    this.loadingSubMembers = true;
+    this.exchangeService.getBybitSubMembers().subscribe({
+      next: (res) => {
+        this.subMembers = res.data ?? [];
+        this.loadingSubMembers = false;
+      },
+      error: () => this.loadingSubMembers = false,
     });
   }
 
