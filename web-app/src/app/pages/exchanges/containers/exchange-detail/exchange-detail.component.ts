@@ -3,8 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
+import { AccountService } from 'src/app/core/services/account.service';
 import { ExchangeAccountDetailDto, ExchangeConnectionDto } from 'src/app/core/models/exchange-detail';
 import { ExchangeTransactionDto } from 'src/app/core/models/exchange-transaction';
+import { BybitSubMemberDto } from 'src/app/core/models/bybit-sub-member';
 import { SyncLogEntry } from 'src/app/core/models/sync-log-entry';
 
 @Component({
@@ -16,6 +18,7 @@ import { SyncLogEntry } from 'src/app/core/models/sync-log-entry';
 export class ExchangeDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private exchangeService = inject(ExchangeService);
+  private accountService = inject(AccountService);
 
   accountId = 0;
   detail: ExchangeAccountDetailDto | null = null;
@@ -35,6 +38,14 @@ export class ExchangeDetailComponent implements OnInit {
   transactions: ExchangeTransactionDto[] = [];
   loadingTransactions = false;
 
+  // Sub-accounts
+  accounts: { id: number; tag: string }[] = [];
+  subMembers: BybitSubMemberDto[] = [];
+  loadingSubMembers = false;
+  syncing = false;
+  syncMessage = '';
+  mappedAccountIds: Record<string, number> = {};
+
   // Sync logs
   syncLogs: SyncLogEntry[] = [];
   loadingLogs = false;
@@ -43,6 +54,15 @@ export class ExchangeDetailComponent implements OnInit {
   ngOnInit(): void {
     this.accountId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadDetail();
+    this.loadAccounts();
+  }
+
+  private loadAccounts(): void {
+    this.accountService.getAccounts().subscribe({
+      next: (result) => {
+        this.accounts = result.map((a) => ({ id: a.id, tag: a.subaccountTag }));
+      },
+    });
   }
 
   private loadDetail(): void {
@@ -93,6 +113,46 @@ export class ExchangeDetailComponent implements OnInit {
         this.loadDetail();
       },
       error: () => this.deletingCredentials = false,
+    });
+  }
+
+  syncAccounts(): void {
+    this.syncing = true;
+    this.syncMessage = '';
+    this.exchangeService.syncBybitAccounts().subscribe({
+      next: (res) => {
+        this.syncMessage = res.message;
+        this.syncing = false;
+        this.loadSubMembers();
+      },
+      error: () => {
+        this.syncMessage = 'Sync failed';
+        this.syncing = false;
+      },
+    });
+  }
+
+  loadSubMembers(): void {
+    this.loadingSubMembers = true;
+    this.exchangeService.getBybitSubMembers().subscribe({
+      next: (res) => {
+        this.subMembers = res.data ?? [];
+        this.loadingSubMembers = false;
+      },
+      error: () => this.loadingSubMembers = false,
+    });
+  }
+
+  mapAccount(member: BybitSubMemberDto): void {
+    const targetId = this.mappedAccountIds[member.uid];
+    if (!targetId) return;
+    this.exchangeService.mapBybitAccount(targetId, member.uid).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          this.mappedAccountIds[member.uid] = 0;
+          this.loadSubMembers();
+        }
+      },
     });
   }
 
