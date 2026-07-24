@@ -209,4 +209,21 @@ export class ExchangeDetailComponent implements OnInit {
       default: return 'bg-yellow-100 text-yellow-700';
     }
   }
+
+  txStatusLabel(status: string | null): string {
+    switch (status) {
+      case '3': return 'Completed';
+      case 'success': return 'Completed';
+      case '4': return 'Failed';
+      case '0': return 'Unknown';
+      case '1': return 'Pending';
+      case '2': return 'Processing';
+      case 'SecurityCheck': return 'Security Check';
+      case 'CancelByUser': return 'Cancelled';
+      case 'Reject': return 'Rejected';
+      case 'Fail': return 'Failed';
+      case 'BlockchainConfirmed': return 'Confirmed';
+      default: return status || '-';
+    }
+  }
 }

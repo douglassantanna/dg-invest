@@ -204,7 +204,7 @@
                   <td class="py-1.5">
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
                       [class]="txStatusBadgeClass(tx.exchangeStatus)">
-                      {{ tx.exchangeStatus || '-' }}
+                      {{ txStatusLabel(tx.exchangeStatus) }}
                     </span>
                   </td>
                 </tr>
