@@ -51,10 +51,31 @@ export class ExchangeDetailComponent implements OnInit {
   loadingLogs = false;
   logDate = '';
 
+  // Reconciliation
+  reconciliation: { bybitTotal: number; appTotal: number; drift: number } | null = null;
+  loadingReconciliation = false;
+  confirmReconcile = false;
+  reconciling = false;
+
+  Math = Math;
+
   ngOnInit(): void {
     this.accountId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadDetail();
     this.loadAccounts();
+  }
+
+  private loadDetail(): void {
+    this.loading = true;
+    this.exchangeService.getExchangeAccountDetail(this.accountId).subscribe({
+      next: (res) => {
+        this.detail = res.data ?? null;
+        this.connection = this.detail?.connections?.[0] ?? null;
+        this.loading = false;
+        this.loadTransactions();
+      },
+      error: () => this.loading = false,
+    });
   }
 
   private loadAccounts(): void {
@@ -225,5 +246,30 @@ export class ExchangeDetailComponent implements OnInit {
       case 'BlockchainConfirmed': return 'Confirmed';
       default: return status || '-';
     }
+  }
+
+  loadReconciliation(): void {
+    this.loadingReconciliation = true;
+    this.confirmReconcile = false;
+    this.exchangeService.getReconciliation(this.accountId).subscribe({
+      next: (res) => {
+        this.reconciliation = res.data ?? null;
+        this.loadingReconciliation = false;
+      },
+      error: () => this.loadingReconciliation = false,
+    });
+  }
+
+  doReconcile(): void {
+    this.reconciling = true;
+    this.exchangeService.reconcileAccount(this.accountId).subscribe({
+      next: (res) => {
+        this.reconciling = false;
+        this.confirmReconcile = false;
+        this.loadReconciliation();
+        this.loadTransactions();
+      },
+      error: () => this.reconciling = false,
+    });
   }
 }

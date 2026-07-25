@@ -53,6 +53,34 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{accountId:int}/reconciliation")]
+    public async Task<ActionResult<Response>> GetReconciliation(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetReconciliationQuery(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("{accountId:int}/reconcile")]
+    public async Task<ActionResult<Response>> ReconcileAccount(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new ReconcileAccountCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
     [HttpPost("bybit/credentials")]
     public async Task<ActionResult<Response>> SaveBybitCredentials([FromBody] SaveBybitCredentialsRequest request)
     {

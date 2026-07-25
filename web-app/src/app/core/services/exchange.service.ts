@@ -10,6 +10,7 @@ import { CredentialsStatusDto } from '../models/credentials-status';
 import { ExchangeAccountDto } from '../models/exchange-account';
 import { ExchangeAccountDetailDto } from '../models/exchange-detail';
 import { ExchangeTransactionDto } from '../models/exchange-transaction';
+import { ReconciliationDto } from '../models/reconciliation';
 
 const url = `${environment.apiUrl}/Exchange`;
 
@@ -29,6 +30,14 @@ export class ExchangeService {
   getExchangeTransactions(accountId: number, limit: number = 20): Observable<Response<ExchangeTransactionDto[]>> {
     const params = new HttpParams().set('limit', limit.toString());
     return this.http.get<Response<ExchangeTransactionDto[]>>(`${url}/${accountId}/transactions`, { params });
+  }
+
+  getReconciliation(accountId: number): Observable<Response<ReconciliationDto>> {
+    return this.http.get<Response<ReconciliationDto>>(`${url}/${accountId}/reconciliation`);
+  }
+
+  reconcileAccount(accountId: number): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/${accountId}/reconcile`, {});
   }
 
   // Bybit-specific endpoints

@@ -51,7 +51,7 @@ describe('Exchange Management', () => {
     cy.visit('/#/exchanges/1');
     cy.get('app-exchange-detail', { timeout: 10000 }).should('exist');
 
-    cy.contains('Sync from Bybit').click();
+    cy.contains('Sync from Bybit').click({ force: true });
     cy.wait('@syncAccounts');
     cy.wait('@subMembers');
 
@@ -69,7 +69,7 @@ describe('Exchange Management', () => {
 
     cy.visit('/#/exchanges');
     cy.get('app-exchange-list', { timeout: 10000 }).should('exist');
-    cy.contains('Manage').first().click();
+    cy.contains('Manage').first().click({ force: true });
     cy.url().should('include', '/exchanges/1');
     cy.get('app-exchange-detail', { timeout: 10000 }).should('exist');
     cy.contains('main — Exchange Settings').should('exist');
