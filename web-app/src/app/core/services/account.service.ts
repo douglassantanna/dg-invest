@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
@@ -36,8 +36,14 @@ export class AccountService {
     return this.http.post<CustomRespose>(`${this.apiUrl}/create`, command);
   }
 
-  getSelectedAccount(): Observable<AccountDto> {
-    return this.http.get<AccountDto>(`${this.apiUrl}/account-details`);
+  getSelectedAccount(page: number = 1, pageSize: number = 20, filter: string = ''): Observable<AccountDto> {
+    let params = new HttpParams()
+      .append('page', page)
+      .append('pageSize', pageSize);
+    if (filter) {
+      params = params.append('filter', filter);
+    }
+    return this.http.get<AccountDto>(`${this.apiUrl}/account-details`, { params });
   }
 
   addCryptoAsset(request: AddCryptoAssetRequest): Observable<CustomRespose> {

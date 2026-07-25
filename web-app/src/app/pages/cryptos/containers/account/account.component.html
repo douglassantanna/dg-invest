@@ -42,6 +42,24 @@
       class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <app-account-transaction-card [groupedTransactionsNew]="account().groupedAccountTransactions">
       </app-account-transaction-card>
+
+      @if (account().totalCount > pageSize) {
+      <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+        <span class="text-sm text-gray-600 dark:text-gray-400">
+          Page {{ account().page }} of {{ totalPages() }} ({{ account().totalCount }} transactions)
+        </span>
+        <div class="flex gap-2">
+          <button (click)="previousPage()" [disabled]="!account().hasPreviousPage"
+            class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            Previous
+          </button>
+          <button (click)="nextPage()" [disabled]="!account().hasNextPage"
+            class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            Next
+          </button>
+        </div>
+      </div>
+      }
     </div>
   </section>
 </main>

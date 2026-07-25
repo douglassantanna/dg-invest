@@ -33,6 +33,11 @@ export interface AccountDto {
   id: number;
   balance: number;
   groupedAccountTransactions: GroupedAccountTransactionsDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 export interface UserDto {

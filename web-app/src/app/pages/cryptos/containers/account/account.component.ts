@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
 import { CommonModule } from '@angular/common';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
@@ -9,6 +9,7 @@ import { DepositComponent } from '../deposit/deposit.component';
 import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { WithdrawComponent } from '../withdraw/withdraw.component';
 import { AccountService } from 'src/app/core/services/account.service';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 export type AccountTransaction = {
   imageUrl: string;
   transactionType: AccountTransactionType;
@@ -43,25 +44,57 @@ export enum AccountTransactionType {
   ],
   templateUrl: './account.component.html',
 })
-export class AccountComponent implements OnInit {
+export class AccountComponent implements OnInit, OnDestroy {
   private accountService = inject(AccountService);
+  private unsubscribe$ = new Subject<void>();
 
   isDepositModalOpen = signal<boolean>(false);
   isWithdrawModalOpen = signal<boolean>(false);
   account = signal<AccountDto>({} as AccountDto);
+  currentPage = signal(1);
+  pageSize = 20;
+  currentFilter = signal('');
+
   ngOnInit(): void {
-    this.accountService.getSelectedAccount().subscribe({
+    this.loadAccountDetails();
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribe$.next();
+    this.unsubscribe$.complete();
+  }
+
+  loadAccountDetails(): void {
+    this.accountService.getSelectedAccount(this.currentPage(), this.pageSize, this.currentFilter()).subscribe({
       next: (result) => {
         if (result) {
           this.account.set(result);
         }
       },
-      error: (err) => { console.log(err) }
-    })
+      error: (err) => { console.log(err); }
+    });
   }
 
-  searchTransactions(input: any) {
-    console.log(input);
+  searchTransactions(input: string): void {
+    this.currentFilter.set(input);
+    this.currentPage.set(1);
+    this.loadAccountDetails();
+  }
+
+  nextPage(): void {
+    if (!this.account().hasNextPage) return;
+    this.currentPage.update((p) => p + 1);
+    this.loadAccountDetails();
+  }
+
+  previousPage(): void {
+    if (!this.account().hasPreviousPage) return;
+    this.currentPage.update((p) => p - 1);
+    this.loadAccountDetails();
+  }
+
+  totalPages(): number {
+    return Math.ceil(this.account().totalCount / this.pageSize);
   }
 
   toggleDepositModal() {
