@@ -1,5 +1,6 @@
 using api.AzureStorage;
 using api.AzureStorage.Blob;
+using api.Cache;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
@@ -23,6 +24,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     private readonly AzureStorageSettings _storageSettings;
     private readonly DataContext _context;
     private readonly ILogger<BybitOrderSyncService> _logger;
+    private readonly ICacheService _cacheService;
 
     public BybitOrderSyncService(
         ICoinMarketCapService coinMarketCapService,
@@ -30,7 +32,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         IBlobStorageService blobStorageService,
         IOptions<AzureStorageSettings> storageSettings,
         DataContext context,
-        ILogger<BybitOrderSyncService> logger)
+        ILogger<BybitOrderSyncService> logger,
+        ICacheService cacheService)
     {
         _coinMarketCapService = coinMarketCapService;
         _transactionService = transactionService;
@@ -38,6 +41,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _storageSettings = storageSettings.Value;
         _context = context;
         _logger = logger;
+        _cacheService = cacheService;
     }
 
     public async Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
@@ -105,6 +109,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Success", null, importSource, logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved order {OrderId} ({Side} {Qty} {Symbol} @ {Price})", order.OrderId, order.Side, qty, baseSymbol, price);
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
         return true;
     }
 
@@ -191,6 +196,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Success", null, "BybitDeposit", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved deposit {TxId} ({Amount} {Symbol}, Status: {Status})", deposit.TxId, amount, symbol, deposit.Status);
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
         return true;
     }
 
@@ -282,6 +288,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Success", null, "BybitWithdrawal", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved withdrawal {TxId} ({Amount} {Symbol}, Status: {Status})", withdrawal.TxId, amount, symbol, withdrawal.Status);
         await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
         return true;
     }
 
