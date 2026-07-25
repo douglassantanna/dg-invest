@@ -86,19 +86,6 @@ export class ExchangeDetailComponent implements OnInit {
     });
   }
 
-  private loadDetail(): void {
-    this.loading = true;
-    this.exchangeService.getExchangeAccountDetail(this.accountId).subscribe({
-      next: (res) => {
-        this.detail = res.data ?? null;
-        this.connection = this.detail?.connections?.[0] ?? null;
-        this.loading = false;
-        this.loadTransactions();
-      },
-      error: () => this.loading = false,
-    });
-  }
-
   saveCredentials(): void {
     if (!this.accountId) return;
     this.savingCredentials = true;
