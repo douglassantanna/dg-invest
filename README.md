@@ -330,6 +330,35 @@ Every synced event is recorded in two places:
 The sync is idempotent — running it multiple times will never create duplicates. If you see duplicates, check the `ExchangeOrderId` or `ExchangeTransactionId` values in the database for collisions.
 
 ---
+
+### Account transactions
+
+The **Account** page displays your transaction history with filtering, pagination, and real-time balance updates.
+
+**Landing page:** Shows the 20 most recent transactions across all categories (deposits, withdrawals, buys, sells), grouped by date with the latest date group first. Each transaction displays its time.
+
+**Filters** (server-side, combine with AND logic):
+
+| Filter | Description |
+|--------|-------------|
+| **Text search** | Searches across exchange name, notes, crypto symbol, and transaction type label (e.g., typing "bybit" finds all Bybit-synced trades) |
+| **From date** | Show transactions on or after this date |
+| **To date** | Show transactions on or before this date |
+| **Status** | Filter by exchange status: All / Completed / Failed / Pending |
+
+**Examples:**
+- Filter by month: set From `2026-07-01`, To `2026-07-31`
+- See only failed syncs: set Status to `Failed`
+- Find all Bybit deposits from June: text `bybit` + From `2026-06-01` + To `2026-06-30`
+
+All filters reset to page 1 when changed. The date inputs and status dropdown can be used independently or together. A "Clear dates" button appears when dates are set.
+
+**Pagination:** 20 transactions per page. Previous/Next buttons appear when there are more than 20 results, showing the current page and total transaction count.
+
+**Persistence:** Non-Success exchange entries are **not created** in the database — they only appear in sync logs. Once status reaches Success, the transaction is recorded and appears here.
+
+---
+
 ### Project structure
 ```bash
 dg-invest/
