@@ -30,6 +30,9 @@
             <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
               {{ getTransactionTypeLabel(transaction.transactionType) }}
             </span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              {{ transaction.date | date: 'h:mm a' }}
+            </span>
             @if (transaction.exchangeStatus) {
             <span [class]="'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ' + getStatusBadgeClass(transaction.exchangeStatus)">
               {{ getStatusLabel(transaction.exchangeStatus) }}

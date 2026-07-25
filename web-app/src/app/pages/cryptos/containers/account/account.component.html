@@ -38,10 +38,57 @@
       </app-crypto-filter>
     </div>
 
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">From</label>
+        <input type="date" [value]="startDate()" (change)="onStartDateChange($event)"
+          class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">To</label>
+        <input type="date" [value]="endDate()" (change)="onEndDateChange($event)"
+          class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-blue-500 focus:border-blue-500" />
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600 dark:text-gray-400">Status</label>
+        <select [value]="currentStatus()" (change)="onStatusChange($event)"
+          class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+      @if (startDate() || endDate()) {
+      <button (click)="clearDateFilters()"
+        class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+        Clear dates
+      </button>
+      }
+    </div>
+
     <div
       class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <app-account-transaction-card [groupedTransactionsNew]="account().groupedAccountTransactions">
       </app-account-transaction-card>
+
+      @if (account().totalCount > pageSize) {
+      <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+        <span class="text-sm text-gray-600 dark:text-gray-400">
+          Page {{ account().page }} of {{ totalPages() }} ({{ account().totalCount }} transactions)
+        </span>
+        <div class="flex gap-2">
+          <button (click)="previousPage()" [disabled]="!account().hasPreviousPage"
+            class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            Previous
+          </button>
+          <button (click)="nextPage()" [disabled]="!account().hasNextPage"
+            class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            Next
+          </button>
+        </div>
+      </div>
+      }
     </div>
   </section>
 </main>

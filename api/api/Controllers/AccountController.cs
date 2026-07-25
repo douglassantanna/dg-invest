@@ -61,7 +61,13 @@ public class AccountController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("account-details")]
-    public async Task<ActionResult<Response>> GetAccountDetails()
+    public async Task<ActionResult<Response>> GetAccountDetails(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? filter = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] string? status = null)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
@@ -69,7 +75,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        GetAccountDetailsQuery command = new(userId);
+        GetAccountDetailsQuery command = new(userId, page, pageSize, filter, startDate, endDate, status);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
             return NotFound(result.Message);
