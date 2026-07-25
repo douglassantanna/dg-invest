@@ -38,12 +38,12 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
 
         try
         {
-            await _keyVaultService.DeleteSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"));
-            await _keyVaultService.DeleteSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"));
-            await _keyVaultService.DeleteSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"));
+            await _keyVaultService.SetSecretAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"), string.Empty);
+            await _keyVaultService.SetSecretAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"), string.Empty);
+            await _keyVaultService.SetSecretAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
 
             _logger.LogInformation("Bybit credentials deleted for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
             return new Response("Credentials deleted successfully", true);

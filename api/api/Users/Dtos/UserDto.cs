@@ -9,7 +9,8 @@ public record UserDto(
     Role Role,
     AccountDto? Account = null
 );
-public record AccountDto(int Id, decimal Balance, List<GroupedAccountTransactionsDto> GroupedAccountTransactions);
+public record AccountDto(int Id, decimal Balance, List<GroupedAccountTransactionsDto> GroupedAccountTransactions,
+    int TotalCount = 0, int Page = 1, int PageSize = 20, bool HasNextPage = false, bool HasPreviousPage = false);
 public record SubAccountDto(int Id, string Name);
 public record SimpleAccountDto(int Id, string SubaccountTag, decimal Balance, bool IsSelected);
 public record AccountTransactionDto(DateTime Date,
