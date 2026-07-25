@@ -54,6 +54,9 @@ export class AccountComponent implements OnInit, OnDestroy {
   currentPage = signal(1);
   pageSize = 20;
   currentFilter = signal('');
+  startDate = signal<string>('');
+  endDate = signal<string>('');
+  currentStatus = signal<string>('');
 
   ngOnInit(): void {
     this.loadAccountDetails();
@@ -65,7 +68,14 @@ export class AccountComponent implements OnInit, OnDestroy {
   }
 
   loadAccountDetails(): void {
-    this.accountService.getSelectedAccount(this.currentPage(), this.pageSize, this.currentFilter()).subscribe({
+    this.accountService.getSelectedAccount(
+      this.currentPage(),
+      this.pageSize,
+      this.currentFilter(),
+      this.startDate() || undefined,
+      this.endDate() || undefined,
+      this.currentStatus() || undefined
+    ).subscribe({
       next: (result) => {
         if (result) {
           this.account.set(result);
@@ -77,6 +87,34 @@ export class AccountComponent implements OnInit, OnDestroy {
 
   searchTransactions(input: string): void {
     this.currentFilter.set(input);
+    this.currentPage.set(1);
+    this.loadAccountDetails();
+  }
+
+  onStartDateChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.startDate.set(input.value);
+    this.currentPage.set(1);
+    this.loadAccountDetails();
+  }
+
+  onEndDateChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.endDate.set(input.value);
+    this.currentPage.set(1);
+    this.loadAccountDetails();
+  }
+
+  clearDateFilters(): void {
+    this.startDate.set('');
+    this.endDate.set('');
+    this.currentPage.set(1);
+    this.loadAccountDetails();
+  }
+
+  onStatusChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.currentStatus.set(select.value);
     this.currentPage.set(1);
     this.loadAccountDetails();
   }

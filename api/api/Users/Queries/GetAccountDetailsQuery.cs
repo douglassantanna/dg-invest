@@ -6,7 +6,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Users.Queries;
-public record GetAccountDetailsQuery(int UserId, int Page = 1, int PageSize = 20, string? Filter = null) : IRequest<Response>;
+public record GetAccountDetailsQuery(int UserId, int Page = 1, int PageSize = 20, string? Filter = null, DateTime? StartDate = null, DateTime? EndDate = null, string? Status = null) : IRequest<Response>;
 public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQuery, Response>
 {
     private readonly DataContext _context;
@@ -46,6 +46,29 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                 (at.CryptoAsset != null && at.CryptoAsset.Symbol.ToLower().Contains(filter)) ||
                 GetTransactionTypeLabel(at.TransactionType).ToLower().Contains(filter)
             );
+        }
+
+        if (request.StartDate.HasValue)
+        {
+            var start = request.StartDate.Value.Date;
+            transactionsQuery = transactionsQuery.Where(at => at.Date >= start);
+        }
+
+        if (request.EndDate.HasValue)
+        {
+            var end = request.EndDate.Value.Date.AddDays(1);
+            transactionsQuery = transactionsQuery.Where(at => at.Date < end);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            var status = request.Status.ToLower();
+            if (status == "completed")
+                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus == "3");
+            else if (status == "failed")
+                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus == "4");
+            else if (status == "pending")
+                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus != "3" && at.ExchangeStatus != "4");
         }
 
         var sortedTransactions = transactionsQuery

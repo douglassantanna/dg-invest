@@ -36,12 +36,21 @@ export class AccountService {
     return this.http.post<CustomRespose>(`${this.apiUrl}/create`, command);
   }
 
-  getSelectedAccount(page: number = 1, pageSize: number = 20, filter: string = ''): Observable<AccountDto> {
+  getSelectedAccount(page: number = 1, pageSize: number = 20, filter: string = '', startDate?: string, endDate?: string, status?: string): Observable<AccountDto> {
     let params = new HttpParams()
       .append('page', page)
       .append('pageSize', pageSize);
     if (filter) {
       params = params.append('filter', filter);
+    }
+    if (startDate) {
+      params = params.append('startDate', startDate);
+    }
+    if (endDate) {
+      params = params.append('endDate', endDate);
+    }
+    if (status) {
+      params = params.append('status', status);
     }
     return this.http.get<AccountDto>(`${this.apiUrl}/account-details`, { params });
   }
