@@ -28,12 +28,22 @@ export class LineChartComponent implements AfterViewInit {
       description: '1M',
       time: ETimeframe._1m
     },
+    {
+      description: '1Y',
+      time: ETimeframe._1y
+    },
+    {
+      description: 'All',
+      time: ETimeframe.All
+    },
   ]);
   selectedTimeFilter = model<ETimeframe>(ETimeframe._24h);
   marketDataNew: MarketData = {
     [ETimeframe._24h]: [],
     [ETimeframe._7d]: [],
     [ETimeframe._1m]: [],
+    [ETimeframe._1y]: [],
+    [ETimeframe.All]: [],
   };
   lineChartInstance: any = null;
   lineChartTitle = signal('');
@@ -113,7 +123,8 @@ export class LineChartComponent implements AfterViewInit {
     const date = new Date(value);
     if (selectedTime === ETimeframe._24h) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     if (selectedTime === ETimeframe._7d) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    if (selectedTime === ETimeframe._1m) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString([], { month: 'short', year: 'numeric' });
   }
 }
 
