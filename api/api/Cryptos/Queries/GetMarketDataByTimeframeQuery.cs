@@ -42,6 +42,7 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             ETimeframe._7d => (now_aligned - 604800) / 86400 * 86400,  // Align to day boundary
             ETimeframe._1m => (now_aligned - 2592000) / 86400 * 86400,  // Align to day boundary
             ETimeframe._1y => now_aligned_month - (12 * oneMonthInterval),  // Align to month boundary
+            ETimeframe.All => 0,
             _ => throw new ArgumentOutOfRangeException("time frame not supported")
         };
 
