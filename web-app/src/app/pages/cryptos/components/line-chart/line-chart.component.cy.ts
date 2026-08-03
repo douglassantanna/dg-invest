@@ -8,7 +8,14 @@ const mockMarketData = {
   ],
 }
 
-const timeframeLabels = ['24H', '7D', '1M', '1Y', 'All']
+const timeframeLabels = [
+  { label: '24H', value: 1 },
+  { label: '7D', value: 2 },
+  { label: '1M', value: 3 },
+  { label: '3M', value: 5 },
+  { label: '6M', value: 6 },
+  { label: '1Y', value: 4 },
+]
 
 describe('LineChartComponent', () => {
   beforeEach(() => {
@@ -24,10 +31,10 @@ describe('LineChartComponent', () => {
     cy.get('button').should('exist')
   })
 
-  it('should render all 5 timeframe buttons', () => {
+  it('should render all 6 timeframe buttons', () => {
     cy.mount(LineChartComponent)
     cy.wait('@marketData')
-    timeframeLabels.forEach((label) => {
+    timeframeLabels.forEach(({ label }) => {
       cy.contains('button', label).should('be.visible')
     })
   })
@@ -39,15 +46,15 @@ describe('LineChartComponent', () => {
     cy.get('@marketData.all').should('have.length', 1)
   })
 
-  timeframeLabels.forEach((label, index) => {
+  timeframeLabels.forEach(({ label, value }) => {
     it(`should fetch market data with correct timeframe when ${label} is clicked`, () => {
       cy.mount(LineChartComponent)
       cy.wait('@marketData')
 
       cy.contains('button', label).click()
 
-      if (index > 0) {
-        cy.wait('@marketData').its('request.url').should('contain', `timeframe=${index + 1}`)
+      if (value !== 1) {
+        cy.wait('@marketData').its('request.url').should('contain', `timeframe=${value}`)
       } else {
         cy.get('@marketData.all').should('have.length.at.least', 1)
       }
@@ -60,12 +67,12 @@ describe('LineChartComponent', () => {
     cy.mount(LineChartComponent)
     cy.wait('@marketData')
 
+    cy.contains('button', '3M').click()
+    cy.wait('@marketData')
+    cy.contains('h1', '3M Market Value').should('be.visible')
+
     cy.contains('button', '1Y').click()
     cy.wait('@marketData')
     cy.contains('h1', '1Y Market Value').should('be.visible')
-
-    cy.contains('button', 'All').click()
-    cy.wait('@marketData')
-    cy.contains('h1', 'All Market Value').should('be.visible')
   })
 })

@@ -29,12 +29,16 @@ export class LineChartComponent implements AfterViewInit {
       time: ETimeframe._1m
     },
     {
-      description: '1Y',
-      time: ETimeframe._1y
+      description: '3M',
+      time: ETimeframe._3m
     },
     {
-      description: 'All',
-      time: ETimeframe.All
+      description: '6M',
+      time: ETimeframe._6m
+    },
+    {
+      description: '1Y',
+      time: ETimeframe._1y
     },
   ]);
   selectedTimeFilter = model<ETimeframe>(ETimeframe._24h);
@@ -42,8 +46,9 @@ export class LineChartComponent implements AfterViewInit {
     [ETimeframe._24h]: [],
     [ETimeframe._7d]: [],
     [ETimeframe._1m]: [],
+    [ETimeframe._3m]: [],
+    [ETimeframe._6m]: [],
     [ETimeframe._1y]: [],
-    [ETimeframe.All]: [],
   };
   lineChartInstance: any = null;
   lineChartTitle = signal('');
@@ -122,8 +127,8 @@ export class LineChartComponent implements AfterViewInit {
   private axisLabelFormatter(value: string, selectedTime: ETimeframe): string {
     const date = new Date(value);
     if (selectedTime === ETimeframe._24h) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (selectedTime === ETimeframe._7d) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    if (selectedTime === ETimeframe._1m) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    if (selectedTime === ETimeframe._7d || selectedTime === ETimeframe._1m || selectedTime === ETimeframe._3m) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    if (selectedTime === ETimeframe._6m) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     return date.toLocaleDateString([], { month: 'short', year: 'numeric' });
   }
 }

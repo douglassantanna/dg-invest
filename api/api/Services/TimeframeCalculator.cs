@@ -18,7 +18,8 @@ public class TimeframeCalculator : ITimeframeCalculator
             ETimeframe._7d => now - (7 * SecondsPerDay),
             ETimeframe._1m => now - (30 * SecondsPerDay),
             ETimeframe._1y => now - (365 * SecondsPerDay),
-            ETimeframe.All => 0,
+            ETimeframe._3m => now - (90 * SecondsPerDay),
+            ETimeframe._6m => now - (180 * SecondsPerDay),
             _ => throw new ArgumentException("Invalid timeframe", nameof(timeframe))
         };
     }
@@ -31,7 +32,8 @@ public class TimeframeCalculator : ITimeframeCalculator
             ETimeframe._7d => SecondsPerDay,      // Group by day
             ETimeframe._1m => SecondsPerDay,      // Group by day
             ETimeframe._1y => SecondsPerMonth,    // Group by month
-            ETimeframe.All => SecondsPerYear,     // Group by year
+            ETimeframe._3m => SecondsPerDay,      // Group by day
+            ETimeframe._6m => 7 * SecondsPerDay,  // Group by week
             _ => throw new ArgumentException("Invalid timeframe", nameof(timeframe))
         };
     }

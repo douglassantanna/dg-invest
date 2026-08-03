@@ -5,5 +5,6 @@ public enum ETimeframe
     _7d = 2,
     _1m = 3,
     _1y = 4,
-    All = 5
+    _3m = 5,
+    _6m = 6
 }
