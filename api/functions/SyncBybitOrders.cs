@@ -100,6 +100,12 @@ public class SyncBybitOrders
                 return;
             }
 
+            if (!syncStatus.IsEnabled)
+            {
+                _logger.LogInformation("SyncBybitOrders: account {AccountId} is disabled, skipping", accountId);
+                return;
+            }
+
             var cutoff = syncStatus.LastSyncAt ?? syncStatus.BybitCredentialsSetAt;
             var startTime = cutoff is { } dt
                 ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()

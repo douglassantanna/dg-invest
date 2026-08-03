@@ -172,6 +172,45 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("bybit/connection-groups")]
+    public async Task<ActionResult<Response>> GetBybitConnectionGroups()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetBybitConnectionGroupQuery(userId.Value));
+        return Ok(result);
+    }
+
+    [HttpPost("bybit/test-connection/{accountId}")]
+    public async Task<ActionResult<Response>> TestBybitConnection(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new TestBybitConnectionCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("bybit/toggle/{accountId}")]
+    public async Task<ActionResult<Response>> ToggleBybitAccount(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new ToggleBybitAccountCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);

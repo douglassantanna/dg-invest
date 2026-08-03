@@ -12,6 +12,7 @@ public class BybitService : IBybitService
     private const string OrderHistoryEndpoint = "/v5/order/history";
     private const string DepositHistoryEndpoint = "/v5/asset/deposit/query-record";
     private const string WithdrawalHistoryEndpoint = "/v5/asset/withdraw/query-record";
+    private const string AccountInfoEndpoint = "/v5/account/info";
     private const int RecvWindow = 60000;
 
     private readonly string _accountBaseUrl;
@@ -78,6 +79,42 @@ public class BybitService : IBybitService
         {
             _logger.LogError(ex, "Error fetching Bybit sub-accounts");
             throw;
+        }
+    }
+
+    public async Task<bool> TestConnectionAsync(string apiKey, string apiSecret)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(paramBytes);
+            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            var responseText = await _accountBaseUrl
+                .AppendPathSegment(AccountInfoEndpoint)
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetStringAsync();
+
+            return true;
+        }
+        catch (FlurlHttpException ex)
+        {
+            var errorBody = await ex.GetResponseStringAsync();
+            _logger.LogWarning("Bybit test connection failed: {StatusCode} {Body}", ex.StatusCode, errorBody);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error testing Bybit connection");
+            return false;
         }
     }
 
