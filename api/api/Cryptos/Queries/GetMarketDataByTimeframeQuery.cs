@@ -42,6 +42,8 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             ETimeframe._7d => (now_aligned - 604800) / 86400 * 86400,  // Align to day boundary
             ETimeframe._1m => (now_aligned - 2592000) / 86400 * 86400,  // Align to day boundary
             ETimeframe._1y => now_aligned_month - (12 * oneMonthInterval),  // Align to month boundary
+            ETimeframe._3m => (now_aligned - (90 * 86400)) / 86400 * 86400,
+            ETimeframe._6m => (now_aligned - (180 * 86400)) / 86400 * 86400,
             _ => throw new ArgumentOutOfRangeException("time frame not supported")
         };
 
@@ -143,25 +145,41 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
                 }
             }
         }
-        else // ETimeframe.All
+        else if (request.Timeframe == ETimeframe._3m)
         {
-            groupedData = snapshots
-                .Where(x => x.Time >= startTime && x.Time <= now_aligned)
-                .GroupBy(x =>
+            const long oneDayInterval = 86400;
+            groupedData = new List<MarketDataPointDto>();
+            for (var time = startTime; time < now_aligned; time += oneDayInterval)
+            {
+                var bucketStart = (time / oneDayInterval) * oneDayInterval;
+                var bucketEnd = bucketStart + oneDayInterval;
+                var lastSnapshot = snapshots
+                    .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                    .OrderByDescending(s => s.Time)
+                    .FirstOrDefault();
+                if (lastSnapshot != null)
                 {
-                    var date = DateTimeOffset.FromUnixTimeSeconds(x.Time).UtcDateTime;
-                    // Start of the month
-                    return new DateTime(date.Year, date.Month, 1);
-                })
-                .SelectMany(group =>
+                    groupedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+                }
+            }
+        }
+        else // ETimeframe._6m
+        {
+            const long oneWeekInterval = 7 * 86400;
+            groupedData = new List<MarketDataPointDto>();
+            for (var time = startTime; time < now_aligned; time += oneWeekInterval)
+            {
+                var bucketStart = (time / oneWeekInterval) * oneWeekInterval;
+                var bucketEnd = bucketStart + oneWeekInterval;
+                var lastSnapshot = snapshots
+                    .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
+                    .OrderByDescending(s => s.Time)
+                    .FirstOrDefault();
+                if (lastSnapshot != null)
                 {
-                    var monthStartTimestamp = new DateTimeOffset(group.Key).ToUnixTimeSeconds();
-                    return group
-                        .OrderBy(x => x.Time)
-                        .Select(x => new MarketDataPointDto(monthStartTimestamp, x.Value));
-                })
-                .OrderBy(x => x.Time)
-                .ToList();
+                    groupedData.Add(new MarketDataPointDto(bucketStart, lastSnapshot.Value));
+                }
+            }
         }
 
         return Result<IEnumerable<MarketDataPointDto>>.Success(groupedData);
