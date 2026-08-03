@@ -15,8 +15,8 @@ const url = `${environment.apiUrl}/Exchange`;
 export class ExchangeService {
   private http = inject(HttpClient);
 
-  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret });
+  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, subaccountTag?: string, bybitUid?: string): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, subaccountTag, bybitUid });
   }
 
   syncBybitAccounts(): Observable<Response<any>> {

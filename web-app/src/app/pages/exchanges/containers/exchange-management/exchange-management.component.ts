@@ -133,7 +133,9 @@ export class ExchangeManagementComponent implements OnInit {
         this.editingSubaccount ? accountId : 0,
         this.formApiKey,
         this.formApiSecret,
-        this.formWebhookSecret
+        this.formWebhookSecret,
+        this.editingSubaccount ? undefined : name,
+        this.editingSubaccount ? undefined : uid
       )
       .subscribe({
         next: (res) => {
