@@ -1,12 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
-import { AccountService } from 'src/app/core/services/account.service';
-import { SyncStatusDto } from 'src/app/core/models/sync-status';
-import { SyncLogEntry } from 'src/app/core/models/sync-log-entry';
-import { BybitSubMemberDto } from 'src/app/core/models/bybit-sub-member';
-import { CredentialsStatusDto } from 'src/app/core/models/credentials-status';
+import { BybitConnectionGroupDto, BybitSubaccountRowDto } from 'src/app/core/models/bybit-connection-group';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
 
 @Component({
@@ -17,190 +13,220 @@ import { ModalComponent } from 'src/app/layout/modal/modal.component';
 })
 export class ExchangeManagementComponent implements OnInit {
   private exchangeService = inject(ExchangeService);
-  private accountService = inject(AccountService);
 
-  accounts: { id: number; tag: string }[] = [];
-  selectedAccountId = 0;
+  groups: BybitConnectionGroupDto[] = [];
+  loading = false;
 
-  // Credentials form
-  apiKey = '';
-  apiSecret = '';
-  webhookSecret = '';
-  savingCredentials = false;
-  credentialsMessage = '';
+  showModal = false;
+  editingSubaccount: BybitSubaccountRowDto | null = null;
+  selectedGroupId: string | null = null;
 
-  // Saved credentials
-  credentialsStatuses: CredentialsStatusDto[] = [];
-  loadingCredentialsStatus = false;
-  deletingCredentialAccountId: number | null = null;
+  formName = '';
+  formUid = '';
+  formApiKey = '';
+  formApiSecret = '';
+  formWebhookSecret = '';
+  formSaving = false;
 
-  // Sync accounts
-  syncing = false;
-  syncMessage = '';
-
-  // Sub-members
-  subMembers: BybitSubMemberDto[] = [];
-  loadingSubMembers = false;
-
-  // Sync statuses
-  syncStatuses: SyncStatusDto[] = [];
-  loadingStatuses = false;
-
-  // Sync logs
-  selectedLogAccountId = 0;
-  syncLogs: SyncLogEntry[] = [];
-  loadingLogs = false;
-  logDate = '';
+  testingAccountId: number | null = null;
+  togglingAccountId: number | null = null;
+  toastMessage = '';
+  showToast = false;
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    this.loadAccounts();
-    this.loadSyncStatuses();
-    this.loadCredentialsStatus();
+    this.loadGroups();
   }
 
-  private loadAccounts(): void {
-    this.accountService.getAccounts().subscribe({
-      next: (result) => {
-        this.accounts = result.map((a) => ({ id: a.id, tag: a.subaccountTag }));
-        if (this.accounts.length > 0) this.selectedAccountId = this.accounts[0].id;
+  loadGroups(): void {
+    this.loading = true;
+    this.exchangeService.getBybitConnectionGroups().subscribe({
+      next: (res) => {
+        this.groups = res.data ?? [];
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
       },
     });
   }
 
-  selectedAccountTag(): string {
-    return this.accounts.find(a => a.id === this.selectedAccountId)?.tag ?? 'selected';
+  toggleGroup(groupId: string): void {
+    const group = this.groups.find((g) => g.id === groupId);
+    if (!group) return;
+    (group as any).collapsed = !(group as any).collapsed;
   }
 
-  saveCredentials(): void {
-    if (!this.selectedAccountId) return;
-    this.savingCredentials = true;
-    this.credentialsMessage = '';
+  isCollapsed(groupId: string): boolean {
+    const group = this.groups.find((g) => g.id === groupId);
+    return !!(group as any)?.collapsed;
+  }
+
+  statusMeta(status: string): { label: string; cls: string } {
+    switch (status) {
+      case 'ok':
+        return { label: 'Connected', cls: 'ok' };
+      case 'err':
+        return { label: 'Error', cls: 'err' };
+      case 'paused':
+        return { label: 'Paused', cls: 'paused' };
+      case 'pending':
+        return { label: 'No key', cls: 'pending' };
+      default:
+        return { label: status, cls: 'paused' };
+    }
+  }
+
+  okCount(subaccounts: BybitSubaccountRowDto[]): number {
+    return subaccounts.filter((s) => s.status === 'ok').length;
+  }
+
+  errCount(subaccounts: BybitSubaccountRowDto[]): number {
+    return subaccounts.filter((s) => s.status === 'err').length;
+  }
+
+  openAddModal(groupId: string): void {
+    this.editingSubaccount = null;
+    this.selectedGroupId = groupId;
+    this.formName = '';
+    this.formUid = '';
+    this.formApiKey = '';
+    this.formApiSecret = '';
+    this.formWebhookSecret = '';
+    this.showModal = true;
+  }
+
+  openEditModal(subaccount: BybitSubaccountRowDto, groupId: string): void {
+    this.editingSubaccount = subaccount;
+    this.selectedGroupId = groupId;
+    this.formName = subaccount.name;
+    this.formUid = subaccount.bybitUid ?? '';
+    this.formApiKey = '';
+    this.formApiSecret = '';
+    this.formWebhookSecret = '';
+    this.showModal = true;
+  }
+
+  closeModal(): void {
+    this.showModal = false;
+    this.editingSubaccount = null;
+    this.selectedGroupId = null;
+  }
+
+  saveSubaccount(): void {
+    const name = this.formName.trim();
+    const uid = this.formUid.trim();
+    if (!name || !uid) {
+      this.flashToast('Please fill in name and UID');
+      return;
+    }
+
+    const accountId = this.editingSubaccount?.accountId ?? 0;
+    if (this.editingSubaccount && accountId === 0) {
+      this.flashToast('Cannot determine account ID for edit');
+      return;
+    }
+
+    this.formSaving = true;
     this.exchangeService
-      .saveBybitCredentials(this.selectedAccountId, this.apiKey, this.apiSecret, this.webhookSecret)
+      .saveBybitCredentials(
+        this.editingSubaccount ? accountId : 0,
+        this.formApiKey,
+        this.formApiSecret,
+        this.formWebhookSecret
+      )
       .subscribe({
         next: (res) => {
-          this.credentialsMessage = res.message;
+          this.formSaving = false;
           if (res.isSuccess) {
-            this.apiKey = '';
-            this.apiSecret = '';
-            this.webhookSecret = '';
+            this.flashToast(
+              this.editingSubaccount
+                ? `${name} updated`
+                : `${name} added`
+            );
+            this.closeModal();
+            this.loadGroups();
+          } else {
+            this.flashToast(res.message);
           }
-          this.savingCredentials = false;
         },
         error: () => {
-          this.credentialsMessage = 'Failed to save credentials';
-          this.savingCredentials = false;
+          this.formSaving = false;
+          this.flashToast('Failed to save credentials');
         },
       });
   }
 
-  loadCredentialsStatus(): void {
-    this.loadingCredentialsStatus = true;
-    this.exchangeService.getCredentialsStatus().subscribe({
+  testConnection(accountId: number, name: string): void {
+    this.testingAccountId = accountId;
+    this.flashToast(`Testing connection for "${name}"...`);
+    this.exchangeService.testBybitConnection(accountId).subscribe({
       next: (res) => {
-        this.credentialsStatuses = res.data ?? [];
-        this.loadingCredentialsStatus = false;
-      },
-      error: () => this.loadingCredentialsStatus = false,
-    });
-  }
-
-  deleteCredentials(accountId: number): void {
-    this.deletingCredentialAccountId = accountId;
-    this.exchangeService.deleteCredentials(accountId).subscribe({
-      next: () => {
-        this.deletingCredentialAccountId = null;
-        this.loadCredentialsStatus();
-      },
-      error: () => this.deletingCredentialAccountId = null,
-    });
-  }
-
-  syncAccounts(): void {
-    this.syncing = true;
-    this.syncMessage = '';
-    this.exchangeService.syncBybitAccounts().subscribe({
-      next: (res) => {
-        this.syncMessage = res.message;
-        this.syncing = false;
-        this.loadSubMembers();
+        this.testingAccountId = null;
+        if (res.isSuccess) {
+          this.flashToast(`"${name}" validated successfully`);
+          this.loadGroups();
+        } else {
+          this.flashToast(`Failed to validate "${name}": ${res.message}`);
+        }
       },
       error: () => {
-        this.syncMessage = 'Sync failed';
-        this.syncing = false;
+        this.testingAccountId = null;
+        this.flashToast(`Failed to validate "${name}"`);
       },
     });
   }
 
-  loadSubMembers(): void {
-    this.loadingSubMembers = true;
-    this.exchangeService.getBybitSubMembers().subscribe({
-      next: (res) => {
-        this.subMembers = res.data ?? [];
-        this.loadingSubMembers = false;
+  toggleEnabled(accountId: number, name: string, currentEnabled: boolean): void {
+    this.togglingAccountId = accountId;
+    this.exchangeService.toggleBybitAccount(accountId).subscribe({
+      next: () => {
+        this.togglingAccountId = null;
+        const newState = currentEnabled ? 'paused' : 'reactivated';
+        // We could use the response data, but simpler: just show toast and reload
+        this.flashToast(
+          `${name} ${newState}`
+        );
+        this.loadGroups();
       },
-      error: () => this.loadingSubMembers = false,
+      error: () => {
+        this.togglingAccountId = null;
+        this.flashToast(`Failed to toggle "${name}"`);
+      },
     });
   }
 
-  mapAccount(member: BybitSubMemberDto): void {
-    this.exchangeService.mapBybitAccount(this.selectedAccountId, member.uid).subscribe({
-      next: (res) => {
-        if (res.isSuccess) this.loadSubMembers();
-      },
-    });
-  }
-
-  private loadSyncStatuses(): void {
-    this.loadingStatuses = true;
-    this.exchangeService.getSyncStatuses().subscribe({
-      next: (res) => {
-        this.syncStatuses = res.data ?? [];
-        this.loadingStatuses = false;
-      },
-      error: () => this.loadingStatuses = false,
-    });
-  }
-
-  toggleSyncLogs(accountId: number): void {
-    if (this.selectedLogAccountId === accountId) {
-      this.selectedLogAccountId = 0;
+  deleteSubaccount(accountId: number, name: string): void {
+    if (!confirm(`Remove "${name}"? The API key and secret will be deleted from Key Vault.`)) {
       return;
     }
-    this.selectedLogAccountId = accountId;
-    this.fetchSyncLogs(accountId);
-  }
-
-  onLogDateChange(accountId: number, date: string): void {
-    this.logDate = date;
-    this.fetchSyncLogs(accountId);
-  }
-
-  private fetchSyncLogs(accountId: number): void {
-    this.loadingLogs = true;
-    this.exchangeService.getSyncLogs(accountId, this.logDate || undefined).subscribe({
-      next: (res) => {
-        this.syncLogs = res.data ?? [];
-        this.loadingLogs = false;
+    this.exchangeService.deleteCredentials(accountId).subscribe({
+      next: () => {
+        this.flashToast(`${name} removed`);
+        this.loadGroups();
       },
-      error: () => this.loadingLogs = false,
+      error: () => {
+        this.flashToast(`Failed to remove "${name}"`);
+      },
     });
   }
 
-  statusBadgeClass(status: string): string {
-    switch (status) {
-      case 'Connected': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'Error': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
+  copyWebhookUrl(webhookUrl: string): void {
+    const baseUrl = window.location.origin;
+    const fullUrl = `${baseUrl}${webhookUrl}`;
+    navigator.clipboard.writeText(fullUrl).then(() => {
+      this.flashToast('Webhook URL copied');
+    }).catch(() => {
+      this.flashToast('Failed to copy URL');
+    });
   }
 
-  logStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'Success': return 'bg-green-100 text-green-700';
-      case 'Duplicate': return 'bg-yellow-100 text-yellow-700';
-      case 'Failed': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  private flashToast(message: string): void {
+    this.toastMessage = message;
+    this.showToast = true;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      this.showToast = false;
+    }, 2500);
   }
 }

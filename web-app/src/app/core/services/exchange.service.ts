@@ -7,6 +7,7 @@ import { SyncStatusDto } from '../models/sync-status';
 import { SyncLogEntry } from '../models/sync-log-entry';
 import { BybitSubMemberDto } from '../models/bybit-sub-member';
 import { CredentialsStatusDto } from '../models/credentials-status';
+import { BybitConnectionGroupDto } from '../models/bybit-connection-group';
 
 const url = `${environment.apiUrl}/Exchange`;
 
@@ -46,5 +47,17 @@ export class ExchangeService {
     let params = new HttpParams();
     if (date) params = params.set('date', date);
     return this.http.get<Response<SyncLogEntry[]>>(`${url}/bybit/sync-logs/${accountId}`, { params });
+  }
+
+  getBybitConnectionGroups(): Observable<Response<BybitConnectionGroupDto[]>> {
+    return this.http.get<Response<BybitConnectionGroupDto[]>>(`${url}/bybit/connection-groups`);
+  }
+
+  testBybitConnection(accountId: number): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/test-connection/${accountId}`, {});
+  }
+
+  toggleBybitAccount(accountId: number): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/toggle/${accountId}`, {});
   }
 }
