@@ -13,6 +13,7 @@ public class SyncStatusConfiguration : IEntityTypeConfiguration<SyncStatus>
         builder.Property(x => x.Status).HasColumnType("varchar").HasMaxLength(50).IsRequired();
         builder.Property(x => x.LastErrorMessage).HasColumnType("varchar").HasMaxLength(1000);
         builder.Property(x => x.LastOrderId).HasColumnType("varchar").HasMaxLength(100);
+        builder.Property(x => x.IsEnabled).IsRequired();
         builder.HasIndex(x => new { x.UserId, x.AccountId, x.ExchangeName }).IsUnique();
     }
 }
