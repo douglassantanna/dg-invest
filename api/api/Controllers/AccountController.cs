@@ -42,7 +42,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        var name = request.Name ?? request.SubaccountTag;
+        var name = request.ResolvedName;
         if (string.IsNullOrWhiteSpace(name))
             return BadRequest(new Response("Account name is required", false));
 
