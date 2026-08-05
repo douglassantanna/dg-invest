@@ -95,6 +95,7 @@ jobs:
         with:
           name: .functions-app
           path: ${{ runner.temp }}/functions-app
+          include-hidden-files: true
 
   deploy_backend:
     name: Deploy Backend
