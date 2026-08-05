@@ -1,0 +1,48 @@
+<main class="max-w-7xl mx-auto p-6 sm:z-10 sm:mb-10">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Exchange Connections</h1>
+
+  <!-- Account list -->
+  @if (loading) {
+    <p class="text-sm text-gray-500 dark:text-gray-400">Loading accounts...</p>
+  } @else if (accounts.length === 0) {
+    <p class="text-sm text-gray-500 dark:text-gray-400">No accounts configured for exchange sync.</p>
+  } @else {
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900">
+            <th class="px-4 py-3 font-medium">Account</th>
+            <th class="px-4 py-3 font-medium">Exchange</th>
+            <th class="px-4 py-3 font-medium">Status</th>
+            <th class="px-4 py-3 font-medium">Last Sync</th>
+            <th class="px-4 py-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of accounts; track a.accountId + a.exchangeName) {
+            <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
+              <td class="px-4 py-3 text-gray-900 dark:text-gray-100 font-medium">{{ a.accountTag }}</td>
+              <td class="px-4 py-3 text-gray-900 dark:text-gray-100">{{ a.exchangeName || '-' }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                  [class]="statusBadgeClass(a.status)">
+                  {{ a.status }}
+                </span>
+                @if (a.errorCount > 0) {
+                  <span class="ml-1 text-xs text-red-500">({{ a.errorCount }})</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ a.lastSyncAt ? (a.lastSyncAt | date:'short') : '-' }}</td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <a [routerLink]="['/exchanges', a.accountId]"
+                  class="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors inline-block">
+                  Manage
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</main>

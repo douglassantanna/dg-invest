@@ -207,6 +207,49 @@ public class BybitService : IBybitService
         }
     }
 
+    public async Task<decimal> GetTotalEquityAsync(string apiKey, string apiSecret)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var queryParams = "accountType=UNIFIED";
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(paramBytes);
+            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            var response = await _accountBaseUrl
+                .AppendPathSegment("/v5/account/wallet-balance")
+                .SetQueryParams(new { accountType = "UNIFIED" })
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<BybitWalletBalanceResponse>();
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogError("Bybit GetWalletBalance returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
+                return 0;
+            }
+
+            var unifiedAccount = response.Result.List
+                .FirstOrDefault(a => a.AccountType == "UNIFIED");
+            if (unifiedAccount == null || !decimal.TryParse(unifiedAccount.TotalEquity, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var equity))
+                return 0;
+
+            return equity;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit wallet balance");
+            return 0;
+        }
+    }
+
     private static string BuildQueryString(Dictionary<string, object> parameters)
     {
         return string.Join("&", parameters.OrderBy(p => p.Key).Select(p => $"{p.Key}={p.Value}"));
