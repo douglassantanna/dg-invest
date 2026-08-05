@@ -12,7 +12,10 @@ public record GetExchangeAccountDetailQuery(int UserId, int AccountId) : IReques
 public record ExchangeAccountDetailDto(
     int AccountId,
     string AccountName,
-    List<ExchangeConnectionDto> Connections);
+    List<ExchangeConnectionDto> Connections)
+{
+    public string AccountTag => AccountName;
+}
 
 public record ExchangeConnectionDto(
     string ExchangeName,

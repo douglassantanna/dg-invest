@@ -14,7 +14,10 @@ public record CredentialsStatusDto(
     string AccountName,
     bool HasApiKey,
     bool HasApiSecret,
-    bool HasWebhookSecret);
+    bool HasWebhookSecret)
+{
+    public string AccountTag => AccountName;
+}
 
 public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsStatusQuery, Response>
 {

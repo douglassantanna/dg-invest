@@ -27,7 +27,10 @@ public record BybitSubaccountRowDto(
     string? MaskedApiKey,
     string WebhookUrl,
     string? LastVerifiedAt,
-    bool IsEnabled);
+    bool IsEnabled)
+{
+    public string? BybitUid => ExternalId;
+}
 
 public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConnectionGroupQuery, Response>
 {

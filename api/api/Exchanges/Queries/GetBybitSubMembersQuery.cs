@@ -15,7 +15,10 @@ public record BybitSubMemberDto(
     string Username,
     string Remark,
     string? MappedAccountName,
-    int? AccountId);
+    int? AccountId)
+{
+    public string? MappedAccountTag => MappedAccountName;
+}
 
 public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembersQuery, Response>
 {

@@ -14,7 +14,10 @@ public record ExchangeAccountDto(
     string Status,
     DateTime? LastSyncAt,
     int ErrorCount,
-    string? LastErrorMessage);
+    string? LastErrorMessage)
+{
+    public string AccountTag => AccountName;
+}
 
 public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccountsQuery, Response>
 {

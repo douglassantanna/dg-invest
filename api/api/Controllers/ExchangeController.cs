@@ -66,8 +66,8 @@ public class ExchangeController : ControllerBase
             request.ApiKey,
             request.ApiSecret,
             request.WebhookSecret,
-            request.Name,
-            request.ExternalId);
+            request.ResolvedName,
+            request.ResolvedExternalId);
 
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
@@ -120,7 +120,11 @@ public class ExchangeController : ControllerBase
         if (userId == null)
             return Unauthorized(new Response("Invalid user ID", false));
 
-        var result = await _mediator.Send(new MapBybitAccountCommand(userId.Value, request.AccountId, request.ExternalId));
+        var externalId = request.ResolvedExternalId;
+        if (string.IsNullOrWhiteSpace(externalId))
+            return BadRequest(new Response("External ID is required", false));
+
+        var result = await _mediator.Send(new MapBybitAccountCommand(userId.Value, request.AccountId, externalId));
         if (!result.IsSuccess)
             return BadRequest(result);
 
@@ -220,5 +224,21 @@ public class ExchangeController : ControllerBase
     }
 }
 
-public record SaveBybitCredentialsRequest(int AccountId, string ApiKey, string ApiSecret, string WebhookSecret, string? Name = null, string? ExternalId = null);
-public record MapBybitAccountRequest(int AccountId, string ExternalId);
+public record SaveBybitCredentialsRequest(
+    int AccountId,
+    string ApiKey,
+    string ApiSecret,
+    string WebhookSecret,
+    string? Name = null,
+    string? ExternalId = null,
+    string? SubaccountTag = null,
+    string? BybitUid = null)
+{
+    public string? ResolvedName => string.IsNullOrWhiteSpace(Name) ? SubaccountTag : Name;
+    public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
+}
+
+public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
+{
+    public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
+}

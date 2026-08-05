@@ -16,7 +16,10 @@ public record SyncStatusDto(
     DateTime? LastSyncAt,
     string? LastOrderId,
     int ErrorCount,
-    string? LastErrorMessage);
+    string? LastErrorMessage)
+{
+    public string? AccountTag => AccountName;
+}
 
 public class GetSyncStatusesQueryHandler : IRequestHandler<GetSyncStatusesQuery, Response>
 {
