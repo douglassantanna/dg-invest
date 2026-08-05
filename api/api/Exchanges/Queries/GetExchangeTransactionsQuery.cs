@@ -31,7 +31,7 @@ public class GetExchangeTransactionsQueryHandler : IRequestHandler<GetExchangeTr
     public async Task<Response> Handle(GetExchangeTransactionsQuery request, CancellationToken cancellationToken)
     {
         var accountExists = await _context.Accounts
-            .AnyAsync(a => a.Id == request.AccountId && a.UserId == request.UserId, cancellationToken);
+            .AnyAsync(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted, cancellationToken);
 
         if (!accountExists)
             return new Response("Account not found", false, 404);

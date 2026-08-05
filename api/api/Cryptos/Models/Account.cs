@@ -17,6 +17,7 @@ public class Account : Entity
     public string? Exchange { get; private set; }
     public string? ExternalId { get; private set; }
     public bool Enabled { get; private set; } = true;
+    public bool IsDeleted { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
     public Account(
@@ -40,6 +41,7 @@ public class Account : Entity
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;
     public void ToggleEnabled() => Enabled = !Enabled;
+    public void SoftDelete() => IsDeleted = true;
     public decimal TotalDeposited() => _accountTransactions.Where(x => x.TransactionType == EAccountTransactionType.DepositFiat).Sum(x => x.Amount);
     public IReadOnlyCollection<AccountTransaction> AccountTransactions => _accountTransactions.AsReadOnly();
     internal void AddTransaction(AccountTransaction accountTransaction)

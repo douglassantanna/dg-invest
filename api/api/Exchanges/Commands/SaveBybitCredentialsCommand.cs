@@ -67,7 +67,7 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
         }
 
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId)
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (account == null)
@@ -82,7 +82,7 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
     private async Task<Response> HandleCreateAndSave(SaveBybitCredentialsCommand request, CancellationToken cancellationToken)
     {
         var existingAccount = await _context.Accounts
-            .Where(a => a.Name == request.Name && a.UserId == request.UserId)
+            .Where(a => a.Name == request.Name && a.UserId == request.UserId && !a.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingAccount != null)

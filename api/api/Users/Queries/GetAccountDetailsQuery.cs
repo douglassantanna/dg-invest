@@ -24,7 +24,7 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
     {
         var account = await _context.Accounts
                                     .AsNoTracking()
-                                    .Where(u => u.UserId == request.UserId)
+                                    .Where(u => u.UserId == request.UserId && !u.IsDeleted)
                                     .Where(x => x.IsSelected == true)
                                     .Include(x => x.AccountTransactions)
                                     .ThenInclude(x => x.CryptoAsset)

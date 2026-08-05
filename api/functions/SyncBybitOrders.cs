@@ -53,7 +53,7 @@ public class SyncBybitOrders
             var accounts = await _context.Accounts
                 .Include(a => a.CryptoAssets)
                     .ThenInclude(ca => ca.Transactions)
-                .Where(a => a.ExternalId != null)
+                .Where(a => a.ExternalId != null && !a.IsDeleted)
                 .ToListAsync(cancellationToken);
 
             _logger.LogInformation("SyncBybitOrders: found {Count} Bybit accounts", accounts.Count);

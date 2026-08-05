@@ -199,13 +199,17 @@ export class ExchangeManagementComponent implements OnInit {
   }
 
   deleteSubaccount(accountId: number, name: string): void {
-    if (!confirm(`Remove "${name}"? The API key and secret will be deleted from Key Vault.`)) {
+    if (!confirm(`Remove "${name}"? The subaccount and its API credentials will be removed.`)) {
       return;
     }
     this.exchangeService.deleteCredentials(accountId).subscribe({
-      next: () => {
-        this.flashToast(`${name} removed`);
-        this.loadGroups();
+      next: (res) => {
+        if (res.isSuccess) {
+          this.flashToast(`${name} removed`);
+          this.loadGroups();
+        } else {
+          this.flashToast(res.message);
+        }
       },
       error: () => {
         this.flashToast(`Failed to remove "${name}"`);

@@ -32,7 +32,7 @@ public class GetUserAccountsQueryHandler : IRequestHandler<GetUserAccountsQuery,
             {
                 return await _context.Accounts
                     .AsNoTracking()
-                    .Where(x => x.UserId == request.UserId)
+                    .Where(x => x.UserId == request.UserId && !x.IsDeleted)
                     .OrderByDescending(x => x.IsSelected == true)
                     .Select(x => new SimpleAccountDto(x.Id, x.Name, x.Balance, x.IsSelected))
                     .ToListAsync(ct);

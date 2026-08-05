@@ -43,7 +43,7 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
     public async Task<Response> Handle(GetBybitConnectionGroupQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId)
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted)
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 

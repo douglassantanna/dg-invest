@@ -22,7 +22,7 @@ public class ToggleBybitAccountCommandHandler : IRequestHandler<ToggleBybitAccou
     public async Task<Response> Handle(ToggleBybitAccountCommand request, CancellationToken cancellationToken)
     {
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId)
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (account == null)

@@ -29,7 +29,7 @@ public class GetSyncStatusesQueryHandler : IRequestHandler<GetSyncStatusesQuery,
         var statuses = await _context.SyncStatuses
             .Where(s => s.UserId == request.UserId)
             .Join(
-                _context.Accounts,
+                _context.Accounts.Where(a => !a.IsDeleted),
                 s => s.AccountId,
                 a => a.Id,
                 (s, a) => new SyncStatusDto(

@@ -67,7 +67,7 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
 
         // Load existing account ExternalId mappings to show which are already linked.
         var mappedAccounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && a.ExternalId != null)
+            .Where(a => a.UserId == request.UserId && a.ExternalId != null && !a.IsDeleted)
             .Select(a => new { a.Id, a.ExternalId, a.Name })
             .ToListAsync(cancellationToken);
 

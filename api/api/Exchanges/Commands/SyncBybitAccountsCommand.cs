@@ -72,7 +72,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 return new Response("Failed to fetch sub-accounts from Bybit", false, 500);
             }
 
-            var existingAccounts = user.Accounts.ToList();
+            var existingAccounts = user.Accounts.Where(a => !a.IsDeleted).ToList();
             var existingBybitUids = existingAccounts.Where(a => a.ExternalId != null)
                                                     .ToDictionary(a => a.ExternalId!, a => a);
             var existingNames = existingAccounts.Select(a => a.Name.ToLowerInvariant())

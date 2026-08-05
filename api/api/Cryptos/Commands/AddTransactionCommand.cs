@@ -73,7 +73,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         var account = await _context.Accounts
                                     .Include(x => x.CryptoAssets)
                                     .Where(x => x.UserId == request.UserId)
-                                    .Where(x => x.IsSelected == true)
+                                    .Where(x => x.IsSelected == true && !x.IsDeleted)
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {

@@ -48,7 +48,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                 .AsNoTracking()
                 .Include(x => x.CryptoAssets)
                 .Include(x => x.AccountTransactions)
-                .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId, ct);
+                .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted, ct);
 
             if (account == null)
             {
