@@ -11,9 +11,25 @@ namespace api.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "BybitUid",
+            migrationBuilder.DropIndex(
+                name: "IX_Accounts_BybitUid",
                 table: "Accounts");
+
+            migrationBuilder.RenameColumn(
+                name: "BybitUid",
+                table: "Accounts",
+                newName: "ExternalId");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "ExternalId",
+                table: "Accounts",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true);
 
             migrationBuilder.RenameColumn(
                 name: "SubaccountTag",
@@ -41,12 +57,12 @@ namespace api.Data.Migrations
                 maxLength: 50,
                 nullable: true);
 
-            migrationBuilder.AddColumn<string>(
-                name: "ExternalId",
-                table: "Accounts",
-                type: "varchar(50)",
-                maxLength: 50,
-                nullable: true);
+            migrationBuilder.Sql("""
+                UPDATE Accounts
+                SET AccountType = 1,
+                    Exchange = 'Bybit'
+                WHERE ExternalId IS NOT NULL;
+                """);
 
             migrationBuilder.CreateTable(
                 name: "ExchangeIntegrations",
@@ -102,20 +118,33 @@ namespace api.Data.Migrations
                 name: "Exchange",
                 table: "Accounts");
 
-            migrationBuilder.DropColumn(
+            migrationBuilder.AlterColumn<string>(
                 name: "ExternalId",
-                table: "Accounts");
+                table: "Accounts",
+                type: "nvarchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true);
 
             migrationBuilder.RenameColumn(
                 name: "Name",
                 table: "Accounts",
                 newName: "SubaccountTag");
 
-            migrationBuilder.AddColumn<string>(
-                name: "BybitUid",
+            migrationBuilder.RenameColumn(
+                name: "ExternalId",
                 table: "Accounts",
-                type: "nvarchar(max)",
-                nullable: true);
+                newName: "BybitUid");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Accounts_BybitUid",
+                table: "Accounts",
+                column: "BybitUid",
+                unique: true,
+                filter: "[BybitUid] IS NOT NULL");
         }
     }
 }
