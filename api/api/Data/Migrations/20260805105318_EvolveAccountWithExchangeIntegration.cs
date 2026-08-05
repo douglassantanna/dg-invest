@@ -11,25 +11,25 @@ namespace api.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_Accounts_BybitUid",
-                table: "Accounts");
+            migrationBuilder.Sql("""
+                IF COL_LENGTH(N'[Accounts]', N'BybitUid') IS NOT NULL
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1
+                        FROM sys.indexes
+                        WHERE name = N'IX_Accounts_BybitUid'
+                          AND object_id = OBJECT_ID(N'[Accounts]')
+                    )
+                        DROP INDEX [IX_Accounts_BybitUid] ON [Accounts];
 
-            migrationBuilder.RenameColumn(
-                name: "BybitUid",
-                table: "Accounts",
-                newName: "ExternalId");
+                    EXEC sp_rename N'[Accounts].[BybitUid]', N'ExternalId', N'COLUMN';
+                END
 
-            migrationBuilder.AlterColumn<string>(
-                name: "ExternalId",
-                table: "Accounts",
-                type: "varchar(50)",
-                maxLength: 50,
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(50)",
-                oldMaxLength: 50,
-                oldNullable: true);
+                IF COL_LENGTH(N'[Accounts]', N'ExternalId') IS NULL
+                    ALTER TABLE [Accounts] ADD [ExternalId] varchar(50) NULL;
+                ELSE
+                    ALTER TABLE [Accounts] ALTER COLUMN [ExternalId] varchar(50) NULL;
+                """);
 
             migrationBuilder.RenameColumn(
                 name: "SubaccountTag",

@@ -26,6 +26,9 @@ public class AccountEvolutionMigrationTests
 
         await migrator.MigrateAsync(PreEvolutionMigration);
         await context.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE Accounts ADD BybitUid nvarchar(50) NULL;
+            CREATE UNIQUE INDEX IX_Accounts_BybitUid ON Accounts (BybitUid) WHERE BybitUid IS NOT NULL;
+
             INSERT INTO Users (FullName, Email, Password, Role, EmailConfirmed, CreatedAt)
             VALUES ('Legacy User', 'legacy@example.com', 'hash', 0, 0, SYSUTCDATETIME());
 
