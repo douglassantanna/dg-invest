@@ -95,13 +95,19 @@ public class BybitService : IBybitService
             var hashBytes = hmac.ComputeHash(paramBytes);
             var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
-            var responseText = await _accountBaseUrl
+            var response = await _accountBaseUrl
                 .AppendPathSegment(AccountInfoEndpoint)
                 .WithHeader("X-BAPI-API-KEY", apiKey)
                 .WithHeader("X-BAPI-TIMESTAMP", timestamp)
                 .WithHeader("X-BAPI-SIGN", signature)
                 .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetStringAsync();
+                .GetJsonAsync<BybitAccountInfoResponse>();
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogWarning("Bybit test connection returned error {Code}: {Message}", response.RetCode, response.RetMsg);
+                return false;
+            }
 
             return true;
         }

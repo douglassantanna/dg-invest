@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using api.Exchanges.Bybit;
+using Flurl.Http.Testing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -132,5 +133,18 @@ public class BybitServiceTests
 
         resultUpper.Should().BeTrue();
         resultLower.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TestConnectionAsync_WhenBybitReturnsNonzeroRetCode_ShouldReturnFalse()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var result = await _sut.TestConnectionAsync("api-key", "api-secret");
+
+        result.Should().BeFalse();
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/account/info")
+            .WithVerb(HttpMethod.Get);
     }
 }
