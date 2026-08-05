@@ -55,6 +55,22 @@ public class DeleteCredentialsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenManualAccount_ShouldReject()
+    {
+        var account = new Account("Dad Account", 1);
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(new DeleteCredentialsCommand(1, account.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Bybit exchange account");
+        var saved = await _context.Accounts.FindAsync(account.Id);
+        saved!.IsDeleted.Should().BeFalse();
+        _keyVault.Verify(k => k.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenAccountNotFound_ShouldReturnNotFound()
     {
         var result = await _handler.Handle(new DeleteCredentialsCommand(1, 999), CancellationToken.None);

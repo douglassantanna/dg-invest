@@ -1,4 +1,5 @@
 using api.AzureKeyVault;
+using api.Cryptos.Models;
 using api.Data;
 using api.Shared;
 using MediatR;
@@ -40,6 +41,12 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
         {
             _logger.LogWarning("DeleteCredentials: main account {AccountId} cannot be deleted for user {UserId}", request.AccountId, request.UserId);
             return new Response("The main account cannot be deleted", false, 400);
+        }
+
+        if (account.AccountType != EAccountType.Exchange || !string.Equals(account.Exchange, "Bybit", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("DeleteCredentials: account {AccountId} is not a Bybit exchange account", request.AccountId);
+            return new Response("Only Bybit exchange accounts can be deleted", false, 400);
         }
 
         try
