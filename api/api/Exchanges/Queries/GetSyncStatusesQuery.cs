@@ -10,7 +10,7 @@ public record GetSyncStatusesQuery(int UserId) : IRequest<Response>;
 
 public record SyncStatusDto(
     int AccountId,
-    string? AccountTag,
+    string? AccountName,
     string ExchangeName,
     string Status,
     DateTime? LastSyncAt,
@@ -34,7 +34,7 @@ public class GetSyncStatusesQueryHandler : IRequestHandler<GetSyncStatusesQuery,
                 a => a.Id,
                 (s, a) => new SyncStatusDto(
                     s.AccountId,
-                    a.SubaccountTag,
+                    a.Name,
                     s.ExchangeName,
                     s.Status,
                     s.LastSyncAt,

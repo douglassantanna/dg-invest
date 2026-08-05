@@ -45,7 +45,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 return new Response("User not found", false, 404);
             }
 
-            var mainAccount = user.Accounts.FirstOrDefault(a => a.SubaccountTag.Equals("main", StringComparison.OrdinalIgnoreCase));
+            var mainAccount = user.Accounts.FirstOrDefault(a => a.Name.Equals("main", StringComparison.OrdinalIgnoreCase));
             if (mainAccount == null)
             {
                 _logger.LogError("SyncBybitAccounts: main account not found for user {UserId}", request.UserId);
@@ -73,9 +73,9 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             }
 
             var existingAccounts = user.Accounts.ToList();
-            var existingBybitUids = existingAccounts.Where(a => a.BybitUid != null)
-                                                    .ToDictionary(a => a.BybitUid!, a => a);
-            var existingTags = existingAccounts.Select(a => a.SubaccountTag.ToLowerInvariant())
+            var existingBybitUids = existingAccounts.Where(a => a.ExternalId != null)
+                                                    .ToDictionary(a => a.ExternalId!, a => a);
+            var existingNames = existingAccounts.Select(a => a.Name.ToLowerInvariant())
                                                .ToHashSet();
 
             int created = 0;
@@ -83,12 +83,12 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
             foreach (var member in subMembers)
             {
-                // 1st priority: match by BybitUid (most reliable — set manually via map-account endpoint).
+                // 1st priority: match by ExternalId (most reliable — set manually via map-account endpoint).
                 if (existingBybitUids.TryGetValue(member.Uid, out var mappedAccount))
                 {
                     matched++;
-                    _logger.LogInformation("SyncBybitAccounts: UID {Uid} already mapped to account '{Tag}'",
-                        member.Uid, mappedAccount.SubaccountTag);
+                    _logger.LogInformation("SyncBybitAccounts: UID {Uid} already mapped to account '{Name}'",
+                        member.Uid, mappedAccount.Name);
                     continue;
                 }
 
@@ -97,20 +97,20 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                     ? member.Username.Trim()
                     : member.Remark.Trim();
 
-                if (existingTags.Contains(tag.ToLowerInvariant()))
+                if (existingNames.Contains(tag.ToLowerInvariant()))
                 {
-                    var existingAccount = existingAccounts.First(a => a.SubaccountTag.Equals(tag, StringComparison.OrdinalIgnoreCase));
-                    existingAccount.SetBybitUid(member.Uid);
+                    var existingAccount = existingAccounts.First(a => a.Name.Equals(tag, StringComparison.OrdinalIgnoreCase));
+                    existingAccount.SetExternalId(member.Uid);
+                    existingAccount.SetExchange("Bybit");
                     matched++;
-                    _logger.LogInformation("SyncBybitAccounts: sub-account '{Tag}' matched by name, set BybitUid {Uid} for user {UserId}", tag, member.Uid, request.UserId);
+                    _logger.LogInformation("SyncBybitAccounts: sub-account '{Name}' matched by name, set ExternalId {Uid} for user {UserId}", tag, member.Uid, request.UserId);
                     continue;
                 }
 
-                var newAccount = new Account(tag, request.UserId);
-                newAccount.SetBybitUid(member.Uid);
+                var newAccount = new Account(tag, request.UserId, EAccountType.Exchange, "Bybit", member.Uid);
                 _context.Accounts.Add(newAccount);
                 created++;
-                _logger.LogInformation("SyncBybitAccounts: created account '{Tag}' (Bybit UID: {Uid}) for user {UserId}",
+                _logger.LogInformation("SyncBybitAccounts: created account '{Name}' (Bybit UID: {Uid}) for user {UserId}",
                     tag, member.Uid, request.UserId);
             }
             await _context.SaveChangesAsync(cancellationToken);

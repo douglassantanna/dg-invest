@@ -15,8 +15,8 @@ public record SaveBybitCredentialsCommand(
     string ApiKey,
     string ApiSecret,
     string WebhookSecret,
-    string? SubaccountTag = null,
-    string? BybitUid = null) : IRequest<Response>;
+    string? Name = null,
+    string? ExternalId = null) : IRequest<Response>;
 
 public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitCredentialsCommand>
 {
@@ -29,7 +29,7 @@ public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitC
         RuleFor(x => x.WebhookSecret).MaximumLength(255);
         When(x => x.AccountId == 0, () =>
         {
-            RuleFor(x => x.SubaccountTag).NotEmpty().MaximumLength(255);
+            RuleFor(x => x.Name).NotEmpty().MaximumLength(255);
         });
     }
 }
@@ -82,25 +82,30 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
     private async Task<Response> HandleCreateAndSave(SaveBybitCredentialsCommand request, CancellationToken cancellationToken)
     {
         var existingAccount = await _context.Accounts
-            .Where(a => a.SubaccountTag == request.SubaccountTag && a.UserId == request.UserId)
+            .Where(a => a.Name == request.Name && a.UserId == request.UserId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingAccount != null)
         {
-            _logger.LogError("SaveBybitCredentials: account with tag '{Tag}' already exists for user {UserId}", request.SubaccountTag, request.UserId);
-            return new Response($"An account with the name '{request.SubaccountTag}' already exists", false, 400);
+            _logger.LogError("SaveBybitCredentials: account with name '{Name}' already exists for user {UserId}", request.Name, request.UserId);
+            return new Response($"An account with the name '{request.Name}' already exists", false, 400);
         }
 
-        var account = new Account(request.SubaccountTag!, request.UserId);
-        if (!string.IsNullOrEmpty(request.BybitUid))
+        var account = new Account(
+            request.Name!,
+            request.UserId,
+            EAccountType.Exchange,
+            "Bybit",
+            string.IsNullOrEmpty(request.ExternalId) ? null : request.ExternalId);
+        if (!string.IsNullOrEmpty(request.ExternalId))
         {
-            account.SetBybitUid(request.BybitUid);
+            account.SetExternalId(request.ExternalId);
         }
 
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("SaveBybitCredentials: created account {AccountId} with tag '{Tag}' for user {UserId}", account.Id, request.SubaccountTag, request.UserId);
+        _logger.LogInformation("SaveBybitCredentials: created account {AccountId} with name '{Name}' for user {UserId}", account.Id, request.Name, request.UserId);
 
         return await SaveSecretsAsync(request.UserId, account.Id, request.ApiKey, request.ApiSecret, request.WebhookSecret, cancellationToken);
     }

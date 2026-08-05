@@ -11,7 +11,7 @@ public record GetCredentialsStatusQuery(int UserId) : IRequest<Response>;
 
 public record CredentialsStatusDto(
     int AccountId,
-    string AccountTag,
+    string AccountName,
     bool HasApiKey,
     bool HasApiSecret,
     bool HasWebhookSecret);
@@ -31,7 +31,7 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
     {
         var accounts = await _context.Accounts
             .Where(a => a.UserId == request.UserId)
-            .OrderBy(a => a.SubaccountTag)
+            .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 
         var results = new List<CredentialsStatusDto>();
@@ -46,7 +46,7 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
 
             results.Add(new CredentialsStatusDto(
                 AccountId: account.Id,
-                AccountTag: account.SubaccountTag,
+                AccountName: account.Name,
                 HasApiKey: !string.IsNullOrEmpty(apiKey),
                 HasApiSecret: !string.IsNullOrEmpty(apiSecret),
                 HasWebhookSecret: !string.IsNullOrEmpty(webhookSecret)));

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace api.Exchanges.Commands;
 
-public record MapBybitAccountCommand(int UserId, int AccountId, string BybitUid) : IRequest<Response>;
+public record MapBybitAccountCommand(int UserId, int AccountId, string ExternalId) : IRequest<Response>;
 
 public class MapBybitAccountCommandValidator : AbstractValidator<MapBybitAccountCommand>
 {
@@ -14,7 +14,7 @@ public class MapBybitAccountCommandValidator : AbstractValidator<MapBybitAccount
     {
         RuleFor(x => x.UserId).GreaterThan(0);
         RuleFor(x => x.AccountId).GreaterThan(0);
-        RuleFor(x => x.BybitUid).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.ExternalId).NotEmpty().MaximumLength(50);
     }
 }
 
@@ -41,9 +41,9 @@ public class MapBybitAccountCommandHandler : IRequestHandler<MapBybitAccountComm
 
         // Ensure the UID is not already mapped to a different account.
         var alreadyMapped = await _context.Accounts
-            .AnyAsync(a => a.BybitUid == request.BybitUid && a.Id != request.AccountId, cancellationToken);
+            .AnyAsync(a => a.ExternalId == request.ExternalId && a.Id != request.AccountId, cancellationToken);
         if (alreadyMapped)
-            return new Response($"Bybit UID '{request.BybitUid}' is already mapped to another account", false, 400);
+            return new Response($"Bybit UID '{request.ExternalId}' is already mapped to another account", false, 400);
 
         var account = await _context.Accounts
             .FirstOrDefaultAsync(a => a.Id == request.AccountId && a.UserId == request.UserId, cancellationToken);
@@ -54,13 +54,14 @@ public class MapBybitAccountCommandHandler : IRequestHandler<MapBybitAccountComm
             return new Response("Account not found", false, 404);
         }
 
-        account.SetBybitUid(request.BybitUid);
+        account.SetExternalId(request.ExternalId);
+        account.SetExchange("Bybit");
         _context.Accounts.Update(account);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("MapBybitAccount: account '{Tag}' (id {AccountId}) mapped to Bybit UID {Uid}",
-            account.SubaccountTag, account.Id, request.BybitUid);
+        _logger.LogInformation("MapBybitAccount: account '{Name}' (id {AccountId}) mapped to Bybit UID {Uid}",
+            account.Name, account.Id, request.ExternalId);
 
-        return new Response($"Account '{account.SubaccountTag}' linked to Bybit UID {request.BybitUid}", true);
+        return new Response($"Account '{account.Name}' linked to Bybit UID {request.ExternalId}", true);
     }
 }

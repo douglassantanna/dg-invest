@@ -19,7 +19,7 @@ public record BybitConnectionGroupDto(
 public record BybitSubaccountRowDto(
     int AccountId,
     string Name,
-    string? BybitUid,
+    string? ExternalId,
     string Status,
     bool HasApiKey,
     bool HasApiSecret,
@@ -44,7 +44,7 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
     {
         var accounts = await _context.Accounts
             .Where(a => a.UserId == request.UserId)
-            .OrderBy(a => a.SubaccountTag)
+            .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 
         var syncStatuses = await _context.SyncStatuses
@@ -100,8 +100,8 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
             rows.Add(new BybitSubaccountRowDto(
                 AccountId: account.Id,
-                Name: account.SubaccountTag,
-                BybitUid: account.BybitUid,
+                Name: account.Name,
+                ExternalId: account.ExternalId,
                 Status: status,
                 HasApiKey: hasApiKey,
                 HasApiSecret: hasApiSecret,

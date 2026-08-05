@@ -43,7 +43,7 @@ public class GetSyncStatusesQueryHandlerTests
         var data = result.Data as List<SyncStatusDto>;
         data.Should().HaveCount(1);
         data![0].AccountId.Should().Be(account.Id);
-        data[0].AccountTag.Should().Be("main");
+        data[0].AccountName.Should().Be("main");
         data[0].ExchangeName.Should().Be("Bybit");
         data[0].Status.Should().Be("Disconnected");
     }

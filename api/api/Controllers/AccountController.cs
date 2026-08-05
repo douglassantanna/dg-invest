@@ -42,7 +42,7 @@ public class AccountController(IMediator mediator) : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
         }
 
-        CreateAccountCommand command = new(userId, request.SubaccountTag);
+        CreateAccountCommand command = new(userId, request.Name);
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {

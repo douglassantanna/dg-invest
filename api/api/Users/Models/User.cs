@@ -41,18 +41,18 @@ public class User : Entity
                 account.Deselect();
         }
     }
-    internal Response AddAccount(string subaccountTag)
+    internal Response AddAccount(string name)
     {
-        var accountExists = Accounts.Any(x => x.SubaccountTag.Equals(subaccountTag, StringComparison.OrdinalIgnoreCase));
+        var accountExists = Accounts.Any(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (accountExists)
-            return new Response($"Subaccount tag '{subaccountTag}' already exists for this user.", false);
+            return new Response($"Account name '{name}' already exists for this user.", false);
 
-        _accounts.Add(new Account(subaccountTag, Id));
+        _accounts.Add(new Account(name, Id));
         return new Response("", true);
     }
 
-    internal Account? GetAccountByTag(string subaccountTag)
-        => Accounts.FirstOrDefault(x => x.SubaccountTag.Equals(subaccountTag, StringComparison.OrdinalIgnoreCase));
+    internal Account? GetAccountByName(string name)
+        => Accounts.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
 
     internal void Update(string fullname, string email)

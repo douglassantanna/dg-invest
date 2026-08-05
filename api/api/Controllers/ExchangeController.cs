@@ -66,8 +66,8 @@ public class ExchangeController : ControllerBase
             request.ApiKey,
             request.ApiSecret,
             request.WebhookSecret,
-            request.SubaccountTag,
-            request.BybitUid);
+            request.Name,
+            request.ExternalId);
 
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
@@ -120,7 +120,7 @@ public class ExchangeController : ControllerBase
         if (userId == null)
             return Unauthorized(new Response("Invalid user ID", false));
 
-        var result = await _mediator.Send(new MapBybitAccountCommand(userId.Value, request.AccountId, request.BybitUid));
+        var result = await _mediator.Send(new MapBybitAccountCommand(userId.Value, request.AccountId, request.ExternalId));
         if (!result.IsSuccess)
             return BadRequest(result);
 
@@ -220,5 +220,5 @@ public class ExchangeController : ControllerBase
     }
 }
 
-public record SaveBybitCredentialsRequest(int AccountId, string ApiKey, string ApiSecret, string WebhookSecret, string? SubaccountTag = null, string? BybitUid = null);
-public record MapBybitAccountRequest(int AccountId, string BybitUid);
+public record SaveBybitCredentialsRequest(int AccountId, string ApiKey, string ApiSecret, string WebhookSecret, string? Name = null, string? ExternalId = null);
+public record MapBybitAccountRequest(int AccountId, string ExternalId);

@@ -5,8 +5,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Users.Commands;
-public record CreateAccountCommand(int UserId, string SubaccountTag) : IRequest<Response>;
-public record CreateAccountRequest(string SubaccountTag);
+public record CreateAccountCommand(int UserId, string Name) : IRequest<Response>;
+public record CreateAccountRequest(string Name);
 public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand, Response>
 {
     private readonly IUserRepository _userRepository;
@@ -29,7 +29,7 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
                 _logger.LogError("CreateAccountCommandHandler. User not found for UserId: {0}", request.UserId);
                 return new Response("User not found", false, 404);
             }
-            var createAccountResult = userResult.Value.AddAccount(request.SubaccountTag);
+            var createAccountResult = userResult.Value.AddAccount(request.Name);
             if (!createAccountResult.IsSuccess)
             {
                 _logger.LogError("CreateAccountCommandHandler. Error creating account for UserId: {0}; Error: {1}", request.UserId, createAccountResult.Message);

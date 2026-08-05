@@ -9,7 +9,7 @@ public record GetExchangeAccountsQuery(int UserId) : IRequest<Response>;
 
 public record ExchangeAccountDto(
     int AccountId,
-    string AccountTag,
+    string AccountName,
     string ExchangeName,
     string Status,
     DateTime? LastSyncAt,
@@ -29,7 +29,7 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
     {
         var accounts = await _context.Accounts
             .Where(a => a.UserId == request.UserId)
-            .Select(a => new { a.Id, a.SubaccountTag })
+            .Select(a => new { a.Id, a.Name })
             .ToListAsync(cancellationToken);
 
         var syncStatuses = await _context.SyncStatuses
@@ -51,7 +51,7 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
                 {
                     result.Add(new ExchangeAccountDto(
                         account.Id,
-                        account.SubaccountTag,
+                        account.Name,
                         s.ExchangeName,
                         s.Status,
                         s.LastSyncAt,
@@ -63,7 +63,7 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
             {
                 result.Add(new ExchangeAccountDto(
                     account.Id,
-                    account.SubaccountTag,
+                    account.Name,
                     string.Empty,
                     "NotConfigured",
                     null,

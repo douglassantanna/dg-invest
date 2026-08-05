@@ -11,11 +11,13 @@ public class AccountTests
         var account = new Account("main", 1);
 
         // Assert
-        account.SubaccountTag.Should().Be("main");
+        account.Name.Should().Be("main");
         account.UserId.Should().Be(1);
         account.IsSelected.Should().BeTrue(); // main account is selected by default
         account.CryptoAssets.Should().BeEmpty();
         account.Balance.Should().Be(0);
+        account.AccountType.Should().Be(EAccountType.Manual);
+        account.Enabled.Should().BeTrue();
     }
 
     [Fact]
@@ -25,7 +27,7 @@ public class AccountTests
         var account = new Account("sub1", 1);
 
         // Assert
-        account.SubaccountTag.Should().Be("sub1");
+        account.Name.Should().Be("sub1");
         account.IsSelected.Should().BeFalse();
     }
 
