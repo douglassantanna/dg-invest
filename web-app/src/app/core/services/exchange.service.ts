@@ -27,8 +27,8 @@ export class ExchangeService {
     return this.http.get<Response<any>>(`${url}/bybit/sub-members`);
   }
 
-  mapBybitAccount(accountId: number, bybitUid: string): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/map-account`, { accountId, bybitUid });
+  mapBybitAccount(accountId: number, externalId: string): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/map-account`, { accountId, externalId });
   }
 
   getCredentialsStatus(): Observable<Response<CredentialsStatusDto[]>> {
