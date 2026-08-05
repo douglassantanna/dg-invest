@@ -83,9 +83,9 @@ namespace api.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Accounts_ExternalId",
+                name: "IX_Accounts_UserId_Exchange_ExternalId",
                 table: "Accounts",
-                column: "ExternalId",
+                columns: new[] { "UserId", "Exchange", "ExternalId" },
                 unique: true,
                 filter: "[ExternalId] IS NOT NULL");
 
@@ -103,7 +103,7 @@ namespace api.Data.Migrations
                 name: "ExchangeIntegrations");
 
             migrationBuilder.DropIndex(
-                name: "IX_Accounts_ExternalId",
+                name: "IX_Accounts_UserId_Exchange_ExternalId",
                 table: "Accounts");
 
             migrationBuilder.DropColumn(

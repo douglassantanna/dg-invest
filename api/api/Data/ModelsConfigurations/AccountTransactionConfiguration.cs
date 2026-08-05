@@ -26,6 +26,8 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.Name).HasColumnType("varchar").HasMaxLength(255);
         builder.Property(x => x.Exchange).HasColumnType("varchar").HasMaxLength(50);
         builder.Property(x => x.ExternalId).HasColumnType("varchar").HasMaxLength(50);
-        builder.HasIndex(x => x.ExternalId).IsUnique().HasFilter("[ExternalId] IS NOT NULL");
+        builder.HasIndex(x => new { x.UserId, x.Exchange, x.ExternalId })
+            .IsUnique()
+            .HasFilter("[ExternalId] IS NOT NULL");
     }
 }

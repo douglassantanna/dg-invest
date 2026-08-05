@@ -66,9 +66,8 @@ public class MapBybitAccountCommandHandlerTests
     [Fact]
     public async Task Handle_WhenUidAlreadyMappedToDifferentAccount_ShouldReturnConflict()
     {
-        var account1 = new Account("sub1", 1);
+        var account1 = new Account("sub1", 1, EAccountType.Exchange, "Bybit", "UID-001");
         var account2 = new Account("sub2", 1);
-        account1.SetExternalId("UID-001");
         _context.Accounts.AddRange(account1, account2);
         await _context.SaveChangesAsync();
 
@@ -79,6 +78,24 @@ public class MapBybitAccountCommandHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Data.Should().Be(400);
         result.Message.Should().Contain("already mapped");
+    }
+
+    [Fact]
+    public async Task Handle_WhenUidIsMappedByDifferentUser_ShouldAllowMapping()
+    {
+        var firstUserAccount = new Account("sub1", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var secondUserAccount = new Account("sub2", 2);
+        _context.Accounts.AddRange(firstUserAccount, secondUserAccount);
+        await _context.SaveChangesAsync();
+
+        var command = new MapBybitAccountCommand(UserId: 2, AccountId: secondUserAccount.Id, ExternalId: "UID-001");
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var saved = await _context.Accounts.FindAsync(secondUserAccount.Id);
+        saved!.ExternalId.Should().Be("UID-001");
+        saved.Exchange.Should().Be("Bybit");
     }
 
     [Fact]

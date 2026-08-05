@@ -41,7 +41,12 @@ public class MapBybitAccountCommandHandler : IRequestHandler<MapBybitAccountComm
 
         // Ensure the UID is not already mapped to a different account.
         var alreadyMapped = await _context.Accounts
-            .AnyAsync(a => a.ExternalId == request.ExternalId && a.Id != request.AccountId && !a.IsDeleted, cancellationToken);
+            .AnyAsync(a => a.UserId == request.UserId
+                           && a.Exchange == "Bybit"
+                           && a.ExternalId == request.ExternalId
+                           && a.Id != request.AccountId
+                           && !a.IsDeleted,
+                cancellationToken);
         if (alreadyMapped)
             return new Response($"Bybit UID '{request.ExternalId}' is already mapped to another account", false, 400);
 

@@ -67,7 +67,7 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalId")
+                    b.HasIndex("UserId", "Exchange", "ExternalId")
                         .IsUnique()
                         .HasFilter("[ExternalId] IS NOT NULL");
 
