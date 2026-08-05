@@ -9,7 +9,7 @@ export interface BybitConnectionGroupDto {
 export interface BybitSubaccountRowDto {
   accountId: number;
   name: string;
-  bybitUid: string | null;
+  externalId: string | null;
   status: string;
   hasApiKey: boolean;
   hasApiSecret: boolean;

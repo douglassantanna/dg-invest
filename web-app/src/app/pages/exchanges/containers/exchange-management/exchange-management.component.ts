@@ -100,7 +100,7 @@ export class ExchangeManagementComponent implements OnInit {
     this.editingSubaccount = subaccount;
     this.selectedGroupId = groupId;
     this.formName = subaccount.name;
-    this.formUid = subaccount.bybitUid ?? '';
+    this.formUid = subaccount.externalId ?? '';
     this.formApiKey = '';
     this.formApiSecret = '';
     this.formWebhookSecret = '';
