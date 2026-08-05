@@ -44,6 +44,10 @@
         [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />
     </div>
   </div>
+
+  <p class="text-xs text-gray-400 dark:text-gray-500 mt-4">
+    Data provided by <a href="https://coinmarketcap.com" target="_blank" rel="noopener" class="underline hover:text-gray-600 dark:hover:text-gray-300">CoinMarketCap</a>
+  </p>
 </div>
 
 @if (isModalOpen()) {
