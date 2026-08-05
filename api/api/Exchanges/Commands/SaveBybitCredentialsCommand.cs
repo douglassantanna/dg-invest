@@ -30,7 +30,13 @@ public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitC
         When(x => x.AccountId == 0, () =>
         {
             RuleFor(x => x.Name).NotEmpty().MaximumLength(255);
+            RuleFor(x => x.ApiKey).NotEmpty();
+            RuleFor(x => x.ApiSecret).NotEmpty();
         });
+        When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiKey), () =>
+            RuleFor(x => x.ApiSecret).NotEmpty().WithMessage("API secret is required when replacing the API key."));
+        When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiSecret), () =>
+            RuleFor(x => x.ApiKey).NotEmpty().WithMessage("API key is required when replacing the API secret."));
     }
 }
 
@@ -76,7 +82,20 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
             return new Response("Account not found", false, 404);
         }
 
-        return await SaveSecretsAsync(request.UserId, request.AccountId, request.ApiKey, request.ApiSecret, request.WebhookSecret, cancellationToken);
+        var replaceApiCredentials = !string.IsNullOrWhiteSpace(request.ApiKey);
+        var replaceWebhookSecret = !string.IsNullOrWhiteSpace(request.WebhookSecret);
+        if (!replaceApiCredentials && !replaceWebhookSecret)
+            return new Response("No credential changes supplied", true);
+
+        return await SaveSecretsAsync(
+            request.UserId,
+            request.AccountId,
+            request.ApiKey,
+            request.ApiSecret,
+            request.WebhookSecret,
+            replaceApiCredentials,
+            replaceWebhookSecret,
+            cancellationToken);
     }
 
     private async Task<Response> HandleCreateAndSave(SaveBybitCredentialsCommand request, CancellationToken cancellationToken)
@@ -107,10 +126,26 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
 
         _logger.LogInformation("SaveBybitCredentials: created account {AccountId} with name '{Name}' for user {UserId}", account.Id, request.Name, request.UserId);
 
-        return await SaveSecretsAsync(request.UserId, account.Id, request.ApiKey, request.ApiSecret, request.WebhookSecret, cancellationToken);
+        return await SaveSecretsAsync(
+            request.UserId,
+            account.Id,
+            request.ApiKey,
+            request.ApiSecret,
+            request.WebhookSecret,
+            replaceApiCredentials: true,
+            replaceWebhookSecret: !string.IsNullOrWhiteSpace(request.WebhookSecret),
+            cancellationToken: cancellationToken);
     }
 
-    private async Task<Response> SaveSecretsAsync(int userId, int accountId, string apiKey, string apiSecret, string webhookSecret, CancellationToken cancellationToken)
+    private async Task<Response> SaveSecretsAsync(
+        int userId,
+        int accountId,
+        string apiKey,
+        string apiSecret,
+        string webhookSecret,
+        bool replaceApiCredentials,
+        bool replaceWebhookSecret,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -124,9 +159,14 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
             syncStatus.MarkCredentialsSet();
             await _context.SaveChangesAsync(cancellationToken);
 
-            await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "api-key"), apiKey);
-            await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "api-secret"), apiSecret);
-            await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "webhook-secret"), webhookSecret);
+            if (replaceApiCredentials)
+            {
+                await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "api-key"), apiKey);
+                await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "api-secret"), apiSecret);
+            }
+
+            if (replaceWebhookSecret)
+                await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "webhook-secret"), webhookSecret);
 
             _logger.LogInformation("Bybit credentials saved for user {UserId}, account {AccountId}", userId, accountId);
             return new Response("Credentials saved successfully", true);

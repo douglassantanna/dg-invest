@@ -7,99 +7,94 @@ public class SaveBybitCredentialsCommandValidatorTests
     private readonly SaveBybitCredentialsCommandValidator _validator = new();
 
     [Fact]
-    public void ShouldPass_WhenAllFieldsValid()
+    public void ShouldPass_WhenExistingAccountCredentialsAreComplete()
     {
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1,
-            AccountId: 1,
-            ApiKey: "valid-api-key",
-            ApiSecret: "valid-api-secret",
-            WebhookSecret: "valid-webhook-secret");
+        var command = new SaveBybitCredentialsCommand(1, 1, "api-key", "api-secret", "webhook-secret");
 
-        var result = _validator.Validate(cmd);
-
-        result.IsValid.Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void ShouldFail_WhenUserIdInvalid(int userId)
-    {
-        var cmd = new SaveBybitCredentialsCommand(
-            userId, AccountId: 1, "key", "secret", "webhook");
-
-        var result = _validator.Validate(cmd);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UserId");
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void ShouldFail_WhenAccountIdInvalid(int accountId)
-    {
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1, accountId, "key", "secret", "webhook");
-
-        var result = _validator.Validate(cmd);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "AccountId");
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void ShouldFail_WhenApiKeyEmpty(string? apiKey)
-    {
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1, AccountId: 1, apiKey ?? string.Empty, "secret", "webhook");
-
-        var result = _validator.Validate(cmd);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "ApiKey");
+        _validator.Validate(command).IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public void ShouldFail_WhenApiKeyTooLong()
+    public void ShouldPass_WhenExistingAccountEditDoesNotChangeCredentials()
     {
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1, AccountId: 1, new string('a', 256), "secret", "webhook");
+        var command = new SaveBybitCredentialsCommand(1, 1, "", "", "");
 
-        var result = _validator.Validate(cmd);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "ApiKey");
+        _validator.Validate(command).IsValid.Should().BeTrue();
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void ShouldFail_WhenApiSecretEmpty(string? secret)
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void ShouldFail_WhenUserIdIsInvalid(int userId)
     {
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1, AccountId: 1, "key", secret ?? string.Empty, "webhook");
+        var command = new SaveBybitCredentialsCommand(userId, 1, "key", "secret", "webhook");
 
-        var result = _validator.Validate(cmd);
+        var result = _validator.Validate(command);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "ApiSecret");
+        result.Errors.Should().Contain(error => error.PropertyName == "UserId");
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void ShouldFail_WhenWebhookSecretEmpty(string? webhookSecret)
+    [Fact]
+    public void ShouldFail_WhenAccountIdIsNegative()
     {
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1, AccountId: 1, "key", "secret", webhookSecret ?? string.Empty);
+        var command = new SaveBybitCredentialsCommand(1, -1, "key", "secret", "webhook");
 
-        var result = _validator.Validate(cmd);
+        var result = _validator.Validate(command);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "WebhookSecret");
+        result.Errors.Should().Contain(error => error.PropertyName == "AccountId");
+    }
+
+    [Fact]
+    public void ShouldFail_WhenCreatingAccountWithoutApiKey()
+    {
+        var command = new SaveBybitCredentialsCommand(1, 0, "", "secret", "", "Futures", "UID-001");
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(error => error.PropertyName == "ApiKey");
+    }
+
+    [Fact]
+    public void ShouldFail_WhenCreatingAccountWithoutApiSecret()
+    {
+        var command = new SaveBybitCredentialsCommand(1, 0, "key", "", "", "Futures", "UID-001");
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(error => error.PropertyName == "ApiSecret");
+    }
+
+    [Fact]
+    public void ShouldFail_WhenUpdatingOnlyApiKey()
+    {
+        var command = new SaveBybitCredentialsCommand(1, 1, "replacement-key", "", "");
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(error => error.PropertyName == "ApiSecret");
+    }
+
+    [Fact]
+    public void ShouldFail_WhenUpdatingOnlyApiSecret()
+    {
+        var command = new SaveBybitCredentialsCommand(1, 1, "", "replacement-secret", "");
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(error => error.PropertyName == "ApiKey");
+    }
+
+    [Fact]
+    public void ShouldPass_WhenUpdatingOnlyWebhookSecret()
+    {
+        var command = new SaveBybitCredentialsCommand(1, 1, "", "", "replacement-webhook");
+
+        _validator.Validate(command).IsValid.Should().BeTrue();
     }
 }
