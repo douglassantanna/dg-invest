@@ -117,7 +117,7 @@ jobs:
           dotnet-version: "8.x"
 
       - name: Install dotnet-ef tool
-        run: dotnet tool install --global dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 8.0.7
 
       - name: Apply database migrations
         env:
