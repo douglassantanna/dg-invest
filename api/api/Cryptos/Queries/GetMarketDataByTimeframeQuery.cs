@@ -167,9 +167,10 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
         {
             const long oneWeekInterval = 7 * 86400;
             groupedData = new List<MarketDataPointDto>();
-            for (var time = startTime; time < now_aligned; time += oneWeekInterval)
+            // Advance using the aligned bucket cursor so buckets stay contiguous
+            // and the last bucket reaches now_aligned, including recent snapshots.
+            for (var bucketStart = (startTime / oneWeekInterval) * oneWeekInterval; bucketStart < now_aligned; bucketStart += oneWeekInterval)
             {
-                var bucketStart = (time / oneWeekInterval) * oneWeekInterval;
                 var bucketEnd = bucketStart + oneWeekInterval;
                 var lastSnapshot = snapshots
                     .Where(s => s.Time >= bucketStart && s.Time < bucketEnd)
