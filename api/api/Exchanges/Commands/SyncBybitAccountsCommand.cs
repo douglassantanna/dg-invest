@@ -73,8 +73,8 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             }
 
             var existingAccounts = user.Accounts.Where(a => !a.IsDeleted).ToList();
-            var existingBybitUids = existingAccounts.Where(a => a.ExternalId != null)
-                                                    .ToDictionary(a => a.ExternalId!, a => a);
+            var existingBybitUids = user.Accounts.Where(a => a.ExternalId != null)
+                                                .ToDictionary(a => a.ExternalId!, a => a);
             var existingNames = existingAccounts.Select(a => a.Name.ToLowerInvariant())
                                                .ToHashSet();
 

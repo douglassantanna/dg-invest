@@ -107,6 +107,23 @@ Use these credentials:
 - password: admin123
 
 ---
+### Testing
+
+Run the backend test suite from the `api` directory:
+
+```bash
+dotnet test unit-tests/unit-tests.csproj
+```
+
+Docker Desktop must be running. The suite includes API integration tests that start a disposable SQL Server instance with Testcontainers, apply the production EF Core migrations, and call the authenticated Account and Exchange endpoints through the full ASP.NET Core pipeline. Key Vault, Bybit, and Blob Storage are replaced with in-memory test doubles so no external credentials or network calls are required.
+
+To run only the Exchange API integration flow:
+
+```bash
+dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~ExchangeControllerIntegrationTests
+```
+
+---
 #### Running everything locally (standalone)
 #### 1. Installation steps
 Install SQL Server Express, Azure Functions Core Tools, Azurite (VS Code extension or npm), .NET 8, EF Core tools, Node.js V18+, NPM and Angular CLI V18

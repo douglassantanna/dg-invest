@@ -59,8 +59,7 @@ public class MapBybitAccountCommandHandler : IRequestHandler<MapBybitAccountComm
             return new Response("Account not found", false, 404);
         }
 
-        account.SetExternalId(request.ExternalId);
-        account.SetExchange("Bybit");
+        account.ConfigureExchange("Bybit", request.ExternalId);
         _context.Accounts.Update(account);
         await _context.SaveChangesAsync(cancellationToken);
 

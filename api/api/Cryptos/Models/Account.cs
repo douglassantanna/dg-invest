@@ -38,6 +38,12 @@ public class Account : Entity
 
     public void SetExternalId(string externalId) => ExternalId = externalId;
     public void SetExchange(string exchange) => Exchange = exchange;
+    public void ConfigureExchange(string exchange, string externalId)
+    {
+        AccountType = EAccountType.Exchange;
+        Exchange = exchange;
+        ExternalId = externalId;
+    }
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;
     public void ToggleEnabled() => Enabled = !Enabled;
