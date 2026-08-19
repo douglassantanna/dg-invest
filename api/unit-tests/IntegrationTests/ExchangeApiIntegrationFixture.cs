@@ -10,6 +10,7 @@ using api.Users.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -26,7 +27,7 @@ public sealed class ExchangeApiIntegrationCollection : ICollectionFixture<Exchan
 public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
 {
     private readonly MsSqlContainer _database = new MsSqlBuilder()
-        .WithPassword("P@ssw0rd!123")
+        .WithPassword($"T{Guid.NewGuid():N}aA1!")
         .Build();
 
     public ExchangeApiFactory Factory { get; private set; } = null!;
@@ -92,6 +93,15 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
     {
         builder.UseSetting("ConnectionStrings:DefaultConnection", _connectionString);
         builder.UseSetting("JWTSettings:Secret", JwtSecret);
+        builder.UseSetting("RateLimiterSettings:RequestsPermitLimit", "1000");
+        builder.UseSetting("RateLimiterSettings:WindowLimitInMinutes", "1");
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:DefaultConnection"] = _connectionString,
+            ["JWTSettings:Secret"] = JwtSecret,
+            ["RateLimiterSettings:RequestsPermitLimit"] = "1000",
+            ["RateLimiterSettings:WindowLimitInMinutes"] = "1",
+        }));
         builder.UseEnvironment("Testing");
         builder.ConfigureServices(services =>
         {

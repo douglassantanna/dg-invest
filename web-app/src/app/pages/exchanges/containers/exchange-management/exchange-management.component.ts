@@ -1,33 +1,27 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
 import { BybitConnectionGroupDto, BybitSubaccountRowDto } from 'src/app/core/models/bybit-connection-group';
-import { ModalComponent } from 'src/app/layout/modal/modal.component';
+import { SyncStatusDto } from 'src/app/core/models/sync-status';
+
+interface ExchangeAccount extends BybitSubaccountRowDto {
+  lastSyncAt: string | null;
+}
 
 @Component({
   selector: 'app-exchange-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule],
   templateUrl: './exchange-management.component.html',
 })
 export class ExchangeManagementComponent implements OnInit {
   private exchangeService = inject(ExchangeService);
 
-  groups: BybitConnectionGroupDto[] = [];
-  loading = false;
-
-  showModal = false;
-  editingSubaccount: BybitSubaccountRowDto | null = null;
-  selectedGroupId: string | null = null;
-
-  formName = '';
-  formUid = '';
-  formApiKey = '';
-  formApiSecret = '';
-  formWebhookSecret = '';
-  formSaving = false;
-
+  accounts: ExchangeAccount[] = [];
+  loading = true;
+  syncingAccounts = false;
   testingAccountId: number | null = null;
   togglingAccountId: number | null = null;
   toastMessage = '';
@@ -35,204 +29,111 @@ export class ExchangeManagementComponent implements OnInit {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    this.loadGroups();
+    this.loadAccounts();
   }
 
-  loadGroups(): void {
-    this.loading = true;
-    this.exchangeService.getBybitConnectionGroups().subscribe({
-      next: (res) => {
-        this.groups = res.data ?? [];
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      },
-    });
+  get configuredAccountCount(): number {
+    return this.accounts.filter((account) => account.hasApiKey && account.hasApiSecret).length;
   }
 
-  toggleGroup(groupId: string): void {
-    const group = this.groups.find((g) => g.id === groupId);
-    if (!group) return;
-    (group as any).collapsed = !(group as any).collapsed;
+  get enabledAccountCount(): number {
+    return this.accounts.filter((account) => account.isEnabled).length;
   }
 
-  isCollapsed(groupId: string): boolean {
-    const group = this.groups.find((g) => g.id === groupId);
-    return !!(group as any)?.collapsed;
-  }
-
-  statusMeta(status: string): { label: string; cls: string } {
+  statusMeta(status: string): { label: string; classes: string } {
     switch (status) {
       case 'ok':
-        return { label: 'Connected', cls: 'ok' };
+        return { label: 'Connected', classes: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
       case 'err':
-        return { label: 'Error', cls: 'err' };
+        return { label: 'Error', classes: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' };
       case 'paused':
-        return { label: 'Paused', cls: 'paused' };
-      case 'pending':
-        return { label: 'No key', cls: 'pending' };
+        return { label: 'Sync disabled', classes: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
       default:
-        return { label: status, cls: 'paused' };
+        return { label: 'Needs setup', classes: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
     }
   }
 
-  okCount(subaccounts: BybitSubaccountRowDto[]): number {
-    return subaccounts.filter((s) => s.status === 'ok').length;
-  }
-
-  errCount(subaccounts: BybitSubaccountRowDto[]): number {
-    return subaccounts.filter((s) => s.status === 'err').length;
-  }
-
-  openAddModal(groupId: string): void {
-    this.editingSubaccount = null;
-    this.selectedGroupId = groupId;
-    this.formName = '';
-    this.formUid = '';
-    this.formApiKey = '';
-    this.formApiSecret = '';
-    this.formWebhookSecret = '';
-    this.showModal = true;
-  }
-
-  openEditModal(subaccount: BybitSubaccountRowDto, groupId: string): void {
-    this.editingSubaccount = subaccount;
-    this.selectedGroupId = groupId;
-    this.formName = subaccount.name;
-    this.formUid = subaccount.externalId ?? '';
-    this.formApiKey = '';
-    this.formApiSecret = '';
-    this.formWebhookSecret = '';
-    this.showModal = true;
-  }
-
-  closeModal(): void {
-    this.showModal = false;
-    this.editingSubaccount = null;
-    this.selectedGroupId = null;
-  }
-
-  saveSubaccount(): void {
-    const name = this.formName.trim();
-    const uid = this.formUid.trim();
-    if (!name || !uid) {
-      this.flashToast('Please fill in name and UID');
-      return;
-    }
-
-    const accountId = this.editingSubaccount?.accountId ?? 0;
-    if (this.editingSubaccount && accountId === 0) {
-      this.flashToast('Cannot determine account ID for edit');
-      return;
-    }
-
-    this.formSaving = true;
-    this.exchangeService
-      .saveBybitCredentials(
-        this.editingSubaccount ? accountId : 0,
-        this.formApiKey,
-        this.formApiSecret,
-        this.formWebhookSecret,
-        this.editingSubaccount ? undefined : name,
-        this.editingSubaccount ? undefined : uid
-      )
-      .subscribe({
-        next: (res) => {
-          this.formSaving = false;
-          if (res.isSuccess) {
-            this.flashToast(
-              this.editingSubaccount
-                ? `${name} updated`
-                : `${name} added`
-            );
-            this.closeModal();
-            this.loadGroups();
-          } else {
-            this.flashToast(res.message);
-          }
-        },
-        error: () => {
-          this.formSaving = false;
-          this.flashToast('Failed to save credentials');
-        },
-      });
-  }
-
-  testConnection(accountId: number, name: string): void {
-    this.testingAccountId = accountId;
-    this.flashToast(`Testing connection for "${name}"...`);
-    this.exchangeService.testBybitConnection(accountId).subscribe({
-      next: (res) => {
-        this.testingAccountId = null;
-        if (res.isSuccess) {
-          this.flashToast(`"${name}" validated successfully`);
-          this.loadGroups();
-        } else {
-          this.flashToast(`Failed to validate "${name}": ${res.message}`);
-        }
-      },
-      error: () => {
-        this.testingAccountId = null;
-        this.flashToast(`Failed to validate "${name}"`);
-      },
-    });
-  }
-
-  toggleEnabled(accountId: number, name: string, currentEnabled: boolean): void {
-    this.togglingAccountId = accountId;
-    this.exchangeService.toggleBybitAccount(accountId).subscribe({
-      next: () => {
-        this.togglingAccountId = null;
-        const newState = currentEnabled ? 'paused' : 'reactivated';
-        // We could use the response data, but simpler: just show toast and reload
-        this.flashToast(
-          `${name} ${newState}`
+  loadAccounts(): void {
+    this.loading = true;
+    forkJoin({
+      groups: this.exchangeService.getBybitConnectionGroups(),
+      statuses: this.exchangeService.getSyncStatuses(),
+    }).subscribe({
+      next: ({ groups, statuses }) => {
+        const statusByAccountId = new Map<number, SyncStatusDto>(
+          (statuses.data ?? []).map((status: SyncStatusDto) => [status.accountId, status])
         );
-        this.loadGroups();
+        const connectionGroups = (groups.data ?? []) as BybitConnectionGroupDto[];
+        this.accounts = connectionGroups.flatMap((group) => group.subaccounts).map((account) => ({
+          ...account,
+          lastSyncAt: statusByAccountId.get(account.accountId)?.lastSyncAt ?? null,
+        }));
+        this.loading = false;
       },
       error: () => {
+        this.loading = false;
+        this.flashToast('Failed to load Bybit accounts');
+      },
+    });
+  }
+
+  syncAccounts(): void {
+    this.syncingAccounts = true;
+    this.exchangeService.syncBybitAccounts().subscribe({
+      next: (response) => {
+        this.syncingAccounts = false;
+        this.flashToast(response.message);
+        if (response.isSuccess) this.loadAccounts();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.syncingAccounts = false;
+        this.flashToast(this.getErrorMessage(error, 'Account discovery failed'));
+      },
+    });
+  }
+
+  testConnection(account: ExchangeAccount): void {
+    this.testingAccountId = account.accountId;
+    this.exchangeService.testBybitConnection(account.accountId).subscribe({
+      next: (response) => {
+        this.testingAccountId = null;
+        this.flashToast(response.message);
+        if (response.isSuccess) this.loadAccounts();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.testingAccountId = null;
+        this.flashToast(this.getErrorMessage(error, `Failed to test ${account.name}`));
+      },
+    });
+  }
+
+  toggleAccount(account: ExchangeAccount): void {
+    this.togglingAccountId = account.accountId;
+    this.exchangeService.toggleBybitAccount(account.accountId).subscribe({
+      next: (response) => {
         this.togglingAccountId = null;
-        this.flashToast(`Failed to toggle "${name}"`);
+        this.flashToast(response.message);
+        if (response.isSuccess) this.loadAccounts();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.togglingAccountId = null;
+        this.flashToast(this.getErrorMessage(error, `Failed to update ${account.name}`));
       },
     });
   }
 
-  deleteSubaccount(accountId: number, name: string): void {
-    if (!confirm(`Remove "${name}"? The subaccount and its API credentials will be removed.`)) {
-      return;
-    }
-    this.exchangeService.deleteCredentials(accountId).subscribe({
-      next: (res) => {
-        if (res.isSuccess) {
-          this.flashToast(`${name} removed`);
-          this.loadGroups();
-        } else {
-          this.flashToast(res.message);
-        }
-      },
-      error: () => {
-        this.flashToast(`Failed to remove "${name}"`);
-      },
-    });
+  formatDate(value: string | null): string {
+    return value ? new Date(value).toLocaleString() : 'Never';
   }
 
-  copyWebhookUrl(webhookUrl: string): void {
-    const baseUrl = window.location.origin;
-    const fullUrl = `${baseUrl}${webhookUrl}`;
-    navigator.clipboard.writeText(fullUrl).then(() => {
-      this.flashToast('Webhook URL copied');
-    }).catch(() => {
-      this.flashToast('Failed to copy URL');
-    });
+  private getErrorMessage(error: HttpErrorResponse, fallback: string): string {
+    return typeof error.error?.message === 'string' ? error.error.message : fallback;
   }
 
-  private flashToast(message: string): void {
+  flashToast(message: string): void {
     this.toastMessage = message;
     this.showToast = true;
     if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => {
-      this.showToast = false;
-    }, 2500);
+    this.toastTimer = setTimeout(() => this.showToast = false, 2500);
   }
 }

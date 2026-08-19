@@ -14,7 +14,7 @@ public class AccountEvolutionMigrationTests
     public async Task EvolveAccountMigration_ShouldPreserveBybitMappingsAndScopeExternalIds()
     {
         await using var container = new MsSqlBuilder()
-            .WithPassword("P@ssw0rd!123")
+            .WithPassword($"T{Guid.NewGuid():N}aA1!")
             .Build();
         await container.StartAsync();
 
