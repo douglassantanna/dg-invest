@@ -3,6 +3,7 @@ using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
+using api.Exchanges.Models;
 using api.Exchanges.Services;
 using api.Models.Cryptos;
 using api.Shared;
@@ -171,6 +172,37 @@ public class ProcessBybitWebhookCommandHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
 
         _syncServiceMock.Verify(s => s.UpsertSyncStatusAsync(1, 1, "order-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenSyncIsDisabled_ShouldAcknowledgeWithoutProcessingOrders()
+    {
+        await SeedAccountAsync();
+        var syncStatus = new SyncStatus(1, 1, "Bybit");
+        syncStatus.ToggleEnabled();
+        _context.SyncStatuses.Add(syncStatus);
+        await _context.SaveChangesAsync();
+        _keyVaultMock
+            .Setup(v => v.GetSecretAsync(It.IsAny<string>()))
+            .ReturnsAsync("webhook-secret");
+        _bybitMock
+            .Setup(s => s.ValidateWebhookSignature(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+
+        var result = await _handler.Handle(_validCmd, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _syncServiceMock.Verify(s => s.ProcessOrderAsync(
+            It.IsAny<BybitOrderData>(),
+            It.IsAny<Account>(),
+            It.IsAny<int>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _syncServiceMock.Verify(s => s.UpsertSyncStatusAsync(
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
