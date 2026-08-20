@@ -58,6 +58,17 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
         if (!request.Payload.Topic.Equals("order", StringComparison.OrdinalIgnoreCase))
             return new Response("ok", true);
 
+        var syncStatus = await _context.SyncStatuses.FirstOrDefaultAsync(
+            status => status.UserId == request.UserId
+                      && status.AccountId == request.AccountId
+                      && status.ExchangeName == "Bybit",
+            cancellationToken);
+        if (syncStatus?.IsEnabled == false)
+        {
+            _logger.LogInformation("ProcessBybitWebhook: sync is disabled for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
+            return new Response("ok", true);
+        }
+
         var account = await _context.Accounts
             .Include(a => a.CryptoAssets)
                 .ThenInclude(ca => ca.Transactions)
