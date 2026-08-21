@@ -33,7 +33,7 @@ public class ProcessBybitOrdersCommandHandler : IRequestHandler<ProcessBybitOrde
         var account = await _context.Accounts
             .Include(a => a.CryptoAssets)
                 .ThenInclude(ca => ca.Transactions)
-            .FirstOrDefaultAsync(a => a.Id == request.AccountId && a.UserId == request.UserId, cancellationToken);
+            .FirstOrDefaultAsync(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted, cancellationToken);
 
         if (account == null)
         {

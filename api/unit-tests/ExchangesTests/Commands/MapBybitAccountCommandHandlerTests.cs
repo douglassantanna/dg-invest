@@ -27,20 +27,20 @@ public class MapBybitAccountCommandHandlerTests
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
 
-        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: account.Id, BybitUid: "UID-001");
+        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: account.Id, ExternalId: "UID-001");
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Message.Should().Contain("UID-001");
 
         var saved = await _context.Accounts.FindAsync(account.Id);
-        saved!.BybitUid.Should().Be("UID-001");
+        saved!.ExternalId.Should().Be("UID-001");
     }
 
     [Fact]
     public async Task Handle_WhenAccountNotFound_ShouldReturnNotFound()
     {
-        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: 999, BybitUid: "UID-001");
+        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: 999, ExternalId: "UID-001");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -55,7 +55,7 @@ public class MapBybitAccountCommandHandlerTests
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
 
-        var cmd = new MapBybitAccountCommand(UserId: 2, AccountId: account.Id, BybitUid: "UID-001");
+        var cmd = new MapBybitAccountCommand(UserId: 2, AccountId: account.Id, ExternalId: "UID-001");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -66,13 +66,12 @@ public class MapBybitAccountCommandHandlerTests
     [Fact]
     public async Task Handle_WhenUidAlreadyMappedToDifferentAccount_ShouldReturnConflict()
     {
-        var account1 = new Account("sub1", 1);
+        var account1 = new Account("sub1", 1, EAccountType.Exchange, "Bybit", "UID-001");
         var account2 = new Account("sub2", 1);
-        account1.SetBybitUid("UID-001");
         _context.Accounts.AddRange(account1, account2);
         await _context.SaveChangesAsync();
 
-        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: account2.Id, BybitUid: "UID-001");
+        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: account2.Id, ExternalId: "UID-001");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -82,14 +81,32 @@ public class MapBybitAccountCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenUidIsMappedByDifferentUser_ShouldAllowMapping()
+    {
+        var firstUserAccount = new Account("sub1", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var secondUserAccount = new Account("sub2", 2);
+        _context.Accounts.AddRange(firstUserAccount, secondUserAccount);
+        await _context.SaveChangesAsync();
+
+        var command = new MapBybitAccountCommand(UserId: 2, AccountId: secondUserAccount.Id, ExternalId: "UID-001");
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var saved = await _context.Accounts.FindAsync(secondUserAccount.Id);
+        saved!.ExternalId.Should().Be("UID-001");
+        saved.Exchange.Should().Be("Bybit");
+    }
+
+    [Fact]
     public async Task Handle_SameAccountCanRemaSameUid()
     {
         var account = new Account("sub1", 1);
-        account.SetBybitUid("UID-001");
+        account.SetExternalId("UID-001");
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
 
-        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: account.Id, BybitUid: "UID-001");
+        var cmd = new MapBybitAccountCommand(UserId: 1, AccountId: account.Id, ExternalId: "UID-001");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -99,7 +116,7 @@ public class MapBybitAccountCommandHandlerTests
     [Fact]
     public async Task Handle_WithInvalidInput_ShouldReturnValidationErrors()
     {
-        var cmd = new MapBybitAccountCommand(UserId: 0, AccountId: 0, BybitUid: "");
+        var cmd = new MapBybitAccountCommand(UserId: 0, AccountId: 0, ExternalId: "");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 

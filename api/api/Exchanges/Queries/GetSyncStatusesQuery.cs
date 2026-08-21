@@ -10,13 +10,16 @@ public record GetSyncStatusesQuery(int UserId) : IRequest<Response>;
 
 public record SyncStatusDto(
     int AccountId,
-    string? AccountTag,
+    string? AccountName,
     string ExchangeName,
     string Status,
     DateTime? LastSyncAt,
     string? LastOrderId,
     int ErrorCount,
-    string? LastErrorMessage);
+    string? LastErrorMessage)
+{
+    public string? AccountTag => AccountName;
+}
 
 public class GetSyncStatusesQueryHandler : IRequestHandler<GetSyncStatusesQuery, Response>
 {
@@ -29,12 +32,12 @@ public class GetSyncStatusesQueryHandler : IRequestHandler<GetSyncStatusesQuery,
         var statuses = await _context.SyncStatuses
             .Where(s => s.UserId == request.UserId)
             .Join(
-                _context.Accounts,
+                _context.Accounts.Where(a => !a.IsDeleted),
                 s => s.AccountId,
                 a => a.Id,
                 (s, a) => new SyncStatusDto(
                     s.AccountId,
-                    a.SubaccountTag,
+                    a.Name,
                     s.ExchangeName,
                     s.Status,
                     s.LastSyncAt,

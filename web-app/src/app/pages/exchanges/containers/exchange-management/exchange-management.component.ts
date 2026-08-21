@@ -1,206 +1,139 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
-import { AccountService } from 'src/app/core/services/account.service';
+import { BybitConnectionGroupDto, BybitSubaccountRowDto } from 'src/app/core/models/bybit-connection-group';
 import { SyncStatusDto } from 'src/app/core/models/sync-status';
-import { SyncLogEntry } from 'src/app/core/models/sync-log-entry';
-import { BybitSubMemberDto } from 'src/app/core/models/bybit-sub-member';
-import { CredentialsStatusDto } from 'src/app/core/models/credentials-status';
-import { ModalComponent } from 'src/app/layout/modal/modal.component';
+
+interface ExchangeAccount extends BybitSubaccountRowDto {
+  lastSyncAt: string | null;
+}
 
 @Component({
   selector: 'app-exchange-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule],
   templateUrl: './exchange-management.component.html',
 })
 export class ExchangeManagementComponent implements OnInit {
   private exchangeService = inject(ExchangeService);
-  private accountService = inject(AccountService);
 
-  accounts: { id: number; tag: string }[] = [];
-  selectedAccountId = 0;
-
-  // Credentials form
-  apiKey = '';
-  apiSecret = '';
-  webhookSecret = '';
-  savingCredentials = false;
-  credentialsMessage = '';
-
-  // Saved credentials
-  credentialsStatuses: CredentialsStatusDto[] = [];
-  loadingCredentialsStatus = false;
-  deletingCredentialAccountId: number | null = null;
-
-  // Sync accounts
-  syncing = false;
-  syncMessage = '';
-
-  // Sub-members
-  subMembers: BybitSubMemberDto[] = [];
-  loadingSubMembers = false;
-
-  // Sync statuses
-  syncStatuses: SyncStatusDto[] = [];
-  loadingStatuses = false;
-
-  // Sync logs
-  selectedLogAccountId = 0;
-  syncLogs: SyncLogEntry[] = [];
-  loadingLogs = false;
-  logDate = '';
+  accounts: ExchangeAccount[] = [];
+  loading = true;
+  syncingAccounts = false;
+  testingAccountId: number | null = null;
+  togglingAccountId: number | null = null;
+  toastMessage = '';
+  showToast = false;
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.loadAccounts();
-    this.loadSyncStatuses();
-    this.loadCredentialsStatus();
   }
 
-  private loadAccounts(): void {
-    this.accountService.getAccounts().subscribe({
-      next: (result) => {
-        this.accounts = result.map((a) => ({ id: a.id, tag: a.subaccountTag }));
-        if (this.accounts.length > 0) this.selectedAccountId = this.accounts[0].id;
+  get configuredAccountCount(): number {
+    return this.accounts.filter((account) => account.hasApiKey && account.hasApiSecret).length;
+  }
+
+  get enabledAccountCount(): number {
+    return this.accounts.filter((account) => account.isEnabled).length;
+  }
+
+  statusMeta(status: string): { label: string; classes: string } {
+    switch (status) {
+      case 'ok':
+        return { label: 'Connected', classes: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+      case 'err':
+        return { label: 'Error', classes: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' };
+      case 'paused':
+        return { label: 'Sync disabled', classes: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' };
+      default:
+        return { label: 'Needs setup', classes: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
+    }
+  }
+
+  loadAccounts(): void {
+    this.loading = true;
+    forkJoin({
+      groups: this.exchangeService.getBybitConnectionGroups(),
+      statuses: this.exchangeService.getSyncStatuses(),
+    }).subscribe({
+      next: ({ groups, statuses }) => {
+        const statusByAccountId = new Map<number, SyncStatusDto>(
+          (statuses.data ?? []).map((status: SyncStatusDto) => [status.accountId, status])
+        );
+        const connectionGroups = (groups.data ?? []) as BybitConnectionGroupDto[];
+        this.accounts = connectionGroups.flatMap((group) => group.subaccounts).map((account) => ({
+          ...account,
+          lastSyncAt: statusByAccountId.get(account.accountId)?.lastSyncAt ?? null,
+        }));
+        this.loading = false;
       },
-    });
-  }
-
-  selectedAccountTag(): string {
-    return this.accounts.find(a => a.id === this.selectedAccountId)?.tag ?? 'selected';
-  }
-
-  saveCredentials(): void {
-    if (!this.selectedAccountId) return;
-    this.savingCredentials = true;
-    this.credentialsMessage = '';
-    this.exchangeService
-      .saveBybitCredentials(this.selectedAccountId, this.apiKey, this.apiSecret, this.webhookSecret)
-      .subscribe({
-        next: (res) => {
-          this.credentialsMessage = res.message;
-          if (res.isSuccess) {
-            this.apiKey = '';
-            this.apiSecret = '';
-            this.webhookSecret = '';
-          }
-          this.savingCredentials = false;
-        },
-        error: () => {
-          this.credentialsMessage = 'Failed to save credentials';
-          this.savingCredentials = false;
-        },
-      });
-  }
-
-  loadCredentialsStatus(): void {
-    this.loadingCredentialsStatus = true;
-    this.exchangeService.getCredentialsStatus().subscribe({
-      next: (res) => {
-        this.credentialsStatuses = res.data ?? [];
-        this.loadingCredentialsStatus = false;
+      error: () => {
+        this.loading = false;
+        this.flashToast('Failed to load Bybit accounts');
       },
-      error: () => this.loadingCredentialsStatus = false,
-    });
-  }
-
-  deleteCredentials(accountId: number): void {
-    this.deletingCredentialAccountId = accountId;
-    this.exchangeService.deleteCredentials(accountId).subscribe({
-      next: () => {
-        this.deletingCredentialAccountId = null;
-        this.loadCredentialsStatus();
-      },
-      error: () => this.deletingCredentialAccountId = null,
     });
   }
 
   syncAccounts(): void {
-    this.syncing = true;
-    this.syncMessage = '';
+    this.syncingAccounts = true;
     this.exchangeService.syncBybitAccounts().subscribe({
-      next: (res) => {
-        this.syncMessage = res.message;
-        this.syncing = false;
-        this.loadSubMembers();
+      next: (response) => {
+        this.syncingAccounts = false;
+        this.flashToast(response.message);
+        if (response.isSuccess) this.loadAccounts();
       },
-      error: () => {
-        this.syncMessage = 'Sync failed';
-        this.syncing = false;
-      },
-    });
-  }
-
-  loadSubMembers(): void {
-    this.loadingSubMembers = true;
-    this.exchangeService.getBybitSubMembers().subscribe({
-      next: (res) => {
-        this.subMembers = res.data ?? [];
-        this.loadingSubMembers = false;
-      },
-      error: () => this.loadingSubMembers = false,
-    });
-  }
-
-  mapAccount(member: BybitSubMemberDto): void {
-    this.exchangeService.mapBybitAccount(this.selectedAccountId, member.uid).subscribe({
-      next: (res) => {
-        if (res.isSuccess) this.loadSubMembers();
+      error: (error: HttpErrorResponse) => {
+        this.syncingAccounts = false;
+        this.flashToast(this.getErrorMessage(error, 'Account discovery failed'));
       },
     });
   }
 
-  private loadSyncStatuses(): void {
-    this.loadingStatuses = true;
-    this.exchangeService.getSyncStatuses().subscribe({
-      next: (res) => {
-        this.syncStatuses = res.data ?? [];
-        this.loadingStatuses = false;
+  testConnection(account: ExchangeAccount): void {
+    this.testingAccountId = account.accountId;
+    this.exchangeService.testBybitConnection(account.accountId).subscribe({
+      next: (response) => {
+        this.testingAccountId = null;
+        this.flashToast(response.message);
+        if (response.isSuccess) this.loadAccounts();
       },
-      error: () => this.loadingStatuses = false,
+      error: (error: HttpErrorResponse) => {
+        this.testingAccountId = null;
+        this.flashToast(this.getErrorMessage(error, `Failed to test ${account.name}`));
+      },
     });
   }
 
-  toggleSyncLogs(accountId: number): void {
-    if (this.selectedLogAccountId === accountId) {
-      this.selectedLogAccountId = 0;
-      return;
-    }
-    this.selectedLogAccountId = accountId;
-    this.fetchSyncLogs(accountId);
-  }
-
-  onLogDateChange(accountId: number, date: string): void {
-    this.logDate = date;
-    this.fetchSyncLogs(accountId);
-  }
-
-  private fetchSyncLogs(accountId: number): void {
-    this.loadingLogs = true;
-    this.exchangeService.getSyncLogs(accountId, this.logDate || undefined).subscribe({
-      next: (res) => {
-        this.syncLogs = res.data ?? [];
-        this.loadingLogs = false;
+  toggleAccount(account: ExchangeAccount): void {
+    this.togglingAccountId = account.accountId;
+    this.exchangeService.toggleBybitAccount(account.accountId).subscribe({
+      next: (response) => {
+        this.togglingAccountId = null;
+        this.flashToast(response.message);
+        if (response.isSuccess) this.loadAccounts();
       },
-      error: () => this.loadingLogs = false,
+      error: (error: HttpErrorResponse) => {
+        this.togglingAccountId = null;
+        this.flashToast(this.getErrorMessage(error, `Failed to update ${account.name}`));
+      },
     });
   }
 
-  statusBadgeClass(status: string): string {
-    switch (status) {
-      case 'Connected': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'Error': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
+  formatDate(value: string | null): string {
+    return value ? new Date(value).toLocaleString() : 'Never';
   }
 
-  logStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'Success': return 'bg-green-100 text-green-700';
-      case 'Duplicate': return 'bg-yellow-100 text-yellow-700';
-      case 'Failed': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  private getErrorMessage(error: HttpErrorResponse, fallback: string): string {
+    return typeof error.error?.message === 'string' ? error.error.message : fallback;
+  }
+
+  flashToast(message: string): void {
+    this.toastMessage = message;
+    this.showToast = true;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.showToast = false, 2500);
   }
 }

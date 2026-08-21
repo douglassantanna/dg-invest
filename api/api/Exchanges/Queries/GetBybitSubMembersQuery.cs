@@ -14,8 +14,11 @@ public record BybitSubMemberDto(
     string Uid,
     string Username,
     string Remark,
-    string? MappedAccountTag,
-    int? AccountId);
+    string? MappedAccountName,
+    int? AccountId)
+{
+    public string? MappedAccountTag => MappedAccountName;
+}
 
 public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembersQuery, Response>
 {
@@ -40,7 +43,7 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
     {
         var mainAccount = await _context.Accounts
             .Where(a => a.UserId == request.UserId
-                     && a.SubaccountTag.ToLower() == "main")
+                     && a.Name.ToLower() == "main")
             .FirstOrDefaultAsync(cancellationToken);
 
         if (mainAccount == null)
@@ -65,13 +68,13 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
             return new Response("Failed to fetch sub-accounts from Bybit", false, 500);
         }
 
-        // Load existing account BybitUid mappings to show which are already linked.
+        // Load existing account ExternalId mappings to show which are already linked.
         var mappedAccounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && a.BybitUid != null)
-            .Select(a => new { a.Id, a.BybitUid, a.SubaccountTag })
+            .Where(a => a.UserId == request.UserId && a.ExternalId != null && !a.IsDeleted)
+            .Select(a => new { a.Id, a.ExternalId, a.Name })
             .ToListAsync(cancellationToken);
 
-        var mappingLookup = mappedAccounts.ToDictionary(a => a.BybitUid!, a => a);
+        var mappingLookup = mappedAccounts.ToDictionary(a => a.ExternalId!, a => a);
 
         var result = subMembers.Select(m =>
         {
@@ -80,7 +83,7 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
                 Uid: m.Uid,
                 Username: m.Username,
                 Remark: m.Remark,
-                MappedAccountTag: mapped?.SubaccountTag,
+                MappedAccountName: mapped?.Name,
                 AccountId: mapped?.Id);
         }).ToList();
 

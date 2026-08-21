@@ -53,7 +53,7 @@ public class SyncBybitOrders
             var accounts = await _context.Accounts
                 .Include(a => a.CryptoAssets)
                     .ThenInclude(ca => ca.Transactions)
-                .Where(a => a.BybitUid != null)
+                .Where(a => a.ExternalId != null && !a.IsDeleted)
                 .ToListAsync(cancellationToken);
 
             _logger.LogInformation("SyncBybitOrders: found {Count} Bybit accounts", accounts.Count);
@@ -97,6 +97,12 @@ public class SyncBybitOrders
             if (syncStatus == null)
             {
                 _logger.LogInformation("SyncBybitOrders: no sync status for account {AccountId} (credentials may predate safeguard), skipping", accountId);
+                return;
+            }
+
+            if (!syncStatus.IsEnabled)
+            {
+                _logger.LogInformation("SyncBybitOrders: account {AccountId} is disabled, skipping", accountId);
                 return;
             }
 

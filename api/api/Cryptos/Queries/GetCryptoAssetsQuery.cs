@@ -48,7 +48,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                 .AsNoTracking()
                 .Include(x => x.CryptoAssets)
                 .Include(x => x.AccountTransactions)
-                .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId, ct);
+                .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted, ct);
 
             if (account == null)
             {
@@ -113,7 +113,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
 
             if (!cryptoAssetDtos.Any())
             {
-                result = [new UserCryptoAssetDto(account.Balance, account.SubaccountTag, [], account.TotalDeposited())];
+                result = [new UserCryptoAssetDto(account.Balance, account.Name, [], account.TotalDeposited())];
             }
             else
             {
@@ -122,7 +122,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                     new UserCryptoAssetDto
                     (
                         account.Balance,
-                        account.SubaccountTag,
+                        account.Name,
                         cryptoAssetDtos,
                         account.TotalDeposited()
                     )

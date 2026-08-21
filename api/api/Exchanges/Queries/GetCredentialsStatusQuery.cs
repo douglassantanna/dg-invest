@@ -11,10 +11,13 @@ public record GetCredentialsStatusQuery(int UserId) : IRequest<Response>;
 
 public record CredentialsStatusDto(
     int AccountId,
-    string AccountTag,
+    string AccountName,
     bool HasApiKey,
     bool HasApiSecret,
-    bool HasWebhookSecret);
+    bool HasWebhookSecret)
+{
+    public string AccountTag => AccountName;
+}
 
 public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsStatusQuery, Response>
 {
@@ -30,8 +33,8 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
     public async Task<Response> Handle(GetCredentialsStatusQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId)
-            .OrderBy(a => a.SubaccountTag)
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted)
+            .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 
         var results = new List<CredentialsStatusDto>();
@@ -46,7 +49,7 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
 
             results.Add(new CredentialsStatusDto(
                 AccountId: account.Id,
-                AccountTag: account.SubaccountTag,
+                AccountName: account.Name,
                 HasApiKey: !string.IsNullOrEmpty(apiKey),
                 HasApiSecret: !string.IsNullOrEmpty(apiSecret),
                 HasWebhookSecret: !string.IsNullOrEmpty(webhookSecret)));

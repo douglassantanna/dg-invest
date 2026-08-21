@@ -46,7 +46,7 @@ export class HeaderComponent implements AfterViewChecked {
   toggleAccountModal(accounts: SimpleAccountDto[]) {
     const selectedAccount = accounts.find(account => account.isSelected);
     if (selectedAccount) {
-      this.accountTag.set(selectedAccount.subaccountTag);
+      this.accountTag.set(selectedAccount.name);
       location.reload();
     }
     this.showAccountModal.set(!this.showAccountModal());

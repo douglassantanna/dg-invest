@@ -11,8 +11,11 @@ public record GetExchangeAccountDetailQuery(int UserId, int AccountId) : IReques
 
 public record ExchangeAccountDetailDto(
     int AccountId,
-    string AccountTag,
-    List<ExchangeConnectionDto> Connections);
+    string AccountName,
+    List<ExchangeConnectionDto> Connections)
+{
+    public string AccountTag => AccountName;
+}
 
 public record ExchangeConnectionDto(
     string ExchangeName,
@@ -38,8 +41,8 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
     public async Task<Response> Handle(GetExchangeAccountDetailQuery request, CancellationToken cancellationToken)
     {
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId)
-            .Select(a => new { a.Id, a.SubaccountTag })
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
+            .Select(a => new { a.Id, a.Name })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (account == null)
@@ -88,7 +91,7 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
 
         return new Response("ok", true, new ExchangeAccountDetailDto(
             account.Id,
-            account.SubaccountTag,
+            account.Name,
             connections));
     }
 }

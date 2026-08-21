@@ -65,7 +65,9 @@ public class ExchangeController : ControllerBase
             request.AccountId,
             request.ApiKey,
             request.ApiSecret,
-            request.WebhookSecret);
+            request.WebhookSecret,
+            request.ResolvedName,
+            request.ResolvedExternalId);
 
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
@@ -118,7 +120,11 @@ public class ExchangeController : ControllerBase
         if (userId == null)
             return Unauthorized(new Response("Invalid user ID", false));
 
-        var result = await _mediator.Send(new MapBybitAccountCommand(userId.Value, request.AccountId, request.BybitUid));
+        var externalId = request.ResolvedExternalId;
+        if (string.IsNullOrWhiteSpace(externalId))
+            return BadRequest(new Response("External ID is required", false));
+
+        var result = await _mediator.Send(new MapBybitAccountCommand(userId.Value, request.AccountId, externalId));
         if (!result.IsSuccess)
             return BadRequest(result);
 
@@ -172,6 +178,45 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("bybit/connection-groups")]
+    public async Task<ActionResult<Response>> GetBybitConnectionGroups()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetBybitConnectionGroupQuery(userId.Value));
+        return Ok(result);
+    }
+
+    [HttpPost("bybit/test-connection/{accountId}")]
+    public async Task<ActionResult<Response>> TestBybitConnection(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new TestBybitConnectionCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("bybit/toggle/{accountId}")]
+    public async Task<ActionResult<Response>> ToggleBybitAccount(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new ToggleBybitAccountCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -179,5 +224,21 @@ public class ExchangeController : ControllerBase
     }
 }
 
-public record SaveBybitCredentialsRequest(int AccountId, string ApiKey, string ApiSecret, string WebhookSecret);
-public record MapBybitAccountRequest(int AccountId, string BybitUid);
+public record SaveBybitCredentialsRequest(
+    int AccountId,
+    string ApiKey,
+    string ApiSecret,
+    string WebhookSecret,
+    string? Name = null,
+    string? ExternalId = null,
+    string? SubaccountTag = null,
+    string? BybitUid = null)
+{
+    public string? ResolvedName => string.IsNullOrWhiteSpace(Name) ? SubaccountTag : Name;
+    public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
+}
+
+public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
+{
+    public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
+}

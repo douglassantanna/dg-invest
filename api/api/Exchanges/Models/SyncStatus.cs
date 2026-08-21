@@ -13,6 +13,8 @@ public class SyncStatus : Entity
     public int ErrorCount { get; private set; }
     public string? LastErrorMessage { get; private set; }
     public DateTime? BybitCredentialsSetAt { get; private set; }
+    public bool IsEnabled { get; private set; } = true;
+    public DateTime? LastVerifiedAt { get; private set; }
 
     private SyncStatus() { }
 
@@ -48,5 +50,15 @@ public class SyncStatus : Entity
     public void MarkCredentialsSet()
     {
         BybitCredentialsSetAt ??= DateTime.UtcNow;
+    }
+
+    public void ToggleEnabled()
+    {
+        IsEnabled = !IsEnabled;
+    }
+
+    public void MarkVerified()
+    {
+        LastVerifiedAt = DateTime.UtcNow;
     }
 }

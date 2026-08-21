@@ -78,7 +78,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
 
         var account = await _context.Accounts.Include(a => a.CryptoAssets)
                                             .Where(ac => ac.IsSelected == true)
-                                            .Where(ac => ac.UserId == request.UserId)
+                                            .Where(ac => ac.UserId == request.UserId && !ac.IsDeleted)
                                             .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {

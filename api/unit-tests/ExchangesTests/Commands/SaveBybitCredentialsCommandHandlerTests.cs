@@ -61,6 +61,22 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenEditFieldsAreBlank_ShouldPreserveStoredSecrets()
+    {
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+
+        var command = new SaveBybitCredentialsCommand(1, account.Id, "", "", "");
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be("No credential changes supplied");
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenKeyVaultThrows_ShouldReturnError()
     {
         _context.Accounts.Add(new Account("main", 1));

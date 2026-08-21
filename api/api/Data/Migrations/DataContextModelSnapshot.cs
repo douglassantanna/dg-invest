@@ -30,20 +30,34 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AccountType")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Balance")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
-                    b.Property<string>("BybitUid")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Exchange")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsSelected")
                         .HasColumnType("bit");
 
-                    b.Property<string>("SubaccountTag")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar");
@@ -52,6 +66,10 @@ namespace api.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Exchange", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("[ExternalId] IS NOT NULL AND [IsDeleted] = 0");
 
                     b.HasIndex("UserId");
 
@@ -211,6 +229,44 @@ namespace api.Migrations
                     b.ToTable("UserPortfolioSnapshots");
                 });
 
+            modelBuilder.Entity("api.Exchanges.Models.ExchangeIntegration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Exchange")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<DateTime?>("LastSyncAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Exchange")
+                        .IsUnique();
+
+                    b.ToTable("ExchangeIntegrations", (string)null);
+                });
+
             modelBuilder.Entity("api.Exchanges.Models.SyncStatus", b =>
                 {
                     b.Property<int>("Id")
@@ -233,6 +289,9 @@ namespace api.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar");
 
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<string>("LastErrorMessage")
                         .HasMaxLength(1000)
                         .HasColumnType("varchar");
@@ -242,6 +301,9 @@ namespace api.Migrations
                         .HasColumnType("varchar");
 
                     b.Property<DateTime?>("LastSyncAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastVerifiedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Status")

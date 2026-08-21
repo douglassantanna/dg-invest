@@ -1,4 +1,5 @@
 using api.AzureKeyVault;
+using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Models;
 using api.Shared;
@@ -13,17 +14,29 @@ public record SaveBybitCredentialsCommand(
     int AccountId,
     string ApiKey,
     string ApiSecret,
-    string WebhookSecret) : IRequest<Response>;
+    string WebhookSecret,
+    string? Name = null,
+    string? ExternalId = null) : IRequest<Response>;
 
 public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitCredentialsCommand>
 {
     public SaveBybitCredentialsCommandValidator()
     {
         RuleFor(x => x.UserId).GreaterThan(0);
-        RuleFor(x => x.AccountId).GreaterThan(0);
-        RuleFor(x => x.ApiKey).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.ApiSecret).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.WebhookSecret).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.AccountId).GreaterThan(-1);
+        RuleFor(x => x.ApiKey).MaximumLength(255);
+        RuleFor(x => x.ApiSecret).MaximumLength(255);
+        RuleFor(x => x.WebhookSecret).MaximumLength(255);
+        When(x => x.AccountId == 0, () =>
+        {
+            RuleFor(x => x.Name).NotEmpty().MaximumLength(255);
+            RuleFor(x => x.ApiKey).NotEmpty();
+            RuleFor(x => x.ApiSecret).NotEmpty();
+        });
+        When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiKey), () =>
+            RuleFor(x => x.ApiSecret).NotEmpty().WithMessage("API secret is required when replacing the API key."));
+        When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiSecret), () =>
+            RuleFor(x => x.ApiKey).NotEmpty().WithMessage("API key is required when replacing the API secret."));
     }
 }
 
@@ -54,8 +67,13 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
             return new Response("Validation failed", false, errors);
         }
 
+        if (request.AccountId == 0)
+        {
+            return await HandleCreateAndSave(request, cancellationToken);
+        }
+
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId)
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (account == null)
@@ -64,28 +82,98 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
             return new Response("Account not found", false, 404);
         }
 
+        var replaceApiCredentials = !string.IsNullOrWhiteSpace(request.ApiKey);
+        var replaceWebhookSecret = !string.IsNullOrWhiteSpace(request.WebhookSecret);
+        if (!replaceApiCredentials && !replaceWebhookSecret)
+            return new Response("No credential changes supplied", true);
+
+        return await SaveSecretsAsync(
+            request.UserId,
+            request.AccountId,
+            request.ApiKey,
+            request.ApiSecret,
+            request.WebhookSecret,
+            replaceApiCredentials,
+            replaceWebhookSecret,
+            cancellationToken);
+    }
+
+    private async Task<Response> HandleCreateAndSave(SaveBybitCredentialsCommand request, CancellationToken cancellationToken)
+    {
+        var existingAccount = await _context.Accounts
+            .Where(a => a.Name == request.Name && a.UserId == request.UserId && !a.IsDeleted)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingAccount != null)
+        {
+            _logger.LogError("SaveBybitCredentials: account with name '{Name}' already exists for user {UserId}", request.Name, request.UserId);
+            return new Response($"An account with the name '{request.Name}' already exists", false, 400);
+        }
+
+        var account = new Account(
+            request.Name!,
+            request.UserId,
+            EAccountType.Exchange,
+            "Bybit",
+            string.IsNullOrEmpty(request.ExternalId) ? null : request.ExternalId);
+        if (!string.IsNullOrEmpty(request.ExternalId))
+        {
+            account.SetExternalId(request.ExternalId);
+        }
+
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("SaveBybitCredentials: created account {AccountId} with name '{Name}' for user {UserId}", account.Id, request.Name, request.UserId);
+
+        return await SaveSecretsAsync(
+            request.UserId,
+            account.Id,
+            request.ApiKey,
+            request.ApiSecret,
+            request.WebhookSecret,
+            replaceApiCredentials: true,
+            replaceWebhookSecret: !string.IsNullOrWhiteSpace(request.WebhookSecret),
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task<Response> SaveSecretsAsync(
+        int userId,
+        int accountId,
+        string apiKey,
+        string apiSecret,
+        string webhookSecret,
+        bool replaceApiCredentials,
+        bool replaceWebhookSecret,
+        CancellationToken cancellationToken)
+    {
         try
         {
             var syncStatus = await _context.SyncStatuses
-                .FirstOrDefaultAsync(s => s.UserId == request.UserId && s.AccountId == request.AccountId && s.ExchangeName == "Bybit", cancellationToken);
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
             if (syncStatus == null)
             {
-                syncStatus = new SyncStatus(request.UserId, request.AccountId, "Bybit");
+                syncStatus = new SyncStatus(userId, accountId, "Bybit");
                 _context.SyncStatuses.Add(syncStatus);
             }
             syncStatus.MarkCredentialsSet();
             await _context.SaveChangesAsync(cancellationToken);
 
-            await _keyVaultService.SetSecretAsync(BuildKey(request.UserId, request.AccountId, "api-key"), request.ApiKey);
-            await _keyVaultService.SetSecretAsync(BuildKey(request.UserId, request.AccountId, "api-secret"), request.ApiSecret);
-            await _keyVaultService.SetSecretAsync(BuildKey(request.UserId, request.AccountId, "webhook-secret"), request.WebhookSecret);
+            if (replaceApiCredentials)
+            {
+                await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "api-key"), apiKey);
+                await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "api-secret"), apiSecret);
+            }
 
-            _logger.LogInformation("Bybit credentials saved for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
+            if (replaceWebhookSecret)
+                await _keyVaultService.SetSecretAsync(BuildKey(userId, accountId, "webhook-secret"), webhookSecret);
+
+            _logger.LogInformation("Bybit credentials saved for user {UserId}, account {AccountId}", userId, accountId);
             return new Response("Credentials saved successfully", true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save Bybit credentials for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
+            _logger.LogError(ex, "Failed to save Bybit credentials for user {UserId}, account {AccountId}", userId, accountId);
             return new Response("Failed to save credentials", false, 500);
         }
     }

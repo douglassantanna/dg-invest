@@ -7,6 +7,7 @@ import { SyncStatusDto } from '../models/sync-status';
 import { SyncLogEntry } from '../models/sync-log-entry';
 import { BybitSubMemberDto } from '../models/bybit-sub-member';
 import { CredentialsStatusDto } from '../models/credentials-status';
+import { BybitConnectionGroupDto } from '../models/bybit-connection-group';
 
 const url = `${environment.apiUrl}/Exchange`;
 
@@ -14,8 +15,8 @@ const url = `${environment.apiUrl}/Exchange`;
 export class ExchangeService {
   private http = inject(HttpClient);
 
-  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret });
+  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId });
   }
 
   syncBybitAccounts(): Observable<Response<any>> {
@@ -26,8 +27,8 @@ export class ExchangeService {
     return this.http.get<Response<any>>(`${url}/bybit/sub-members`);
   }
 
-  mapBybitAccount(accountId: number, bybitUid: string): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/map-account`, { accountId, bybitUid });
+  mapBybitAccount(accountId: number, externalId: string): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/map-account`, { accountId, externalId });
   }
 
   getCredentialsStatus(): Observable<Response<CredentialsStatusDto[]>> {
@@ -46,5 +47,17 @@ export class ExchangeService {
     let params = new HttpParams();
     if (date) params = params.set('date', date);
     return this.http.get<Response<SyncLogEntry[]>>(`${url}/bybit/sync-logs/${accountId}`, { params });
+  }
+
+  getBybitConnectionGroups(): Observable<Response<BybitConnectionGroupDto[]>> {
+    return this.http.get<Response<BybitConnectionGroupDto[]>>(`${url}/bybit/connection-groups`);
+  }
+
+  testBybitConnection(accountId: number): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/test-connection/${accountId}`, {});
+  }
+
+  toggleBybitAccount(accountId: number): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/toggle/${accountId}`, {});
   }
 }
