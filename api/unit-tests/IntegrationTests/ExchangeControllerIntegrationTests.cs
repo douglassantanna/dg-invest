@@ -15,6 +15,23 @@ public class ExchangeControllerIntegrationTests
     public ExchangeControllerIntegrationTests(ExchangeApiIntegrationFixture fixture) => _fixture = fixture;
 
     [Fact]
+    public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        var response = await client.PostAsJsonAsync("/api/Account/create", new { name = "Name contract portfolio" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var account = await scope.ServiceProvider.GetRequiredService<DataContext>().Accounts.SingleAsync(
+            candidate => candidate.UserId == userId && candidate.Name == "Name contract portfolio");
+        account.AccountType.Should().Be(EAccountType.Manual);
+        account.Exchange.Should().BeNull();
+        account.ExternalId.Should().BeNull();
+    }
+
+    [Fact]
     public async Task AccountAndBybitEndpoints_CompleteManagedSubaccountFlow()
     {
         var (userId, mainAccountId) = await _fixture.CreateUserAsync();

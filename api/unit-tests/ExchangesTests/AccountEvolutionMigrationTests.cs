@@ -42,6 +42,7 @@ public class AccountEvolutionMigrationTests
         context.ChangeTracker.Clear();
 
         var legacyAccount = await context.Accounts.SingleAsync();
+        legacyAccount.Name.Should().Be("Legacy Bybit");
         legacyAccount.ExternalId.Should().Be("UID-001");
         legacyAccount.AccountType.Should().Be(EAccountType.Exchange);
         legacyAccount.Exchange.Should().Be("Bybit");
