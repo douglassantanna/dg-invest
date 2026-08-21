@@ -32,6 +32,18 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task CreateAccount_WithoutNameOrLegacyAlias_ShouldRejectRequest()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        var response = await client.PostAsJsonAsync("/api/Account/create", new { });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Account name is required");
+    }
+
+    [Fact]
     public async Task AccountAndBybitEndpoints_CompleteManagedSubaccountFlow()
     {
         var (userId, mainAccountId) = await _fixture.CreateUserAsync();

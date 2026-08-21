@@ -52,15 +52,15 @@ Tracked by milestone `Exchange PR5: Sync-engine refinement`.
 - User-facing workflows require Cypress coverage with production API contracts mocked at the browser boundary.
 - A phase is not complete until its relevant test layers pass in CI.
 
-## Account Context Architecture
+## Target Account Context Architecture
 
-The completed integration separates three concepts:
+The completed integration will separate three concepts:
 
 - A manual `Account` is a user-owned portfolio context. It never receives exchange credentials or is converted by discovery.
 - An `ExchangeIntegration` is the per-user connection to an exchange. It holds integration-level discovery state and Key Vault credentials.
 - An exchange `Account` is a portfolio context with `AccountType = Exchange`, an exchange name, and an external account ID such as a Bybit UID.
 
-Discovery creates or updates only exchange accounts and matches them by `(UserId, Exchange, ExternalId)`. It must not match or mutate manual accounts based on a display name. The account selector groups manual and exchange contexts by origin.
+PR2 makes discovery create or update only exchange accounts and match them by `(UserId, Exchange, ExternalId)`. It must not match or mutate manual accounts based on a display name. PR4 adds an account selector that groups manual and exchange contexts by origin.
 
 Disabling an integration or account stops every sync path, including polling and webhooks. Disconnecting removes stored credentials while preserving historical portfolio data.
 
