@@ -171,6 +171,18 @@ Orders, deposits, and withdrawals from your Bybit account are automatically sync
 
 The webhook catches trades instantly. The REST poll catches anything the webhook missed, including deposits and withdrawals Bybit doesn't send webhooks for. Both paths pass through the same dedup logic, so nothing is ever double-counted.
 
+#### Account Context And Rollout
+
+The exchange integration is being delivered in phases. The current foundation distinguishes three concepts:
+
+- **Manual account** — a user-owned portfolio such as Main or Savings. It never becomes an exchange account through discovery.
+- **Exchange integration** — the per-user connection to Bybit. It owns integration-level connection state and discovery credentials stored in Key Vault.
+- **Exchange account** — a separately selectable portfolio identified by `AccountType = Exchange`, its exchange name, and the external Bybit UID.
+
+Bybit discovery must create or update only exchange accounts, matching them by user, exchange, and UID. Manual accounts remain separate. A finished account selector groups Manual, Bybit, and future exchange contexts by origin.
+
+The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for architecture, milestones, test policy, and the stage delivery flow.
+
 #### What gets synced
 
 | Data | How it's recorded |
