@@ -1,69 +1,31 @@
-using api.AzureKeyVault;
-using api.Data;
-using api.Exchanges.Models;
+using api.Exchanges.Services;
 using api.Shared;
 using FluentValidation;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
+using api.Data;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace api.Exchanges.Commands;
-
 public record SaveBybitIntegrationCredentialsCommand(int UserId, string ApiKey, string ApiSecret) : IRequest<Response>;
-
 public class SaveBybitIntegrationCredentialsCommandValidator : AbstractValidator<SaveBybitIntegrationCredentialsCommand>
 {
     public SaveBybitIntegrationCredentialsCommandValidator()
     {
-        RuleFor(x => x.UserId).GreaterThan(0);
-        RuleFor(x => x.ApiKey).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.ApiSecret).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.UserId).GreaterThan(0); RuleFor(x => x.ApiKey).NotEmpty().MaximumLength(255); RuleFor(x => x.ApiSecret).NotEmpty().MaximumLength(255);
     }
 }
-
 public class SaveBybitIntegrationCredentialsCommandHandler : IRequestHandler<SaveBybitIntegrationCredentialsCommand, Response>
 {
-    private readonly IKeyVaultService _keyVaultService;
-    private readonly DataContext _context;
-    private readonly ILogger<SaveBybitIntegrationCredentialsCommandHandler> _logger;
-
-    public SaveBybitIntegrationCredentialsCommandHandler(
-        IKeyVaultService keyVaultService,
-        DataContext context,
-        ILogger<SaveBybitIntegrationCredentialsCommandHandler> logger)
-    {
-        _keyVaultService = keyVaultService;
-        _context = context;
-        _logger = logger;
-    }
-
+    private readonly IBybitCredentialSetService _credentials;
+    public SaveBybitIntegrationCredentialsCommandHandler(api.AzureKeyVault.IKeyVaultService vault, DataContext context, ILogger<SaveBybitIntegrationCredentialsCommandHandler> logger)
+        => _credentials = new BybitCredentialSetService(context, vault, NullLogger<BybitCredentialSetService>.Instance);
     public async Task<Response> Handle(SaveBybitIntegrationCredentialsCommand request, CancellationToken cancellationToken)
     {
         var validation = await new SaveBybitIntegrationCredentialsCommandValidator().ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
-            return new Response("Validation failed", false, validation.Errors.Select(x => x.ErrorMessage).ToList());
-
-        try
-        {
-            var integration = await _context.ExchangeIntegrations
-                .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
-            if (integration == null)
-            {
-                integration = new ExchangeIntegration(request.UserId, "Bybit");
-                _context.ExchangeIntegrations.Add(integration);
-                await _context.SaveChangesAsync(cancellationToken);
-            }
-
-            await _keyVaultService.SetSecretAsync(BuildIntegrationKey(request.UserId, "api-key"), request.ApiKey);
-            await _keyVaultService.SetSecretAsync(BuildIntegrationKey(request.UserId, "api-secret"), request.ApiSecret);
-            _logger.LogInformation("Bybit integration credentials saved for user {UserId}", request.UserId);
-            return new Response("Integration credentials saved successfully", true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save Bybit integration credentials for user {UserId}", request.UserId);
-            return new Response("Failed to save integration credentials", false, 500);
-        }
+        if (!validation.IsValid) return new("Validation failed", false, validation.Errors.Select(x => x.ErrorMessage).ToList());
+        var result = await _credentials.ReplaceAsync(request.UserId, null, new Dictionary<string, string> { ["api-key"] = request.ApiKey, ["api-secret"] = request.ApiSecret }, cancellationToken);
+        if (result.Success) return new("Integration credentials saved successfully", true);
+        return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save integration credentials; recovery may be required", false, 500);
     }
-
-    public static string BuildIntegrationKey(int userId, string suffix) => $"bybit-integration-{userId}-{suffix}";
+    public static string BuildIntegrationKey(int userId, string suffix) => BybitCredentialKeys.LegacyIntegrationKey(userId, suffix);
 }

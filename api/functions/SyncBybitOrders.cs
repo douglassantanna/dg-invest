@@ -1,9 +1,9 @@
 using api.AzureKeyVault;
+using api.Exchanges.Services;
 using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
-using api.Exchanges.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -97,8 +97,8 @@ public class SyncBybitOrders
                 return;
             }
 
-            var apiKey = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
+            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, userId, accountId, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, userId, accountId, "api-secret", cancellationToken);
 
             if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
             {

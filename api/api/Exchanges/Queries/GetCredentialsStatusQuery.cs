@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Commands;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -41,12 +42,9 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
         var results = new List<CredentialsStatusDto>();
         foreach (var account in accounts)
         {
-            var apiKey = await _keyVaultService.GetSecretReadResultAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretReadResultAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-secret"));
-            var webhookSecret = await _keyVaultService.GetSecretReadResultAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "webhook-secret"));
+            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
+            var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
 
             if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
                 return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);

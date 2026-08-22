@@ -123,6 +123,7 @@ public sealed class InMemoryKeyVault : IKeyVaultService
 {
     private readonly Dictionary<string, string> _secrets = new(StringComparer.Ordinal);
     public bool IsAvailable { get; set; } = true;
+    public bool FailWrites { get; set; }
 
     public Task<KeyVaultSecretReadResult> GetSecretReadResultAsync(string secretName)
     {
@@ -145,6 +146,9 @@ public sealed class InMemoryKeyVault : IKeyVaultService
 
     public Task SetSecretAsync(string secretName, string value)
     {
+        if (FailWrites)
+            throw new InvalidOperationException("Key Vault write failed");
+
         _secrets[secretName] = value;
         return Task.CompletedTask;
     }

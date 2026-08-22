@@ -14,6 +14,8 @@ public class SyncStatusConfiguration : IEntityTypeConfiguration<SyncStatus>
         builder.Property(x => x.LastErrorMessage).HasColumnType("varchar").HasMaxLength(1000);
         builder.Property(x => x.LastOrderId).HasColumnType("varchar").HasMaxLength(100);
         builder.Property(x => x.IsEnabled).IsRequired();
+        builder.Property(x => x.ActiveCredentialSetId).HasMaxLength(32);
+        builder.Property(x => x.CredentialVersion).IsConcurrencyToken();
         builder.HasIndex(x => new { x.UserId, x.AccountId, x.ExchangeName }).IsUnique();
     }
 }

@@ -104,6 +104,8 @@ public static class ServiceExtensions
         services.AddScoped<IBybitService, BybitService>();
         services.AddScoped<IBlobStorageService, BlobStorageService>();
         services.AddScoped<IBybitOrderSyncService, BybitOrderSyncService>();
+        services.AddScoped<IBybitCredentialSetService, BybitCredentialSetService>();
+        services.AddHostedService<CredentialRecoveryService>();
 
         return services;
     }

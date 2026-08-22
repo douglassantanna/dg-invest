@@ -2,6 +2,7 @@ using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -46,10 +47,8 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
         if (integration == null)
             return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
 
-        var apiKey = await _keyVaultService.GetSecretReadResultAsync(
-            SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-key"));
-        var apiSecret = await _keyVaultService.GetSecretReadResultAsync(
-            SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-secret"));
+        var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-key", cancellationToken);
+        var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-secret", cancellationToken);
 
         if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
             return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
