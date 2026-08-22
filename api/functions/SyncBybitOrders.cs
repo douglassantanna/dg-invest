@@ -83,6 +83,20 @@ public class SyncBybitOrders
             var userId = account.UserId;
             var accountId = account.Id;
 
+            var syncStatus = await _context.SyncStatuses
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
+            if (syncStatus == null)
+            {
+                _logger.LogInformation("SyncBybitOrders: no sync status for account {AccountId} (credentials may predate safeguard), skipping", accountId);
+                return;
+            }
+
+            if (!syncStatus.IsEnabled)
+            {
+                _logger.LogInformation("SyncBybitOrders: account {AccountId} is disabled, skipping", accountId);
+                return;
+            }
+
             var apiKey = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
             var apiSecret = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
 
@@ -97,20 +111,6 @@ public class SyncBybitOrders
             if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
             {
                 _logger.LogInformation("SyncBybitOrders: no credentials for account {AccountId} (user {UserId})", accountId, userId);
-                return;
-            }
-
-            var syncStatus = await _context.SyncStatuses
-                .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
-            if (syncStatus == null)
-            {
-                _logger.LogInformation("SyncBybitOrders: no sync status for account {AccountId} (credentials may predate safeguard), skipping", accountId);
-                return;
-            }
-
-            if (!syncStatus.IsEnabled)
-            {
-                _logger.LogInformation("SyncBybitOrders: account {AccountId} is disabled, skipping", accountId);
                 return;
             }
 

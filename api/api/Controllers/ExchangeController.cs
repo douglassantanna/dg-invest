@@ -240,7 +240,8 @@ public class ExchangeController : ControllerBase
     private ActionResult<Response> Failure(Response result) =>
         IsKeyVaultUnavailable(result) ? StatusCode(StatusCodes.Status503ServiceUnavailable, result) : BadRequest(result);
 
-    private static bool IsKeyVaultUnavailable(Response result) => result.Data is 503;
+    private static bool IsKeyVaultUnavailable(Response result) =>
+        result.Data is 503 || string.Equals(result.Data?.ToString(), "503", StringComparison.Ordinal);
 }
 
 public record SaveBybitCredentialsRequest(
