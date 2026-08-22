@@ -59,6 +59,11 @@ public class SyncStatus : Entity
         CredentialVersion = Guid.NewGuid();
         MarkCredentialsSet();
     }
+    public void DeactivateCredentialSet()
+    {
+        ActiveCredentialSetId = null;
+        CredentialVersion = Guid.NewGuid();
+    }
 
     public void ToggleEnabled()
     {

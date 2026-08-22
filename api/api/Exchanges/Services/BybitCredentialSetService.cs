@@ -18,9 +18,19 @@ public static class BybitCredentialReader
 {
     public static async Task<KeyVaultSecretReadResult> ReadAsync(DataContext context, IKeyVaultService vault, int userId, int? accountId, string suffix, CancellationToken cancellationToken = default)
     {
-        var setId = accountId is { } id
-            ? await context.SyncStatuses.Where(x => x.UserId == userId && x.AccountId == id && x.ExchangeName == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken)
-            : await context.ExchangeIntegrations.Where(x => x.UserId == userId && x.Exchange == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken);
+        if (accountId is not { } id)
+        {
+            var integrationSetId = await context.ExchangeIntegrations.Where(x => x.UserId == userId && x.Exchange == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken);
+            return await vault.GetSecretReadResultAsync(BybitCredentialKeys.Key(integrationSetId, userId, null, suffix));
+        }
+
+        // A status with no pointer is deliberately revoked, not a legacy credential fallback.
+        var pointer = await context.SyncStatuses.Where(x => x.UserId == userId && x.AccountId == id && x.ExchangeName == "Bybit")
+            .Select(x => new { x.ActiveCredentialSetId })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (pointer is not null && pointer.ActiveCredentialSetId is null && !await context.Accounts.AnyAsync(x => x.Id == id && x.UserId == userId && !x.IsDeleted, cancellationToken))
+            return new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound);
+        var setId = pointer?.ActiveCredentialSetId;
         return await vault.GetSecretReadResultAsync(BybitCredentialKeys.Key(setId, userId, accountId, suffix));
     }
 }

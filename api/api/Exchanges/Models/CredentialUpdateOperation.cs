@@ -32,6 +32,7 @@ public class CredentialUpdateOperation : Entity
     public void MarkActive() => SetState("Active", null);
     public void MarkRecoveryRequired(string error) => SetState("RecoveryRequired", error);
     public void MarkSuperseded() => SetState("Superseded", null);
+    public void MarkRetired() => SetState("Retired", null);
     public void MarkCleaned() => SetState("Cleaned", null);
     private void SetState(string state, string? error)
     {
