@@ -66,7 +66,7 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             priorSet = pointer?.ActiveCredentialSetId;
             priorVersion = pointer?.CredentialVersion;
         }
-        var operation = new CredentialUpdateOperation(userId, "Bybit", accountId, priorSet);
+        var operation = new CredentialUpdateOperation(userId, "Bybit", accountId, priorSet, priorVersion);
         _context.CredentialUpdateOperations.Add(operation);
         try { await _context.SaveChangesAsync(cancellationToken); }
         catch (Exception ex) { return new CredentialUpdateResult(false, false, ex.Message); }
@@ -159,11 +159,55 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         var operations = await _context.CredentialUpdateOperations.Where(x => x.State == "VaultWritten" || x.State == "RecoveryRequired").ToListAsync(cancellationToken);
         foreach (var operation in operations)
         {
+            var keysAvailable = true;
+            foreach (var suffix in Suffixes)
+            {
+                var secret = await _vault.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(operation.NewCredentialSetId, suffix));
+                if (secret.IsUnavailable)
+                {
+                    operation.MarkRecoveryRequired("Key Vault unavailable while verifying credential set");
+                    keysAvailable = false;
+                    break;
+                }
+                if (!secret.IsFound)
+                {
+                    operation.MarkCleaned();
+                    keysAvailable = false;
+                    break;
+                }
+            }
+            if (!keysAvailable) continue;
+
             var active = operation.AccountId is { } account
                 ? await _context.SyncStatuses.Where(x => x.UserId == operation.UserId && x.AccountId == account && x.ExchangeName == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken)
                 : await _context.ExchangeIntegrations.Where(x => x.UserId == operation.UserId && x.Exchange == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken);
-            if (active == operation.NewCredentialSetId) operation.MarkActive();
-            else if (operation.State == "VaultWritten") operation.MarkRecoveryRequired("Activation was not observed");
+            if (active == operation.NewCredentialSetId)
+            {
+                operation.MarkActive();
+                continue;
+            }
+
+            if (operation.PreviousCredentialVersion is not { } priorVersion)
+            {
+                operation.MarkCleaned();
+                continue;
+            }
+
+            var newVersion = Guid.NewGuid();
+            var activated = operation.AccountId is { } accountId
+                ? await _context.SyncStatuses
+                    .Where(x => x.UserId == operation.UserId && x.AccountId == accountId && x.ExchangeName == "Bybit" && x.ActiveCredentialSetId == operation.PreviousCredentialSetId && x.CredentialVersion == priorVersion)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, newVersion), cancellationToken) == 1
+                : await _context.ExchangeIntegrations
+                    .Where(x => x.UserId == operation.UserId && x.Exchange == "Bybit" && x.ActiveCredentialSetId == operation.PreviousCredentialSetId && x.CredentialVersion == priorVersion)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, newVersion)
+                        .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1;
+            if (activated) operation.MarkActive();
+            else operation.MarkSuperseded();
         }
         await _context.SaveChangesAsync(cancellationToken);
         return operations.Count;

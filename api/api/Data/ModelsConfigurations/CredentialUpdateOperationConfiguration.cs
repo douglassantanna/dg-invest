@@ -10,6 +10,7 @@ public class CredentialUpdateOperationConfiguration : IEntityTypeConfiguration<C
         builder.ToTable("CredentialUpdateOperations");
         builder.Property(x => x.OperationId).HasMaxLength(32).IsRequired();
         builder.Property(x => x.NewCredentialSetId).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.PreviousCredentialSetId).HasMaxLength(32);
         builder.Property(x => x.Exchange).HasMaxLength(50).IsRequired();
         builder.Property(x => x.State).HasMaxLength(32).IsRequired();
         builder.Property(x => x.Error).HasMaxLength(2000);

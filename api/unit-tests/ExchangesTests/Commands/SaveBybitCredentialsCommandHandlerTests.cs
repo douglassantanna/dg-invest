@@ -5,6 +5,8 @@ using api.Exchanges.Commands;
 using api.Exchanges.Models;
 using api.Exchanges.Services;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -223,5 +225,90 @@ public class SaveBybitCredentialsCommandHandlerTests
         context.ChangeTracker.Clear();
         (await context.SyncStatuses.SingleAsync()).ActiveCredentialSetId.Should().Be("winning-set");
         (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_WhenVaultWrittenSetIsComplete_ShouldActivateMatchingPriorPointer()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
+        await using var context = new DataContext(options);
+        await context.Database.EnsureCreatedAsync();
+        var status = new SyncStatus(1, 1, "Bybit");
+        status.ActivateCredentialSet("old-set");
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", status.CredentialVersion);
+        operation.MarkVaultWritten();
+        context.CredentialUpdateOperations.Add(operation);
+        await context.SaveChangesAsync();
+        var vault = new Mock<IKeyVaultService>();
+        vault.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
+
+        var reconciled = await new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance)
+            .ReconcileAsync(CancellationToken.None);
+
+        reconciled.Should().Be(1);
+        context.ChangeTracker.Clear();
+        (await context.SyncStatuses.SingleAsync()).ActiveCredentialSetId.Should().Be(operation.NewCredentialSetId);
+        (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Active");
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_WhenAnotherSetIsActive_ShouldMarkOperationSuperseded()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
+        await using var context = new DataContext(options);
+        await context.Database.EnsureCreatedAsync();
+        var status = new SyncStatus(1, 1, "Bybit");
+        status.ActivateCredentialSet("old-set");
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", status.CredentialVersion);
+        operation.MarkVaultWritten();
+        status.ActivateCredentialSet("winning-set");
+        context.CredentialUpdateOperations.Add(operation);
+        await context.SaveChangesAsync();
+        var vault = new Mock<IKeyVaultService>();
+        vault.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
+
+        await new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance)
+            .ReconcileAsync(CancellationToken.None);
+
+        (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Superseded");
+    }
+
+    [Theory]
+    [InlineData(KeyVaultSecretReadStatus.NotFound, "Cleaned")]
+    [InlineData(KeyVaultSecretReadStatus.Unavailable, "RecoveryRequired")]
+    public async Task ReconcileAsync_WhenCredentialSetCannotBeVerified_ShouldNotActivate(KeyVaultSecretReadStatus status, string expectedState)
+    {
+        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
+        operation.MarkVaultWritten();
+        _context.CredentialUpdateOperations.Add(operation);
+        await _context.SaveChangesAsync();
+        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(status));
+
+        await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
+            .ReconcileAsync(CancellationToken.None);
+
+        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be(expectedState);
+        (await _context.SyncStatuses.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public void ConfigureServices_RegistersCredentialRecoveryHostedService()
+    {
+        var services = new ServiceCollection();
+
+        services.ConfigureServices();
+
+        services.Should().Contain(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(CredentialRecoveryService));
     }
 }
