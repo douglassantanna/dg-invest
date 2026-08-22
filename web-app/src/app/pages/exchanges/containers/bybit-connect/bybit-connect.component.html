@@ -1,0 +1,100 @@
+<main class="max-w-5xl mx-auto p-6 sm:mb-10">
+  <a routerLink="/exchanges" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400">
+    <i class="material-icons text-base">arrow_back</i>
+    Back to Bybit integration
+  </a>
+
+  <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6 mt-6">
+    <section>
+      <div class="flex items-start gap-4 mb-7">
+        <div class="w-12 h-12 shrink-0 rounded-xl bg-yellow-400 text-gray-900 flex items-center justify-center font-black text-xl">B</div>
+        <div>
+          <div class="text-xs font-semibold uppercase tracking-[0.18em] text-yellow-600 dark:text-yellow-400 mb-2">Bybit / New connection</div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Connect your Bybit account</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Start with your main Bybit account to discover the portfolios you want to sync.</p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
+          <div>
+            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Discovery credentials</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Use a read-only key created in Bybit API Management.</p>
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">Prototype</span>
+        </div>
+
+        <div class="p-6 space-y-5">
+          <div class="rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 p-4 flex justify-between gap-4">
+            <div>
+              <div class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Portfolio account</div>
+              <div class="font-semibold text-gray-900 dark:text-gray-100 mt-1">Main</div>
+            </div>
+            <span class="text-xs text-gray-500 dark:text-gray-400 self-center">Used for discovery only</span>
+          </div>
+
+          <div>
+            <label for="api-key" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">API key</label>
+            <input id="api-key" [(ngModel)]="apiKey" autocomplete="off" placeholder="Paste your Bybit API key"
+              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2.5 text-sm focus:outline-none focus:border-yellow-500">
+          </div>
+
+          <div>
+            <label for="api-secret" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">API secret</label>
+            <div class="relative">
+              <input id="api-secret" [(ngModel)]="apiSecret" [type]="showSecrets ? 'text' : 'password'" autocomplete="off" placeholder="Paste your Bybit API secret"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2.5 pr-16 text-sm focus:outline-none focus:border-yellow-500">
+              <button type="button" (click)="showSecrets = !showSecrets" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-500 hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400">
+                {{ showSecrets ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label for="webhook-secret" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">Webhook secret <span class="font-normal text-gray-400">Optional</span></label>
+            <input id="webhook-secret" [(ngModel)]="webhookSecret" [type]="showSecrets ? 'text' : 'password'" autocomplete="off" placeholder="Add this when you configure a Bybit webhook"
+              class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2.5 text-sm focus:outline-none focus:border-yellow-500">
+          </div>
+
+          @if (errorMessage) {
+            <p class="text-sm text-red-600 dark:text-red-400">{{ errorMessage }}</p>
+          }
+
+          <button type="button" (click)="saveCredentials()" [disabled]="state !== 'form'"
+            class="w-full py-3 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-60 text-gray-900 rounded-lg text-sm font-semibold transition-colors">
+            {{ state === 'form' ? 'Save securely and continue' : 'Credentials saved' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="space-y-4 lg:pt-20">
+      <section class="rounded-2xl bg-gray-900 dark:bg-gray-950 text-white p-6 shadow-lg">
+        <div class="flex items-center gap-2 text-yellow-300">
+          <i class="material-icons text-lg">verified_user</i>
+          <span class="text-sm font-semibold">Your credentials stay private</span>
+        </div>
+        <p class="text-sm text-gray-300 mt-3 leading-6">In the real flow, keys are encrypted and stored in Azure Key Vault. They are never displayed after saving.</p>
+        <p class="text-xs text-gray-400 mt-4">This screen is a mock. It does not submit or retain any entered values.</p>
+      </section>
+
+      <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+        <h2 class="font-semibold text-gray-900 dark:text-gray-100">What happens next</h2>
+        <ol class="mt-4 space-y-4 text-sm">
+          <li class="flex gap-3"><span class="w-6 h-6 shrink-0 rounded-full bg-yellow-100 dark:bg-yellow-400/15 text-yellow-700 dark:text-yellow-300 flex items-center justify-center font-semibold text-xs">1</span><span class="text-gray-600 dark:text-gray-300">Save a read-only API key for your <strong class="text-gray-900 dark:text-gray-100">Main</strong> account.</span></li>
+          <li class="flex gap-3"><span class="w-6 h-6 shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center font-semibold text-xs">2</span><span class="text-gray-600 dark:text-gray-300">Test the connection before any account data is imported.</span></li>
+          <li class="flex gap-3"><span class="w-6 h-6 shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center font-semibold text-xs">3</span><span class="text-gray-600 dark:text-gray-300">Discover and configure each Bybit subaccount separately.</span></li>
+        </ol>
+
+        @if (state === 'saved') {
+          <button type="button" (click)="testConnection()" class="w-full mt-6 py-2.5 border border-yellow-500 text-yellow-700 dark:text-yellow-300 dark:border-yellow-400 rounded-lg text-sm font-semibold hover:bg-yellow-50 dark:hover:bg-yellow-400/10">Test connection</button>
+        } @else if (state === 'verified') {
+          <div class="mt-6 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm">Connection verified. You can now discover your Bybit accounts.</div>
+          <button type="button" (click)="discoverAccounts()" class="w-full mt-3 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-gray-900 rounded-lg text-sm font-semibold">Discover Bybit accounts</button>
+        } @else if (state === 'discovered') {
+          <div class="mt-6 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm">4 Bybit accounts found. The next screen will let you configure each one.</div>
+        }
+      </section>
+    </aside>
+  </div>
+</main>

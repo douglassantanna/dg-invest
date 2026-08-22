@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
 import { BybitConnectionGroupDto, BybitSubaccountRowDto } from 'src/app/core/models/bybit-connection-group';
@@ -13,7 +14,7 @@ interface ExchangeAccount extends BybitSubaccountRowDto {
 @Component({
   selector: 'app-exchange-management',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './exchange-management.component.html',
 })
 export class ExchangeManagementComponent implements OnInit {

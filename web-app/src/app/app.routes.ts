@@ -8,6 +8,7 @@ import { AccountComponent } from './pages/cryptos/containers/account/account.com
 import { DepositComponent } from './pages/cryptos/containers/deposit/deposit.component';
 import { WithdrawComponent } from './pages/cryptos/containers/withdraw/withdraw.component';
 import { ExchangeManagementComponent } from './pages/exchanges/containers/exchange-management/exchange-management.component';
+import { BybitConnectComponent } from './pages/exchanges/containers/bybit-connect/bybit-connect.component';
 
 export const routes: Routes = [
   {
@@ -44,6 +45,11 @@ export const routes: Routes = [
     path: "exchanges",
     canActivate: [authGuard],
     component: ExchangeManagementComponent,
+  },
+  {
+    path: "exchanges/bybit/connect",
+    canActivate: [authGuard],
+    component: BybitConnectComponent,
   },
   {
     path: "login",
