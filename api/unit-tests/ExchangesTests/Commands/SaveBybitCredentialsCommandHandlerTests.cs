@@ -3,7 +3,10 @@ using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Commands;
 using api.Exchanges.Models;
+using api.Exchanges.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace unit_tests.ExchangesTests.Commands;
 
@@ -182,5 +185,43 @@ public class SaveBybitCredentialsCommandHandlerTests
         result.Data.Should().Be(503);
         _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         (await _context.SyncStatuses.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_WhenPointerChangesBeforeActivation_ShouldPreserveWinnerAndRequireRecovery()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
+        await using var context = new DataContext(options);
+        await context.Database.EnsureCreatedAsync();
+        var status = new SyncStatus(1, 1, "Bybit");
+        status.ActivateCredentialSet("original-set");
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+
+        var vault = new Mock<IKeyVaultService>();
+        var changedPointer = false;
+        vault.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>(async (_, _) =>
+            {
+                if (changedPointer) return;
+                changedPointer = true;
+                await using var winnerContext = new DataContext(options);
+                var winner = await winnerContext.SyncStatuses.SingleAsync();
+                winner.ActivateCredentialSet("winning-set");
+                await winnerContext.SaveChangesAsync();
+            });
+        var service = new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance);
+
+        var result = await service.ReplaceAsync(1, 1, new Dictionary<string, string>
+        {
+            ["api-key"] = "key", ["api-secret"] = "secret", ["webhook-secret"] = "webhook"
+        }, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        context.ChangeTracker.Clear();
+        (await context.SyncStatuses.SingleAsync()).ActiveCredentialSetId.Should().Be("winning-set");
+        (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
     }
 }

@@ -50,9 +50,22 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
     public async Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken)
     {
-        var priorSet = accountId is { } id
-            ? await _context.SyncStatuses.Where(x => x.UserId == userId && x.AccountId == id && x.ExchangeName == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken)
-            : await _context.ExchangeIntegrations.Where(x => x.UserId == userId && x.Exchange == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken);
+        string? priorSet;
+        Guid? priorVersion;
+        if (accountId is { } id)
+        {
+            var pointer = await _context.SyncStatuses.Where(x => x.UserId == userId && x.AccountId == id && x.ExchangeName == "Bybit")
+                .Select(x => new { x.ActiveCredentialSetId, x.CredentialVersion }).SingleOrDefaultAsync(cancellationToken);
+            priorSet = pointer?.ActiveCredentialSetId;
+            priorVersion = pointer?.CredentialVersion;
+        }
+        else
+        {
+            var pointer = await _context.ExchangeIntegrations.Where(x => x.UserId == userId && x.Exchange == "Bybit")
+                .Select(x => new { x.ActiveCredentialSetId, x.CredentialVersion }).SingleOrDefaultAsync(cancellationToken);
+            priorSet = pointer?.ActiveCredentialSetId;
+            priorVersion = pointer?.CredentialVersion;
+        }
         var operation = new CredentialUpdateOperation(userId, "Bybit", accountId, priorSet);
         _context.CredentialUpdateOperations.Add(operation);
         try { await _context.SaveChangesAsync(cancellationToken); }
@@ -83,17 +96,43 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
         try
         {
-            if (accountId is { } account)
+            var activated = true;
+            if (priorVersion is { } accountVersion && accountId is { } account)
             {
-                var status = await _context.SyncStatuses.SingleOrDefaultAsync(x => x.UserId == userId && x.AccountId == account && x.ExchangeName == "Bybit", cancellationToken);
-                if (status == null) { status = new SyncStatus(userId, account, "Bybit"); _context.SyncStatuses.Add(status); }
+                var now = DateTime.UtcNow;
+                activated = await _context.SyncStatuses
+                    .Where(x => x.UserId == userId && x.AccountId == account && x.ExchangeName == "Bybit" && x.ActiveCredentialSetId == priorSet && x.CredentialVersion == accountVersion)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, Guid.NewGuid())
+                        .SetProperty(x => x.BybitCredentialsSetAt, x => x.BybitCredentialsSetAt ?? now), cancellationToken) == 1;
+            }
+            else if (priorVersion is { } integrationVersion)
+            {
+                activated = await _context.ExchangeIntegrations
+                    .Where(x => x.UserId == userId && x.Exchange == "Bybit" && x.ActiveCredentialSetId == priorSet && x.CredentialVersion == integrationVersion)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, Guid.NewGuid())
+                        .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1;
+            }
+            else if (accountId is { } accountToCreate)
+            {
+                var status = new SyncStatus(userId, accountToCreate, "Bybit");
                 status.ActivateCredentialSet(operation.NewCredentialSetId);
+                _context.SyncStatuses.Add(status);
             }
             else
             {
-                var integration = await _context.ExchangeIntegrations.SingleOrDefaultAsync(x => x.UserId == userId && x.Exchange == "Bybit", cancellationToken);
-                if (integration == null) { integration = new ExchangeIntegration(userId, "Bybit"); _context.ExchangeIntegrations.Add(integration); }
+                var integration = new ExchangeIntegration(userId, "Bybit");
                 integration.ActivateCredentialSet(operation.NewCredentialSetId);
+                _context.ExchangeIntegrations.Add(integration);
+            }
+            if (!activated)
+            {
+                operation.MarkRecoveryRequired("Active credential set changed concurrently");
+                await TrySaveAsync(cancellationToken);
+                return new(false, false, "Active credential set changed concurrently");
             }
             operation.MarkActive();
             await _context.SaveChangesAsync(cancellationToken);
