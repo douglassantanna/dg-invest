@@ -41,21 +41,18 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
 
     public async Task<Response> Handle(GetBybitSubMembersQuery request, CancellationToken cancellationToken)
     {
-        var mainAccount = await _context.Accounts
-            .Where(a => a.UserId == request.UserId
-                     && a.Name.ToLower() == "main")
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (mainAccount == null)
-            return new Response("Main account not found", false, 404);
+        var integration = await _context.ExchangeIntegrations
+            .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
+        if (integration == null)
+            return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
 
         var apiKey = await _keyVaultService.GetSecretAsync(
-            SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, mainAccount.Id, "api-key"));
+            SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-key"));
         var apiSecret = await _keyVaultService.GetSecretAsync(
-            SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, mainAccount.Id, "api-secret"));
+            SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-secret"));
 
         if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
-            return new Response("Bybit credentials not configured for main account", false, 400);
+            return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
 
         List<BybitSubMember> subMembers;
         try
@@ -70,7 +67,8 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
 
         // Load existing account ExternalId mappings to show which are already linked.
         var mappedAccounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && a.ExternalId != null && !a.IsDeleted)
+            .Where(a => a.UserId == request.UserId && a.ExternalId != null && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .Select(a => new { a.Id, a.ExternalId, a.Name })
             .ToListAsync(cancellationToken);
 

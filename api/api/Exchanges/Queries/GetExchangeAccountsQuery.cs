@@ -31,7 +31,7 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
     public async Task<Response> Handle(GetExchangeAccountsQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted && a.AccountType == api.Cryptos.Models.EAccountType.Exchange)
             .Select(a => new { a.Id, a.Name })
             .ToListAsync(cancellationToken);
 

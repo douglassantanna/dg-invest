@@ -76,6 +76,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("bybit/integration-credentials")]
+    public async Task<ActionResult<Response>> SaveBybitIntegrationCredentials([FromBody] SaveBybitIntegrationCredentialsRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new SaveBybitIntegrationCredentialsCommand(userId.Value, request.ApiKey, request.ApiSecret));
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
     [HttpPost("bybit/sync-accounts")]
     public async Task<ActionResult<Response>> SyncBybitAccounts()
     {
@@ -237,6 +251,8 @@ public record SaveBybitCredentialsRequest(
     public string? ResolvedName => string.IsNullOrWhiteSpace(Name) ? SubaccountTag : Name;
     public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
 }
+
+public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret);
 
 public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
 {

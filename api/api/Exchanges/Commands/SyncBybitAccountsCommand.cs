@@ -2,7 +2,6 @@ using api.AzureKeyVault;
 using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Bybit;
-using api.Exchanges.Commands;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -34,26 +33,33 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
     {
         try
         {
-            var user = await _context.Users
-                .Include(u => u.Accounts)
-                .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
-
-
-            if (user == null)
+            var userExists = await _context.Users.AnyAsync(u => u.Id == request.UserId, cancellationToken);
+            if (!userExists)
             {
                 _logger.LogError("SyncBybitAccounts: user {UserId} not found", request.UserId);
                 return new Response("User not found", false, 404);
             }
 
-            var mainAccount = user.Accounts.FirstOrDefault(a => a.Name.Equals("main", StringComparison.OrdinalIgnoreCase));
-            if (mainAccount == null)
+            var integration = await _context.ExchangeIntegrations
+                .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
+            if (integration == null)
             {
-                _logger.LogError("SyncBybitAccounts: main account not found for user {UserId}", request.UserId);
-                return new Response("Main account not found", false, 404);
+                var legacyMainAccount = await _context.Accounts.SingleOrDefaultAsync(
+                    account => account.UserId == request.UserId && !account.IsDeleted && account.Name == "main",
+                    cancellationToken);
+                if (legacyMainAccount != null)
+                {
+                    var legacyApiKey = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-key"));
+                    var legacyApiSecret = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-secret"));
+                    if (!string.IsNullOrEmpty(legacyApiKey) && !string.IsNullOrEmpty(legacyApiSecret))
+                        return new Response("Your existing Bybit discovery credentials need migration to the integration model. They remain unchanged while migration is prepared.", false, 409);
+                }
+
+                return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
             }
 
-            var apiKey = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, mainAccount.Id, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, mainAccount.Id, "api-secret"));
+            var apiKey = await _keyVaultService.GetSecretAsync(SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-key"));
+            var apiSecret = await _keyVaultService.GetSecretAsync(SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-secret"));
 
             if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
             {
@@ -72,18 +78,16 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 return new Response("Failed to fetch sub-accounts from Bybit", false, 500);
             }
 
-            var existingAccounts = user.Accounts.Where(a => !a.IsDeleted).ToList();
-            var existingBybitUids = user.Accounts.Where(a => a.ExternalId != null)
-                                                .ToDictionary(a => a.ExternalId!, a => a);
-            var existingNames = existingAccounts.Select(a => a.Name.ToLowerInvariant())
-                                               .ToHashSet();
+            var existingBybitUids = await _context.Accounts
+                .Where(a => a.UserId == request.UserId && !a.IsDeleted
+                         && a.AccountType == EAccountType.Exchange && a.Exchange == "Bybit" && a.ExternalId != null)
+                .ToDictionaryAsync(a => a.ExternalId!, a => a, cancellationToken);
 
             int created = 0;
             int matched = 0;
 
             foreach (var member in subMembers)
             {
-                // 1st priority: match by ExternalId (most reliable — set manually via map-account endpoint).
                 if (existingBybitUids.TryGetValue(member.Uid, out var mappedAccount))
                 {
                     matched++;
@@ -92,20 +96,9 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                     continue;
                 }
 
-                // 2nd priority: match by remark, 3rd: fall back to auto-generated username.
                 var tag = string.IsNullOrWhiteSpace(member.Remark)
                     ? member.Username.Trim()
                     : member.Remark.Trim();
-
-                if (existingNames.Contains(tag.ToLowerInvariant()))
-                {
-                    var existingAccount = existingAccounts.First(a => a.Name.Equals(tag, StringComparison.OrdinalIgnoreCase));
-                    existingAccount.SetExternalId(member.Uid);
-                    existingAccount.SetExchange("Bybit");
-                    matched++;
-                    _logger.LogInformation("SyncBybitAccounts: sub-account '{Name}' matched by name, set ExternalId {Uid} for user {UserId}", tag, member.Uid, request.UserId);
-                    continue;
-                }
 
                 var newAccount = new Account(tag, request.UserId, EAccountType.Exchange, "Bybit", member.Uid);
                 _context.Accounts.Add(newAccount);

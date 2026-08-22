@@ -31,7 +31,8 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
     public async Task<Response> Handle(TestBybitConnectionCommand request, CancellationToken cancellationToken)
     {
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .FirstOrDefaultAsync(cancellationToken);
 
         if (account == null)

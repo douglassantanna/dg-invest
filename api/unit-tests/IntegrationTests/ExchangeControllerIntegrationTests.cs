@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using api.Cryptos.Models;
 using api.Data;
+using api.Exchanges.Commands;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace unit_tests.IntegrationTests;
@@ -56,19 +57,19 @@ public class ExchangeControllerIntegrationTests
         accounts.StatusCode.Should().Be(HttpStatusCode.OK);
         (await accounts.Content.ReadAsStringAsync()).Should().Contain("Manual portfolio");
 
-        var saveMainCredentials = await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new
+        var saveIntegrationCredentials = await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new
         {
-            accountId = mainAccountId,
-            apiKey = "main-api-key",
-            apiSecret = "main-api-secret",
-            webhookSecret = "main-webhook-secret",
+            apiKey = "integration-api-key",
+            apiSecret = "integration-api-secret",
         });
-        saveMainCredentials.StatusCode.Should().Be(HttpStatusCode.OK);
+        saveIntegrationCredentials.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AssertIntegrationCredentialsAsync(userId);
 
         var syncAccounts = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
         syncAccounts.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var exchangeAccountId = await GetAccountIdAsync(userId, "Integration subaccount");
+        var exchangeAccountId = await GetAccountIdAsync(userId, "Integration subaccount", EAccountType.Exchange);
         var saveSubaccountCredentials = await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new
         {
             accountId = exchangeAccountId,
@@ -92,25 +93,103 @@ public class ExchangeControllerIntegrationTests
         var toggle = await client.PostAsync($"/api/Exchange/bybit/toggle/{exchangeAccountId}", null);
         toggle.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var manualAccountId = await GetAccountIdAsync(userId, "Manual portfolio");
-        var map = await client.PostAsJsonAsync("/api/Exchange/bybit/map-account", new { accountId = manualAccountId, externalId = "integration-manual-uid" });
-        map.StatusCode.Should().Be(HttpStatusCode.OK);
-        await AssertAccountIsExchangeAsync(manualAccountId, "integration-manual-uid");
-
         var delete = await client.DeleteAsync($"/api/Exchange/bybit/credentials/{exchangeAccountId}");
         delete.StatusCode.Should().Be(HttpStatusCode.OK);
-        var resync = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
-        resync.StatusCode.Should().Be(HttpStatusCode.OK);
-        await AssertAccountIsDeletedAsync(exchangeAccountId);
     }
 
-    private async Task<int> GetAccountIdAsync(int userId, string name)
+    [Fact]
+    public async Task BybitDiscovery_PreservesSameNamedManualAccountAndMatchesOnlyUid()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var createManual = await client.PostAsJsonAsync("/api/Account/create", new { name = "Integration subaccount" });
+        createManual.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new { apiKey = "key", apiSecret = "secret" }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await client.PostAsync("/api/Exchange/bybit/sync-accounts", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync("/api/Exchange/bybit/sync-accounts", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var accounts = await scope.ServiceProvider.GetRequiredService<DataContext>().Accounts
+            .Where(x => x.UserId == userId && x.Name == "Integration subaccount")
+            .ToListAsync();
+        accounts.Should().ContainSingle(x => x.AccountType == EAccountType.Manual && x.ExternalId == null && x.Exchange == null);
+        accounts.Should().ContainSingle(x => x.AccountType == EAccountType.Exchange && x.Exchange == "Bybit" && x.ExternalId == "integration-uid-1");
+    }
+
+    [Fact]
+    public async Task BybitDiscovery_RequiresIntegrationCredentials()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        var response = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("integration credentials");
+    }
+
+    [Fact]
+    public async Task BybitDiscovery_WithLegacyMainCredentials_ShouldExplainMigrationRequirement()
+    {
+        var (userId, mainAccountId) = await _fixture.CreateUserAsync();
+        await _fixture.Factory.KeyVault.SetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-key"), "legacy-key");
+        await _fixture.Factory.KeyVault.SetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-secret"), "legacy-secret");
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        var response = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("need migration");
+    }
+
+    [Fact]
+    public async Task ExchangeEndpoints_ShouldExcludeManualAccounts()
+    {
+        var (userId, mainAccountId) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        var accounts = await client.GetAsync("/api/Exchange/accounts");
+        accounts.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await accounts.Content.ReadAsStringAsync()).Should().NotContain("\"accountName\":\"main\"");
+
+        (await client.GetAsync($"/api/Exchange/{mainAccountId}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var transactions = await client.GetAsync($"/api/Exchange/{mainAccountId}/transactions");
+        transactions.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await transactions.Content.ReadAsStringAsync()).Should().Contain("Account not found");
+    }
+
+    [Fact]
+    public async Task BybitAccountActions_RejectManualAccounts()
+    {
+        var (userId, mainAccountId) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        (await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new { accountId = mainAccountId, apiKey = "key", apiSecret = "secret", webhookSecret = "" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.PostAsync($"/api/Exchange/bybit/test-connection/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.PostAsync($"/api/Exchange/bybit/toggle/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.PostAsJsonAsync("/api/Exchange/bybit/map-account", new { accountId = mainAccountId, externalId = "manual-uid" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    private async Task<int> GetAccountIdAsync(int userId, string name, EAccountType? accountType = null)
     {
         using var scope = _fixture.Factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<DataContext>().Accounts
-            .Where(account => account.UserId == userId && account.Name == name)
+            .Where(account => account.UserId == userId && account.Name == name && (accountType == null || account.AccountType == accountType))
             .Select(account => account.Id)
             .SingleAsync();
+    }
+
+    private async Task AssertIntegrationCredentialsAsync(int userId)
+    {
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+        (await context.ExchangeIntegrations.CountAsync(x => x.UserId == userId && x.Exchange == "Bybit")).Should().Be(1);
+        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-integration-{userId}-api-key")).Should().Be("integration-api-key");
+        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-integration-{userId}-api-secret")).Should().Be("integration-api-secret");
     }
 
     private async Task AssertAccountIsExchangeAsync(int accountId, string externalId)
