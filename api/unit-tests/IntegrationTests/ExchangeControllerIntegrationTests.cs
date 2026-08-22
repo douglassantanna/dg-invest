@@ -224,6 +224,103 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitCredentialEndpoints_AcceptLegacyAccountAliasesAndReturnSuccess()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        var integration = await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new
+        {
+            apiKey = "integration-api-key",
+            apiSecret = "integration-api-secret",
+        });
+        var account = await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new
+        {
+            accountId = 0,
+            subaccountTag = "Legacy aliases account",
+            bybitUid = "legacy-uid-001",
+            apiKey = "account-api-key",
+            apiSecret = "account-api-secret",
+            webhookSecret = "account-webhook-secret",
+        });
+
+        integration.StatusCode.Should().Be(HttpStatusCode.OK);
+        account.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var exchangeAccount = await context.Accounts.SingleAsync(candidate => candidate.UserId == userId && candidate.Name == "Legacy aliases account");
+        exchangeAccount.ExternalId.Should().Be("legacy-uid-001");
+        (await context.ExchangeIntegrations.SingleAsync(candidate => candidate.UserId == userId && candidate.Exchange == "Bybit")).ActiveCredentialSetId.Should().NotBeNull();
+        (await context.CredentialUpdateOperations.Where(candidate => candidate.UserId == userId).Select(candidate => candidate.State).ToListAsync())
+            .Should().OnlyContain(state => state == "Active");
+    }
+
+    [Theory]
+    [InlineData("/api/Exchange/bybit/integration-credentials")]
+    [InlineData("/api/Exchange/bybit/credentials")]
+    public async Task BybitCredentialEndpoints_Return503AndRecordRecoveryWhenKeyVaultIsUnavailable(string endpoint)
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        _fixture.Factory.KeyVault.IsAvailable = false;
+        try
+        {
+            var response = endpoint.EndsWith("integration-credentials", StringComparison.Ordinal)
+                ? await client.PostAsJsonAsync(endpoint, new { apiKey = "api-key", apiSecret = "api-secret" })
+                : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Unavailable account", bybitUid = "unavailable-uid", apiKey = "api-key", apiSecret = "api-secret", webhookSecret = "" });
+
+            response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+            var payload = await response.Content.ReadAsStringAsync();
+            payload.Should().Contain(KeyVaultSecretReadResult.UnavailableMessage);
+            payload.Should().Contain("\"data\":503");
+        }
+        finally
+        {
+            _fixture.Factory.KeyVault.IsAvailable = true;
+        }
+
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var operation = await scope.ServiceProvider.GetRequiredService<DataContext>().CredentialUpdateOperations.SingleAsync(candidate => candidate.UserId == userId);
+        operation.State.Should().Be("RecoveryRequired");
+    }
+
+    [Theory]
+    [InlineData("/api/Exchange/bybit/integration-credentials")]
+    [InlineData("/api/Exchange/bybit/credentials")]
+    public async Task BybitCredentialEndpoints_ReturnBadRequestAndLeavePendingStatusWhenRecoveryIsRequired(string endpoint)
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        _fixture.Factory.KeyVault.FailWrites = true;
+        try
+        {
+            var response = endpoint.EndsWith("integration-credentials", StringComparison.Ordinal)
+                ? await client.PostAsJsonAsync(endpoint, new { apiKey = "api-key", apiSecret = "api-secret" })
+                : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Pending account", bybitUid = "pending-uid", apiKey = "api-key", apiSecret = "api-secret", webhookSecret = "webhook-secret" });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await response.Content.ReadAsStringAsync()).Should().Contain("recovery may be required");
+        }
+        finally
+        {
+            _fixture.Factory.KeyVault.FailWrites = false;
+        }
+
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            (await context.CredentialUpdateOperations.SingleAsync(candidate => candidate.UserId == userId)).State.Should().Be("RecoveryRequired");
+        }
+
+        if (!endpoint.EndsWith("integration-credentials", StringComparison.Ordinal))
+        {
+            var groups = await client.GetAsync("/api/Exchange/bybit/connection-groups");
+            groups.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await groups.Content.ReadAsStringAsync()).Should().Contain("\"status\":\"pending\"");
+        }
+    }
+
+    [Fact]
     public async Task BybitDiscovery_WithLegacyMainCredentials_ShouldExplainMigrationRequirement()
     {
         var (userId, mainAccountId) = await _fixture.CreateUserAsync();
