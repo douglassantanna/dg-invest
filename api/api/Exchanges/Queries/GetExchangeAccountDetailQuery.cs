@@ -58,12 +58,15 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
 
         foreach (var status in syncStatuses)
         {
-            var hasApiKey = !string.IsNullOrEmpty(
-                await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key")));
-            var hasApiSecret = !string.IsNullOrEmpty(
-                await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret")));
-            var hasWebhookSecret = !string.IsNullOrEmpty(
-                await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret")));
+            var apiKey = await _keyVaultService.GetSecretReadResultAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"));
+            var apiSecret = await _keyVaultService.GetSecretReadResultAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"));
+            var webhookSecret = await _keyVaultService.GetSecretReadResultAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"));
+
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
             connections.Add(new ExchangeConnectionDto(
                 status.ExchangeName,
@@ -71,9 +74,9 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
                 status.LastSyncAt,
                 status.ErrorCount,
                 status.LastErrorMessage,
-                hasApiKey,
-                hasApiSecret,
-                hasWebhookSecret));
+                apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value),
+                apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value),
+                webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value)));
         }
 
         // If no sync status exists, still report the account as NotConfigured

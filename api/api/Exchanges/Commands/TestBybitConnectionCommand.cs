@@ -43,15 +43,18 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
         var key = SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key");
         var secret = SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret");
 
-        var apiKey = await _keyVaultService.GetSecretAsync(key);
-        var apiSecret = await _keyVaultService.GetSecretAsync(secret);
+        var apiKey = await _keyVaultService.GetSecretReadResultAsync(key);
+        var apiSecret = await _keyVaultService.GetSecretReadResultAsync(secret);
 
-        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+        if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
+            return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+
+        if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
         {
             return new Response("API key and secret are not configured for this account", false, 400);
         }
 
-        var success = await _bybitService.TestConnectionAsync(apiKey, apiSecret);
+        var success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!);
 
         if (success)
         {

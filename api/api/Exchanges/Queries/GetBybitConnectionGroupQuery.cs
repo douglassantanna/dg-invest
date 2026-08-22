@@ -60,16 +60,19 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
         foreach (var account in accounts)
         {
-            var apiKey = await _keyVaultService.GetSecretAsync(
+            var apiKey = await _keyVaultService.GetSecretReadResultAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(
+            var apiSecret = await _keyVaultService.GetSecretReadResultAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-secret"));
-            var webhookSecret = await _keyVaultService.GetSecretAsync(
+            var webhookSecret = await _keyVaultService.GetSecretReadResultAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "webhook-secret"));
 
-            var hasApiKey = !string.IsNullOrEmpty(apiKey);
-            var hasApiSecret = !string.IsNullOrEmpty(apiSecret);
-            var hasWebhookSecret = !string.IsNullOrEmpty(webhookSecret);
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+
+            var hasApiKey = apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value);
+            var hasApiSecret = apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value);
+            var hasWebhookSecret = webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value);
 
             var syncStatus = syncStatuses
                 .FirstOrDefault(s => s.AccountId == account.Id);
@@ -90,8 +93,8 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
             else
                 status = "pending";
 
-            var maskedApiKey = hasApiKey && apiKey!.Length > 4
-                ? "...." + apiKey[^4..]
+            var maskedApiKey = hasApiKey && apiKey.Value!.Length > 4
+                ? "...." + apiKey.Value[^4..]
                 : null;
 
             var webhookUrl = hasWebhookSecret

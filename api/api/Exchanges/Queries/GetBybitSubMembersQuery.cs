@@ -46,18 +46,21 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
         if (integration == null)
             return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
 
-        var apiKey = await _keyVaultService.GetSecretAsync(
+        var apiKey = await _keyVaultService.GetSecretReadResultAsync(
             SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-key"));
-        var apiSecret = await _keyVaultService.GetSecretAsync(
+        var apiSecret = await _keyVaultService.GetSecretReadResultAsync(
             SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-secret"));
 
-        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+        if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
+            return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+
+        if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
             return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
 
         List<BybitSubMember> subMembers;
         try
         {
-            subMembers = await _bybitService.GetSubAccountsAsync(apiKey, apiSecret);
+            subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!);
         }
         catch (Exception ex)
         {

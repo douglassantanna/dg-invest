@@ -27,7 +27,8 @@ public class TestBybitConnectionCommandHandlerTests
         await context.SaveChangesAsync();
 
         var keyVault = new Mock<IKeyVaultService>();
-        keyVault.Setup(x => x.GetSecretAsync(It.IsAny<string>())).ReturnsAsync("configured");
+        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "configured"));
         var bybitService = new Mock<IBybitService>();
         bybitService.Setup(x => x.TestConnectionAsync("configured", "configured")).ReturnsAsync(false);
         var logger = Mock.Of<ILogger<TestBybitConnectionCommandHandler>>();
@@ -37,5 +38,54 @@ public class TestBybitConnectionCommandHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         syncStatus.LastVerifiedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WhenKeyVaultIsUnavailable_ReturnsRetriableFailure()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
+        var handler = new TestBybitConnectionCommandHandler(keyVault.Object, Mock.Of<IBybitService>(), context,
+            Mock.Of<ILogger<TestBybitConnectionCommandHandler>>());
+
+        var result = await handler.Handle(new TestBybitConnectionCommand(1, account.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be(KeyVaultSecretReadResult.UnavailableMessage);
+        result.Data.Should().Be(503);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCredentialsAreMissing_ReturnsBadRequestWithoutCallingBybit()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
+        var bybitService = new Mock<IBybitService>();
+        var handler = new TestBybitConnectionCommandHandler(keyVault.Object, bybitService.Object, context,
+            Mock.Of<ILogger<TestBybitConnectionCommandHandler>>());
+
+        var result = await handler.Handle(new TestBybitConnectionCommand(1, account.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Data.Should().Be(400);
+        bybitService.Verify(x => x.TestConnectionAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 }

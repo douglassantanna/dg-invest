@@ -122,9 +122,26 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
 public sealed class InMemoryKeyVault : IKeyVaultService
 {
     private readonly Dictionary<string, string> _secrets = new(StringComparer.Ordinal);
+    public bool IsAvailable { get; set; } = true;
 
-    public Task<string?> GetSecretAsync(string secretName) =>
-        Task.FromResult(_secrets.TryGetValue(secretName, out var value) ? value : null);
+    public Task<KeyVaultSecretReadResult> GetSecretReadResultAsync(string secretName)
+    {
+        if (!IsAvailable)
+            return Task.FromResult(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
+
+        return Task.FromResult(_secrets.TryGetValue(secretName, out var value)
+            ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, value)
+            : new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
+    }
+
+    public async Task<string?> GetSecretAsync(string secretName)
+    {
+        var result = await GetSecretReadResultAsync(secretName);
+        if (result.IsUnavailable)
+            throw new InvalidOperationException(KeyVaultSecretReadResult.UnavailableMessage);
+
+        return result.Value;
+    }
 
     public Task SetSecretAsync(string secretName, string value)
     {

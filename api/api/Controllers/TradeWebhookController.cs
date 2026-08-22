@@ -58,6 +58,9 @@ public class TradeWebhookController : ControllerBase
         if (!result.IsSuccess && result.Data?.ToString() == "401")
             return Unauthorized();
 
+        if (!result.IsSuccess && result.Data?.ToString() == "503")
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
         // Return 200 for all other outcomes so Bybit does not retry indefinitely.
         return Ok();
     }

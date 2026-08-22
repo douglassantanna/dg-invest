@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using api.AzureKeyVault;
 using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Commands;
+using api.Exchanges.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace unit_tests.IntegrationTests;
@@ -128,6 +130,89 @@ public class ExchangeControllerIntegrationTests
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("integration credentials");
+    }
+
+    [Fact]
+    public async Task BybitDiscovery_DistinguishesMissingCredentialsFromUnavailableKeyVault()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            context.ExchangeIntegrations.Add(new ExchangeIntegration(userId, "Bybit"));
+            await context.SaveChangesAsync();
+        }
+        await _fixture.Factory.KeyVault.SetSecretAsync(
+            SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(userId, "api-key"), "integration-api-key");
+        await _fixture.Factory.KeyVault.SetSecretAsync(
+            SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(userId, "api-secret"), "integration-api-secret");
+        await _fixture.Factory.KeyVault.DeleteSecretAsync(
+            SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(userId, "api-secret"));
+
+        var missingSecret = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+
+        missingSecret.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await missingSecret.Content.ReadAsStringAsync()).Should().Contain("Bybit credentials not found");
+
+        _fixture.Factory.KeyVault.IsAvailable = false;
+        try
+        {
+            var unavailable = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+
+            unavailable.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+            (await unavailable.Content.ReadAsStringAsync()).Should().Contain(KeyVaultSecretReadResult.UnavailableMessage);
+        }
+        finally
+        {
+            _fixture.Factory.KeyVault.IsAvailable = true;
+        }
+    }
+
+    [Fact]
+    public async Task BybitCredentialEndpoints_DistinguishUnavailableVaultFromMissingSecrets()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var save = await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new
+        {
+            accountId = 0,
+            name = "Credential status account",
+            apiKey = "api-key",
+            apiSecret = "api-secret",
+            webhookSecret = "webhook-secret",
+        });
+        save.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var accountId = await GetAccountIdAsync(userId, "Credential status account", EAccountType.Exchange);
+        var endpoints = new[]
+        {
+            "/api/Exchange/bybit/connection-groups",
+            "/api/Exchange/bybit/credentials-status",
+            $"/api/Exchange/{accountId}",
+        };
+
+        _fixture.Factory.KeyVault.IsAvailable = false;
+        try
+        {
+            foreach (var endpoint in endpoints)
+                (await client.GetAsync(endpoint)).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        }
+        finally
+        {
+            _fixture.Factory.KeyVault.IsAvailable = true;
+        }
+
+        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
+        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
+        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "webhook-secret"));
+
+        foreach (var endpoint in endpoints)
+            (await client.GetAsync(endpoint)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await (await client.GetAsync("/api/Exchange/bybit/connection-groups")).Content.ReadAsStringAsync()).Should().Contain("pending");
+        (await (await client.GetAsync("/api/Exchange/bybit/credentials-status")).Content.ReadAsStringAsync()).Should().Contain("\"hasApiKey\":false");
+        (await (await client.GetAsync($"/api/Exchange/{accountId}")).Content.ReadAsStringAsync()).Should().Contain("\"hasApiKey\":false");
     }
 
     [Fact]
