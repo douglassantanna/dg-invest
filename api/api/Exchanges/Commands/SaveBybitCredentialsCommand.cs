@@ -52,13 +52,8 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
         if (!string.IsNullOrWhiteSpace(request.ApiKey)) { replacements["api-key"] = request.ApiKey; replacements["api-secret"] = request.ApiSecret; }
         if (!string.IsNullOrWhiteSpace(request.WebhookSecret)) replacements["webhook-secret"] = request.WebhookSecret;
         if (replacements.Count == 0) return new("No credential changes supplied", true);
-        var result = await _credentials.ReplaceAsync(request.UserId, accountId, replacements, cancellationToken);
+        var result = await _credentials.ReplaceAsync(request.UserId, accountId, replacements, cancellationToken, createdAccount != null);
         if (result.Success) return new("Credentials saved successfully", true);
-        if (createdAccount != null)
-        {
-            _context.Accounts.Remove(createdAccount);
-            try { await _context.SaveChangesAsync(cancellationToken); } catch { }
-        }
         return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save credentials; recovery may be required", false, 500);
     }
     public static string BuildKey(int userId, int accountId, string suffix) => BybitCredentialKeys.LegacyAccountKey(userId, accountId, suffix);

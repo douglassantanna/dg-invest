@@ -134,43 +134,46 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenFirstWriteFails_ShouldRecordRecoveryAndNotActivateSyncStatus()
+    public async Task Handle_WhenFirstWriteFailsCreatingAccount_ShouldRetainAccountAndRecordRecovery()
     {
-        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        _context.Accounts.Add(account);
-        await _context.SaveChangesAsync();
         _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "old"));
         var calls = 0;
         _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((_, _) => ++calls == 1 ? Task.FromException(new Exception("failed")) : Task.CompletedTask);
 
-        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, account.Id, "key", "secret", ""), CancellationToken.None);
+        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "Futures", "UID-001"), CancellationToken.None);
 
         result.Data.Should().Be(500);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(key => key.StartsWith("bybit-1-")), It.IsAny<string>()), Times.Never);
+        var account = await _context.Accounts.SingleAsync();
+        account.IsDeleted.Should().BeFalse();
         (await _context.SyncStatuses.CountAsync()).Should().Be(0);
-        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
+        var operation = await _context.CredentialUpdateOperations.SingleAsync();
+        operation.State.Should().Be("RecoveryRequired");
+        operation.CreatesAccount.Should().BeTrue();
+        operation.AccountId.Should().Be(account.Id);
     }
 
     [Fact]
-    public async Task Handle_WhenSecondWriteFails_ShouldNotRestoreImmutableSet()
+    public async Task Handle_WhenSecondWriteFailsCreatingAccount_ShouldRetainAccountAndImmutableSet()
     {
-        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        _context.Accounts.Add(account);
-        await _context.SaveChangesAsync();
         _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
         var calls = 0;
         _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((_, _) => ++calls == 2 ? Task.FromException(new Exception("failed")) : Task.CompletedTask);
 
-        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, account.Id, "key", "secret", ""), CancellationToken.None);
+        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "Futures", "UID-001"), CancellationToken.None);
 
         result.Data.Should().Be(500);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(key => key.StartsWith("bybit-1-")), It.IsAny<string>()), Times.Never);
+        var account = await _context.Accounts.SingleAsync();
+        account.IsDeleted.Should().BeFalse();
         (await _context.SyncStatuses.CountAsync()).Should().Be(0);
-        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
+        var operation = await _context.CredentialUpdateOperations.SingleAsync();
+        operation.State.Should().Be("RecoveryRequired");
+        operation.CreatesAccount.Should().BeTrue();
+        operation.AccountId.Should().Be(account.Id);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(key => key.StartsWith("bybit-set-")), It.IsAny<string>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -254,6 +257,28 @@ public class SaveBybitCredentialsCommandHandlerTests
         context.ChangeTracker.Clear();
         (await context.SyncStatuses.SingleAsync()).ActiveCredentialSetId.Should().Be(operation.NewCredentialSetId);
         (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Active");
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_WhenNewAccountOperationHasCompleteSet_ShouldCreateAndActivateSyncStatus()
+    {
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+        var operation = new CredentialUpdateOperation(1, "Bybit", account.Id, null, null, createsAccount: true);
+        operation.MarkRecoveryRequired("second vault write failed");
+        _context.CredentialUpdateOperations.Add(operation);
+        await _context.SaveChangesAsync();
+        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
+
+        await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
+            .ReconcileAsync(CancellationToken.None);
+
+        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Active");
+        var status = await _context.SyncStatuses.SingleAsync();
+        status.AccountId.Should().Be(account.Id);
+        status.ActiveCredentialSetId.Should().Be(operation.NewCredentialSetId);
     }
 
     [Fact]

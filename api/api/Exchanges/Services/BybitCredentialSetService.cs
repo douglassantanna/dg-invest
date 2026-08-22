@@ -37,7 +37,7 @@ public static class BybitCredentialReader
 
 public interface IBybitCredentialSetService
 {
-    Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken);
+    Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false);
     Task<KeyVaultSecretReadResult> ReadAsync(int userId, int? accountId, string suffix, CancellationToken cancellationToken = default);
     Task<int> ReconcileAsync(CancellationToken cancellationToken);
 }
@@ -58,7 +58,7 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         return await BybitCredentialReader.ReadAsync(_context, _vault, userId, accountId, suffix, cancellationToken);
     }
 
-    public async Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken)
+    public async Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false)
     {
         string? priorSet;
         Guid? priorVersion;
@@ -76,7 +76,7 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             priorSet = pointer?.ActiveCredentialSetId;
             priorVersion = pointer?.CredentialVersion;
         }
-        var operation = new CredentialUpdateOperation(userId, "Bybit", accountId, priorSet, priorVersion);
+        var operation = new CredentialUpdateOperation(userId, "Bybit", accountId, priorSet, priorVersion, createsAccount);
         _context.CredentialUpdateOperations.Add(operation);
         try { await _context.SaveChangesAsync(cancellationToken); }
         catch (Exception ex) { return new CredentialUpdateResult(false, false, ex.Message); }
@@ -193,6 +193,25 @@ public class BybitCredentialSetService : IBybitCredentialSetService
                 : await _context.ExchangeIntegrations.Where(x => x.UserId == operation.UserId && x.Exchange == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken);
             if (active == operation.NewCredentialSetId)
             {
+                operation.MarkActive();
+                continue;
+            }
+
+            if (operation.CreatesAccount && operation.AccountId is { } newAccountId)
+            {
+                if (active is not null)
+                {
+                    operation.MarkSuperseded();
+                    continue;
+                }
+                if (!await _context.Accounts.AnyAsync(x => x.Id == newAccountId && x.UserId == operation.UserId && !x.IsDeleted, cancellationToken))
+                {
+                    operation.MarkCleaned();
+                    continue;
+                }
+                var status = new SyncStatus(operation.UserId, newAccountId, "Bybit");
+                status.ActivateCredentialSet(operation.NewCredentialSetId);
+                _context.SyncStatuses.Add(status);
                 operation.MarkActive();
                 continue;
             }

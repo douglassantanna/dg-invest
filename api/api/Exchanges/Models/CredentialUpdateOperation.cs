@@ -8,6 +8,7 @@ public class CredentialUpdateOperation : Entity
     public int UserId { get; private set; }
     public string Exchange { get; private set; } = string.Empty;
     public int? AccountId { get; private set; }
+    public bool CreatesAccount { get; private set; }
     public string State { get; private set; } = "Pending";
     public string? PreviousCredentialSetId { get; private set; }
     public Guid? PreviousCredentialVersion { get; private set; }
@@ -18,13 +19,14 @@ public class CredentialUpdateOperation : Entity
     public Guid Version { get; private set; } = Guid.NewGuid();
 
     private CredentialUpdateOperation() { }
-    public CredentialUpdateOperation(int userId, string exchange, int? accountId, string? previousCredentialSetId, Guid? previousCredentialVersion)
+    public CredentialUpdateOperation(int userId, string exchange, int? accountId, string? previousCredentialSetId, Guid? previousCredentialVersion, bool createsAccount = false)
     {
         OperationId = Guid.NewGuid().ToString("N");
         NewCredentialSetId = Guid.NewGuid().ToString("N");
         UserId = userId;
         Exchange = exchange;
         AccountId = accountId;
+        CreatesAccount = createsAccount;
         PreviousCredentialSetId = previousCredentialSetId;
         PreviousCredentialVersion = previousCredentialVersion;
     }
