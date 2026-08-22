@@ -25,6 +25,8 @@ public class ProcessBybitWebhookCommandHandlerTests
     {
         _bybitMock = new Mock<IBybitService>();
         _keyVaultMock = new Mock<IKeyVaultService>();
+        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "webhook-secret"));
         _syncServiceMock = new Mock<IBybitOrderSyncService>();
 
         var options = new DbContextOptionsBuilder<DataContext>()
@@ -83,14 +85,30 @@ public class ProcessBybitWebhookCommandHandlerTests
     public async Task Handle_WhenWebhookSecretMissing_ShouldReturn401()
     {
         _keyVaultMock
-            .Setup(v => v.GetSecretAsync(It.IsAny<string>()))
-            .ReturnsAsync(string.Empty);
+            .Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
 
         var result = await _handler.Handle(_validCmd, CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Data.Should().Be(401);
         result.Message.Should().Be("Webhook secret not configured");
+    }
+
+    [Fact]
+    public async Task Handle_WhenKeyVaultIsUnavailable_Returns503WithoutValidatingOrProcessing()
+    {
+        _keyVaultMock
+            .Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
+
+        var result = await _handler.Handle(_validCmd, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Data.Should().Be(503);
+        _bybitMock.Verify(s => s.ValidateWebhookSignature(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _syncServiceMock.Verify(s => s.ProcessOrderAsync(It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _syncServiceMock.Verify(s => s.UpsertSyncStatusAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

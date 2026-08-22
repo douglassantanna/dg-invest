@@ -40,16 +40,22 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
 
     public async Task<Response> Handle(ProcessBybitWebhookCommand request, CancellationToken cancellationToken)
     {
-        var webhookSecret = await _keyVaultService.GetSecretAsync(
+        var webhookSecret = await _keyVaultService.GetSecretReadResultAsync(
             SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"));
 
-        if (string.IsNullOrEmpty(webhookSecret))
+        if (webhookSecret.IsUnavailable)
+        {
+            _logger.LogError("ProcessBybitWebhook: Key Vault unavailable for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
+            return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+        }
+
+        if (string.IsNullOrEmpty(webhookSecret.Value))
         {
             _logger.LogWarning("ProcessBybitWebhook: webhook secret not configured for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
             return new Response("Webhook secret not configured", false, 401);
         }
 
-        if (!_bybitService.ValidateWebhookSignature(request.RawBody, request.Signature, request.Timestamp, webhookSecret))
+        if (!_bybitService.ValidateWebhookSignature(request.RawBody, request.Signature, request.Timestamp, webhookSecret.Value))
         {
             _logger.LogWarning("ProcessBybitWebhook: invalid signature for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
             return new Response("Invalid signature", false, 401);

@@ -49,19 +49,24 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                     cancellationToken);
                 if (legacyMainAccount != null)
                 {
-                    var legacyApiKey = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-key"));
-                    var legacyApiSecret = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-secret"));
-                    if (!string.IsNullOrEmpty(legacyApiKey) && !string.IsNullOrEmpty(legacyApiSecret))
+                    var legacyApiKey = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-key"));
+                    var legacyApiSecret = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-secret"));
+                    if (legacyApiKey.IsUnavailable || legacyApiSecret.IsUnavailable)
+                        return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+                    if (!string.IsNullOrEmpty(legacyApiKey.Value) && !string.IsNullOrEmpty(legacyApiSecret.Value))
                         return new Response("Your existing Bybit discovery credentials need migration to the integration model. They remain unchanged while migration is prepared.", false, 409);
                 }
 
                 return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
             }
 
-            var apiKey = await _keyVaultService.GetSecretAsync(SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-secret"));
+            var apiKey = await _keyVaultService.GetSecretReadResultAsync(SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-key"));
+            var apiSecret = await _keyVaultService.GetSecretReadResultAsync(SaveBybitIntegrationCredentialsCommandHandler.BuildIntegrationKey(request.UserId, "api-secret"));
 
-            if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+
+            if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
             {
                 _logger.LogError("SyncBybitAccounts: Bybit credentials not configured for user {UserId}", request.UserId);
                 return new Response("Bybit credentials not found. Please save your API key and secret first.", false, 400);
@@ -70,7 +75,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             List<BybitSubMember> subMembers;
             try
             {
-                subMembers = await _bybitService.GetSubAccountsAsync(apiKey, apiSecret);
+                subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!);
             }
             catch (Exception ex)
             {

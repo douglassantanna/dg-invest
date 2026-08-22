@@ -83,10 +83,18 @@ public class SyncBybitOrders
             var userId = account.UserId;
             var accountId = account.Id;
 
-            var apiKey = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
+            var apiKey = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
+            var apiSecret = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
 
-            if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
+            {
+                const string errorMessage = "Credential storage is temporarily unavailable";
+                _logger.LogError("SyncBybitOrders: Key Vault unavailable for account {AccountId} (user {UserId})", accountId, userId);
+                await _orderSyncService.MarkSyncStatusErrorAsync(userId, accountId, errorMessage, cancellationToken);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
             {
                 _logger.LogInformation("SyncBybitOrders: no credentials for account {AccountId} (user {UserId})", accountId, userId);
                 return;
@@ -111,7 +119,7 @@ public class SyncBybitOrders
                 ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
 
-            var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
+            var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, limit: 50, startTime: startTime);
             var hasFailures = false;
 
             if (orders.Count > 0)
@@ -132,7 +140,7 @@ public class SyncBybitOrders
                 _logger.LogInformation("SyncBybitOrders: no orders for account {AccountId}", accountId);
             }
 
-            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
+            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey.Value!, apiSecret.Value!, limit: 50, startTime: startTime);
             _logger.LogInformation("SyncBybitOrders: received {Count} deposits from Bybit for account {AccountId}: {TxIds}",
                 deposits.Count, accountId, string.Join(", ", deposits.Select(d => $"{d.TxId}({d.Status})")));
 
@@ -143,7 +151,7 @@ public class SyncBybitOrders
             }
             _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
-            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey, apiSecret, limit: 50, startTime: startTime);
+            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey.Value!, apiSecret.Value!, limit: 50, startTime: startTime);
             _logger.LogInformation("SyncBybitOrders: received {Count} withdrawals from Bybit for account {AccountId}: {TxIds}",
                 withdrawals.Count, accountId, string.Join(", ", withdrawals.Select(w => $"{w.TxId}({w.Status})")));
 

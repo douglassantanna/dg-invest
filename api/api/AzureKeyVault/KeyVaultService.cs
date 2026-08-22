@@ -14,22 +14,42 @@ public class KeyVaultService : IKeyVaultService
         _client = new SecretClient(new Uri(settings.Value.VaultUri), new DefaultAzureCredential());
     }
 
-    public async Task<string?> GetSecretAsync(string secretName)
+    public KeyVaultService(SecretClient client, ILogger<KeyVaultService> logger)
+    {
+        _client = client;
+        _logger = logger;
+    }
+
+    public async Task<KeyVaultSecretReadResult> GetSecretReadResultAsync(string secretName)
     {
         try
         {
             var response = await _client.GetSecretAsync(secretName);
-            return response.Value.Value;
+            return new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, response.Value.Value);
         }
-        catch (Azure.RequestFailedException)
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404 && ex.ErrorCode == "SecretNotFound")
         {
-            return null;
+            return new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound);
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve secret {SecretName} from Key Vault", secretName);
+            return new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve secret {SecretName} from Key Vault", secretName);
-            return null;
+            return new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable);
         }
+    }
+
+    public async Task<string?> GetSecretAsync(string secretName)
+    {
+        var result = await GetSecretReadResultAsync(secretName);
+        if (result.IsUnavailable)
+            throw new InvalidOperationException(KeyVaultSecretReadResult.UnavailableMessage);
+
+        return result.Value;
     }
 
     public async Task SetSecretAsync(string secretName, string value)

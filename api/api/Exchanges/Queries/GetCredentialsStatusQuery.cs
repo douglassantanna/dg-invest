@@ -41,19 +41,22 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
         var results = new List<CredentialsStatusDto>();
         foreach (var account in accounts)
         {
-            var apiKey = await _keyVaultService.GetSecretAsync(
+            var apiKey = await _keyVaultService.GetSecretReadResultAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(
+            var apiSecret = await _keyVaultService.GetSecretReadResultAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-secret"));
-            var webhookSecret = await _keyVaultService.GetSecretAsync(
+            var webhookSecret = await _keyVaultService.GetSecretReadResultAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "webhook-secret"));
+
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
             results.Add(new CredentialsStatusDto(
                 AccountId: account.Id,
                 AccountName: account.Name,
-                HasApiKey: !string.IsNullOrEmpty(apiKey),
-                HasApiSecret: !string.IsNullOrEmpty(apiSecret),
-                HasWebhookSecret: !string.IsNullOrEmpty(webhookSecret)));
+                HasApiKey: apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value),
+                HasApiSecret: apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value),
+                HasWebhookSecret: webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value)));
         }
 
         return new Response("ok", true, results);
