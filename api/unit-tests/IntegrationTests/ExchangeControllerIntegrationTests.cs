@@ -203,9 +203,17 @@ public class ExchangeControllerIntegrationTests
             _fixture.Factory.KeyVault.IsAvailable = true;
         }
 
-        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
-        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
-        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "webhook-secret"));
+        string activeSetId;
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            activeSetId = (await scope.ServiceProvider.GetRequiredService<DataContext>().SyncStatuses
+                .Where(x => x.UserId == userId && x.AccountId == accountId && x.ExchangeName == "Bybit")
+                .Select(x => x.ActiveCredentialSetId)
+                .SingleAsync())!;
+        }
+        await _fixture.Factory.KeyVault.DeleteSecretAsync($"bybit-set-{activeSetId}-api-key");
+        await _fixture.Factory.KeyVault.DeleteSecretAsync($"bybit-set-{activeSetId}-api-secret");
+        await _fixture.Factory.KeyVault.DeleteSecretAsync($"bybit-set-{activeSetId}-webhook-secret");
 
         foreach (var endpoint in endpoints)
             (await client.GetAsync(endpoint)).StatusCode.Should().Be(HttpStatusCode.OK);
@@ -272,9 +280,10 @@ public class ExchangeControllerIntegrationTests
     {
         using var scope = _fixture.Factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-        (await context.ExchangeIntegrations.CountAsync(x => x.UserId == userId && x.Exchange == "Bybit")).Should().Be(1);
-        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-integration-{userId}-api-key")).Should().Be("integration-api-key");
-        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-integration-{userId}-api-secret")).Should().Be("integration-api-secret");
+        var integration = await context.ExchangeIntegrations.SingleAsync(x => x.UserId == userId && x.Exchange == "Bybit");
+        integration.ActiveCredentialSetId.Should().NotBeNull();
+        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-set-{integration.ActiveCredentialSetId}-api-key")).Should().Be("integration-api-key");
+        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-set-{integration.ActiveCredentialSetId}-api-secret")).Should().Be("integration-api-secret");
     }
 
     private async Task AssertAccountIsExchangeAsync(int accountId, string externalId)

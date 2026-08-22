@@ -40,8 +40,7 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
 
     public async Task<Response> Handle(ProcessBybitWebhookCommand request, CancellationToken cancellationToken)
     {
-        var webhookSecret = await _keyVaultService.GetSecretReadResultAsync(
-            SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"));
+        var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
 
         if (webhookSecret.IsUnavailable)
         {

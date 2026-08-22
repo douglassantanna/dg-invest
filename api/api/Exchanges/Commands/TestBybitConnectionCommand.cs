@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Bybit;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -40,11 +41,8 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             return new Response("Account not found", false, 404);
         }
 
-        var key = SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key");
-        var secret = SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret");
-
-        var apiKey = await _keyVaultService.GetSecretReadResultAsync(key);
-        var apiSecret = await _keyVaultService.GetSecretReadResultAsync(secret);
+        var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
+        var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
 
         if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
             return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
