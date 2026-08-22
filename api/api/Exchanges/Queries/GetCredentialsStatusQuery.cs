@@ -33,7 +33,8 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
     public async Task<Response> Handle(GetCredentialsStatusQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 

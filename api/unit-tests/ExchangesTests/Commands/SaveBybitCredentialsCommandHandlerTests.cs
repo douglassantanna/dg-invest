@@ -27,7 +27,7 @@ public class SaveBybitCredentialsCommandHandlerTests
     [Fact]
     public async Task Handle_WhenAccountExists_ShouldSaveToKeyVaultAndReturnSuccess()
     {
-        _context.Accounts.Add(new Account("main", 1));
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
         await _context.SaveChangesAsync();
         var cmd = new SaveBybitCredentialsCommand(
             UserId: 1, AccountId: 1,
@@ -79,7 +79,7 @@ public class SaveBybitCredentialsCommandHandlerTests
     [Fact]
     public async Task Handle_WhenKeyVaultThrows_ShouldReturnError()
     {
-        _context.Accounts.Add(new Account("main", 1));
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
         await _context.SaveChangesAsync();
         _keyVaultMock
             .Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
@@ -107,5 +107,19 @@ public class SaveBybitCredentialsCommandHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("Validation failed");
         result.Data.Should().BeOfType<List<string>>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenAccountIsManual_ShouldRejectWithoutWritingSecrets()
+    {
+        var account = new Account("main", 1);
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, account.Id, "key", "secret", ""), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Bybit exchange account");
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 }

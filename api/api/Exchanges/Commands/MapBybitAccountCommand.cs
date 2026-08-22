@@ -59,7 +59,10 @@ public class MapBybitAccountCommandHandler : IRequestHandler<MapBybitAccountComm
             return new Response("Account not found", false, 404);
         }
 
-        account.ConfigureExchange("Bybit", request.ExternalId);
+        if (account.AccountType != api.Cryptos.Models.EAccountType.Exchange || account.Exchange != "Bybit")
+            return new Response("Account is not an active Bybit exchange account", false, 400);
+
+        account.SetExternalId(request.ExternalId);
         _context.Accounts.Update(account);
         await _context.SaveChangesAsync(cancellationToken);
 

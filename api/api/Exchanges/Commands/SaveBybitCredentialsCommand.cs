@@ -82,6 +82,9 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
             return new Response("Account not found", false, 404);
         }
 
+        if (account.AccountType != EAccountType.Exchange || account.Exchange != "Bybit")
+            return new Response("Account is not an active Bybit exchange account", false, 400);
+
         var replaceApiCredentials = !string.IsNullOrWhiteSpace(request.ApiKey);
         var replaceWebhookSecret = !string.IsNullOrWhiteSpace(request.WebhookSecret);
         if (!replaceApiCredentials && !replaceWebhookSecret)
