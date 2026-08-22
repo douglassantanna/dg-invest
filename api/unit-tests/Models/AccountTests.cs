@@ -31,6 +31,16 @@ public class AccountTests
         account.IsSelected.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_WhenExternalIdIsEmpty_ShouldLeaveAccountUnmapped(string externalId)
+    {
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", externalId);
+
+        account.ExternalId.Should().BeNull();
+    }
+
     [Fact]
     public void Select_WhenCalled_ShouldSetIsSelectedToTrue()
     {

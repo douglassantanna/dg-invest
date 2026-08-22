@@ -166,27 +166,35 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
     public async Task<int> ReconcileAsync(CancellationToken cancellationToken)
     {
-        var operations = await _context.CredentialUpdateOperations.Where(x => x.State == "VaultWritten" || x.State == "RecoveryRequired").ToListAsync(cancellationToken);
+        var operations = await _context.CredentialUpdateOperations.Where(x => x.State == "Pending" || x.State == "VaultWritten" || x.State == "RecoveryRequired").ToListAsync(cancellationToken);
         foreach (var operation in operations)
         {
-            var keysAvailable = true;
+            var keysComplete = true;
+            var vaultUnavailable = false;
             foreach (var suffix in Suffixes)
             {
                 var secret = await _vault.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(operation.NewCredentialSetId, suffix));
                 if (secret.IsUnavailable)
                 {
-                    operation.MarkRecoveryRequired("Key Vault unavailable while verifying credential set");
-                    keysAvailable = false;
-                    break;
+                    vaultUnavailable = true;
+                    continue;
                 }
                 if (!secret.IsFound)
                 {
-                    operation.MarkCleaned();
-                    keysAvailable = false;
-                    break;
+                    keysComplete = false;
                 }
             }
-            if (!keysAvailable) continue;
+            // Inspect every immutable key before deciding whether a crash left a recoverable set.
+            if (vaultUnavailable)
+            {
+                operation.MarkRecoveryRequired("Key Vault unavailable while verifying credential set");
+                continue;
+            }
+            if (!keysComplete)
+            {
+                operation.MarkCleaned();
+                continue;
+            }
 
             var active = operation.AccountId is { } account
                 ? await _context.SyncStatuses.Where(x => x.UserId == operation.UserId && x.AccountId == account && x.ExchangeName == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken)
