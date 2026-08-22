@@ -193,6 +193,40 @@ public class ProcessBybitWebhookCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithActiveCredentialSet_UsesImmutableWebhookSecretInsteadOfLegacyOrArbitraryKeys()
+    {
+        var account = await SeedAccountAsync();
+        const string credentialSetId = "active-webhook-set";
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        status.ActivateCredentialSet(credentialSetId);
+        _context.SyncStatuses.Add(status);
+        await _context.SaveChangesAsync();
+
+        var immutableKey = BybitCredentialKeys.SetKey(credentialSetId, "webhook-secret");
+        var legacyKey = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "webhook-secret");
+        var secrets = new Dictionary<string, string>
+        {
+            [immutableKey] = "immutable-webhook-secret",
+            [legacyKey] = "conflicting-legacy-webhook-secret"
+        };
+        _keyVaultMock
+            .Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
+            .Returns((string key) => Task.FromResult(secrets.TryGetValue(key, out var value)
+                ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, value)
+                : throw new InvalidOperationException($"Unexpected vault key: {key}")));
+        _bybitMock
+            .Setup(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "immutable-webhook-secret"))
+            .Returns(true);
+
+        var result = await _handler.Handle(_validCmd with { AccountId = account.Id }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _bybitMock.Verify(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "immutable-webhook-secret"), Times.Once);
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(immutableKey), Times.Once);
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(legacyKey), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenSyncIsDisabled_ShouldAcknowledgeWithoutProcessingOrders()
     {
         await SeedAccountAsync();

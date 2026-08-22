@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\api\api.csproj" />
+    <ProjectReference Include="..\functions\functions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
