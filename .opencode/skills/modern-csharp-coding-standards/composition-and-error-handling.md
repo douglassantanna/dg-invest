@@ -114,7 +114,7 @@ public record PaymentMethod
 
 ## Result Type Pattern
 
-For expected errors, use a **domain-specific result type** instead of exceptions. Don't build a generic `Result<T>` — each operation knows what success and failure look like, so let the result type reflect that. Use sealed records with factory methods and enum error codes.
+For expected errors, use a **generic `Result<T, TError>`** instead of exceptions. Each operation knows what success and failure look like, so the error type reflects the domain. Use enum error codes for type-safe, switchable failure classification.
 
 ```csharp
 // Enum for error classification - type-safe and switchable
@@ -125,42 +125,43 @@ public enum OrderErrorCode
     NotFound
 }
 
-// Domain-specific result type - sealed record with factory methods
-public sealed record CreateOrderResult
+// Generic result type - sealed record with factory methods
+public sealed record Result<T, TError>
 {
     public bool IsSuccess { get; private init; }
-    public Order? Order { get; private init; }
-    public OrderErrorCode? ErrorCode { get; private init; }
-    public string? ErrorMessage { get; private init; }
+    public T? Value { get; private init; }
+    public TError? Error { get; private init; }
 
-    public static CreateOrderResult Success(Order order) => new()
+    public static Result<T, TError> Success(T value) => new()
     {
         IsSuccess = true,
-        Order = order
+        Value = value
     };
 
-    public static CreateOrderResult Failed(OrderErrorCode code, string message) => new()
+    public static Result<T, TError> Failed(TError error) => new()
     {
         IsSuccess = false,
-        ErrorCode = code,
-        ErrorMessage = message
+        Error = error
     };
 }
+
+// Domain error carrying a code and message
+public sealed record OrderError(OrderErrorCode Code, string Message);
 
 // Usage example
 public sealed class OrderService(IOrderRepository repository)
 {
-    public async Task<CreateOrderResult> CreateOrderAsync(
+    public async Task<Result<Order, OrderError>> CreateOrderAsync(
         CreateOrderRequest request,
         CancellationToken cancellationToken)
     {
         if (!IsValid(request))
-            return CreateOrderResult.Failed(
-                OrderErrorCode.ValidationError, "Invalid order request");
+            return Result<Order, OrderError>.Failure(
+                new OrderError(OrderErrorCode.ValidationError, "Invalid order request"));
 
         if (!await HasInventoryAsync(request.Items, cancellationToken))
-            return CreateOrderResult.Failed(
-                OrderErrorCode.InsufficientInventory, "Items out of stock");
+            return Result<Order, OrderError>.Failure(
+                new OrderError(OrderErrorCode.InsufficientInventory, "Items out of stock"));
 
         var order = new Order(
             OrderId.New(),
@@ -169,24 +170,24 @@ public sealed class OrderService(IOrderRepository repository)
 
         await repository.SaveAsync(order, cancellationToken);
 
-        return CreateOrderResult.Success(order);
+        return Result<Order, OrderError>.Success(order);
     }
 
     // Map result to HTTP response - switch on enum error codes
-    public IActionResult MapToActionResult(CreateOrderResult result)
+    public IActionResult MapToActionResult(Result<Order, OrderError> result)
     {
         if (result.IsSuccess)
-            return new OkObjectResult(result.Order);
+            return new OkObjectResult(result.Value);
 
-        return result.ErrorCode switch
+        return result.Error!.Code switch
         {
             OrderErrorCode.ValidationError =>
-                new BadRequestObjectResult(new { error = result.ErrorMessage }),
+                new BadRequestObjectResult(new { error = result.Error.Message }),
             OrderErrorCode.InsufficientInventory =>
-                new ConflictObjectResult(new { error = result.ErrorMessage }),
+                new ConflictObjectResult(new { error = result.Error.Message }),
             OrderErrorCode.NotFound =>
-                new NotFoundObjectResult(new { error = result.ErrorMessage }),
-            _ => new ObjectResult(new { error = result.ErrorMessage }) { StatusCode = 500 }
+                new NotFoundObjectResult(new { error = result.Error.Message }),
+            _ => new ObjectResult(new { error = result.Error.Message }) { StatusCode = 500 }
         };
     }
 }
