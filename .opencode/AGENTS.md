@@ -3,6 +3,7 @@
 ## RESPONSES
 
 - Keep responses concise and to the point - unless the user asks otherwise
+- Read `prompt.md` for product context, target architecture, and delivery roadmap.
 
 ## PLANNING MODE
 
