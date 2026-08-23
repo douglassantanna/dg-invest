@@ -98,7 +98,12 @@ public class LegacyBybitCredentialPromotionService : ILegacyBybitCredentialPromo
             var pending = await GetOrCreatePendingAsync(existing, source.UserId, source.Id, cancellationToken);
             if (pending is null)
             {
-                var current = await _context.LegacyBybitCredentialPromotions.AsNoTracking().SingleAsync(x => x.UserId == source.UserId && x.Exchange == "Bybit", cancellationToken);
+                var current = await _context.LegacyBybitCredentialPromotions.AsNoTracking().SingleOrDefaultAsync(x => x.UserId == source.UserId && x.Exchange == "Bybit", cancellationToken);
+                if (current is null)
+                {
+                    reports.Add(new(source.UserId, source.Id, "ConcurrentPromotion", "RecoveryRequired", null, null));
+                    continue;
+                }
                 reports.Add(new(source.UserId, source.Id, current.Outcome, current.State, current.CredentialOperationId, current.CredentialSetId));
                 continue;
             }
