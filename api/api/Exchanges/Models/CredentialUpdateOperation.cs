@@ -31,6 +31,11 @@ public class CredentialUpdateOperation : Entity
         PreviousCredentialVersion = previousCredentialVersion;
     }
     public void MarkVaultWritten() => SetState("VaultWritten", null);
+    public void Touch()
+    {
+        UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid();
+    }
     public void MarkActive() => SetState("Active", null);
     public void MarkRecoveryRequired(string error) => SetState("RecoveryRequired", error);
     public void MarkSuperseded() => SetState("Superseded", null);

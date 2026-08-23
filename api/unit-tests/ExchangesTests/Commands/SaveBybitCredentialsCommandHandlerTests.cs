@@ -288,6 +288,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         var operation = new CredentialUpdateOperation(1, "Bybit", account.Id, null, null, createsAccount: true);
         _context.CredentialUpdateOperations.Add(operation);
         await _context.SaveChangesAsync();
+        await MakeOperationStaleAsync(_context, operation);
         _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
 
@@ -306,6 +307,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
         _context.CredentialUpdateOperations.Add(operation);
         await _context.SaveChangesAsync();
+        await MakeOperationStaleAsync(_context, operation);
         _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.EndsWith("api-secret"))))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
         _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => !key.EndsWith("api-secret"))))
@@ -324,6 +326,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
         _context.CredentialUpdateOperations.Add(operation);
         await _context.SaveChangesAsync();
+        await MakeOperationStaleAsync(_context, operation);
         _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.EndsWith("api-secret"))))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
         _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.EndsWith("webhook-secret"))))
@@ -335,6 +338,50 @@ public class SaveBybitCredentialsCommandHandlerTests
             .ReconcileAsync(CancellationToken.None);
 
         (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_WhenPendingOperationIsFresh_ShouldNotReadVault()
+    {
+        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
+        _context.CredentialUpdateOperations.Add(operation);
+        await _context.SaveChangesAsync();
+
+        var reconciled = await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
+            .ReconcileAsync(CancellationToken.None);
+
+        reconciled.Should().Be(0);
+        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Pending");
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_WhenWritingSecrets_ShouldTouchPendingOperationAfterEachWrite()
+    {
+        CredentialUpdateOperation? operation = null;
+        DateTime initialUpdatedAt = default;
+        DateTime updatedAfterFirstWrite = default;
+        var writes = 0;
+        _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>(async (_, _) =>
+            {
+                if (++writes == 1) await Task.Delay(10);
+                else if (writes == 2) updatedAfterFirstWrite = operation!.UpdatedAt;
+            });
+
+        var result = await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
+            .ReplaceAsync(1, 1, new Dictionary<string, string>
+            {
+                ["api-key"] = "key", ["api-secret"] = "secret", ["webhook-secret"] = "webhook"
+            }, CancellationToken.None, operationCreated: created =>
+            {
+                operation = created;
+                initialUpdatedAt = created.UpdatedAt;
+                return Task.CompletedTask;
+            });
+
+        result.Success.Should().BeTrue();
+        updatedAfterFirstWrite.Should().BeAfter(initialUpdatedAt);
     }
 
     [Fact]
@@ -391,5 +438,11 @@ public class SaveBybitCredentialsCommandHandlerTests
         services.ConfigureServices();
 
         services.Should().Contain(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(CredentialRecoveryService));
+    }
+
+    private static async Task MakeOperationStaleAsync(DataContext context, CredentialUpdateOperation operation)
+    {
+        context.Entry(operation).Property(x => x.UpdatedAt).CurrentValue = DateTime.UtcNow.AddMinutes(-11);
+        await context.SaveChangesAsync();
     }
 }
