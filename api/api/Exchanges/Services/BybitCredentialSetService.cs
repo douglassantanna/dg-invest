@@ -37,16 +37,17 @@ public static class BybitCredentialReader
 
 public interface IBybitCredentialSetService
 {
-    Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false);
+    Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false, bool verifyDestination = false, Func<CredentialUpdateOperation, Task>? operationCreated = null);
     Task<KeyVaultSecretReadResult> ReadAsync(int userId, int? accountId, string suffix, CancellationToken cancellationToken = default);
     Task<int> ReconcileAsync(CancellationToken cancellationToken);
 }
 
-public record CredentialUpdateResult(bool Success, bool Unavailable, string? Error = null);
+public record CredentialUpdateResult(bool Success, bool Unavailable, string? Error = null, string? OperationId = null, string? CredentialSetId = null);
 
 public class BybitCredentialSetService : IBybitCredentialSetService
 {
     private static readonly string[] Suffixes = ["api-key", "api-secret", "webhook-secret"];
+    private static readonly TimeSpan PendingOperationGracePeriod = TimeSpan.FromMinutes(10);
     private readonly DataContext _context;
     private readonly IKeyVaultService _vault;
     private readonly ILogger<BybitCredentialSetService> _logger;
@@ -58,7 +59,7 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         return await BybitCredentialReader.ReadAsync(_context, _vault, userId, accountId, suffix, cancellationToken);
     }
 
-    public async Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false)
+    public async Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false, bool verifyDestination = false, Func<CredentialUpdateOperation, Task>? operationCreated = null)
     {
         string? priorSet;
         Guid? priorVersion;
@@ -80,19 +81,33 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         _context.CredentialUpdateOperations.Add(operation);
         try { await _context.SaveChangesAsync(cancellationToken); }
         catch (Exception ex) { return new CredentialUpdateResult(false, false, ex.Message); }
+        try
+        {
+            if (operationCreated is not null) await operationCreated(operation);
+        }
+        catch (Exception ex)
+        {
+            operation.MarkRecoveryRequired("Could not persist credential operation correlation");
+            await TrySaveAsync(cancellationToken);
+            return new(false, false, ex.Message, operation.OperationId, operation.NewCredentialSetId);
+        }
 
         var values = new Dictionary<string, string>();
         foreach (var suffix in Suffixes)
         {
             if (replacements.TryGetValue(suffix, out var replacement)) { values[suffix] = replacement; continue; }
             var existing = await _vault.GetSecretReadResultAsync(BybitCredentialKeys.Key(priorSet, userId, accountId, suffix));
-            if (existing.IsUnavailable) { operation.MarkRecoveryRequired("Key Vault unavailable while reading previous set"); await TrySaveAsync(cancellationToken); return new(false, true); }
+            if (existing.IsUnavailable) { operation.MarkRecoveryRequired("Key Vault unavailable while reading previous set"); await TrySaveAsync(cancellationToken); return new(false, true, OperationId: operation.OperationId, CredentialSetId: operation.NewCredentialSetId); }
             values[suffix] = existing.Value ?? string.Empty;
         }
         try
         {
             foreach (var (suffix, value) in values)
+            {
                 await _vault.SetSecretAsync(BybitCredentialKeys.SetKey(operation.NewCredentialSetId, suffix), value);
+                operation.Touch();
+                await _context.SaveChangesAsync(cancellationToken);
+            }
             operation.MarkVaultWritten();
             await _context.SaveChangesAsync(cancellationToken);
         }
@@ -101,7 +116,24 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             operation.MarkRecoveryRequired(ex.Message);
             await TrySaveAsync(cancellationToken);
             _logger.LogError(ex, "Bybit credential operation {OperationId} did not finish Vault write", operation.OperationId);
-            return new(false, false, ex.Message);
+            return new(false, false, "Credential set write failed", operation.OperationId, operation.NewCredentialSetId);
+        }
+
+        if (verifyDestination) foreach (var suffix in Suffixes)
+        {
+            var written = await _vault.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(operation.NewCredentialSetId, suffix));
+            if (written.IsUnavailable)
+            {
+                operation.MarkRecoveryRequired("Key Vault unavailable while verifying credential set");
+                await TrySaveAsync(cancellationToken);
+                return new(false, true, OperationId: operation.OperationId, CredentialSetId: operation.NewCredentialSetId);
+            }
+            if (!written.IsFound || written.Value != values[suffix])
+            {
+                operation.MarkRecoveryRequired("Credential set verification failed");
+                await TrySaveAsync(cancellationToken);
+                return new(false, false, "Credential set verification failed", operation.OperationId, operation.NewCredentialSetId);
+            }
         }
 
         try
@@ -142,11 +174,11 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             {
                 operation.MarkRecoveryRequired("Active credential set changed concurrently");
                 await TrySaveAsync(cancellationToken);
-                return new(false, false, "Active credential set changed concurrently");
+                return new(false, false, "Active credential set changed concurrently", operation.OperationId, operation.NewCredentialSetId);
             }
             operation.MarkActive();
             await _context.SaveChangesAsync(cancellationToken);
-            return new(true, false);
+            return new(true, false, OperationId: operation.OperationId, CredentialSetId: operation.NewCredentialSetId);
         }
         catch (DbUpdateConcurrencyException ex)
         {
@@ -166,27 +198,38 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
     public async Task<int> ReconcileAsync(CancellationToken cancellationToken)
     {
-        var operations = await _context.CredentialUpdateOperations.Where(x => x.State == "VaultWritten" || x.State == "RecoveryRequired").ToListAsync(cancellationToken);
+        var pendingCutoff = DateTime.UtcNow - PendingOperationGracePeriod;
+        var operations = await _context.CredentialUpdateOperations
+            .Where(x => x.State == "VaultWritten" || x.State == "RecoveryRequired" || (x.State == "Pending" && x.UpdatedAt <= pendingCutoff))
+            .ToListAsync(cancellationToken);
         foreach (var operation in operations)
         {
-            var keysAvailable = true;
+            var keysComplete = true;
+            var vaultUnavailable = false;
             foreach (var suffix in Suffixes)
             {
                 var secret = await _vault.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(operation.NewCredentialSetId, suffix));
                 if (secret.IsUnavailable)
                 {
-                    operation.MarkRecoveryRequired("Key Vault unavailable while verifying credential set");
-                    keysAvailable = false;
-                    break;
+                    vaultUnavailable = true;
+                    continue;
                 }
                 if (!secret.IsFound)
                 {
-                    operation.MarkCleaned();
-                    keysAvailable = false;
-                    break;
+                    keysComplete = false;
                 }
             }
-            if (!keysAvailable) continue;
+            // Inspect every immutable key before deciding whether a crash left a recoverable set.
+            if (vaultUnavailable)
+            {
+                operation.MarkRecoveryRequired("Key Vault unavailable while verifying credential set");
+                continue;
+            }
+            if (!keysComplete)
+            {
+                operation.MarkCleaned();
+                continue;
+            }
 
             var active = operation.AccountId is { } account
                 ? await _context.SyncStatuses.Where(x => x.UserId == operation.UserId && x.AccountId == account && x.ExchangeName == "Bybit").Select(x => x.ActiveCredentialSetId).SingleOrDefaultAsync(cancellationToken)

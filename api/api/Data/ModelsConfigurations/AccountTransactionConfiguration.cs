@@ -28,6 +28,6 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.ExternalId).HasColumnType("varchar").HasMaxLength(50);
         builder.HasIndex(x => new { x.UserId, x.Exchange, x.ExternalId })
             .IsUnique()
-            .HasFilter("[ExternalId] IS NOT NULL");
+            .HasFilter("[ExternalId] IS NOT NULL AND [IsDeleted] = 0");
     }
 }

@@ -6,6 +6,7 @@ using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Commands;
 using api.Exchanges.Models;
+using api.Users.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace unit_tests.IntegrationTests;
@@ -362,6 +363,38 @@ public class ExchangeControllerIntegrationTests
         (await client.PostAsync($"/api/Exchange/bybit/toggle/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await client.PostAsJsonAsync("/api/Exchange/bybit/map-account", new { accountId = mainAccountId, externalId = "manual-uid" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task LegacyCredentialPromotion_RequiresAdminAndPromotesForDiscovery()
+    {
+        var (userId, mainAccountId) = await _fixture.CreateUserAsync(Role.Admin);
+        await _fixture.Factory.KeyVault.SetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-key"), "legacy-key");
+        await _fixture.Factory.KeyVault.SetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-secret"), "legacy-secret");
+
+        (await _fixture.Factory.CreateClient().PostAsync("/api/Migrations/bybit-legacy-credentials", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var user = _fixture.Factory.CreateAuthenticatedClient(userId);
+        (await user.PostAsync("/api/Migrations/bybit-legacy-credentials", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var admin = _fixture.Factory.CreateAuthenticatedClient(userId, Role.Admin);
+        (await admin.PostAsync("/api/Migrations/bybit-legacy-credentials", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var scope = _fixture.Factory.Services.CreateScope())
+            (await scope.ServiceProvider.GetRequiredService<DataContext>().ExchangeIntegrations.CountAsync(x => x.UserId == userId && x.Exchange == "Bybit")).Should().Be(0);
+
+        (await admin.PostAsync("/api/Migrations/bybit-legacy-credentials?dryRun=false", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await admin.PostAsync("/api/Exchange/bybit/sync-accounts", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await _fixture.Factory.KeyVault.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-key"))).Should().Be("legacy-key");
+    }
+
+    [Fact]
+    public async Task RunMigrations_RequiresAdmin()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+
+        (await _fixture.Factory.CreateClient().PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var user = _fixture.Factory.CreateAuthenticatedClient(userId);
+        (await user.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var admin = _fixture.Factory.CreateAuthenticatedClient(userId, Role.Admin);
+        (await admin.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     private async Task<int> GetAccountIdAsync(int userId, string name, EAccountType? accountType = null)

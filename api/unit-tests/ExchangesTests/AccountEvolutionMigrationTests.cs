@@ -17,6 +17,8 @@ public class AccountEvolutionMigrationTests
     private const string CredentialSagaMigration = "20260822192424_AddCredentialSetSaga";
     private const string CreatesAccountMigration = "20260822195335_AddCredentialOperationCreatesAccount";
     private const string PriorVersionMigration = "20260822210000_AddCredentialOperationPriorVersion";
+    private const string AccountExternalIdIndexMigration = "20260822220000_AlignAccountExternalIdIndex";
+    private const string LegacyPromotionMigration = "20260822230000_AddLegacyBybitCredentialPromotions";
 
     [Fact]
     public async Task EvolveAccountMigration_ShouldPreserveBybitMappingsAndScopeExternalIds()
@@ -154,6 +156,49 @@ public class AccountEvolutionMigrationTests
 
         read.Should().Be(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-key"));
         vault.Verify(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, 1, "api-key")), Times.Once);
+    }
+
+    [Fact]
+    public async Task AccountExternalIdIndexMigration_ShouldUseActiveAccountFilterOnSqlServer()
+    {
+        await using var container = new MsSqlBuilder()
+            .WithPassword($"T{Guid.NewGuid():N}aA1!")
+            .Build();
+        await container.StartAsync();
+
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlServer(container.GetConnectionString())
+            .Options;
+        await using var context = new DataContext(options);
+        var migrator = context.Database.GetService<IMigrator>();
+
+        await migrator.MigrateAsync(CurrentMigration);
+        await migrator.MigrateAsync(AccountExternalIdIndexMigration);
+
+        var filter = await context.Database.SqlQueryRaw<string>("""
+            SELECT filter_definition AS Value
+            FROM sys.indexes
+            WHERE object_id = OBJECT_ID(N'[Accounts]')
+              AND name = 'IX_Accounts_UserId_Exchange_ExternalId'
+            """).SingleAsync();
+        filter.Should().Contain("[ExternalId] IS NOT NULL");
+        filter.Should().Contain("[IsDeleted]=(0)");
+    }
+
+    [Fact]
+    public async Task LegacyPromotionMigration_ShouldCreateDurableUniquePromotionSchema()
+    {
+        await using var container = new MsSqlBuilder().WithPassword($"T{Guid.NewGuid():N}aA1!").Build();
+        await container.StartAsync();
+        var options = new DbContextOptionsBuilder<DataContext>().UseSqlServer(container.GetConnectionString()).Options;
+        await using var context = new DataContext(options);
+        var migrator = context.Database.GetService<IMigrator>();
+        await migrator.MigrateAsync(PriorVersionMigration);
+        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'LegacyBybitCredentialPromotions'")).Should().Be(0);
+        await migrator.MigrateAsync(LegacyPromotionMigration);
+
+        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'LegacyBybitCredentialPromotions'")).Should().Be(1);
+        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.indexes WHERE object_id = OBJECT_ID(N'[LegacyBybitCredentialPromotions]') AND name = 'IX_LegacyBybitCredentialPromotions_UserId_Exchange' AND is_unique = 1")).Should().Be(1);
     }
 
     private static async Task<int> ScalarAsync(DataContext context, string sql) =>

@@ -31,18 +31,18 @@ public class Account : Entity
         UserId = userId;
         AccountType = accountType;
         Exchange = exchange;
-        ExternalId = externalId;
+        ExternalId = NormalizeExternalId(externalId);
         IsSelected = name == "main" ? true : false;
         CreatedAt = DateTime.Now;
     }
 
-    public void SetExternalId(string externalId) => ExternalId = externalId;
+    public void SetExternalId(string externalId) => ExternalId = NormalizeExternalId(externalId);
     public void SetExchange(string exchange) => Exchange = exchange;
     public void ConfigureExchange(string exchange, string externalId)
     {
         AccountType = EAccountType.Exchange;
         Exchange = exchange;
-        ExternalId = externalId;
+        ExternalId = NormalizeExternalId(externalId);
     }
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;
@@ -72,4 +72,6 @@ public class Account : Entity
         _cryptoAssets.Add(cryptoAsset);
         return new Response("", true);
     }
+
+    private static string? NormalizeExternalId(string? externalId) => string.IsNullOrWhiteSpace(externalId) ? null : externalId;
 }

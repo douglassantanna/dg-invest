@@ -181,7 +181,7 @@ The exchange integration is being delivered in phases. PR1 establishes the data 
 
 PR2 will make Bybit discovery create or update only exchange accounts, matching them by user, exchange, and UID. Manual accounts will remain separate. A finished account selector will group Manual, Bybit, and future exchange contexts by origin.
 
-The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for architecture, milestones, test policy, and the stage delivery flow.
+The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for architecture, promotion records, milestones, test policy, and the stage delivery flow.
 
 #### What gets synced
 
