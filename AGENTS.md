@@ -17,6 +17,7 @@
 - This application is expected to serve approximately 20 users.
 - Prefer the simplest direct implementation that works and is easy to maintain.
 - Avoid fancy patterns, unnecessary abstractions, extra infrastructure, or complex generalization unless the requirement clearly needs it.
+- Keep changes focused and small; prioritize making the app work quickly over exhaustive process.
 
 ## PLANNING MODE
 
@@ -31,7 +32,8 @@
 - When using sub-agents, coordinate their work and verify the combined result.
 - Use the model and tools appropriate to the task complexity.
 - Skip independent diff-review/audit cycles unless the user explicitly asks for one; prioritize delivering working code quickly.
-- After a change, run the relevant available validation: `dotnet test` or `dotnet build` for backend changes, and `npm run test` or `npm run build` for Angular changes.
+- Do not run tests or builds by default. Tell the user the smallest relevant command to run and why, then wait for their result.
+- Run validation only when the user explicitly requests it.
 
 ## DATABASE SCHEMA CHANGES
 
