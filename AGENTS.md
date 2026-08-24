@@ -5,6 +5,19 @@
 - Keep responses concise and to the point - unless the user asks otherwise
 - Read `prompt.md` for product context, target architecture, and delivery roadmap.
 
+## SESSION NOTES
+
+- At the start of every session, create a Markdown note under `/Users/douglassantanna/Developer/Personal/obsidian/Development/DG Invest/Notes`.
+- Use one note per session and organize it by topic/context discussed.
+- Update the session note periodically after meaningful milestones, decisions, blockers, or scope changes, and before ending the session.
+- Keep notes factual and useful for future handoff: current branch, active issues, decisions, commands/results when relevant, and next steps.
+
+## ENGINEERING SCOPE
+
+- This application is expected to serve approximately 20 users.
+- Prefer the simplest direct implementation that works and is easy to maintain.
+- Avoid fancy patterns, unnecessary abstractions, extra infrastructure, or complex generalization unless the requirement clearly needs it.
+
 ## PLANNING MODE
 
 - Ask clarifying questions only when requirements, design, or scope cannot be safely inferred from the codebase and request.
@@ -17,6 +30,7 @@
 - Delegate independent work that can safely run in parallel; otherwise implement the smallest correct change directly.
 - When using sub-agents, coordinate their work and verify the combined result.
 - Use the model and tools appropriate to the task complexity.
+- Skip independent diff-review/audit cycles unless the user explicitly asks for one; prioritize delivering working code quickly.
 - After a change, run the relevant available validation: `dotnet test` or `dotnet build` for backend changes, and `npm run test` or `npm run build` for Angular changes.
 
 ## DATABASE SCHEMA CHANGES

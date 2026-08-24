@@ -1,4 +1,5 @@
 using api.AzureKeyVault;
+using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Services;
@@ -40,6 +41,42 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
 
     public async Task<Response> Handle(ProcessBybitWebhookCommand request, CancellationToken cancellationToken)
     {
+        var accountState = await _context.Accounts
+            .Where(account => account.Id == request.AccountId && account.UserId == request.UserId)
+            .Select(account => new
+            {
+                account.IsDeleted,
+                account.AccountType,
+                account.Exchange
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (accountState is null || accountState.IsDeleted || accountState.AccountType != EAccountType.Exchange || accountState.Exchange != "Bybit")
+        {
+            _logger.LogInformation("ProcessBybitWebhook: inactive Bybit account {AccountId} for user {UserId}", request.AccountId, request.UserId);
+            return new Response("ok", true);
+        }
+
+        var integrationState = await _context.ExchangeIntegrations
+            .Where(integration => integration.UserId == request.UserId && integration.Exchange == "Bybit")
+            .Select(integration => new { integration.Enabled, integration.ActiveCredentialSetId })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (integrationState is not null && (!integrationState.Enabled || integrationState.ActiveCredentialSetId == null))
+        {
+            _logger.LogInformation("ProcessBybitWebhook: integration is disconnected for user {UserId}", request.UserId);
+            return new Response("ok", true);
+        }
+
+        var syncStatus = await _context.SyncStatuses.FirstOrDefaultAsync(
+            status => status.UserId == request.UserId
+                      && status.AccountId == request.AccountId
+                      && status.ExchangeName == "Bybit",
+            cancellationToken);
+        if (syncStatus is null || !syncStatus.IsEnabled || (syncStatus.ActiveCredentialSetId == null && syncStatus.CredentialVersion != Guid.Empty))
+        {
+            _logger.LogInformation("ProcessBybitWebhook: sync is disabled for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
+            return new Response("ok", true);
+        }
+
         var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
 
         if (webhookSecret.IsUnavailable)
@@ -62,17 +99,6 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
 
         if (!request.Payload.Topic.Equals("order", StringComparison.OrdinalIgnoreCase))
             return new Response("ok", true);
-
-        var syncStatus = await _context.SyncStatuses.FirstOrDefaultAsync(
-            status => status.UserId == request.UserId
-                      && status.AccountId == request.AccountId
-                      && status.ExchangeName == "Bybit",
-            cancellationToken);
-        if (syncStatus?.IsEnabled == false)
-        {
-            _logger.LogInformation("ProcessBybitWebhook: sync is disabled for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
-            return new Response("ok", true);
-        }
 
         var account = await _context.Accounts
             .Include(a => a.CryptoAssets)

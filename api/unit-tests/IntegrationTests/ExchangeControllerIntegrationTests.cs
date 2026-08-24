@@ -6,6 +6,7 @@ using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Commands;
 using api.Exchanges.Models;
+using api.Exchanges.Services;
 using api.Users.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -66,6 +67,7 @@ public class ExchangeControllerIntegrationTests
             apiSecret = "integration-api-secret",
         });
         saveIntegrationCredentials.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await saveIntegrationCredentials.Content.ReadAsStringAsync()).Should().NotContain("integration-api-secret");
 
         await AssertIntegrationCredentialsAsync(userId);
 
@@ -98,6 +100,53 @@ public class ExchangeControllerIntegrationTests
 
         var delete = await client.DeleteAsync($"/api/Exchange/bybit/credentials/{exchangeAccountId}");
         delete.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task DisconnectBybitIntegration_DisablesIntegrationAndSyncWithoutDeletingAccounts()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        (await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new { apiKey = "integration-api-key", apiSecret = "integration-api-secret" }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var firstSync = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+        firstSync.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await firstSync.Content.ReadAsStringAsync()).Should().Contain("0 matched, 1 created");
+        var secondSync = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+        secondSync.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await secondSync.Content.ReadAsStringAsync()).Should().Contain("1 matched, 0 created");
+        var accountId = await GetAccountIdAsync(userId, "Integration subaccount", EAccountType.Exchange);
+        var saveAccountCredentials = await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new
+        {
+            accountId,
+            apiKey = "account-api-key",
+            apiSecret = "account-api-secret",
+            webhookSecret = "account-webhook-secret",
+        });
+        saveAccountCredentials.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await saveAccountCredentials.Content.ReadAsStringAsync()).Should().NotContain("account-api-secret");
+
+        var disconnect = await client.PostAsync("/api/Exchange/bybit/disconnect", null);
+        var repeatDisconnect = await client.PostAsync("/api/Exchange/bybit/disconnect", null);
+
+        disconnect.StatusCode.Should().Be(HttpStatusCode.OK);
+        repeatDisconnect.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var integration = await context.ExchangeIntegrations.SingleAsync(candidate => candidate.UserId == userId && candidate.Exchange == "Bybit");
+        integration.Enabled.Should().BeFalse();
+        integration.Status.Should().Be("Disconnected");
+        integration.ActiveCredentialSetId.Should().BeNull();
+        var account = await context.Accounts.SingleAsync(candidate => candidate.Id == accountId);
+        account.IsDeleted.Should().BeFalse();
+        var status = await context.SyncStatuses.SingleAsync(candidate => candidate.UserId == userId && candidate.AccountId == accountId && candidate.ExchangeName == "Bybit");
+        status.IsEnabled.Should().BeFalse();
+        status.Status.Should().Be("Disconnected");
+        status.ActiveCredentialSetId.Should().BeNull();
+        (await context.CredentialUpdateOperations.Where(candidate => candidate.UserId == userId).Select(candidate => candidate.State).ToListAsync())
+            .Should().OnlyContain(state => state == "Retired");
+        (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be(string.Empty);
+        (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyAccountKey(userId, accountId, "webhook-secret"))).Should().Be(string.Empty);
     }
 
     [Fact]

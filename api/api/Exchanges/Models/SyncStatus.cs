@@ -56,6 +56,7 @@ public class SyncStatus : Entity
     public void ActivateCredentialSet(string credentialSetId)
     {
         ActiveCredentialSetId = credentialSetId;
+        IsEnabled = true;
         CredentialVersion = Guid.NewGuid();
         MarkCredentialsSet();
     }
@@ -68,6 +69,11 @@ public class SyncStatus : Entity
     public void ToggleEnabled()
     {
         IsEnabled = !IsEnabled;
+    }
+    public void Disable()
+    {
+        IsEnabled = false;
+        MarkDisconnected();
     }
 
     public void MarkVerified()

@@ -53,7 +53,15 @@ public class SyncBybitOrders
             var accounts = await _context.Accounts
                 .Include(a => a.CryptoAssets)
                     .ThenInclude(ca => ca.Transactions)
-                .Where(a => a.ExternalId != null && !a.IsDeleted)
+                .Where(a => a.ExternalId != null
+                            && !a.IsDeleted
+                            && a.AccountType == EAccountType.Exchange
+                            && a.Exchange == "Bybit"
+                            && (!_context.ExchangeIntegrations.Any(integration => integration.UserId == a.UserId && integration.Exchange == "Bybit")
+                                || _context.ExchangeIntegrations.Any(integration => integration.UserId == a.UserId
+                                    && integration.Exchange == "Bybit"
+                                    && integration.Enabled
+                                    && integration.ActiveCredentialSetId != null)))
                 .ToListAsync(cancellationToken);
 
             _logger.LogInformation("SyncBybitOrders: found {Count} Bybit accounts", accounts.Count);
@@ -94,6 +102,12 @@ public class SyncBybitOrders
             if (!syncStatus.IsEnabled)
             {
                 _logger.LogInformation("SyncBybitOrders: account {AccountId} is disabled, skipping", accountId);
+                return;
+            }
+
+            if (syncStatus.ActiveCredentialSetId == null && syncStatus.CredentialVersion != Guid.Empty)
+            {
+                _logger.LogInformation("SyncBybitOrders: account {AccountId} has no active credentials, skipping", accountId);
                 return;
             }
 

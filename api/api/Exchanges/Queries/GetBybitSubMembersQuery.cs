@@ -46,6 +46,8 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
             .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
         if (integration == null)
             return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
+        if (!integration.Enabled)
+            return new Response("Bybit integration is disconnected. Save integration credentials to reconnect.", false, 400);
 
         var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-key", cancellationToken);
         var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-secret", cancellationToken);
