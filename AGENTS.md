@@ -30,6 +30,7 @@
 - Delegate independent work that can safely run in parallel; otherwise implement the smallest correct change directly.
 - When using sub-agents, coordinate their work and verify the combined result.
 - Use the model and tools appropriate to the task complexity.
+- Skip independent diff-review/audit cycles unless the user explicitly asks for one; prioritize delivering working code quickly.
 - After a change, run the relevant available validation: `dotnet test` or `dotnet build` for backend changes, and `npm run test` or `npm run build` for Angular changes.
 
 ## DATABASE SCHEMA CHANGES

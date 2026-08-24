@@ -149,22 +149,34 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             if (priorVersion is { } accountVersion && accountId is { } account)
             {
                 var now = DateTime.UtcNow;
-                activated = await _context.SyncStatuses
-                    .Where(x => x.UserId == userId && x.AccountId == account && x.ExchangeName == "Bybit" && x.ActiveCredentialSetId == priorSet && x.CredentialVersion == accountVersion)
-                    .ExecuteUpdateAsync(setters => setters
+                var newVersion = Guid.NewGuid();
+                var query = _context.SyncStatuses
+                    .Where(x => x.UserId == userId && x.AccountId == account && x.ExchangeName == "Bybit" && x.ActiveCredentialSetId == priorSet && x.CredentialVersion == accountVersion);
+                activated = priorSet == null
+                    ? await query.ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
-                        .SetProperty(x => x.CredentialVersion, Guid.NewGuid())
+                        .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.IsEnabled, true)
+                        .SetProperty(x => x.BybitCredentialsSetAt, x => x.BybitCredentialsSetAt ?? now), cancellationToken) == 1
+                    : await query.ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.BybitCredentialsSetAt, x => x.BybitCredentialsSetAt ?? now), cancellationToken) == 1;
             }
             else if (priorVersion is { } integrationVersion)
             {
-                activated = await _context.ExchangeIntegrations
-                    .Where(x => x.UserId == userId && x.Exchange == "Bybit" && x.ActiveCredentialSetId == priorSet && x.CredentialVersion == integrationVersion)
-                    .ExecuteUpdateAsync(setters => setters
+                var newVersion = Guid.NewGuid();
+                var query = _context.ExchangeIntegrations
+                    .Where(x => x.UserId == userId && x.Exchange == "Bybit" && x.ActiveCredentialSetId == priorSet && x.CredentialVersion == integrationVersion);
+                activated = priorSet == null
+                    ? await query.ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
-                        .SetProperty(x => x.CredentialVersion, Guid.NewGuid())
+                        .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.Enabled, true)
+                        .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1
+                    : await query.ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1;
             }
             else if (accountId is { } accountToCreate)
@@ -275,20 +287,35 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             }
 
             var newVersion = Guid.NewGuid();
-            var activated = operation.AccountId is { } accountId
-                ? await _context.SyncStatuses
-                    .Where(x => x.UserId == operation.UserId && x.AccountId == accountId && x.ExchangeName == "Bybit" && x.ActiveCredentialSetId == operation.PreviousCredentialSetId && x.CredentialVersion == priorVersion)
-                    .ExecuteUpdateAsync(setters => setters
+            bool activated;
+            if (operation.AccountId is { } accountId)
+            {
+                var query = _context.SyncStatuses
+                    .Where(x => x.UserId == operation.UserId && x.AccountId == accountId && x.ExchangeName == "Bybit" && x.ActiveCredentialSetId == operation.PreviousCredentialSetId && x.CredentialVersion == priorVersion);
+                activated = operation.PreviousCredentialSetId == null
+                    ? await query.ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
                         .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.IsEnabled, true), cancellationToken) == 1
-                : await _context.ExchangeIntegrations
-                    .Where(x => x.UserId == operation.UserId && x.Exchange == "Bybit" && x.ActiveCredentialSetId == operation.PreviousCredentialSetId && x.CredentialVersion == priorVersion)
-                    .ExecuteUpdateAsync(setters => setters
+                    : await query.ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, newVersion), cancellationToken) == 1;
+            }
+            else
+            {
+                var query = _context.ExchangeIntegrations
+                    .Where(x => x.UserId == operation.UserId && x.Exchange == "Bybit" && x.ActiveCredentialSetId == operation.PreviousCredentialSetId && x.CredentialVersion == priorVersion);
+                activated = operation.PreviousCredentialSetId == null
+                    ? await query.ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
                         .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.Enabled, true)
+                        .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1
+                    : await query.ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
+                        .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1;
+            }
             if (activated) operation.MarkActive();
             else operation.MarkSuperseded();
         }

@@ -97,6 +97,9 @@ public class ProcessBybitWebhookCommandHandlerTests
         return account;
     }
 
+    private static void MarkAsLegacyStatus(SyncStatus status) =>
+        typeof(SyncStatus).GetProperty(nameof(SyncStatus.CredentialVersion))!.SetValue(status, Guid.Empty);
+
     [Fact]
     public async Task Handle_WhenWebhookSecretMissing_ShouldReturn401()
     {
@@ -246,6 +249,31 @@ public class ProcessBybitWebhookCommandHandlerTests
         _bybitMock.Verify(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "immutable-webhook-secret"), Times.Once);
         _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(immutableKey), Times.Once);
         _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(legacyKey), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithLegacySyncStatus_ShouldReadLegacyWebhookSecret()
+    {
+        var account = new Account("Legacy Bybit", 1, EAccountType.Exchange, "Bybit", "UID-LEGACY");
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        MarkAsLegacyStatus(status);
+        _context.SyncStatuses.Add(status);
+        await _context.SaveChangesAsync();
+        var legacyKey = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "webhook-secret");
+        _keyVaultMock
+            .Setup(v => v.GetSecretReadResultAsync(legacyKey))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-webhook-secret"));
+        _bybitMock
+            .Setup(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "legacy-webhook-secret"))
+            .Returns(true);
+
+        var result = await _handler.Handle(_validCmd with { AccountId = account.Id }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(legacyKey), Times.Once);
+        _syncServiceMock.Verify(s => s.ProcessOrderAsync(It.IsAny<BybitOrderData>(), It.IsAny<Account>(), 1, "Webhook", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

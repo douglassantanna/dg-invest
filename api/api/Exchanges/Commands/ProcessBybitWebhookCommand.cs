@@ -71,7 +71,7 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
                       && status.AccountId == request.AccountId
                       && status.ExchangeName == "Bybit",
             cancellationToken);
-        if (syncStatus is null || !syncStatus.IsEnabled || syncStatus.ActiveCredentialSetId == null)
+        if (syncStatus is null || !syncStatus.IsEnabled || (syncStatus.ActiveCredentialSetId == null && syncStatus.CredentialVersion != Guid.Empty))
         {
             _logger.LogInformation("ProcessBybitWebhook: sync is disabled for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
             return new Response("ok", true);

@@ -163,6 +163,41 @@ public class SyncBybitOrdersTests
         bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", 50, It.IsAny<long?>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Run_WhenLegacyStatusHasNoActiveSet_ShouldUseLegacyCredentials()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new DataContext(options);
+        var account = new Account("Legacy Futures", 1, EAccountType.Exchange, "Bybit", "UID-LEGACY");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        typeof(SyncStatus).GetProperty(nameof(SyncStatus.CredentialVersion))!.SetValue(status, Guid.Empty);
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+        var legacyApiKey = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-key");
+        var legacyApiSecret = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-secret");
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(legacyApiKey))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-api-key"));
+        keyVault.Setup(x => x.GetSecretReadResultAsync(legacyApiSecret))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-api-secret"));
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetDepositHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
+        var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
+            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+
+        bybitService.Verify(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>()), Times.Once);
+    }
+
     private static IConfiguration EnabledConfiguration() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
         .Build();

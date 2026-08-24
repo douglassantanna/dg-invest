@@ -105,7 +105,7 @@ public class SyncBybitOrders
                 return;
             }
 
-            if (syncStatus.ActiveCredentialSetId == null)
+            if (syncStatus.ActiveCredentialSetId == null && syncStatus.CredentialVersion != Guid.Empty)
             {
                 _logger.LogInformation("SyncBybitOrders: account {AccountId} has no active credentials, skipping", accountId);
                 return;
