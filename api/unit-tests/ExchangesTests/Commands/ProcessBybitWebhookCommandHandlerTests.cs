@@ -72,18 +72,35 @@ public class ProcessBybitWebhookCommandHandlerTests
         };
     }
 
-    private async Task<Account> SeedAccountAsync()
+    private async Task SeedIntegrationAsync()
     {
-        var account = new Account("main", 1);
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.ActivateCredentialSet("integration-set");
+        _context.ExchangeIntegrations.Add(integration);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task<Account> SeedAccountAsync(bool seedStatus = true)
+    {
+        await SeedIntegrationAsync();
+        var account = new Account("Bybit account", 1, EAccountType.Exchange, "Bybit", "UID-001");
         account.AddCryptoAsset(new CryptoAsset("Bitcoin", "BTC", "BTC", 1));
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
+        if (seedStatus)
+        {
+            var status = new SyncStatus(1, account.Id, "Bybit");
+            status.ActivateCredentialSet("account-set");
+            _context.SyncStatuses.Add(status);
+            await _context.SaveChangesAsync();
+        }
         return account;
     }
 
     [Fact]
     public async Task Handle_WhenWebhookSecretMissing_ShouldReturn401()
     {
+        await SeedAccountAsync();
         _keyVaultMock
             .Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
@@ -98,6 +115,7 @@ public class ProcessBybitWebhookCommandHandlerTests
     [Fact]
     public async Task Handle_WhenKeyVaultIsUnavailable_Returns503WithoutValidatingOrProcessing()
     {
+        await SeedAccountAsync();
         _keyVaultMock
             .Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
@@ -114,6 +132,7 @@ public class ProcessBybitWebhookCommandHandlerTests
     [Fact]
     public async Task Handle_WhenSignatureInvalid_ShouldReturn401()
     {
+        await SeedAccountAsync();
         _keyVaultMock
             .Setup(v => v.GetSecretAsync(It.IsAny<string>()))
             .ReturnsAsync("webhook-secret");
@@ -131,6 +150,7 @@ public class ProcessBybitWebhookCommandHandlerTests
     [Fact]
     public async Task Handle_WhenTopicIsNotOrder_ShouldReturnOk()
     {
+        await SeedAccountAsync();
         _keyVaultMock
             .Setup(v => v.GetSecretAsync(It.IsAny<string>()))
             .ReturnsAsync("webhook-secret");
@@ -150,8 +170,9 @@ public class ProcessBybitWebhookCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenAccountNotFound_ShouldReturn404AndMarkSyncStatusError()
+    public async Task Handle_WhenAccountNotFound_ShouldAcknowledgeWithoutReadingVaultOrMarkingError()
     {
+        await SeedIntegrationAsync();
         _keyVaultMock
             .Setup(v => v.GetSecretAsync(It.IsAny<string>()))
             .ReturnsAsync("webhook-secret");
@@ -161,10 +182,11 @@ public class ProcessBybitWebhookCommandHandlerTests
 
         var result = await _handler.Handle(_validCmd, CancellationToken.None);
 
-        result.IsSuccess.Should().BeFalse();
-        result.Data.Should().Be(404);
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be("ok");
 
-        _syncServiceMock.Verify(s => s.MarkSyncStatusErrorAsync(1, 1, "Account not found", It.IsAny<CancellationToken>()), Times.Once);
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(It.IsAny<string>()), Times.Never);
+        _syncServiceMock.Verify(s => s.MarkSyncStatusErrorAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -195,7 +217,7 @@ public class ProcessBybitWebhookCommandHandlerTests
     [Fact]
     public async Task Handle_WithActiveCredentialSet_UsesImmutableWebhookSecretInsteadOfLegacyOrArbitraryKeys()
     {
-        var account = await SeedAccountAsync();
+        var account = await SeedAccountAsync(seedStatus: false);
         const string credentialSetId = "active-webhook-set";
         var status = new SyncStatus(1, account.Id, "Bybit");
         status.ActivateCredentialSet(credentialSetId);
@@ -229,8 +251,9 @@ public class ProcessBybitWebhookCommandHandlerTests
     [Fact]
     public async Task Handle_WhenSyncIsDisabled_ShouldAcknowledgeWithoutProcessingOrders()
     {
-        await SeedAccountAsync();
+        await SeedAccountAsync(seedStatus: false);
         var syncStatus = new SyncStatus(1, 1, "Bybit");
+        syncStatus.ActivateCredentialSet("disabled-set");
         syncStatus.ToggleEnabled();
         _context.SyncStatuses.Add(syncStatus);
         await _context.SaveChangesAsync();

@@ -24,6 +24,11 @@ public class ExchangeIntegration : Entity
 
     public void MarkEnabled() => Enabled = true;
     public void MarkDisabled() => Enabled = false;
+    public void MarkDisconnected()
+    {
+        Enabled = false;
+        Status = "Disconnected";
+    }
     public void ToggleEnabled() => Enabled = !Enabled;
     public void MarkConfigured() => Status = "Configured";
     public void ActivateCredentialSet(string credentialSetId)
@@ -31,6 +36,12 @@ public class ExchangeIntegration : Entity
         ActiveCredentialSetId = credentialSetId;
         CredentialVersion = Guid.NewGuid();
         MarkConfigured();
+        MarkEnabled();
+    }
+    public void DeactivateCredentialSet()
+    {
+        ActiveCredentialSetId = null;
+        CredentialVersion = Guid.NewGuid();
     }
 
     public void MarkSynced(DateTime timestamp)
