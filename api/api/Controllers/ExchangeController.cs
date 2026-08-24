@@ -37,7 +37,7 @@ public class ExchangeController : ControllerBase
 
         var result = await _mediator.Send(new GetExchangeAccountDetailQuery(userId.Value, accountId));
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return Failure(result);
 
         return Ok(result);
     }
@@ -71,7 +71,21 @@ public class ExchangeController : ControllerBase
 
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return Failure(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("bybit/integration-credentials")]
+    public async Task<ActionResult<Response>> SaveBybitIntegrationCredentials([FromBody] SaveBybitIntegrationCredentialsRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new SaveBybitIntegrationCredentialsCommand(userId.Value, request.ApiKey, request.ApiSecret));
+        if (!result.IsSuccess)
+            return Failure(result);
 
         return Ok(result);
     }
@@ -85,7 +99,7 @@ public class ExchangeController : ControllerBase
 
         var result = await _mediator.Send(new SyncBybitAccountsCommand(userId.Value));
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return Failure(result);
 
         return Ok(result);
     }
@@ -104,7 +118,7 @@ public class ExchangeController : ControllerBase
 
         var result = await _mediator.Send(new GetBybitSubMembersQuery(userId.Value));
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return Failure(result);
 
         return Ok(result);
     }
@@ -139,7 +153,7 @@ public class ExchangeController : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
 
         var result = await _mediator.Send(new GetCredentialsStatusQuery(userId.Value));
-        return Ok(result);
+        return result.IsSuccess ? Ok(result) : Failure(result);
     }
 
     [HttpDelete("bybit/credentials/{accountId}")]
@@ -151,7 +165,21 @@ public class ExchangeController : ControllerBase
 
         var result = await _mediator.Send(new DeleteCredentialsCommand(userId.Value, accountId));
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return Failure(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("bybit/disconnect")]
+    public async Task<ActionResult<Response>> DisconnectBybitIntegration()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new DisconnectBybitIntegrationCommand(userId.Value));
+        if (!result.IsSuccess)
+            return Failure(result);
 
         return Ok(result);
     }
@@ -186,7 +214,7 @@ public class ExchangeController : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
 
         var result = await _mediator.Send(new GetBybitConnectionGroupQuery(userId.Value));
-        return Ok(result);
+        return result.IsSuccess ? Ok(result) : Failure(result);
     }
 
     [HttpPost("bybit/test-connection/{accountId}")]
@@ -198,7 +226,7 @@ public class ExchangeController : ControllerBase
 
         var result = await _mediator.Send(new TestBybitConnectionCommand(userId.Value, accountId));
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return Failure(result);
 
         return Ok(result);
     }
@@ -222,6 +250,12 @@ public class ExchangeController : ControllerBase
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(claim, out var id) ? id : null;
     }
+
+    private ActionResult<Response> Failure(Response result) =>
+        IsKeyVaultUnavailable(result) ? StatusCode(StatusCodes.Status503ServiceUnavailable, result) : BadRequest(result);
+
+    private static bool IsKeyVaultUnavailable(Response result) =>
+        result.Data is 503 || string.Equals(result.Data?.ToString(), "503", StringComparison.Ordinal);
 }
 
 public record SaveBybitCredentialsRequest(
@@ -237,6 +271,8 @@ public record SaveBybitCredentialsRequest(
     public string? ResolvedName => string.IsNullOrWhiteSpace(Name) ? SubaccountTag : Name;
     public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
 }
+
+public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret);
 
 public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
 {

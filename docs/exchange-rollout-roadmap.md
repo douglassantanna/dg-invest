@@ -76,3 +76,17 @@ Each phase is released independently to `stage`; do not maintain one long-lived 
 6. Merge the phase pull request into `stage`, then create the next phase branch from the updated `stage` head.
 
 For PR1, apply migrations and deploy the API/Function while keeping user self-service disabled. PR2 supplies the stable API boundary, PR3 exposes it to users, PR4 improves account navigation, and PR5 enables safe, observable automatic synchronization.
+
+## Legacy Credential Promotion Records
+
+`LegacyBybitCredentialPromotion` is a durable, non-secret audit record used when a legacy `main` account's Bybit discovery credentials move into the immutable credential-set model.
+
+It records the user, source account, credential operation ID, destination credential-set ID, outcome, and state. It never stores API keys, API secrets, or webhook values.
+
+Promotion records make the migration idempotent and recoverable:
+
+- A completed migration reports `Promoted` and does not create another active credential set when rerun.
+- Complete source API key/secret pairs are copied and verified before the new integration set is activated.
+- Incomplete pairs, Key Vault outages, source conflicts, and polluted manual-account metadata are reported for review without mutating source data.
+- Source legacy secrets remain intact during the migration window.
+- A promotion record correlates the legacy source with the durable credential update operation, allowing interrupted promotions to converge safely after recovery.

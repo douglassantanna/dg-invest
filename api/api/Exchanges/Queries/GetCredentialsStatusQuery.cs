@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Commands;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -33,26 +34,27 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
     public async Task<Response> Handle(GetCredentialsStatusQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 
         var results = new List<CredentialsStatusDto>();
         foreach (var account in accounts)
         {
-            var apiKey = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-secret"));
-            var webhookSecret = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "webhook-secret"));
+            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
+            var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
+
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
             results.Add(new CredentialsStatusDto(
                 AccountId: account.Id,
                 AccountName: account.Name,
-                HasApiKey: !string.IsNullOrEmpty(apiKey),
-                HasApiSecret: !string.IsNullOrEmpty(apiSecret),
-                HasWebhookSecret: !string.IsNullOrEmpty(webhookSecret)));
+                HasApiKey: apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value),
+                HasApiSecret: apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value),
+                HasWebhookSecret: webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value)));
         }
 
         return new Response("ok", true, results);

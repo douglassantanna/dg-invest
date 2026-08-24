@@ -22,7 +22,8 @@ public class ToggleBybitAccountCommandHandler : IRequestHandler<ToggleBybitAccou
     public async Task<Response> Handle(ToggleBybitAccountCommand request, CancellationToken cancellationToken)
     {
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .FirstOrDefaultAsync(cancellationToken);
 
         if (account == null)
@@ -37,6 +38,19 @@ public class ToggleBybitAccountCommandHandler : IRequestHandler<ToggleBybitAccou
         if (syncStatus == null)
         {
             return new Response("No Bybit configuration found for this account", false, 404);
+        }
+
+        if (!syncStatus.IsEnabled)
+        {
+            if (syncStatus.ActiveCredentialSetId == null)
+                return new Response("Cannot enable account without active Bybit credentials", false, 400);
+
+            var integration = await _context.ExchangeIntegrations
+                .Where(x => x.UserId == request.UserId && x.Exchange == "Bybit")
+                .Select(x => new { x.Enabled, x.ActiveCredentialSetId })
+                .SingleOrDefaultAsync(cancellationToken);
+            if (integration is not null && (!integration.Enabled || integration.ActiveCredentialSetId == null))
+                return new Response("Cannot enable account while Bybit integration is disconnected", false, 400);
         }
 
         syncStatus.ToggleEnabled();

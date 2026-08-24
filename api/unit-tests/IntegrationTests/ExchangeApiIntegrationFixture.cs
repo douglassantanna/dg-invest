@@ -47,12 +47,12 @@ public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
         await _database.DisposeAsync();
     }
 
-    public async Task<(int UserId, int MainAccountId)> CreateUserAsync()
+    public async Task<(int UserId, int MainAccountId)> CreateUserAsync(Role role = Role.User)
     {
         using var scope = Factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
         var suffix = Guid.NewGuid().ToString("N");
-        var user = new User("Integration User", $"integration-{suffix}@example.com", "password", Role.User);
+        var user = new User("Integration User", $"integration-{suffix}@example.com", "password", role);
         context.Users.Add(user);
         await context.SaveChangesAsync();
 
@@ -74,14 +74,14 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
 
     public ExchangeApiFactory(string connectionString) => _connectionString = connectionString;
 
-    public HttpClient CreateAuthenticatedClient(int userId)
+    public HttpClient CreateAuthenticatedClient(int userId, Role role = Role.User)
     {
         var client = CreateClient();
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret)),
             SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
-            claims: [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
+            claims: [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, role.ToString())],
             expires: DateTime.UtcNow.AddMinutes(5),
             signingCredentials: credentials);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -122,12 +122,33 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
 public sealed class InMemoryKeyVault : IKeyVaultService
 {
     private readonly Dictionary<string, string> _secrets = new(StringComparer.Ordinal);
+    public bool IsAvailable { get; set; } = true;
+    public bool FailWrites { get; set; }
 
-    public Task<string?> GetSecretAsync(string secretName) =>
-        Task.FromResult(_secrets.TryGetValue(secretName, out var value) ? value : null);
+    public Task<KeyVaultSecretReadResult> GetSecretReadResultAsync(string secretName)
+    {
+        if (!IsAvailable)
+            return Task.FromResult(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
+
+        return Task.FromResult(_secrets.TryGetValue(secretName, out var value)
+            ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, value)
+            : new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
+    }
+
+    public async Task<string?> GetSecretAsync(string secretName)
+    {
+        var result = await GetSecretReadResultAsync(secretName);
+        if (result.IsUnavailable)
+            throw new InvalidOperationException(KeyVaultSecretReadResult.UnavailableMessage);
+
+        return result.Value;
+    }
 
     public Task SetSecretAsync(string secretName, string value)
     {
+        if (FailWrites)
+            throw new InvalidOperationException("Key Vault write failed");
+
         _secrets[secretName] = value;
         return Task.CompletedTask;
     }

@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Commands;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -41,7 +42,8 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
     public async Task<Response> Handle(GetExchangeAccountDetailQuery request, CancellationToken cancellationToken)
     {
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange)
             .Select(a => new { a.Id, a.Name })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -57,12 +59,12 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
 
         foreach (var status in syncStatuses)
         {
-            var hasApiKey = !string.IsNullOrEmpty(
-                await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key")));
-            var hasApiSecret = !string.IsNullOrEmpty(
-                await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret")));
-            var hasWebhookSecret = !string.IsNullOrEmpty(
-                await _keyVaultService.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret")));
+            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
+            var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
+
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
             connections.Add(new ExchangeConnectionDto(
                 status.ExchangeName,
@@ -70,9 +72,9 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
                 status.LastSyncAt,
                 status.ErrorCount,
                 status.LastErrorMessage,
-                hasApiKey,
-                hasApiSecret,
-                hasWebhookSecret));
+                apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value),
+                apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value),
+                webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value)));
         }
 
         // If no sync status exists, still report the account as NotConfigured

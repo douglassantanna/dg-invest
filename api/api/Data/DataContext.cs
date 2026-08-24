@@ -21,6 +21,8 @@ public class DataContext : DbContext
     public virtual DbSet<UserPortfolioSnapshot> UserPortfolioSnapshots { get; set; } = null!;
     public virtual DbSet<SyncStatus> SyncStatuses { get; set; } = null!;
     public virtual DbSet<ExchangeIntegration> ExchangeIntegrations { get; set; } = null!;
+    public virtual DbSet<CredentialUpdateOperation> CredentialUpdateOperations { get; set; } = null!;
+    public virtual DbSet<LegacyBybitCredentialPromotion> LegacyBybitCredentialPromotions { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);

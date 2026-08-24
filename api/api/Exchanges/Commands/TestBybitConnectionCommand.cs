@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Bybit;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,8 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
     public async Task<Response> Handle(TestBybitConnectionCommand request, CancellationToken cancellationToken)
     {
         var account = await _context.Accounts
-            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.Id == request.AccountId && a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .FirstOrDefaultAsync(cancellationToken);
 
         if (account == null)
@@ -39,18 +41,18 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             return new Response("Account not found", false, 404);
         }
 
-        var key = SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key");
-        var secret = SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret");
+        var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
+        var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
 
-        var apiKey = await _keyVaultService.GetSecretAsync(key);
-        var apiSecret = await _keyVaultService.GetSecretAsync(secret);
+        if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
+            return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
-        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+        if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
         {
             return new Response("API key and secret are not configured for this account", false, 400);
         }
 
-        var success = await _bybitService.TestConnectionAsync(apiKey, apiSecret);
+        var success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!);
 
         if (success)
         {

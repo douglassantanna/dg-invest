@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Commands;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,8 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
     public async Task<Response> Handle(GetBybitConnectionGroupQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && !a.IsDeleted)
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 
@@ -59,16 +61,16 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
         foreach (var account in accounts)
         {
-            var apiKey = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-secret"));
-            var webhookSecret = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "webhook-secret"));
+            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
+            var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
 
-            var hasApiKey = !string.IsNullOrEmpty(apiKey);
-            var hasApiSecret = !string.IsNullOrEmpty(apiSecret);
-            var hasWebhookSecret = !string.IsNullOrEmpty(webhookSecret);
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+
+            var hasApiKey = apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value);
+            var hasApiSecret = apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value);
+            var hasWebhookSecret = webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value);
 
             var syncStatus = syncStatuses
                 .FirstOrDefault(s => s.AccountId == account.Id);
@@ -89,8 +91,8 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
             else
                 status = "pending";
 
-            var maskedApiKey = hasApiKey && apiKey!.Length > 4
-                ? "...." + apiKey[^4..]
+            var maskedApiKey = hasApiKey && apiKey.Value!.Length > 4
+                ? "...." + apiKey.Value[^4..]
                 : null;
 
             var webhookUrl = hasWebhookSecret

@@ -23,7 +23,7 @@ public class MapBybitAccountCommandHandlerTests
     [Fact]
     public async Task Handle_WhenAccountExists_ShouldMapUidAndReturnSuccess()
     {
-        var account = new Account("sub1", 1);
+        var account = new Account("sub1", 1, EAccountType.Exchange, "Bybit");
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
 
@@ -67,7 +67,7 @@ public class MapBybitAccountCommandHandlerTests
     public async Task Handle_WhenUidAlreadyMappedToDifferentAccount_ShouldReturnConflict()
     {
         var account1 = new Account("sub1", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        var account2 = new Account("sub2", 1);
+        var account2 = new Account("sub2", 1, EAccountType.Exchange, "Bybit");
         _context.Accounts.AddRange(account1, account2);
         await _context.SaveChangesAsync();
 
@@ -84,7 +84,7 @@ public class MapBybitAccountCommandHandlerTests
     public async Task Handle_WhenUidIsMappedByDifferentUser_ShouldAllowMapping()
     {
         var firstUserAccount = new Account("sub1", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        var secondUserAccount = new Account("sub2", 2);
+        var secondUserAccount = new Account("sub2", 2, EAccountType.Exchange, "Bybit");
         _context.Accounts.AddRange(firstUserAccount, secondUserAccount);
         await _context.SaveChangesAsync();
 
@@ -101,7 +101,7 @@ public class MapBybitAccountCommandHandlerTests
     [Fact]
     public async Task Handle_SameAccountCanRemaSameUid()
     {
-        var account = new Account("sub1", 1);
+        var account = new Account("sub1", 1, EAccountType.Exchange, "Bybit");
         account.SetExternalId("UID-001");
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
@@ -123,5 +123,19 @@ public class MapBybitAccountCommandHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("Validation failed");
         result.Data.Should().BeOfType<List<string>>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenAccountIsManual_ShouldRejectWithoutMapping()
+    {
+        var account = new Account("manual", 1);
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(new MapBybitAccountCommand(1, account.Id, "UID-001"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Bybit exchange account");
+        (await _context.Accounts.FindAsync(account.Id))!.ExternalId.Should().BeNull();
     }
 }
