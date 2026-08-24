@@ -2,8 +2,6 @@ using api.Exchanges.Services;
 using api.Shared;
 using FluentValidation;
 using MediatR;
-using api.Data;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace api.Exchanges.Commands;
 public record SaveBybitIntegrationCredentialsCommand(int UserId, string ApiKey, string ApiSecret) : IRequest<Response>;
@@ -17,8 +15,7 @@ public class SaveBybitIntegrationCredentialsCommandValidator : AbstractValidator
 public class SaveBybitIntegrationCredentialsCommandHandler : IRequestHandler<SaveBybitIntegrationCredentialsCommand, Response>
 {
     private readonly IBybitCredentialSetService _credentials;
-    public SaveBybitIntegrationCredentialsCommandHandler(api.AzureKeyVault.IKeyVaultService vault, DataContext context, ILogger<SaveBybitIntegrationCredentialsCommandHandler> logger)
-        => _credentials = new BybitCredentialSetService(context, vault, NullLogger<BybitCredentialSetService>.Instance);
+    public SaveBybitIntegrationCredentialsCommandHandler(IBybitCredentialSetService credentials) => _credentials = credentials;
     public async Task<Response> Handle(SaveBybitIntegrationCredentialsCommand request, CancellationToken cancellationToken)
     {
         var validation = await new SaveBybitIntegrationCredentialsCommandValidator().ValidateAsync(request, cancellationToken);

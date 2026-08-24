@@ -18,6 +18,7 @@ public class AccountEvolutionMigrationTests
     private const string CreatesAccountMigration = "20260822195335_AddCredentialOperationCreatesAccount";
     private const string PriorVersionMigration = "20260822210000_AddCredentialOperationPriorVersion";
     private const string AccountExternalIdIndexMigration = "20260822220000_AlignAccountExternalIdIndex";
+    private const string ExchangeOnlyExternalIdIndexMigration = "20260824210000_FilterAccountExternalIdIndexToExchangeAccounts";
     private const string LegacyPromotionMigration = "20260822230000_AddLegacyBybitCredentialPromotions";
 
     [Fact]
@@ -174,6 +175,7 @@ public class AccountEvolutionMigrationTests
 
         await migrator.MigrateAsync(CurrentMigration);
         await migrator.MigrateAsync(AccountExternalIdIndexMigration);
+        await migrator.MigrateAsync(ExchangeOnlyExternalIdIndexMigration);
 
         var filter = await context.Database.SqlQueryRaw<string>("""
             SELECT filter_definition AS Value
@@ -183,6 +185,18 @@ public class AccountEvolutionMigrationTests
             """).SingleAsync();
         filter.Should().Contain("[ExternalId] IS NOT NULL");
         filter.Should().Contain("[IsDeleted]=(0)");
+        filter.Should().Contain("[AccountType]=(1)");
+
+        context.Users.Add(new User("Polluted User", "polluted@example.com", "hash", Role.User));
+        await context.SaveChangesAsync();
+        var userId = await context.Users.Where(user => user.Email == "polluted@example.com").Select(user => user.Id).SingleAsync();
+        var manual = new Account("Legacy manual", userId);
+        manual.SetExchange("Bybit");
+        manual.SetExternalId("UID-POLLUTED");
+        var exchange = new Account("Exchange", userId, EAccountType.Exchange, "Bybit", "UID-POLLUTED");
+        context.Accounts.AddRange(manual, exchange);
+
+        await context.SaveChangesAsync();
     }
 
     [Fact]

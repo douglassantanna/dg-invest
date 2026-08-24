@@ -18,8 +18,7 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         var keyVault = new Mock<IKeyVaultService>();
         keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
-        var handler = new SaveBybitIntegrationCredentialsCommandHandler(
-            keyVault.Object, context, Mock.Of<ILogger<SaveBybitIntegrationCredentialsCommandHandler>>());
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object));
 
         var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "api-key", "api-secret"), CancellationToken.None);
 
@@ -46,7 +45,7 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         var calls = 0;
         keyVault.Setup(x => x.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((_, _) => ++calls == failingCall ? Task.FromException(new Exception("failed")) : Task.CompletedTask);
-        var handler = new SaveBybitIntegrationCredentialsCommandHandler(keyVault.Object, context, Mock.Of<ILogger<SaveBybitIntegrationCredentialsCommandHandler>>());
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object));
 
         var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "key", "secret"), CancellationToken.None);
 
@@ -64,7 +63,7 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         var keyVault = new Mock<IKeyVaultService>();
         keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
-        var handler = new SaveBybitIntegrationCredentialsCommandHandler(keyVault.Object, context, Mock.Of<ILogger<SaveBybitIntegrationCredentialsCommandHandler>>());
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object));
 
         var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "key", "secret"), CancellationToken.None);
 
@@ -73,4 +72,7 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         (await context.ExchangeIntegrations.CountAsync()).Should().Be(0);
         (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
     }
+
+    private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault) =>
+        new BybitCredentialSetService(context, vault, Mock.Of<ILogger<BybitCredentialSetService>>());
 }

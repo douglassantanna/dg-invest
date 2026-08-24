@@ -114,6 +114,20 @@ public class DeleteCredentialsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenExchangeAccountIsNamedMain_ShouldAllowRemoval()
+    {
+        var account = new Account("main", 1, EAccountType.Exchange, "Bybit", "UID-MAIN");
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(new DeleteCredentialsCommand(1, account.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var saved = await _context.Accounts.FindAsync(account.Id);
+        saved!.IsDeleted.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Handle_WhenManualAccount_ShouldReject()
     {
         var account = new Account("Dad Account", 1);

@@ -29,8 +29,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         _keyVaultMock
             .Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
-        var logger = Mock.Of<ILogger<SaveBybitCredentialsCommandHandler>>();
-        _handler = new SaveBybitCredentialsCommandHandler(_keyVaultMock.Object, _context, logger);
+        _handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object));
     }
 
     [Fact]
@@ -187,7 +186,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         await context.Database.EnsureCreatedAsync();
         context.Users.Add(new User("User", "user@example.com", "hash", Role.User));
         await context.SaveChangesAsync();
-        var handler = new SaveBybitCredentialsCommandHandler(_keyVaultMock.Object, context, Mock.Of<ILogger<SaveBybitCredentialsCommandHandler>>());
+        var handler = new SaveBybitCredentialsCommandHandler(context, CredentialService(context, _keyVaultMock.Object));
 
         (await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "First", ""), CancellationToken.None)).IsSuccess.Should().BeTrue();
         (await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "Second", "   "), CancellationToken.None)).IsSuccess.Should().BeTrue();
@@ -529,6 +528,9 @@ public class SaveBybitCredentialsCommandHandlerTests
 
         services.Should().Contain(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(CredentialRecoveryService));
     }
+
+    private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault) =>
+        new BybitCredentialSetService(context, vault, Mock.Of<ILogger<BybitCredentialSetService>>());
 
     private static async Task MakeOperationStaleAsync(DataContext context, CredentialUpdateOperation operation)
     {

@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace api.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260822220000_AlignAccountExternalIdIndex")]
-    public partial class AlignAccountExternalIdIndex : Migration
+    [Migration("20260824210000_FilterAccountExternalIdIndexToExchangeAccounts")]
+    public partial class FilterAccountExternalIdIndexToExchangeAccounts : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -35,7 +35,7 @@ namespace api.Data.Migrations
                 table: "Accounts",
                 columns: new[] { "UserId", "Exchange", "ExternalId" },
                 unique: true,
-                filter: "[ExternalId] IS NOT NULL");
+                filter: "[ExternalId] IS NOT NULL AND [IsDeleted] = 0");
         }
     }
 }
