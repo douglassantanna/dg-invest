@@ -21,7 +21,7 @@ namespace api.Data.Migrations
                 table: "Accounts",
                 columns: new[] { "UserId", "Exchange", "ExternalId" },
                 unique: true,
-                filter: "[ExternalId] IS NOT NULL AND [IsDeleted] = 0 AND [AccountType] = 1");
+                filter: "[ExternalId] IS NOT NULL AND [IsDeleted] = 0");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
