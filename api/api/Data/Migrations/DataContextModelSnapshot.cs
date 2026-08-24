@@ -69,7 +69,7 @@ namespace api.Migrations
 
                     b.HasIndex("UserId", "Exchange", "ExternalId")
                         .IsUnique()
-                        .HasFilter("[ExternalId] IS NOT NULL AND [IsDeleted] = 0");
+                        .HasFilter("[ExternalId] IS NOT NULL AND [IsDeleted] = 0 AND [AccountType] = 1");
 
                     b.ToTable("Accounts");
                 });

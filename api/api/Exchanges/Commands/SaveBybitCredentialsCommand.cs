@@ -5,7 +5,6 @@ using api.Shared;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace api.Exchanges.Commands;
 public record SaveBybitCredentialsCommand(int UserId, int AccountId, string ApiKey, string ApiSecret, string WebhookSecret, string? Name = null, string? ExternalId = null) : IRequest<Response>;
@@ -22,10 +21,10 @@ public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitC
 public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCredentialsCommand, Response>
 {
     private readonly DataContext _context; private readonly IBybitCredentialSetService _credentials;
-    public SaveBybitCredentialsCommandHandler(api.AzureKeyVault.IKeyVaultService vault, DataContext context, ILogger<SaveBybitCredentialsCommandHandler> logger)
+    public SaveBybitCredentialsCommandHandler(DataContext context, IBybitCredentialSetService credentials)
     {
         _context = context;
-        _credentials = new BybitCredentialSetService(context, vault, NullLogger<BybitCredentialSetService>.Instance);
+        _credentials = credentials;
     }
     public async Task<Response> Handle(SaveBybitCredentialsCommand request, CancellationToken cancellationToken)
     {
