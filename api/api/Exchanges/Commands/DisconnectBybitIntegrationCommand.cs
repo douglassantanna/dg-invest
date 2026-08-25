@@ -28,8 +28,6 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
 
     public async Task<Response> Handle(DisconnectBybitIntegrationCommand request, CancellationToken cancellationToken)
     {
-        var integration = await _context.ExchangeIntegrations
-            .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
         var accountIds = await _context.Accounts
             .Where(account => account.UserId == request.UserId
                               && !account.IsDeleted
@@ -46,6 +44,11 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
                 await using var transaction = _context.Database.IsRelational()
                     ? await _context.Database.BeginTransactionAsync(cancellationToken)
                     : null;
+
+                _context.ChangeTracker.Clear();
+
+                var integration = await _context.ExchangeIntegrations
+                    .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
 
                 if (integration != null)
                 {

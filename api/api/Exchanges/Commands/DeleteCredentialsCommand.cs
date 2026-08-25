@@ -52,20 +52,29 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
 
         try
         {
+            // Keep legacy callers from reading old fixed-name credentials during the migration.
+            await _keyVaultService.SetSecretAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"), string.Empty);
+            await _keyVaultService.SetSecretAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"), string.Empty);
+            await _keyVaultService.SetSecretAsync(
+                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
+
             var strategy = _context.Database.CreateExecutionStrategy();
             await strategy.ExecuteAsync(async () =>
             {
-                // Keep legacy callers from reading old fixed-name credentials during the migration.
-                await _keyVaultService.SetSecretAsync(
-                    SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"), string.Empty);
-                await _keyVaultService.SetSecretAsync(
-                    SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"), string.Empty);
-                await _keyVaultService.SetSecretAsync(
-                    SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
-
                 await using var transaction = _context.Database.IsRelational()
                     ? await _context.Database.BeginTransactionAsync(cancellationToken)
                     : null;
+
+                _context.ChangeTracker.Clear();
+
+                var accountToDelete = await _context.Accounts
+                    .Where(a => a.Id == request.AccountId && a.UserId == request.UserId)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (accountToDelete == null)
+                    throw new InvalidOperationException($"Account {request.AccountId} was not found during delete retry unit.");
 
                 var status = await _context.SyncStatuses.SingleOrDefaultAsync(x =>
                     x.UserId == request.UserId && x.AccountId == request.AccountId && x.ExchangeName == "Bybit", cancellationToken);
@@ -82,7 +91,7 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
                     else operation.MarkSuperseded();
                 }
 
-                account.SoftDelete();
+                accountToDelete.SoftDelete();
                 await _context.SaveChangesAsync(cancellationToken);
                 if (transaction != null) await transaction.CommitAsync(cancellationToken);
             });
