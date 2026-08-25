@@ -206,6 +206,58 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetWalletBalanceAsync_WhenBybitReturnsBalance_ShouldReturnWalletResponse()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "OK",
+            result = new
+            {
+                list = new[]
+                {
+                    new
+                    {
+                        accountType = "UNIFIED",
+                        totalEquity = "10000.50",
+                        coin = new[]
+                        {
+                            new { coin = "USDT", walletBalance = "6000.25", availableBalance = "5900.25", usdValue = "6000.25" },
+                            new { coin = "USDC", walletBalance = "4000.25", availableBalance = "4000.25", usdValue = "4000.25" }
+                        }
+                    }
+                }
+            }
+        });
+
+        var result = await _sut.GetWalletBalanceAsync("api-key", "api-secret", BybitRegion.Global, "UNIFIED");
+
+        result.Result.List.Should().ContainSingle();
+        var wallet = result.Result.List.Single();
+        wallet.AccountType.Should().Be("UNIFIED");
+        wallet.TotalEquity.Should().Be("10000.50");
+        wallet.Coin.Should().HaveCount(2);
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/account/wallet-balance")
+            .WithQueryParam("accountType", "UNIFIED")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetWalletBalanceAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetWalletBalanceAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/account/wallet-balance")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
     public async Task GetSubAccountsAsync_WhenRegionIsEu_ShouldCallEuHost()
     {
         using var httpTest = new HttpTest();
