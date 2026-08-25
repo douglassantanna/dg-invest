@@ -199,10 +199,19 @@ describe('Exchange management', () => {
     cy.intercept('POST', `${api}/bybit/disconnect`, response(null, 'Bybit integration disconnected')).as('disconnect');
     visitBybit();
     cy.window().then(win => cy.stub(win, 'confirm').returns(true));
+    cy.intercept('GET', `${api}/bybit/connection-groups`, groups([])).as('disconnectedGroups');
+    cy.intercept('GET', `${api}/bybit/sync-status`, response([])).as('disconnectedStatuses');
+    cy.intercept('GET', `${api}/bybit/sub-members`, response([])).as('disconnectedSubMembers');
 
     cy.contains('button', 'Disconnect Bybit').click();
     cy.wait('@disconnect');
+    cy.wait('@disconnectedGroups');
+    cy.wait('@disconnectedStatuses');
+    cy.wait('@disconnectedSubMembers');
     cy.contains('Bybit integration disconnected').should('be.visible');
+    cy.contains('button', 'Disconnect Bybit').should('not.exist');
+    cy.contains('Setup required').should('be.visible');
+    cy.contains('Trading account').should('not.exist');
   });
 
   it('rotates account credentials, clears secrets, and refreshes account state', () => {

@@ -143,6 +143,12 @@ public class ExchangeControllerIntegrationTests
         status.IsEnabled.Should().BeFalse();
         status.Status.Should().Be("Disconnected");
         status.ActiveCredentialSetId.Should().BeNull();
+        var connectionGroupsAfterDisconnect = await client.GetAsync("/api/Exchange/bybit/connection-groups");
+        connectionGroupsAfterDisconnect.StatusCode.Should().Be(HttpStatusCode.OK);
+        var connectionGroupsPayload = await connectionGroupsAfterDisconnect.Content.ReadAsStringAsync();
+        connectionGroupsPayload.Should().Contain("\"subaccountCount\":0");
+        connectionGroupsPayload.Should().Contain("\"subaccounts\":[]");
+        connectionGroupsPayload.Should().NotContain("Integration subaccount");
         (await context.CredentialUpdateOperations.Where(candidate => candidate.UserId == userId).Select(candidate => candidate.State).ToListAsync())
             .Should().OnlyContain(state => state == "Retired");
         (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be(string.Empty);

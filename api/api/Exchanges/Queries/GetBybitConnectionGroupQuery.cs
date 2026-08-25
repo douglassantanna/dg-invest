@@ -46,6 +46,11 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
     public async Task<Response> Handle(GetBybitConnectionGroupQuery request, CancellationToken cancellationToken)
     {
+        var integration = await _context.ExchangeIntegrations
+            .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
+        if (integration != null && !integration.Enabled)
+            return new Response("ok", true, EmptyGroup());
+
         var accounts = await _context.Accounts
             .Where(a => a.UserId == request.UserId && !a.IsDeleted
                      && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
@@ -126,6 +131,16 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
         return new Response("ok", true, new List<BybitConnectionGroupDto> { group });
     }
+
+    private static List<BybitConnectionGroupDto> EmptyGroup() =>
+    [
+        new(
+            Id: "bybit-main",
+            Name: "Main account (Bybit login)",
+            SubaccountCount: 0,
+            MaxSubaccounts: 10,
+            Subaccounts: [])
+    ];
 
     private static string FormatRelativeTime(DateTime utc)
     {
