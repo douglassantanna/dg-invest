@@ -121,12 +121,14 @@ public class SyncBybitOrders
                 return;
             }
 
+            var region = BybitEndpoints.Parse(syncStatus.Region);
+            await PopulateInitialCashBalanceAsync(account, apiKey.Value!, apiSecret.Value!, region, cancellationToken);
+
             var cutoff = syncStatus.LastSyncAt ?? syncStatus.BybitCredentialsSetAt;
             var startTime = cutoff is { } dt
                 ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
 
-            var region = BybitEndpoints.Parse(syncStatus.Region);
             var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
             var hasFailures = false;
 
@@ -198,6 +200,24 @@ public class SyncBybitOrders
                 await _orderSyncService.MarkSyncStatusErrorAsync(account.UserId, account.Id, ex.Message, cancellationToken);
             }
             catch { }
+        }
+    }
+
+    private async Task PopulateInitialCashBalanceAsync(Account account, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken)
+    {
+        if (account.Balance != 0)
+            return;
+
+        try
+        {
+            var wallet = await _bybitService.GetWalletBalanceAsync(apiKey, apiSecret, region, "UNIFIED", account.ExternalId);
+            var balance = BybitCashBalance.SumStablecoinCash(wallet);
+            account.SetInitialBalance(balance);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SyncBybitOrders: failed to fetch initial cash balance for account {AccountId}", account.Id);
         }
     }
 }

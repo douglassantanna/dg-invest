@@ -180,6 +180,7 @@ public sealed class FakeBybitService : IBybitService
     public string? LastApiKey { get; set; }
     public BybitRegion? LastRegion { get; set; }
     public BybitApiException? SubAccountsError { get; set; }
+    public Dictionary<string, BybitWalletBalanceResponse> WalletBalancesByAccountType { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public bool ValidateWebhookSignature(string rawBody, string signature, string timestamp, string webhookSecret) => true;
     public Task<List<BybitSubMember>> GetSubAccountsAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)
@@ -192,6 +193,13 @@ public sealed class FakeBybitService : IBybitService
     public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitOrderData>());
     public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
     public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
-    public Task<BybitWalletBalanceResponse> GetWalletBalanceAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, string accountType = "UNIFIED") => Task.FromResult(new BybitWalletBalanceResponse());
+    public Task<BybitWalletBalanceResponse> GetWalletBalanceAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, string accountType = "UNIFIED", string? memberId = null)
+    {
+        LastApiKey = apiKey;
+        LastRegion = region;
+        return Task.FromResult(WalletBalancesByAccountType.TryGetValue(accountType, out var response)
+            ? response
+            : new BybitWalletBalanceResponse());
+    }
     public Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global) => Task.FromResult(true);
 }

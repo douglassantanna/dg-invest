@@ -63,10 +63,10 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 return new Response("Bybit credentials not found. Please save your API key and secret first.", false, 400);
             }
 
+            var region = BybitEndpoints.Parse(integration.Region);
             List<BybitSubMember> subMembers;
             try
             {
-                var region = BybitEndpoints.Parse(integration?.Region);
                 subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!, region);
             }
             catch (BybitApiException ex)
@@ -92,6 +92,11 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             int matched = 0;
             int disabled = 0;
 
+            var mainAccount = await _context.Accounts
+                .SingleOrDefaultAsync(a => a.UserId == request.UserId && a.AccountType == EAccountType.Manual && a.Name == "main", cancellationToken);
+            if (mainAccount is not null)
+                await PopulateInitialCashBalanceAsync(mainAccount, apiKey.Value!, apiSecret.Value!, region, "FUND", null, cancellationToken);
+
             foreach (var member in subMembers)
             {
                 if (existingByUid.TryGetValue(member.Uid, out var mappedAccount))
@@ -106,6 +111,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                     matched++;
                     _logger.LogInformation("SyncBybitAccounts: UID {Uid} already mapped to account '{Name}'",
                         member.Uid, mappedAccount.Name);
+                    await PopulateInitialCashBalanceAsync(mappedAccount, apiKey.Value!, apiSecret.Value!, region, "UNIFIED", member.Uid, cancellationToken);
                     continue;
                 }
 
@@ -115,6 +121,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
                 var newAccount = new Account(tag, request.UserId, EAccountType.Exchange, "Bybit", member.Uid);
                 _context.Accounts.Add(newAccount);
+                await PopulateInitialCashBalanceAsync(newAccount, apiKey.Value!, apiSecret.Value!, region, "UNIFIED", member.Uid, cancellationToken);
                 created++;
                 _logger.LogInformation("SyncBybitAccounts: created account '{Name}' (Bybit UID: {Uid}) for user {UserId}",
                     tag, member.Uid, request.UserId);
@@ -142,5 +149,22 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
         }
 
 
+    }
+
+    private async Task PopulateInitialCashBalanceAsync(Account account, string apiKey, string apiSecret, BybitRegion region, string accountType, string? memberId, CancellationToken cancellationToken)
+    {
+        if (account.Balance != 0)
+            return;
+
+        try
+        {
+            var wallet = await _bybitService.GetWalletBalanceAsync(apiKey, apiSecret, region, accountType, memberId);
+            var balance = BybitCashBalance.SumStablecoinCash(wallet);
+            account.SetInitialBalance(balance);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SyncBybitAccounts: failed to fetch {AccountType} cash balance for account {AccountId}", accountType, account.Id);
+        }
     }
 }

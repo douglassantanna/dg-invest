@@ -262,12 +262,14 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<BybitWalletBalanceResponse> GetWalletBalanceAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, string accountType = "UNIFIED")
+    public async Task<BybitWalletBalanceResponse> GetWalletBalanceAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, string accountType = "UNIFIED", string? memberId = null)
     {
         try
         {
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
             var queryDict = new Dictionary<string, object> { ["accountType"] = accountType };
+            if (!string.IsNullOrWhiteSpace(memberId))
+                queryDict["memberId"] = memberId;
             var queryParams = BuildQueryString(queryDict);
             var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
             var keyBytes = Encoding.UTF8.GetBytes(apiSecret);

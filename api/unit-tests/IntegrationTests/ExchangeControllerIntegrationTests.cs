@@ -104,6 +104,41 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitDiscovery_ShouldPopulateMainFundingAndSubaccountUnifiedCashBalances()
+    {
+        var originalSubAccounts = _fixture.Factory.Bybit.SubAccounts.ToList();
+        try
+        {
+            _fixture.Factory.Bybit.SubAccounts.Clear();
+            _fixture.Factory.Bybit.SubAccounts.Add(new BybitSubMember { Uid = "sub-uid-1", Username = "Sub", Remark = "Trading subaccount" });
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("USDT", "3000"), ("USDC", "2000"), ("BTC", "1"));
+            _fixture.Factory.Bybit.WalletBalancesByAccountType["UNIFIED"] = WalletBalance("UNIFIED", ("USDT", "6000"), ("USDC", "4000"), ("ETH", "2"));
+
+            var (userId, mainAccountId) = await _fixture.CreateUserAsync();
+            using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+            (await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new { apiKey = "integration-api-key", apiSecret = "integration-api-secret" }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            var syncAccounts = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+
+            syncAccounts.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var main = await context.Accounts.SingleAsync(account => account.Id == mainAccountId);
+            var sub = await context.Accounts.SingleAsync(account => account.UserId == userId && account.ExternalId == "sub-uid-1");
+            main.Balance.Should().Be(5000m);
+            sub.Balance.Should().Be(10000m);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.SubAccounts.Clear();
+            _fixture.Factory.Bybit.SubAccounts.AddRange(originalSubAccounts);
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+        }
+    }
+
+    [Fact]
     public async Task DisconnectBybitIntegration_DisablesIntegrationAndSyncWithoutDeletingAccounts()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
@@ -765,4 +800,27 @@ public class ExchangeControllerIntegrationTests
         account.IsDeleted.Should().BeTrue();
         (await context.Accounts.CountAsync(candidate => candidate.ExternalId == account.ExternalId && !candidate.IsDeleted)).Should().Be(0);
     }
+
+    private static BybitWalletBalanceResponse WalletBalance(string accountType, params (string Coin, string Balance)[] coins) => new()
+    {
+        RetCode = 0,
+        RetMsg = "OK",
+        Result = new BybitWalletBalanceResult
+        {
+            List =
+            [
+                new BybitWalletBalanceAccount
+                {
+                    AccountType = accountType,
+                    Coin = coins.Select(coin => new BybitWalletBalanceCoin
+                    {
+                        Coin = coin.Coin,
+                        WalletBalance = coin.Balance,
+                        AvailableBalance = coin.Balance,
+                        UsdValue = coin.Balance
+                    }).ToList()
+                }
+            ]
+        }
+    };
 }

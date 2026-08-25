@@ -195,6 +195,48 @@ public class SyncBybitOrdersTests
     }
 
     [Fact]
+    public async Task Run_WhenAccountBalanceIsZero_ShouldPopulateStablecoinCashBeforeProcessingOrders()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.MarkEnabled();
+        context.AddRange(account, integration);
+        await context.SaveChangesAsync();
+
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        status.EnableForCredentials();
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-key")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-key"));
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-secret")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
+
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.GetWalletBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "UNIFIED", "UID-001"))
+            .ReturnsAsync(WalletBalance("UNIFIED", ("USDT", "6000"), ("USDC", "4000"), ("BTC", "1")));
+        bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
+            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+
+        var saved = await context.Accounts.SingleAsync(candidate => candidate.Id == account.Id);
+        saved.Balance.Should().Be(10000m);
+        bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Run_WhenBybitRejectsHistoryRequest_ShouldRecordBybitError()
     {
         var options = new DbContextOptionsBuilder<DataContext>()
@@ -237,4 +279,27 @@ public class SyncBybitOrdersTests
     private static IConfiguration EnabledConfiguration() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
         .Build();
+
+    private static BybitWalletBalanceResponse WalletBalance(string accountType, params (string Coin, string Balance)[] coins) => new()
+    {
+        RetCode = 0,
+        RetMsg = "OK",
+        Result = new BybitWalletBalanceResult
+        {
+            List =
+            [
+                new BybitWalletBalanceAccount
+                {
+                    AccountType = accountType,
+                    Coin = coins.Select(coin => new BybitWalletBalanceCoin
+                    {
+                        Coin = coin.Coin,
+                        WalletBalance = coin.Balance,
+                        AvailableBalance = coin.Balance,
+                        UsdValue = coin.Balance
+                    }).ToList()
+                }
+            ]
+        }
+    };
 }
