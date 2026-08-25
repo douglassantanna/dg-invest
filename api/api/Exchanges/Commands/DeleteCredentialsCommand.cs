@@ -52,36 +52,40 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
 
         try
         {
-            // Keep legacy callers from reading old fixed-name credentials during the migration.
-            await _keyVaultService.SetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"), string.Empty);
-            await _keyVaultService.SetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"), string.Empty);
-            await _keyVaultService.SetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
-
-            await using var transaction = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(cancellationToken)
-                : null;
-
-            var status = await _context.SyncStatuses.SingleOrDefaultAsync(x =>
-                x.UserId == request.UserId && x.AccountId == request.AccountId && x.ExchangeName == "Bybit", cancellationToken);
-            var activeSetId = status?.ActiveCredentialSetId;
-            if (status != null) status.DeactivateCredentialSet();
-
-            var operations = await _context.CredentialUpdateOperations.Where(x =>
-                x.UserId == request.UserId && x.AccountId == request.AccountId && x.Exchange == "Bybit" &&
-                (x.State == "Pending" || x.State == "VaultWritten" || x.State == "RecoveryRequired" || x.NewCredentialSetId == activeSetId))
-                .ToListAsync(cancellationToken);
-            foreach (var operation in operations)
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                if (operation.NewCredentialSetId == activeSetId) operation.MarkRetired();
-                else operation.MarkSuperseded();
-            }
+                // Keep legacy callers from reading old fixed-name credentials during the migration.
+                await _keyVaultService.SetSecretAsync(
+                    SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"), string.Empty);
+                await _keyVaultService.SetSecretAsync(
+                    SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"), string.Empty);
+                await _keyVaultService.SetSecretAsync(
+                    SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
 
-            account.SoftDelete();
-            await _context.SaveChangesAsync(cancellationToken);
-            if (transaction != null) await transaction.CommitAsync(cancellationToken);
+                await using var transaction = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
+
+                var status = await _context.SyncStatuses.SingleOrDefaultAsync(x =>
+                    x.UserId == request.UserId && x.AccountId == request.AccountId && x.ExchangeName == "Bybit", cancellationToken);
+                var activeSetId = status?.ActiveCredentialSetId;
+                if (status != null) status.DeactivateCredentialSet();
+
+                var operations = await _context.CredentialUpdateOperations.Where(x =>
+                    x.UserId == request.UserId && x.AccountId == request.AccountId && x.Exchange == "Bybit" &&
+                    (x.State == "Pending" || x.State == "VaultWritten" || x.State == "RecoveryRequired" || x.NewCredentialSetId == activeSetId))
+                    .ToListAsync(cancellationToken);
+                foreach (var operation in operations)
+                {
+                    if (operation.NewCredentialSetId == activeSetId) operation.MarkRetired();
+                    else operation.MarkSuperseded();
+                }
+
+                account.SoftDelete();
+                await _context.SaveChangesAsync(cancellationToken);
+                if (transaction != null) await transaction.CommitAsync(cancellationToken);
+            });
 
             _logger.LogInformation("Bybit account {AccountId} soft-deleted for user {UserId}", request.AccountId, request.UserId);
             return new Response("Subaccount removed", true);

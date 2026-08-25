@@ -40,41 +40,45 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
 
         try
         {
-            await using var transaction = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(cancellationToken)
-                : null;
-
-            if (integration != null)
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                integration.DeactivateCredentialSet();
-                integration.MarkDisconnected();
-            }
+                await using var transaction = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
 
-            var statuses = await _context.SyncStatuses
-                .Where(status => status.UserId == request.UserId && status.ExchangeName == "Bybit")
-                .ToListAsync(cancellationToken);
-            foreach (var status in statuses)
-            {
-                status.DeactivateCredentialSet();
-                status.Disable();
-            }
+                if (integration != null)
+                {
+                    integration.DeactivateCredentialSet();
+                    integration.MarkDisconnected();
+                }
 
-            var activeOrIncompleteOperations = await _context.CredentialUpdateOperations
-                .Where(operation => operation.UserId == request.UserId
-                                    && operation.Exchange == "Bybit"
-                                    && (operation.State == "Pending"
-                                        || operation.State == "VaultWritten"
-                                        || operation.State == "RecoveryRequired"
-                                        || operation.State == "Active"))
-                .ToListAsync(cancellationToken);
-            foreach (var operation in activeOrIncompleteOperations)
-            {
-                if (operation.State == "Active") operation.MarkRetired();
-                else operation.MarkSuperseded();
-            }
+                var statuses = await _context.SyncStatuses
+                    .Where(status => status.UserId == request.UserId && status.ExchangeName == "Bybit")
+                    .ToListAsync(cancellationToken);
+                foreach (var status in statuses)
+                {
+                    status.DeactivateCredentialSet();
+                    status.Disable();
+                }
 
-            await _context.SaveChangesAsync(cancellationToken);
-            if (transaction != null) await transaction.CommitAsync(cancellationToken);
+                var activeOrIncompleteOperations = await _context.CredentialUpdateOperations
+                    .Where(operation => operation.UserId == request.UserId
+                                        && operation.Exchange == "Bybit"
+                                        && (operation.State == "Pending"
+                                            || operation.State == "VaultWritten"
+                                            || operation.State == "RecoveryRequired"
+                                            || operation.State == "Active"))
+                    .ToListAsync(cancellationToken);
+                foreach (var operation in activeOrIncompleteOperations)
+                {
+                    if (operation.State == "Active") operation.MarkRetired();
+                    else operation.MarkSuperseded();
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+                if (transaction != null) await transaction.CommitAsync(cancellationToken);
+            });
         }
         catch (Exception ex)
         {
