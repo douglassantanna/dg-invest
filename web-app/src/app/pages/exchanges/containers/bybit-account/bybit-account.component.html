@@ -61,6 +61,17 @@
               <input id="account-webhook-secret" name="webhookSecret" type="password" [(ngModel)]="webhookSecret" autocomplete="off" placeholder="Optional"
                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
             </div>
+            <div>
+              <label for="account-region" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Region</label>
+              <select id="account-region" name="region" [(ngModel)]="region"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                <option value="Global">Global (api.bybit.com)</option>
+                <option value="Eu">EU (api.bybit.eu)</option>
+              </select>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Choose <span class="font-medium">EU</span> if this Bybit account is registered under the EU entity.
+              </p>
+            </div>
             <button type="submit" [disabled]="saving || (!apiKey && !apiSecret && !webhookSecret)"
               class="w-full rounded-lg bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
               {{ saving ? 'Saving...' : 'Save credentials' }}

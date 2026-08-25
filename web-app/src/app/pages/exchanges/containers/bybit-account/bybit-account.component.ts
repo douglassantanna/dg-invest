@@ -30,6 +30,7 @@ export class BybitAccountComponent implements OnInit {
   apiKey = '';
   apiSecret = '';
   webhookSecret = '';
+  region: 'Global' | 'Eu' = 'Global';
   selectedExternalId = '';
   loading = true;
   saving = false;
@@ -85,7 +86,7 @@ export class BybitAccountComponent implements OnInit {
     if (this.saving) return;
     this.saving = true;
     this.loadError = '';
-    this.exchangeService.saveBybitCredentials(this.accountId, this.apiKey, this.apiSecret, this.webhookSecret)
+    this.exchangeService.saveBybitCredentials(this.accountId, this.apiKey, this.apiSecret, this.webhookSecret, undefined, undefined, this.region)
       .pipe(finalize(() => this.clearCredentialForm()))
       .subscribe({
         next: response => {

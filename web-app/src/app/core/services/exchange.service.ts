@@ -16,12 +16,12 @@ const url = `${environment.apiUrl}/Exchange`;
 export class ExchangeService {
   private http = inject(HttpClient);
 
-  saveBybitIntegrationCredentials(apiKey: string, apiSecret: string): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/integration-credentials`, { apiKey, apiSecret });
+  saveBybitIntegrationCredentials(apiKey: string, apiSecret: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/integration-credentials`, { apiKey, apiSecret, region });
   }
 
-  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId });
+  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId, region });
   }
 
   getExchangeAccountDetail(accountId: number): Observable<Response<ExchangeAccountDetailDto>> {

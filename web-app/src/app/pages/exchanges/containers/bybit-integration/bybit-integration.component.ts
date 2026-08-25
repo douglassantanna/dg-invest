@@ -30,6 +30,7 @@ export class BybitIntegrationComponent implements OnInit {
   subMembers: BybitSubMemberDto[] = [];
   apiKey = '';
   apiSecret = '';
+  region: 'Global' | 'Eu' = 'Global';
   loading = true;
   saving = false;
   discovering = false;
@@ -84,7 +85,7 @@ export class BybitIntegrationComponent implements OnInit {
     if (this.saving || this.discovering) return;
     this.saving = true;
     this.loadError = '';
-    this.exchangeService.saveBybitIntegrationCredentials(this.apiKey, this.apiSecret)
+    this.exchangeService.saveBybitIntegrationCredentials(this.apiKey, this.apiSecret, this.region)
       .pipe(finalize(() => this.clearCredentialForm()))
       .subscribe({
       next: response => {
