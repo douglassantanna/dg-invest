@@ -1,0 +1,150 @@
+<main class="max-w-6xl mx-auto px-4 py-6 sm:px-6">
+  <nav class="mb-4">
+    <a routerLink="/exchanges" class="text-sm font-medium text-yellow-700 hover:text-yellow-600 dark:text-yellow-400">
+      &larr; Exchanges
+    </a>
+  </nav>
+
+  <header class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div>
+      <div class="text-xs font-semibold uppercase tracking-[0.18em] text-yellow-600 dark:text-yellow-400 mb-2">Exchanges / Bybit</div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Bybit integration</h1>
+      <p class="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+        Connect a Bybit API key, discover exchange accounts, then manage synchronization account by account.
+      </p>
+    </div>
+    @if (hasAccounts) {
+      <button type="button" (click)="disconnect()" [disabled]="disconnecting"
+        class="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20">
+        {{ disconnecting ? 'Disconnecting...' : 'Disconnect Bybit' }}
+      </button>
+    }
+  </header>
+
+  @if (loadError) {
+    <div role="alert" class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+      {{ loadError }}
+    </div>
+  }
+
+  <section class="grid gap-5 lg:grid-cols-[minmax(0,380px)_1fr]">
+    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div class="mb-5 flex gap-3">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400 font-black text-gray-900">B</div>
+        <div>
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100">Connection setup</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            These discovery credentials stay in server-side Key Vault after save.
+          </p>
+        </div>
+      </div>
+
+      <form (ngSubmit)="connect()" class="space-y-4">
+        <div>
+          <label for="bybit-api-key" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">API key</label>
+          <input id="bybit-api-key" name="apiKey" [(ngModel)]="apiKey" required autocomplete="off"
+            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/30 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+        </div>
+        <div>
+          <label for="bybit-api-secret" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">API secret</label>
+          <input id="bybit-api-secret" name="apiSecret" type="password" [(ngModel)]="apiSecret" required autocomplete="off"
+            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/30 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+        </div>
+        <button type="submit" [disabled]="saving || discovering || !apiKey || !apiSecret"
+          class="w-full rounded-lg bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
+          {{ saving ? 'Saving...' : discovering ? 'Discovering accounts...' : 'Connect Bybit' }}
+        </button>
+      </form>
+
+      @if (hasAccounts) {
+        <button type="button" (click)="discover()" [disabled]="discovering"
+          class="mt-3 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-yellow-500 hover:text-yellow-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:text-yellow-400">
+          {{ discovering ? 'Discovering...' : 'Discover accounts again' }}
+        </button>
+      }
+    </div>
+
+    <div class="min-w-0 space-y-5">
+      <section class="grid gap-3 sm:grid-cols-3">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Integration</div>
+          <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ hasAccounts ? 'Connected' : 'Setup required' }}</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Exchange accounts</div>
+          <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ accountCount }} found</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Active sync</div>
+          <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ enabledCount }} enabled</div>
+        </div>
+      </section>
+
+      <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100">Discovered Bybit accounts</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Open an account to configure sync credentials, webhooks, and health.</p>
+        </div>
+
+        @if (loading) {
+          <div class="p-6 text-sm text-gray-500 dark:text-gray-400">Loading Bybit accounts...</div>
+        } @else if (!hasAccounts) {
+          <div class="p-6 text-sm text-gray-500 dark:text-gray-400">
+            No exchange accounts found yet. Save the Bybit credentials to discover accounts.
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200 text-left text-xs uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                  <th class="px-5 py-3 font-medium">Account</th>
+                  <th class="px-5 py-3 font-medium">Status</th>
+                  <th class="px-5 py-3 font-medium">Credentials</th>
+                  <th class="px-5 py-3 font-medium">Last sync</th>
+                  <th class="px-5 py-3 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (account of accounts; track account.accountId) {
+                  <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900/40">
+                    <td class="px-5 py-4">
+                      <a [routerLink]="['/exchanges', 'bybit', account.accountId]" class="font-semibold text-gray-900 hover:text-yellow-700 dark:text-gray-100 dark:hover:text-yellow-400">
+                        {{ account.name }}
+                      </a>
+                      <div class="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400">UID {{ account.externalId || 'Not mapped' }}</div>
+                    </td>
+                    <td class="px-5 py-4">
+                      <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="statusClasses(account)">
+                        {{ statusLabel(account) }}
+                      </span>
+                      @if (account.lastErrorMessage) {
+                        <div class="mt-1 text-xs text-red-600 dark:text-red-400">{{ account.lastErrorMessage }}</div>
+                      }
+                    </td>
+                    <td class="px-5 py-4">
+                      <span [ngClass]="account.hasApiKey && account.hasApiSecret ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                        {{ credentialLabel(account) }}
+                      </span>
+                    </td>
+                    <td class="px-5 py-4 text-gray-500 dark:text-gray-400">{{ formatDate(account.lastSyncAt) }}</td>
+                    <td class="px-5 py-4">
+                      <a [routerLink]="['/exchanges', 'bybit', account.accountId]" class="text-sm font-medium text-yellow-700 hover:text-yellow-600 dark:text-yellow-400">
+                        Manage
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    </div>
+  </section>
+
+  @if (toastMessage) {
+    <div role="status" class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg dark:bg-gray-100 dark:text-gray-900">
+      {{ toastMessage }}
+    </div>
+  }
+</main>

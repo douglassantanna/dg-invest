@@ -1,19 +1,10 @@
 describe('Header Component', () => {
   const localStorageTokenKey = 'dg-invest-token';
-  const AUTH_TOKEN = 'auth-token';
+  const AUTH_TOKEN = 'eyJhbGciOiJub25lIn0.eyJ1bmlxdWVfbmFtZSI6IkRvdWdsYXMiLCJyb2xlIjoiQWRtaW4iLCJuYW1laWQiOiIxIn0.';
 
   beforeEach(() => {
     cy.clearLocalStorage();
   });
-
-  const setAuthToken = () => {
-    cy.window().then(win => {
-      win.localStorage.setItem(
-        localStorageTokenKey,
-        JSON.stringify({ jwtToken: AUTH_TOKEN })
-      );
-    });
-  };
 
   const interceptListAssets = () => {
     cy.intercept('GET', '**/api/Crypto/list-assets*', {
@@ -24,9 +15,14 @@ describe('Header Component', () => {
 
   const visitCryptosAsAuthenticatedUser = () => {
     interceptListAssets();
-    setAuthToken();
-
-    cy.visit('/#/cryptos');
+    cy.visit('/#/cryptos', {
+      onBeforeLoad: win => {
+        win.localStorage.setItem(
+          localStorageTokenKey,
+          JSON.stringify({ jwtToken: AUTH_TOKEN })
+        );
+      },
+    });
 
     cy.wait('@listAssets');
     cy.get('app-view-cryptos').should('exist');

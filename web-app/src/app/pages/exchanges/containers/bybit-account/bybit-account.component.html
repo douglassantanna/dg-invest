@@ -1,0 +1,185 @@
+<main class="max-w-6xl mx-auto px-4 py-6 sm:px-6">
+  <nav class="mb-4">
+    <a routerLink="/exchanges/bybit" class="text-sm font-medium text-yellow-700 hover:text-yellow-600 dark:text-yellow-400">
+      &larr; Bybit integration
+    </a>
+  </nav>
+
+  @if (loading) {
+    <div class="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+      Loading exchange account...
+    </div>
+  } @else if (loadError) {
+    <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+      {{ loadError }}
+    </div>
+  } @else {
+    <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-[0.18em] text-yellow-600 dark:text-yellow-400 mb-2">Bybit / Account</div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ name }}</h1>
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [ngClass]="statusClasses()">{{ statusLabel() }}</span>
+          <span class="font-mono text-xs text-gray-500 dark:text-gray-400">UID {{ connectionRow?.externalId || 'Not mapped' }}</span>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" (click)="testConnection()" [disabled]="testing"
+          class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-yellow-500 hover:text-yellow-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:text-yellow-400">
+          {{ testing ? 'Testing...' : 'Test connection' }}
+        </button>
+        <button type="button" (click)="toggle()" [disabled]="toggling"
+          class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-yellow-500 hover:text-yellow-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:text-yellow-400">
+          {{ toggling ? 'Saving...' : connectionRow?.isEnabled ? 'Pause sync' : 'Enable sync' }}
+        </button>
+        <button type="button" (click)="removeAccount()" [disabled]="removing"
+          class="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20">
+          {{ removing ? 'Removing...' : 'Remove exchange account' }}
+        </button>
+      </div>
+    </header>
+
+    <div class="grid gap-5 lg:grid-cols-[minmax(0,360px)_1fr]">
+      <div class="space-y-5">
+        <section class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100">Account credentials</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Replace account API credentials and the webhook signing secret.</p>
+
+          <form (ngSubmit)="saveCredentials()" class="mt-4 space-y-4">
+            <div>
+              <label for="account-api-key" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">API key</label>
+              <input id="account-api-key" name="apiKey" [(ngModel)]="apiKey" autocomplete="off" [placeholder]="connectionRow?.maskedApiKey || 'Enter a new API key'"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+            </div>
+            <div>
+              <label for="account-api-secret" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">API secret</label>
+              <input id="account-api-secret" name="apiSecret" type="password" [(ngModel)]="apiSecret" autocomplete="off" placeholder="Required with a new API key"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+            </div>
+            <div>
+              <label for="account-webhook-secret" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Webhook secret</label>
+              <input id="account-webhook-secret" name="webhookSecret" type="password" [(ngModel)]="webhookSecret" autocomplete="off" placeholder="Optional"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+            </div>
+            <button type="submit" [disabled]="saving || (!apiKey && !apiSecret && !webhookSecret)"
+              class="w-full rounded-lg bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
+              {{ saving ? 'Saving...' : 'Save credentials' }}
+            </button>
+          </form>
+        </section>
+
+        <section class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100">Webhook</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Add this URL to Bybit to receive order updates.</p>
+          <div class="mt-3 break-all rounded-lg bg-gray-50 p-3 font-mono text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            {{ connectionRow?.webhookUrl || 'Save a webhook secret to enable the URL.' }}
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h2 class="font-semibold text-gray-900 dark:text-gray-100">Account mapping</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Match this portfolio to the Bybit UID returned by discovery.</p>
+          <div class="mt-4 flex flex-col gap-3">
+            <select name="externalId" [(ngModel)]="selectedExternalId"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+              <option value="">Select Bybit UID</option>
+              @for (member of subMembers; track member.uid) {
+                <option [value]="member.uid">{{ member.uid }}</option>
+              }
+            </select>
+            <button type="button" (click)="mapAccount()" [disabled]="!canMap"
+              class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-yellow-500 hover:text-yellow-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:text-yellow-400">
+              {{ mapping ? 'Mapping...' : 'Map account' }}
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <div class="min-w-0 space-y-5">
+        <section class="grid gap-3 sm:grid-cols-3">
+          <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Last sync</div>
+            <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ formatDate(connection?.lastSyncAt ?? null) }}</div>
+          </div>
+          <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Sync errors</div>
+            <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ connection?.errorCount ?? 0 }}</div>
+          </div>
+          <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Credentials</div>
+            <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {{ connection?.hasApiKey && connection?.hasApiSecret ? 'Configured' : 'Missing' }}
+            </div>
+          </div>
+        </section>
+
+        @if (connection?.lastErrorMessage) {
+          <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+            {{ connection?.lastErrorMessage }}
+          </div>
+        }
+
+        <section class="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Recent exchange transactions</h2>
+          </div>
+          @if (transactions.length === 0) {
+            <p class="p-5 text-sm text-gray-500 dark:text-gray-400">No exchange transactions imported yet.</p>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-gray-200 text-left text-xs uppercase text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    <th class="px-5 py-3">Date</th><th class="px-5 py-3">Type</th><th class="px-5 py-3">Asset</th><th class="px-5 py-3 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (transaction of transactions; track transaction.id) {
+                    <tr class="border-b border-gray-100 last:border-0 dark:border-gray-700">
+                      <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ formatDate(transaction.date) }}</td>
+                      <td class="px-5 py-3 text-gray-900 dark:text-gray-100">{{ transaction.type }}</td>
+                      <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-100">{{ transaction.asset }}</td>
+                      <td class="px-5 py-3 text-right font-mono text-gray-900 dark:text-gray-100">{{ transaction.amount }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <section class="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Sync logs</h2>
+          </div>
+          @if (logs.length === 0) {
+            <p class="p-5 text-sm text-gray-500 dark:text-gray-400">No sync logs yet.</p>
+          } @else {
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+              @for (log of logs; track log.id) {
+                <div class="p-5">
+                  <div class="flex flex-wrap justify-between gap-2">
+                    <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ log.orderId }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(log.timestamp) }}</span>
+                  </div>
+                  <div class="mt-2 text-sm text-gray-900 dark:text-gray-100">
+                    {{ log.side }} {{ log.qty }} {{ log.symbol }} · {{ log.status }}
+                  </div>
+                  @if (log.errorMessage) {
+                    <div class="mt-1 text-sm text-red-600 dark:text-red-400">{{ log.errorMessage }}</div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </section>
+      </div>
+    </div>
+  }
+
+  @if (toastMessage) {
+    <div role="status" class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm text-white shadow-lg dark:bg-gray-100 dark:text-gray-900">
+      {{ toastMessage }}
+    </div>
+  }
+</main>
