@@ -219,8 +219,10 @@ public class SyncBybitOrdersTests
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
 
         var bybitService = new Mock<IBybitService>();
-        bybitService.Setup(x => x.GetWalletBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "UNIFIED", "UID-001"))
-            .ReturnsAsync(WalletBalance("UNIFIED", ("USDT", "6000"), ("USDC", "4000"), ("BTC", "1")));
+        bybitService.Setup(x => x.GetAccountCoinBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "UNIFIED", "USDT", "UID-001"))
+            .ReturnsAsync(AccountCoinBalance("UNIFIED", "USDT", "6000", "UID-001"));
+        bybitService.Setup(x => x.GetAccountCoinBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "UNIFIED", "USDC", "UID-001"))
+            .ReturnsAsync(AccountCoinBalance("UNIFIED", "USDC", "4000", "UID-001"));
         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
@@ -280,26 +282,20 @@ public class SyncBybitOrdersTests
         .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
         .Build();
 
-    private static BybitWalletBalanceResponse WalletBalance(string accountType, params (string Coin, string Balance)[] coins) => new()
+    private static BybitAccountCoinBalanceResponse AccountCoinBalance(string accountType, string coin, string balance, string memberId = "") => new()
     {
         RetCode = 0,
-        RetMsg = "OK",
-        Result = new BybitWalletBalanceResult
+        RetMsg = "success",
+        Result = new BybitAccountCoinBalanceResult
         {
-            List =
-            [
-                new BybitWalletBalanceAccount
-                {
-                    AccountType = accountType,
-                    Coin = coins.Select(coin => new BybitWalletBalanceCoin
-                    {
-                        Coin = coin.Coin,
-                        WalletBalance = coin.Balance,
-                        AvailableBalance = coin.Balance,
-                        UsdValue = coin.Balance
-                    }).ToList()
-                }
-            ]
+            AccountType = accountType,
+            MemberId = memberId,
+            Balance = new BybitAccountCoinBalance
+            {
+                Coin = coin,
+                WalletBalance = balance,
+                TransferBalance = balance
+            }
         }
     };
 }

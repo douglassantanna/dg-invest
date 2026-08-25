@@ -258,6 +258,52 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetAccountCoinBalanceAsync_WhenBybitReturnsBalance_ShouldReturnSingleCoinBalance()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "success",
+            result = new
+            {
+                accountType = "UNIFIED",
+                memberId = "12345",
+                balance = new { coin = "USDT", walletBalance = "6000.25", transferBalance = "5900.25" }
+            }
+        });
+
+        var result = await _sut.GetAccountCoinBalanceAsync("api-key", "api-secret", BybitRegion.Global, "UNIFIED", "USDT", "12345");
+
+        result.Result.AccountType.Should().Be("UNIFIED");
+        result.Result.MemberId.Should().Be("12345");
+        result.Result.Balance.Coin.Should().Be("USDT");
+        result.Result.Balance.WalletBalance.Should().Be("6000.25");
+        result.Result.Balance.TransferBalance.Should().Be("5900.25");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-account-coin-balance")
+            .WithQueryParam("accountType", "UNIFIED")
+            .WithQueryParam("coin", "USDT")
+            .WithQueryParam("memberId", "12345")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetAccountCoinBalanceAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetAccountCoinBalanceAsync("api-key", "api-secret", BybitRegion.Global, "FUND", "USDC"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-account-coin-balance")
+            .WithQueryParam("accountType", "FUND")
+            .WithQueryParam("coin", "USDC")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
     public async Task GetSubAccountsAsync_WhenRegionIsEu_ShouldCallEuHost()
     {
         using var httpTest = new HttpTest();

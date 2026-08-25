@@ -13,6 +13,7 @@ public class BybitService : IBybitService
     private const string DepositHistoryEndpoint = "/v5/asset/deposit/query-record";
     private const string WithdrawalHistoryEndpoint = "/v5/asset/withdraw/query-record";
     private const string WalletBalanceEndpoint = "/v5/account/wallet-balance";
+    private const string AccountCoinBalanceEndpoint = "/v5/asset/transfer/query-account-coin-balance";
     private const string AccountInfoEndpoint = "/v5/account/info";
     private const int RecvWindow = 60000;
 
@@ -300,6 +301,49 @@ public class BybitService : IBybitService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching Bybit wallet balance");
+            throw;
+        }
+    }
+
+    public async Task<BybitAccountCoinBalanceResponse> GetAccountCoinBalanceAsync(string apiKey, string apiSecret, BybitRegion region, string accountType, string coin, string? memberId = null)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var queryDict = new Dictionary<string, object> { ["accountType"] = accountType, ["coin"] = coin };
+            if (!string.IsNullOrWhiteSpace(memberId))
+                queryDict["memberId"] = memberId;
+
+            var queryParams = BuildQueryString(queryDict);
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(paramBytes);
+            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            var baseUrl = GetBaseUrl(region);
+            var response = await baseUrl
+                .AppendPathSegment(AccountCoinBalanceEndpoint)
+                .SetQueryParams(queryDict)
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<BybitAccountCoinBalanceResponse>();
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogError("Bybit GetAccountCoinBalance returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
+                throw new BybitApiException(response.RetCode, response.RetMsg);
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit account coin balance");
             throw;
         }
     }

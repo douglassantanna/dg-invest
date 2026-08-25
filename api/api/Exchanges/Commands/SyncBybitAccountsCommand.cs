@@ -158,8 +158,12 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
         try
         {
-            var wallet = await _bybitService.GetWalletBalanceAsync(apiKey, apiSecret, region, accountType, memberId);
-            var balance = BybitCashBalance.SumStablecoinCash(wallet);
+            var balance = 0m;
+            foreach (var coin in BybitCashBalance.CashCoins)
+            {
+                var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, accountType, coin, memberId);
+                balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+            }
             account.SetInitialBalance(balance);
         }
         catch (Exception ex)

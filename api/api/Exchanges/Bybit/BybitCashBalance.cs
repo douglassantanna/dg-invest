@@ -4,7 +4,8 @@ namespace api.Exchanges.Bybit;
 
 public static class BybitCashBalance
 {
-    private static readonly HashSet<string> CashCoins = new(StringComparer.OrdinalIgnoreCase) { "USDT", "USDC" };
+    public static readonly string[] CashCoins = ["USDT", "USDC"];
+    private static readonly HashSet<string> CashCoinSet = new(CashCoins, StringComparer.OrdinalIgnoreCase);
 
     public static decimal SumStablecoinCash(BybitWalletBalanceResponse wallet)
     {
@@ -13,8 +14,14 @@ public static class BybitCashBalance
             return 0;
 
         return account.Coin
-            .Where(coin => CashCoins.Contains(coin.Coin))
+            .Where(coin => CashCoinSet.Contains(coin.Coin))
             .Sum(coin => ParseAmount(string.IsNullOrWhiteSpace(coin.AvailableBalance) ? coin.WalletBalance : coin.AvailableBalance));
+    }
+
+    public static decimal FromAccountCoinBalance(BybitAccountCoinBalanceResponse response)
+    {
+        var balance = response.Result.Balance;
+        return ParseAmount(string.IsNullOrWhiteSpace(balance.TransferBalance) ? balance.WalletBalance : balance.TransferBalance);
     }
 
     private static decimal ParseAmount(string value) => decimal.TryParse(

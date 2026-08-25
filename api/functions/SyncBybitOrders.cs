@@ -210,8 +210,12 @@ public class SyncBybitOrders
 
         try
         {
-            var wallet = await _bybitService.GetWalletBalanceAsync(apiKey, apiSecret, region, "UNIFIED", account.ExternalId);
-            var balance = BybitCashBalance.SumStablecoinCash(wallet);
+            var balance = 0m;
+            foreach (var coin in BybitCashBalance.CashCoins)
+            {
+                var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, "UNIFIED", coin, account.ExternalId);
+                balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+            }
             account.SetInitialBalance(balance);
             await _context.SaveChangesAsync(cancellationToken);
         }

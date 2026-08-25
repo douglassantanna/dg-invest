@@ -201,5 +201,29 @@ public sealed class FakeBybitService : IBybitService
             ? response
             : new BybitWalletBalanceResponse());
     }
+    public Task<BybitAccountCoinBalanceResponse> GetAccountCoinBalanceAsync(string apiKey, string apiSecret, BybitRegion region, string accountType, string coin, string? memberId = null)
+    {
+        LastApiKey = apiKey;
+        LastRegion = region;
+        var wallet = WalletBalancesByAccountType.TryGetValue(accountType, out var response)
+            ? response.Result.List.FirstOrDefault()?.Coin.FirstOrDefault(item => string.Equals(item.Coin, coin, StringComparison.OrdinalIgnoreCase))
+            : null;
+        return Task.FromResult(new BybitAccountCoinBalanceResponse
+        {
+            RetCode = 0,
+            RetMsg = "success",
+            Result = new BybitAccountCoinBalanceResult
+            {
+                AccountType = accountType,
+                MemberId = memberId ?? string.Empty,
+                Balance = new BybitAccountCoinBalance
+                {
+                    Coin = coin,
+                    WalletBalance = wallet?.WalletBalance ?? "0",
+                    TransferBalance = wallet?.AvailableBalance ?? wallet?.WalletBalance ?? "0"
+                }
+            }
+        });
+    }
     public Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global) => Task.FromResult(true);
 }
