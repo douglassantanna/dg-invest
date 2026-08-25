@@ -107,7 +107,8 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<DbContextOptions<DataContext>>();
             services.RemoveAll<DataContext>();
-            services.AddDbContext<DataContext>(options => options.UseSqlServer(_connectionString));
+            services.AddDbContext<DataContext>(options =>
+                options.UseSqlServer(_connectionString, sql => sql.EnableRetryOnFailure()));
 
             services.RemoveAll<IKeyVaultService>();
             services.RemoveAll<IBybitService>();
