@@ -60,28 +60,41 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
             await _keyVaultService.SetSecretAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
 
-            await using var transaction = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(cancellationToken)
-                : null;
-
-            var status = await _context.SyncStatuses.SingleOrDefaultAsync(x =>
-                x.UserId == request.UserId && x.AccountId == request.AccountId && x.ExchangeName == "Bybit", cancellationToken);
-            var activeSetId = status?.ActiveCredentialSetId;
-            if (status != null) status.DeactivateCredentialSet();
-
-            var operations = await _context.CredentialUpdateOperations.Where(x =>
-                x.UserId == request.UserId && x.AccountId == request.AccountId && x.Exchange == "Bybit" &&
-                (x.State == "Pending" || x.State == "VaultWritten" || x.State == "RecoveryRequired" || x.NewCredentialSetId == activeSetId))
-                .ToListAsync(cancellationToken);
-            foreach (var operation in operations)
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                if (operation.NewCredentialSetId == activeSetId) operation.MarkRetired();
-                else operation.MarkSuperseded();
-            }
+                await using var transaction = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
 
-            account.SoftDelete();
-            await _context.SaveChangesAsync(cancellationToken);
-            if (transaction != null) await transaction.CommitAsync(cancellationToken);
+                _context.ChangeTracker.Clear();
+
+                var accountToDelete = await _context.Accounts
+                    .Where(a => a.Id == request.AccountId && a.UserId == request.UserId)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (accountToDelete == null)
+                    throw new InvalidOperationException($"Account {request.AccountId} was not found during delete retry unit.");
+
+                var status = await _context.SyncStatuses.SingleOrDefaultAsync(x =>
+                    x.UserId == request.UserId && x.AccountId == request.AccountId && x.ExchangeName == "Bybit", cancellationToken);
+                var activeSetId = status?.ActiveCredentialSetId;
+                if (status != null) status.DeactivateCredentialSet();
+
+                var operations = await _context.CredentialUpdateOperations.Where(x =>
+                    x.UserId == request.UserId && x.AccountId == request.AccountId && x.Exchange == "Bybit" &&
+                    (x.State == "Pending" || x.State == "VaultWritten" || x.State == "RecoveryRequired" || x.NewCredentialSetId == activeSetId))
+                    .ToListAsync(cancellationToken);
+                foreach (var operation in operations)
+                {
+                    if (operation.NewCredentialSetId == activeSetId) operation.MarkRetired();
+                    else operation.MarkSuperseded();
+                }
+
+                accountToDelete.SoftDelete();
+                await _context.SaveChangesAsync(cancellationToken);
+                if (transaction != null) await transaction.CommitAsync(cancellationToken);
+            });
 
             _logger.LogInformation("Bybit account {AccountId} soft-deleted for user {UserId}", request.AccountId, request.UserId);
             return new Response("Subaccount removed", true);
