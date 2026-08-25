@@ -28,8 +28,6 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
 
     public async Task<Response> Handle(DisconnectBybitIntegrationCommand request, CancellationToken cancellationToken)
     {
-        var integration = await _context.ExchangeIntegrations
-            .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
         var accountIds = await _context.Accounts
             .Where(account => account.UserId == request.UserId
                               && !account.IsDeleted
@@ -40,41 +38,50 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
 
         try
         {
-            await using var transaction = _context.Database.IsRelational()
-                ? await _context.Database.BeginTransactionAsync(cancellationToken)
-                : null;
-
-            if (integration != null)
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                integration.DeactivateCredentialSet();
-                integration.MarkDisconnected();
-            }
+                await using var transaction = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
 
-            var statuses = await _context.SyncStatuses
-                .Where(status => status.UserId == request.UserId && status.ExchangeName == "Bybit")
-                .ToListAsync(cancellationToken);
-            foreach (var status in statuses)
-            {
-                status.DeactivateCredentialSet();
-                status.Disable();
-            }
+                _context.ChangeTracker.Clear();
 
-            var activeOrIncompleteOperations = await _context.CredentialUpdateOperations
-                .Where(operation => operation.UserId == request.UserId
-                                    && operation.Exchange == "Bybit"
-                                    && (operation.State == "Pending"
-                                        || operation.State == "VaultWritten"
-                                        || operation.State == "RecoveryRequired"
-                                        || operation.State == "Active"))
-                .ToListAsync(cancellationToken);
-            foreach (var operation in activeOrIncompleteOperations)
-            {
-                if (operation.State == "Active") operation.MarkRetired();
-                else operation.MarkSuperseded();
-            }
+                var integration = await _context.ExchangeIntegrations
+                    .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
 
-            await _context.SaveChangesAsync(cancellationToken);
-            if (transaction != null) await transaction.CommitAsync(cancellationToken);
+                if (integration != null)
+                {
+                    integration.DeactivateCredentialSet();
+                    integration.MarkDisconnected();
+                }
+
+                var statuses = await _context.SyncStatuses
+                    .Where(status => status.UserId == request.UserId && status.ExchangeName == "Bybit")
+                    .ToListAsync(cancellationToken);
+                foreach (var status in statuses)
+                {
+                    status.DeactivateCredentialSet();
+                    status.Disable();
+                }
+
+                var activeOrIncompleteOperations = await _context.CredentialUpdateOperations
+                    .Where(operation => operation.UserId == request.UserId
+                                        && operation.Exchange == "Bybit"
+                                        && (operation.State == "Pending"
+                                            || operation.State == "VaultWritten"
+                                            || operation.State == "RecoveryRequired"
+                                            || operation.State == "Active"))
+                    .ToListAsync(cancellationToken);
+                foreach (var operation in activeOrIncompleteOperations)
+                {
+                    if (operation.State == "Active") operation.MarkRetired();
+                    else operation.MarkSuperseded();
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+                if (transaction != null) await transaction.CommitAsync(cancellationToken);
+            });
         }
         catch (Exception ex)
         {

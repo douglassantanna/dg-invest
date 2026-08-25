@@ -43,6 +43,14 @@ public class DisconnectBybitIntegrationCommandHandlerTests
 
         var result = await _handler.Handle(new DisconnectBybitIntegrationCommand(1), CancellationToken.None);
 
+        _context.ChangeTracker.Clear();
+        integration = await _context.ExchangeIntegrations.SingleAsync(x => x.UserId == 1 && x.Exchange == "Bybit");
+        account = await _context.Accounts.SingleAsync(x => x.Id == account.Id);
+        status = await _context.SyncStatuses.SingleAsync(x => x.Id == status.Id);
+        activeIntegrationOperation = await _context.CredentialUpdateOperations.SingleAsync(x => x.OperationId == activeIntegrationOperation.OperationId);
+        activeAccountOperation = await _context.CredentialUpdateOperations.SingleAsync(x => x.OperationId == activeAccountOperation.OperationId);
+        pendingOperation = await _context.CredentialUpdateOperations.SingleAsync(x => x.OperationId == pendingOperation.OperationId);
+
         result.IsSuccess.Should().BeTrue();
         integration.Enabled.Should().BeFalse();
         integration.Status.Should().Be("Disconnected");
@@ -72,6 +80,9 @@ public class DisconnectBybitIntegrationCommandHandlerTests
         var first = await _handler.Handle(new DisconnectBybitIntegrationCommand(1), CancellationToken.None);
         var second = await _handler.Handle(new DisconnectBybitIntegrationCommand(1), CancellationToken.None);
 
+        _context.ChangeTracker.Clear();
+        integration = await _context.ExchangeIntegrations.SingleAsync(x => x.UserId == 1 && x.Exchange == "Bybit");
+
         first.IsSuccess.Should().BeTrue();
         second.IsSuccess.Should().BeTrue();
         integration.Enabled.Should().BeFalse();
@@ -88,6 +99,9 @@ public class DisconnectBybitIntegrationCommandHandlerTests
         _keyVault.Setup(v => v.SetSecretAsync(It.IsAny<string>(), string.Empty)).ThrowsAsync(new InvalidOperationException("vault failed"));
 
         var result = await _handler.Handle(new DisconnectBybitIntegrationCommand(1), CancellationToken.None);
+
+        _context.ChangeTracker.Clear();
+        integration = await _context.ExchangeIntegrations.SingleAsync(x => x.UserId == 1 && x.Exchange == "Bybit");
 
         result.IsSuccess.Should().BeTrue();
         integration.Enabled.Should().BeFalse();
@@ -106,6 +120,10 @@ public class DisconnectBybitIntegrationCommandHandlerTests
         await _context.SaveChangesAsync();
 
         var result = await _handler.Handle(new DisconnectBybitIntegrationCommand(1), CancellationToken.None);
+
+        _context.ChangeTracker.Clear();
+        account = await _context.Accounts.SingleAsync(x => x.Id == account.Id);
+        status = await _context.SyncStatuses.SingleAsync(x => x.Id == status.Id);
 
         result.IsSuccess.Should().BeTrue();
         account.IsDeleted.Should().BeFalse();
