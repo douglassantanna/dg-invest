@@ -41,8 +41,8 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             return new Response("Account not found", false, 404);
         }
 
-        var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
-        var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
+        var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken, _logger);
+        var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken, _logger);
 
         if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
             return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);

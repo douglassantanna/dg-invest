@@ -49,8 +49,8 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
         if (!integration.Enabled)
             return new Response("Bybit integration is disconnected. Save integration credentials to reconnect.", false, 400);
 
-        var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-key", cancellationToken);
-        var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-secret", cancellationToken);
+        var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, null, "api-key", cancellationToken);
+        var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, null, "api-secret", cancellationToken);
 
         if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
             return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);

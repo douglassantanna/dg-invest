@@ -10,7 +10,8 @@ public class SaveBybitIntegrationCredentialsCommandValidator : AbstractValidator
 {
     public SaveBybitIntegrationCredentialsCommandValidator()
     {
-        RuleFor(x => x.UserId).GreaterThan(0); RuleFor(x => x.ApiKey).NotEmpty().MaximumLength(255); RuleFor(x => x.ApiSecret).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.UserId).GreaterThan(0);         RuleFor(x => x.ApiKey).NotEmpty().MaximumLength(255); RuleFor(x => x.ApiSecret).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.ApiSecret).NotEqual(x => x.ApiKey).WithMessage("API key and secret must be different.");
     }
 }
 public class SaveBybitIntegrationCredentialsCommandHandler : IRequestHandler<SaveBybitIntegrationCredentialsCommand, Response>
@@ -21,7 +22,7 @@ public class SaveBybitIntegrationCredentialsCommandHandler : IRequestHandler<Sav
     {
         var validation = await new SaveBybitIntegrationCredentialsCommandValidator().ValidateAsync(request, cancellationToken);
         if (!validation.IsValid) return new("Validation failed", false, validation.Errors.Select(x => x.ErrorMessage).ToList());
-        var result = await _credentials.ReplaceAsync(request.UserId, null, new Dictionary<string, string> { ["api-key"] = request.ApiKey, ["api-secret"] = request.ApiSecret }, cancellationToken, region: request.Region);
+        var result = await _credentials.SaveAsync(request.UserId, null, request.ApiKey, request.ApiSecret, null, request.Region, cancellationToken);
         if (result.Success) return new("Integration credentials saved successfully", true);
         return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save integration credentials; recovery may be required", false, 500);
     }

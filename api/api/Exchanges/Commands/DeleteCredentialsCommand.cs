@@ -78,17 +78,10 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
 
                 var status = await _context.SyncStatuses.SingleOrDefaultAsync(x =>
                     x.UserId == request.UserId && x.AccountId == request.AccountId && x.ExchangeName == "Bybit", cancellationToken);
-                var activeSetId = status?.ActiveCredentialSetId;
-                if (status != null) status.DeactivateCredentialSet();
-
-                var operations = await _context.CredentialUpdateOperations.Where(x =>
-                    x.UserId == request.UserId && x.AccountId == request.AccountId && x.Exchange == "Bybit" &&
-                    (x.State == "Pending" || x.State == "VaultWritten" || x.State == "RecoveryRequired" || x.NewCredentialSetId == activeSetId))
-                    .ToListAsync(cancellationToken);
-                foreach (var operation in operations)
+                if (status != null)
                 {
-                    if (operation.NewCredentialSetId == activeSetId) operation.MarkRetired();
-                    else operation.MarkSuperseded();
+                    status.Disable();
+                    status.MarkDisconnected();
                 }
 
                 accountToDelete.SoftDelete();

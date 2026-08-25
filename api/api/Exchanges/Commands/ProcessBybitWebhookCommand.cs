@@ -58,9 +58,9 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
 
         var integrationState = await _context.ExchangeIntegrations
             .Where(integration => integration.UserId == request.UserId && integration.Exchange == "Bybit")
-            .Select(integration => new { integration.Enabled, integration.ActiveCredentialSetId })
+            .Select(integration => new { integration.Enabled })
             .SingleOrDefaultAsync(cancellationToken);
-        if (integrationState is not null && (!integrationState.Enabled || integrationState.ActiveCredentialSetId == null))
+        if (integrationState is not null && !integrationState.Enabled)
         {
             _logger.LogInformation("ProcessBybitWebhook: integration is disconnected for user {UserId}", request.UserId);
             return new Response("ok", true);
@@ -71,13 +71,13 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
                       && status.AccountId == request.AccountId
                       && status.ExchangeName == "Bybit",
             cancellationToken);
-        if (syncStatus is null || !syncStatus.IsEnabled || (syncStatus.ActiveCredentialSetId == null && syncStatus.CredentialVersion != Guid.Empty))
+        if (syncStatus is null || !syncStatus.IsEnabled)
         {
             _logger.LogInformation("ProcessBybitWebhook: sync is disabled for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
             return new Response("ok", true);
         }
 
-        var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
+        var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
 
         if (webhookSecret.IsUnavailable)
         {

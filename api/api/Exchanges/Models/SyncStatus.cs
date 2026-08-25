@@ -15,9 +15,7 @@ public class SyncStatus : Entity
     public DateTime? BybitCredentialsSetAt { get; private set; }
     public bool IsEnabled { get; private set; } = true;
     public DateTime? LastVerifiedAt { get; private set; }
-    public string? ActiveCredentialSetId { get; private set; }
     public string Region { get; private set; } = "Global";
-    public Guid CredentialVersion { get; private set; } = Guid.NewGuid();
 
     private SyncStatus() { }
 
@@ -54,18 +52,11 @@ public class SyncStatus : Entity
     {
         BybitCredentialsSetAt ??= DateTime.UtcNow;
     }
-    public void ActivateCredentialSet(string credentialSetId)
-    {
-        ActiveCredentialSetId = credentialSetId;
-        IsEnabled = true;
-        CredentialVersion = Guid.NewGuid();
-        MarkCredentialsSet();
-    }
     public void SetRegion(string? region) => Region = string.IsNullOrWhiteSpace(region) ? "Global" : region;
-    public void DeactivateCredentialSet()
+    public void EnableForCredentials()
     {
-        ActiveCredentialSetId = null;
-        CredentialVersion = Guid.NewGuid();
+        IsEnabled = true;
+        MarkCredentialsSet();
     }
 
     public void ToggleEnabled()

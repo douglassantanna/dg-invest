@@ -17,6 +17,7 @@ public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitC
         When(x => x.AccountId == 0, () => { RuleFor(x => x.Name).NotEmpty().MaximumLength(255); RuleFor(x => x.ApiKey).NotEmpty(); RuleFor(x => x.ApiSecret).NotEmpty(); });
         When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiKey), () => RuleFor(x => x.ApiSecret).NotEmpty());
         When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiSecret), () => RuleFor(x => x.ApiKey).NotEmpty());
+        When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiKey) && !string.IsNullOrWhiteSpace(x.ApiSecret), () => RuleFor(x => x.ApiSecret).NotEqual(x => x.ApiKey).WithMessage("API key and secret must be different."));
     }
 }
 public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCredentialsCommand, Response>
@@ -48,11 +49,7 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
             if (account == null) return new("Account not found", false, 404);
             if (account.AccountType != EAccountType.Exchange || account.Exchange != "Bybit") return new("Account is not an active Bybit exchange account", false, 400);
         }
-        var replacements = new Dictionary<string, string>();
-        if (!string.IsNullOrWhiteSpace(request.ApiKey)) { replacements["api-key"] = request.ApiKey; replacements["api-secret"] = request.ApiSecret; }
-        if (!string.IsNullOrWhiteSpace(request.WebhookSecret)) replacements["webhook-secret"] = request.WebhookSecret;
-        if (replacements.Count == 0) return new("No credential changes supplied", true);
-        var result = await _credentials.ReplaceAsync(request.UserId, accountId, replacements, cancellationToken, createdAccount != null, region: request.Region);
+        var result = await _credentials.SaveAsync(request.UserId, accountId, request.ApiKey, request.ApiSecret, request.WebhookSecret, request.Region, cancellationToken);
         if (result.Success) return new("Credentials saved successfully", true);
         return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save credentials; recovery may be required", false, 500);
     }

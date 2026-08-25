@@ -59,9 +59,9 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
 
         foreach (var status in syncStatuses)
         {
-            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
-            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
-            var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
+            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
+            var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
 
             if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
                 return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
