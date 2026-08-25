@@ -147,6 +147,9 @@ public sealed class InMemoryKeyVault : IKeyVaultService
 
     public Task SetSecretAsync(string secretName, string value)
     {
+        if (!IsAvailable)
+            throw new InvalidOperationException(KeyVaultSecretReadResult.UnavailableMessage);
+
         if (FailWrites)
             throw new InvalidOperationException("Key Vault write failed");
 
