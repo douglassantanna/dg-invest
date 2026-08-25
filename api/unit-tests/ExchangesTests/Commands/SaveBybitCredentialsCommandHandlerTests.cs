@@ -1,15 +1,19 @@
 using api.AzureKeyVault;
 using api.Cryptos.Models;
 using api.Data;
+using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
 using api.Exchanges.Models;
 using api.Exchanges.Services;
 using api.Users.Models;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using System.Threading;
+using Xunit;
+using FluentAssertions;
 
 namespace unit_tests.ExchangesTests.Commands;
 
@@ -70,42 +74,6 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenEditFieldsAreBlank_ShouldPreserveStoredSecrets()
-    {
-        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        _context.Accounts.Add(account);
-        await _context.SaveChangesAsync();
-
-        var command = new SaveBybitCredentialsCommand(1, account.Id, "", "", "");
-
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Message.Should().Be("No credential changes supplied");
-        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Handle_WhenKeyVaultThrows_ShouldReturnError()
-    {
-        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
-        await _context.SaveChangesAsync();
-        _keyVaultMock
-            .Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ThrowsAsync(new Exception("Key Vault unavailable"));
-
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1, AccountId: 1,
-            ApiKey: "key", ApiSecret: "secret", WebhookSecret: "webhook");
-
-        var result = await _handler.Handle(cmd, CancellationToken.None);
-
-        result.IsSuccess.Should().BeFalse();
-        result.Data.Should().Be(500);
-        (await _context.SyncStatuses.CountAsync()).Should().Be(0);
-    }
-
-    [Fact]
     public async Task Handle_WithInvalidInput_ShouldReturnValidationErrors()
     {
         var cmd = new SaveBybitCredentialsCommand(
@@ -117,6 +85,19 @@ public class SaveBybitCredentialsCommandHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("Validation failed");
         result.Data.Should().BeOfType<List<string>>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenApiSecretEqualsApiKey_ShouldReturnValidationError()
+    {
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(new SaveBybitCredentialsCommand(
+            UserId: 1, AccountId: 1, ApiKey: "same", ApiSecret: "same", WebhookSecret: ""), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -134,46 +115,38 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenFirstWriteFailsCreatingAccount_ShouldRetainAccountAndRecordRecovery()
+    public async Task Handle_WhenKeyVaultWriteFails_ShouldReturnErrorWithoutSyncStatus()
     {
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "old"));
-        var calls = 0;
-        _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>((_, _) => ++calls == 1 ? Task.FromException(new Exception("failed")) : Task.CompletedTask);
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
+        await _context.SaveChangesAsync();
+        _keyVaultMock
+            .Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new Exception("Key Vault unavailable"));
 
-        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "Futures", "UID-001"), CancellationToken.None);
+        var cmd = new SaveBybitCredentialsCommand(
+            UserId: 1, AccountId: 1,
+            ApiKey: "key", ApiSecret: "secret", WebhookSecret: "webhook");
 
-        result.Data.Should().Be(500);
-        var account = await _context.Accounts.SingleAsync();
-        account.IsDeleted.Should().BeFalse();
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("recovery may be required");
         (await _context.SyncStatuses.CountAsync()).Should().Be(0);
-        var operation = await _context.CredentialUpdateOperations.SingleAsync();
-        operation.State.Should().Be("RecoveryRequired");
-        operation.CreatesAccount.Should().BeTrue();
-        operation.AccountId.Should().Be(account.Id);
     }
 
     [Fact]
-    public async Task Handle_WhenSecondWriteFailsCreatingAccount_ShouldRetainAccountAndImmutableSet()
+    public async Task Handle_WhenCreatingAccount_AndKeyVaultFails_ShouldRetainAccountWithoutSyncStatus()
     {
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
-        var calls = 0;
         _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>((_, _) => ++calls == 2 ? Task.FromException(new Exception("failed")) : Task.CompletedTask);
+            .ThrowsAsync(new Exception("failed"));
 
         var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "Futures", "UID-001"), CancellationToken.None);
 
-        result.Data.Should().Be(500);
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("recovery may be required");
         var account = await _context.Accounts.SingleAsync();
         account.IsDeleted.Should().BeFalse();
         (await _context.SyncStatuses.CountAsync()).Should().Be(0);
-        var operation = await _context.CredentialUpdateOperations.SingleAsync();
-        operation.State.Should().Be("RecoveryRequired");
-        operation.CreatesAccount.Should().BeTrue();
-        operation.AccountId.Should().Be(account.Id);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(key => key.StartsWith("bybit-set-")), It.IsAny<string>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -196,345 +169,39 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenPriorReadIsUnavailable_ShouldNotWriteOrPersistSyncStatus()
+    public async Task SaveAsync_WhenAccountProvided_ShouldWriteCanonicalSecretsAndEnableStatus()
     {
-        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        _context.Accounts.Add(account);
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
         await _context.SaveChangesAsync();
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
+        var service = CredentialService(_context, _keyVaultMock.Object);
 
-        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, account.Id, "key", "secret", ""), CancellationToken.None);
-
-        result.Data.Should().Be(503);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        (await _context.SyncStatuses.CountAsync()).Should().Be(0);
-    }
-
-    [Fact]
-    public async Task ReplaceAsync_WhenPointerChangesBeforeActivation_ShouldPreserveWinnerAndRequireRecovery()
-    {
-        await using var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
-        await using var context = new DataContext(options);
-        await context.Database.EnsureCreatedAsync();
-        var status = new SyncStatus(1, 1, "Bybit");
-        status.ActivateCredentialSet("original-set");
-        context.SyncStatuses.Add(status);
-        await context.SaveChangesAsync();
-
-        var vault = new Mock<IKeyVaultService>();
-        var changedPointer = false;
-        vault.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>(async (_, _) =>
-            {
-                if (changedPointer) return;
-                changedPointer = true;
-                await using var winnerContext = new DataContext(options);
-                var winner = await winnerContext.SyncStatuses.SingleAsync();
-                winner.ActivateCredentialSet("winning-set");
-                await winnerContext.SaveChangesAsync();
-            });
-        var service = new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance);
-
-        var result = await service.ReplaceAsync(1, 1, new Dictionary<string, string>
-        {
-            ["api-key"] = "key", ["api-secret"] = "secret", ["webhook-secret"] = "webhook"
-        }, CancellationToken.None);
-
-        result.Success.Should().BeFalse();
-        context.ChangeTracker.Clear();
-        (await context.SyncStatuses.SingleAsync()).ActiveCredentialSetId.Should().Be("winning-set");
-        (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_WhenVaultWrittenSetIsComplete_ShouldActivateMatchingPriorPointer()
-    {
-        await using var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
-        await using var context = new DataContext(options);
-        await context.Database.EnsureCreatedAsync();
-        var status = new SyncStatus(1, 1, "Bybit");
-        status.ActivateCredentialSet("old-set");
-        context.SyncStatuses.Add(status);
-        await context.SaveChangesAsync();
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", status.CredentialVersion);
-        operation.MarkVaultWritten();
-        context.CredentialUpdateOperations.Add(operation);
-        await context.SaveChangesAsync();
-        var vault = new Mock<IKeyVaultService>();
-        vault.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
-
-        var reconciled = await new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        reconciled.Should().Be(1);
-        context.ChangeTracker.Clear();
-        (await context.SyncStatuses.SingleAsync()).ActiveCredentialSetId.Should().Be(operation.NewCredentialSetId);
-        (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Active");
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_WhenReconnectOperationCompletesAfterDisconnect_ShouldReactivateSyncStatus()
-    {
-        await using var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
-        await using var context = new DataContext(options);
-        await context.Database.EnsureCreatedAsync();
-        var status = new SyncStatus(1, 1, "Bybit");
-        status.Disable();
-        context.SyncStatuses.Add(status);
-        await context.SaveChangesAsync();
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, null, status.CredentialVersion);
-        operation.MarkVaultWritten();
-        context.CredentialUpdateOperations.Add(operation);
-        await context.SaveChangesAsync();
-        var vault = new Mock<IKeyVaultService>();
-        vault.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
-
-        await new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        context.ChangeTracker.Clear();
-        var saved = await context.SyncStatuses.SingleAsync();
-        saved.ActiveCredentialSetId.Should().Be(operation.NewCredentialSetId);
-        saved.IsEnabled.Should().BeTrue();
-        (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Active");
-    }
-
-    [Fact]
-    public async Task ReplaceAsync_WhenPausedAccountRotatesCredentials_ShouldKeepAccountPaused()
-    {
-        await using var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
-        await using var context = new DataContext(options);
-        await context.Database.EnsureCreatedAsync();
-        var status = new SyncStatus(1, 1, "Bybit");
-        status.ActivateCredentialSet("old-set");
-        status.ToggleEnabled();
-        context.SyncStatuses.Add(status);
-        await context.SaveChangesAsync();
-        var vault = new Mock<IKeyVaultService>();
-        vault.Setup(v => v.GetSecretReadResultAsync(BybitCredentialKeys.SetKey("old-set", "api-key")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "old-key"));
-        vault.Setup(v => v.GetSecretReadResultAsync(BybitCredentialKeys.SetKey("old-set", "api-secret")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "old-secret"));
-        vault.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
-
-        var result = await new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReplaceAsync(1, 1, new Dictionary<string, string> { ["webhook-secret"] = "new-webhook" }, CancellationToken.None);
-
-        result.Success.Should().BeTrue(result.Error);
-        context.ChangeTracker.Clear();
-        var saved = await context.SyncStatuses.SingleAsync();
-        saved.ActiveCredentialSetId.Should().Be(result.CredentialSetId);
-        saved.IsEnabled.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_WhenPausedAccountRotationCompletes_ShouldKeepAccountPaused()
-    {
-        await using var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
-        await using var context = new DataContext(options);
-        await context.Database.EnsureCreatedAsync();
-        var status = new SyncStatus(1, 1, "Bybit");
-        status.ActivateCredentialSet("old-set");
-        status.ToggleEnabled();
-        context.SyncStatuses.Add(status);
-        await context.SaveChangesAsync();
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", status.CredentialVersion);
-        operation.MarkVaultWritten();
-        context.CredentialUpdateOperations.Add(operation);
-        await context.SaveChangesAsync();
-        var vault = new Mock<IKeyVaultService>();
-        vault.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
-
-        await new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        context.ChangeTracker.Clear();
-        var saved = await context.SyncStatuses.SingleAsync();
-        saved.ActiveCredentialSetId.Should().Be(operation.NewCredentialSetId);
-        saved.IsEnabled.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_WhenNewAccountOperationHasCompleteSet_ShouldCreateAndActivateSyncStatus()
-    {
-        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        _context.Accounts.Add(account);
-        await _context.SaveChangesAsync();
-        var operation = new CredentialUpdateOperation(1, "Bybit", account.Id, null, null, createsAccount: true);
-        _context.CredentialUpdateOperations.Add(operation);
-        await _context.SaveChangesAsync();
-        await MakeOperationStaleAsync(_context, operation);
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
-
-        await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Active");
-        var status = await _context.SyncStatuses.SingleAsync();
-        status.AccountId.Should().Be(account.Id);
-        status.ActiveCredentialSetId.Should().Be(operation.NewCredentialSetId);
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_WhenPendingSetIsPartial_ShouldInspectEveryKeyAndCleanOperation()
-    {
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
-        _context.CredentialUpdateOperations.Add(operation);
-        await _context.SaveChangesAsync();
-        await MakeOperationStaleAsync(_context, operation);
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.EndsWith("api-secret"))))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => !key.EndsWith("api-secret"))))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
-
-        await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Cleaned");
-        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.StartsWith($"bybit-set-{operation.NewCredentialSetId}-"))), Times.Exactly(3));
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_WhenPendingPartialSetCannotBeFullyInspected_ShouldRequireRecovery()
-    {
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
-        _context.CredentialUpdateOperations.Add(operation);
-        await _context.SaveChangesAsync();
-        await MakeOperationStaleAsync(_context, operation);
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.EndsWith("api-secret"))))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.EndsWith("webhook-secret"))))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Unavailable));
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.Is<string>(key => key.EndsWith("api-key"))))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
-
-        await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("RecoveryRequired");
-    }
-
-    [Fact]
-    public async Task ReconcileAsync_WhenPendingOperationIsFresh_ShouldNotReadVault()
-    {
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
-        _context.CredentialUpdateOperations.Add(operation);
-        await _context.SaveChangesAsync();
-
-        var reconciled = await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        reconciled.Should().Be(0);
-        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Pending");
-        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ReplaceAsync_WhenWritingSecrets_ShouldTouchPendingOperationAfterEachWrite()
-    {
-        CredentialUpdateOperation? operation = null;
-        DateTime initialUpdatedAt = default;
-        DateTime updatedAfterFirstWrite = default;
-        var writes = 0;
-        _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>(async (_, _) =>
-            {
-                if (++writes == 1) await Task.Delay(10);
-                else if (writes == 2) updatedAfterFirstWrite = operation!.UpdatedAt;
-            });
-
-        var result = await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReplaceAsync(1, 1, new Dictionary<string, string>
-            {
-                ["api-key"] = "key", ["api-secret"] = "secret", ["webhook-secret"] = "webhook"
-            }, CancellationToken.None, operationCreated: created =>
-            {
-                operation = created;
-                initialUpdatedAt = created.UpdatedAt;
-                return Task.CompletedTask;
-            });
+        var result = await service.SaveAsync(1, 1, "key", "secret", "webhook", BybitRegion.Global, CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        updatedAfterFirstWrite.Should().BeAfter(initialUpdatedAt);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(
+            It.Is<string>(s => s == BybitCredentialKeys.LegacyAccountKey(1, 1, "api-key")), "key"), Times.Once);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(
+            It.Is<string>(s => s == BybitCredentialKeys.LegacyAccountKey(1, 1, "api-secret")), "secret"), Times.Once);
+        var status = await _context.SyncStatuses.SingleAsync();
+        status.IsEnabled.Should().BeTrue();
+        status.Region.Should().Be("Global");
     }
 
     [Fact]
-    public async Task ReconcileAsync_WhenAnotherSetIsActive_ShouldMarkOperationSuperseded()
+    public async Task SaveAsync_WhenIntegration_ShouldWriteIntegrationSecretsAndEnable()
     {
-        await using var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<DataContext>().UseSqlite(connection).Options;
-        await using var context = new DataContext(options);
-        await context.Database.EnsureCreatedAsync();
-        var status = new SyncStatus(1, 1, "Bybit");
-        status.ActivateCredentialSet("old-set");
-        context.SyncStatuses.Add(status);
-        await context.SaveChangesAsync();
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", status.CredentialVersion);
-        operation.MarkVaultWritten();
-        status.ActivateCredentialSet("winning-set");
-        context.CredentialUpdateOperations.Add(operation);
-        await context.SaveChangesAsync();
-        var vault = new Mock<IKeyVaultService>();
-        vault.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "value"));
+        var service = CredentialService(_context, _keyVaultMock.Object);
 
-        await new BybitCredentialSetService(context, vault.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
+        var result = await service.SaveAsync(1, null, "key", "secret", null, BybitRegion.Eu, CancellationToken.None);
 
-        (await context.CredentialUpdateOperations.SingleAsync()).State.Should().Be("Superseded");
-    }
-
-    [Theory]
-    [InlineData(KeyVaultSecretReadStatus.NotFound, "Cleaned")]
-    [InlineData(KeyVaultSecretReadStatus.Unavailable, "RecoveryRequired")]
-    public async Task ReconcileAsync_WhenCredentialSetCannotBeVerified_ShouldNotActivate(KeyVaultSecretReadStatus status, string expectedState)
-    {
-        var operation = new CredentialUpdateOperation(1, "Bybit", 1, "old-set", Guid.NewGuid());
-        operation.MarkVaultWritten();
-        _context.CredentialUpdateOperations.Add(operation);
-        await _context.SaveChangesAsync();
-        _keyVaultMock.Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(status));
-
-        await new BybitCredentialSetService(_context, _keyVaultMock.Object, NullLogger<BybitCredentialSetService>.Instance)
-            .ReconcileAsync(CancellationToken.None);
-
-        (await _context.CredentialUpdateOperations.SingleAsync()).State.Should().Be(expectedState);
-        (await _context.SyncStatuses.CountAsync()).Should().Be(0);
-    }
-
-    [Fact]
-    public void ConfigureServices_RegistersCredentialRecoveryHostedService()
-    {
-        var services = new ServiceCollection();
-
-        services.ConfigureServices();
-
-        services.Should().Contain(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(CredentialRecoveryService));
+        result.Success.Should().BeTrue();
+        _keyVaultMock.Verify(v => v.SetSecretAsync(
+            It.Is<string>(s => s == BybitCredentialKeys.LegacyIntegrationKey(1, "api-key")), "key"), Times.Once);
+        var integration = await _context.ExchangeIntegrations.SingleAsync();
+        integration.Enabled.Should().BeTrue();
+        integration.Region.Should().Be("Eu");
     }
 
     private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault) =>
         new BybitCredentialSetService(context, vault, Mock.Of<ILogger<BybitCredentialSetService>>());
-
-    private static async Task MakeOperationStaleAsync(DataContext context, CredentialUpdateOperation operation)
-    {
-        context.Entry(operation).Property(x => x.UpdatedAt).CurrentValue = DateTime.UtcNow.AddMinutes(-11);
-        await context.SaveChangesAsync();
-    }
 }

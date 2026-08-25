@@ -137,22 +137,18 @@ public class ExchangeControllerIntegrationTests
         var integration = await context.ExchangeIntegrations.SingleAsync(candidate => candidate.UserId == userId && candidate.Exchange == "Bybit");
         integration.Enabled.Should().BeFalse();
         integration.Status.Should().Be("Disconnected");
-        integration.ActiveCredentialSetId.Should().BeNull();
         var account = await context.Accounts.SingleAsync(candidate => candidate.Id == accountId);
         account.IsDeleted.Should().BeFalse();
         account.Enabled.Should().BeFalse();
         var status = await context.SyncStatuses.SingleAsync(candidate => candidate.UserId == userId && candidate.AccountId == accountId && candidate.ExchangeName == "Bybit");
         status.IsEnabled.Should().BeFalse();
         status.Status.Should().Be("Disconnected");
-        status.ActiveCredentialSetId.Should().BeNull();
         var connectionGroupsAfterDisconnect = await client.GetAsync("/api/Exchange/bybit/connection-groups");
         connectionGroupsAfterDisconnect.StatusCode.Should().Be(HttpStatusCode.OK);
         var connectionGroupsPayload = await connectionGroupsAfterDisconnect.Content.ReadAsStringAsync();
         connectionGroupsPayload.Should().Contain("\"subaccountCount\":0");
         connectionGroupsPayload.Should().Contain("\"subaccounts\":[]");
         connectionGroupsPayload.Should().NotContain("Integration subaccount");
-        (await context.CredentialUpdateOperations.Where(candidate => candidate.UserId == userId).Select(candidate => candidate.State).ToListAsync())
-            .Should().OnlyContain(state => state == "Retired");
         (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be(string.Empty);
         (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyAccountKey(userId, accountId, "webhook-secret"))).Should().Be(string.Empty);
     }
@@ -233,7 +229,7 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
-    public async Task BybitIntegrationCredentials_ReconnectUpdatesActiveCredentialSetAndUsesNewKey()
+    public async Task BybitIntegrationCredentials_ReconnectUsesNewKey()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
         using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
@@ -241,14 +237,12 @@ public class ExchangeControllerIntegrationTests
         (await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new { apiKey = "first-api-key", apiSecret = "first-api-secret" }))
             .StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string firstSetId;
         using (var scope = _fixture.Factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             var integration = await context.ExchangeIntegrations.SingleAsync(x => x.UserId == userId && x.Exchange == "Bybit");
-            integration.ActiveCredentialSetId.Should().NotBeNull();
-            firstSetId = integration.ActiveCredentialSetId!;
-            (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-set-{firstSetId}-api-key")).Should().Be("first-api-key");
+            integration.Enabled.Should().BeTrue();
+            (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be("first-api-key");
         }
 
         _fixture.Factory.Bybit.LastApiKey = null;
@@ -260,16 +254,12 @@ public class ExchangeControllerIntegrationTests
         (await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new { apiKey = "second-api-key", apiSecret = "second-api-secret" }))
             .StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string secondSetId;
         using (var scope = _fixture.Factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             var integration = await context.ExchangeIntegrations.SingleAsync(x => x.UserId == userId && x.Exchange == "Bybit");
-            integration.ActiveCredentialSetId.Should().NotBeNull();
-            secondSetId = integration.ActiveCredentialSetId!;
-            secondSetId.Should().NotBe(firstSetId);
-            (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-set-{secondSetId}-api-key")).Should().Be("second-api-key");
-            (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-set-{secondSetId}-api-secret")).Should().Be("second-api-secret");
+            (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be("second-api-key");
+            (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-secret"))).Should().Be("second-api-secret");
         }
 
         _fixture.Factory.Bybit.LastApiKey = null;
@@ -585,17 +575,9 @@ public class ExchangeControllerIntegrationTests
             _fixture.Factory.KeyVault.IsAvailable = true;
         }
 
-        string activeSetId;
-        using (var scope = _fixture.Factory.Services.CreateScope())
-        {
-            activeSetId = (await scope.ServiceProvider.GetRequiredService<DataContext>().SyncStatuses
-                .Where(x => x.UserId == userId && x.AccountId == accountId && x.ExchangeName == "Bybit")
-                .Select(x => x.ActiveCredentialSetId)
-                .SingleAsync())!;
-        }
-        await _fixture.Factory.KeyVault.DeleteSecretAsync($"bybit-set-{activeSetId}-api-key");
-        await _fixture.Factory.KeyVault.DeleteSecretAsync($"bybit-set-{activeSetId}-api-secret");
-        await _fixture.Factory.KeyVault.DeleteSecretAsync($"bybit-set-{activeSetId}-webhook-secret");
+        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
+        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
+        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "webhook-secret"));
 
         foreach (var endpoint in endpoints)
             (await client.GetAsync(endpoint)).StatusCode.Should().Be(HttpStatusCode.OK);
@@ -632,9 +614,7 @@ public class ExchangeControllerIntegrationTests
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
         var exchangeAccount = await context.Accounts.SingleAsync(candidate => candidate.UserId == userId && candidate.Name == "Legacy aliases account");
         exchangeAccount.ExternalId.Should().Be("legacy-uid-001");
-        (await context.ExchangeIntegrations.SingleAsync(candidate => candidate.UserId == userId && candidate.Exchange == "Bybit")).ActiveCredentialSetId.Should().NotBeNull();
-        (await context.CredentialUpdateOperations.Where(candidate => candidate.UserId == userId).Select(candidate => candidate.State).ToListAsync())
-            .Should().OnlyContain(state => state == "Active");
+        (await context.ExchangeIntegrations.SingleAsync(candidate => candidate.UserId == userId && candidate.Exchange == "Bybit")).Enabled.Should().BeTrue();
     }
 
     [Theory]
@@ -660,16 +640,12 @@ public class ExchangeControllerIntegrationTests
         {
             _fixture.Factory.KeyVault.IsAvailable = true;
         }
-
-        using var scope = _fixture.Factory.Services.CreateScope();
-        var operation = await scope.ServiceProvider.GetRequiredService<DataContext>().CredentialUpdateOperations.SingleAsync(candidate => candidate.UserId == userId);
-        operation.State.Should().Be("RecoveryRequired");
     }
 
     [Theory]
     [InlineData("/api/Exchange/bybit/integration-credentials")]
     [InlineData("/api/Exchange/bybit/credentials")]
-    public async Task BybitCredentialEndpoints_ReturnBadRequestAndLeavePendingStatusWhenRecoveryIsRequired(string endpoint)
+    public async Task BybitCredentialEndpoints_ReturnErrorAndLeavePendingStatusWhenVaultWriteFails(string endpoint)
     {
         var (userId, _) = await _fixture.CreateUserAsync();
         using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
@@ -680,18 +656,13 @@ public class ExchangeControllerIntegrationTests
                 ? await client.PostAsJsonAsync(endpoint, new { apiKey = "api-key", apiSecret = "api-secret" })
                 : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Pending account", bybitUid = "pending-uid", apiKey = "api-key", apiSecret = "api-secret", webhookSecret = "webhook-secret" });
 
+            var body = await response.Content.ReadAsStringAsync();
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-            (await response.Content.ReadAsStringAsync()).Should().Contain("recovery may be required");
+            body.Should().Contain("recovery may be required");
         }
         finally
         {
             _fixture.Factory.KeyVault.FailWrites = false;
-        }
-
-        using (var scope = _fixture.Factory.Services.CreateScope())
-        {
-            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-            (await context.CredentialUpdateOperations.SingleAsync(candidate => candidate.UserId == userId)).State.Should().Be("RecoveryRequired");
         }
 
         if (!endpoint.EndsWith("integration-credentials", StringComparison.Ordinal))
@@ -703,7 +674,7 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
-    public async Task BybitDiscovery_WithLegacyMainCredentials_ShouldExplainMigrationRequirement()
+    public async Task BybitDiscovery_WithOnlyMainAccountCredentials_ShouldRequireIntegrationCredentials()
     {
         var (userId, mainAccountId) = await _fixture.CreateUserAsync();
         await _fixture.Factory.KeyVault.SetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-key"), "legacy-key");
@@ -713,7 +684,7 @@ public class ExchangeControllerIntegrationTests
         var response = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("need migration");
+        (await response.Content.ReadAsStringAsync()).Should().Contain("integration credentials");
     }
 
     [Fact]
@@ -747,26 +718,6 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
-    public async Task LegacyCredentialPromotion_RequiresAdminAndPromotesForDiscovery()
-    {
-        var (userId, mainAccountId) = await _fixture.CreateUserAsync(Role.Admin);
-        await _fixture.Factory.KeyVault.SetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-key"), "legacy-key");
-        await _fixture.Factory.KeyVault.SetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-secret"), "legacy-secret");
-
-        (await _fixture.Factory.CreateClient().PostAsync("/api/Migrations/bybit-legacy-credentials", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        using var user = _fixture.Factory.CreateAuthenticatedClient(userId);
-        (await user.PostAsync("/api/Migrations/bybit-legacy-credentials", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        using var admin = _fixture.Factory.CreateAuthenticatedClient(userId, Role.Admin);
-        (await admin.PostAsync("/api/Migrations/bybit-legacy-credentials", null)).StatusCode.Should().Be(HttpStatusCode.OK);
-        using (var scope = _fixture.Factory.Services.CreateScope())
-            (await scope.ServiceProvider.GetRequiredService<DataContext>().ExchangeIntegrations.CountAsync(x => x.UserId == userId && x.Exchange == "Bybit")).Should().Be(0);
-
-        (await admin.PostAsync("/api/Migrations/bybit-legacy-credentials?dryRun=false", null)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await admin.PostAsync("/api/Exchange/bybit/sync-accounts", null)).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await _fixture.Factory.KeyVault.GetSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, mainAccountId, "api-key"))).Should().Be("legacy-key");
-    }
-
-    [Fact]
     public async Task RunMigrations_RequiresAdmin()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
@@ -792,9 +743,9 @@ public class ExchangeControllerIntegrationTests
         using var scope = _fixture.Factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
         var integration = await context.ExchangeIntegrations.SingleAsync(x => x.UserId == userId && x.Exchange == "Bybit");
-        integration.ActiveCredentialSetId.Should().NotBeNull();
-        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-set-{integration.ActiveCredentialSetId}-api-key")).Should().Be("integration-api-key");
-        (await _fixture.Factory.KeyVault.GetSecretAsync($"bybit-set-{integration.ActiveCredentialSetId}-api-secret")).Should().Be("integration-api-secret");
+        integration.Enabled.Should().BeTrue();
+        (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be("integration-api-key");
+        (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-secret"))).Should().Be("integration-api-secret");
     }
 
     private async Task AssertAccountIsExchangeAsync(int accountId, string externalId)

@@ -45,19 +45,6 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
             if (integration == null)
             {
-                var legacyMainAccount = await _context.Accounts.SingleOrDefaultAsync(
-                    account => account.UserId == request.UserId && !account.IsDeleted && account.Name == "main",
-                    cancellationToken);
-                if (legacyMainAccount != null)
-                {
-                    var legacyApiKey = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-key"));
-                    var legacyApiSecret = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-secret"));
-                    if (legacyApiKey.IsUnavailable || legacyApiSecret.IsUnavailable)
-                        return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
-                    if (!string.IsNullOrEmpty(legacyApiKey.Value) && !string.IsNullOrEmpty(legacyApiSecret.Value))
-                        return new Response("Your existing Bybit discovery credentials need migration to the integration model. They remain unchanged while migration is prepared.", false, 409);
-                }
-
                 return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
             }
 

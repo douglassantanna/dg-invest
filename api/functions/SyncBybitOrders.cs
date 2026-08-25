@@ -58,11 +58,9 @@ public class SyncBybitOrders
                             && !a.IsDeleted
                             && a.AccountType == EAccountType.Exchange
                             && a.Exchange == "Bybit"
-                            && (!_context.ExchangeIntegrations.Any(integration => integration.UserId == a.UserId && integration.Exchange == "Bybit")
-                                || _context.ExchangeIntegrations.Any(integration => integration.UserId == a.UserId
-                                    && integration.Exchange == "Bybit"
-                                    && integration.Enabled
-                                    && integration.ActiveCredentialSetId != null)))
+                            && _context.ExchangeIntegrations
+                                .Where(integration => integration.UserId == a.UserId && integration.Exchange == "Bybit")
+                                .All(integration => integration.Enabled))
                 .ToListAsync(cancellationToken);
 
             _logger.LogInformation("SyncBybitOrders: found {Count} Bybit accounts", accounts.Count);
@@ -106,14 +104,8 @@ public class SyncBybitOrders
                 return;
             }
 
-            if (syncStatus.ActiveCredentialSetId == null && syncStatus.CredentialVersion != Guid.Empty)
-            {
-                _logger.LogInformation("SyncBybitOrders: account {AccountId} has no active credentials, skipping", accountId);
-                return;
-            }
-
-            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, userId, accountId, "api-key", cancellationToken);
-            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, userId, accountId, "api-secret", cancellationToken);
+            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, accountId, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, accountId, "api-secret", cancellationToken);
 
             if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
             {

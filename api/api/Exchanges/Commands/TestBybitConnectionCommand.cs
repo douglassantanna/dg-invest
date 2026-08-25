@@ -52,6 +52,11 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             return new Response("API key and secret are not configured for this account", false, 400);
         }
 
+        if (!string.IsNullOrEmpty(apiKey.Value) && apiKey.Value == apiSecret.Value)
+        {
+            return new Response("Stored Bybit credentials appear corrupted (API key and secret are identical). Please re-enter them.", false, 400);
+        }
+
         bool success;
         try
         {

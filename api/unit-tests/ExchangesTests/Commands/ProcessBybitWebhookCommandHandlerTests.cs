@@ -75,7 +75,7 @@ public class ProcessBybitWebhookCommandHandlerTests
     private async Task SeedIntegrationAsync()
     {
         var integration = new ExchangeIntegration(1, "Bybit");
-        integration.ActivateCredentialSet("integration-set");
+        integration.MarkEnabled();
         _context.ExchangeIntegrations.Add(integration);
         await _context.SaveChangesAsync();
     }
@@ -90,15 +90,12 @@ public class ProcessBybitWebhookCommandHandlerTests
         if (seedStatus)
         {
             var status = new SyncStatus(1, account.Id, "Bybit");
-            status.ActivateCredentialSet("account-set");
+            status.EnableForCredentials();
             _context.SyncStatuses.Add(status);
             await _context.SaveChangesAsync();
         }
         return account;
     }
-
-    private static void MarkAsLegacyStatus(SyncStatus status) =>
-        typeof(SyncStatus).GetProperty(nameof(SyncStatus.CredentialVersion))!.SetValue(status, Guid.Empty);
 
     [Fact]
     public async Task Handle_WhenWebhookSecretMissing_ShouldReturn401()
@@ -218,21 +215,20 @@ public class ProcessBybitWebhookCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithActiveCredentialSet_UsesImmutableWebhookSecretInsteadOfLegacyOrArbitraryKeys()
+    public async Task Handle_WithAccountWebhookSecret_UsesCanonicalAccountKeyOverIntegrationKey()
     {
         var account = await SeedAccountAsync(seedStatus: false);
-        const string credentialSetId = "active-webhook-set";
         var status = new SyncStatus(1, account.Id, "Bybit");
-        status.ActivateCredentialSet(credentialSetId);
+        status.EnableForCredentials();
         _context.SyncStatuses.Add(status);
         await _context.SaveChangesAsync();
 
-        var immutableKey = BybitCredentialKeys.SetKey(credentialSetId, "webhook-secret");
-        var legacyKey = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "webhook-secret");
+        var accountKey = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "webhook-secret");
+        var integrationKey = BybitCredentialKeys.LegacyIntegrationKey(1, "webhook-secret");
         var secrets = new Dictionary<string, string>
         {
-            [immutableKey] = "immutable-webhook-secret",
-            [legacyKey] = "conflicting-legacy-webhook-secret"
+            [accountKey] = "account-webhook-secret",
+            [integrationKey] = "conflicting-integration-webhook-secret"
         };
         _keyVaultMock
             .Setup(v => v.GetSecretReadResultAsync(It.IsAny<string>()))
@@ -240,30 +236,30 @@ public class ProcessBybitWebhookCommandHandlerTests
                 ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, value)
                 : throw new InvalidOperationException($"Unexpected vault key: {key}")));
         _bybitMock
-            .Setup(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "immutable-webhook-secret"))
+            .Setup(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "account-webhook-secret"))
             .Returns(true);
 
         var result = await _handler.Handle(_validCmd with { AccountId = account.Id }, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        _bybitMock.Verify(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "immutable-webhook-secret"), Times.Once);
-        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(immutableKey), Times.Once);
-        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(legacyKey), Times.Never);
+        _bybitMock.Verify(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "account-webhook-secret"), Times.Once);
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(accountKey), Times.Once);
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(integrationKey), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WithLegacySyncStatus_ShouldReadLegacyWebhookSecret()
+    public async Task Handle_ShouldReadCanonicalWebhookSecret()
     {
         var account = new Account("Legacy Bybit", 1, EAccountType.Exchange, "Bybit", "UID-LEGACY");
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
         var status = new SyncStatus(1, account.Id, "Bybit");
-        MarkAsLegacyStatus(status);
+        status.EnableForCredentials();
         _context.SyncStatuses.Add(status);
         await _context.SaveChangesAsync();
-        var legacyKey = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "webhook-secret");
+        var key = BybitCredentialKeys.LegacyAccountKey(1, account.Id, "webhook-secret");
         _keyVaultMock
-            .Setup(v => v.GetSecretReadResultAsync(legacyKey))
+            .Setup(v => v.GetSecretReadResultAsync(key))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-webhook-secret"));
         _bybitMock
             .Setup(s => s.ValidateWebhookSignature(_validCmd.RawBody, _validCmd.Signature, _validCmd.Timestamp, "legacy-webhook-secret"))
@@ -272,7 +268,7 @@ public class ProcessBybitWebhookCommandHandlerTests
         var result = await _handler.Handle(_validCmd with { AccountId = account.Id }, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(legacyKey), Times.Once);
+        _keyVaultMock.Verify(v => v.GetSecretReadResultAsync(key), Times.Once);
         _syncServiceMock.Verify(s => s.ProcessOrderAsync(It.IsAny<BybitOrderData>(), It.IsAny<Account>(), 1, "Webhook", It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -281,7 +277,6 @@ public class ProcessBybitWebhookCommandHandlerTests
     {
         await SeedAccountAsync(seedStatus: false);
         var syncStatus = new SyncStatus(1, 1, "Bybit");
-        syncStatus.ActivateCredentialSet("disabled-set");
         syncStatus.ToggleEnabled();
         _context.SyncStatuses.Add(syncStatus);
         await _context.SaveChangesAsync();

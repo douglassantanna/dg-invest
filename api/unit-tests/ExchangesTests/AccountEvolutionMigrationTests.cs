@@ -13,14 +13,8 @@ public class AccountEvolutionMigrationTests
 {
     private const string PreEvolutionMigration = "20260803171537_AddBybitAccountManagementFields";
     private const string CurrentMigration = "20260805134607_AddIsDeletedToAccount";
-    private const string PreCredentialSagaMigration = "20260805134607_AddIsDeletedToAccount";
-    private const string CredentialSagaMigration = "20260822192424_AddCredentialSetSaga";
-    private const string CreatesAccountMigration = "20260822195335_AddCredentialOperationCreatesAccount";
-    private const string PriorVersionMigration = "20260822210000_AddCredentialOperationPriorVersion";
     private const string AccountExternalIdIndexMigration = "20260822220000_AlignAccountExternalIdIndex";
     private const string ExchangeOnlyExternalIdIndexMigration = "20260824210000_FilterAccountExternalIdIndexToExchangeAccounts";
-    private const string LegacyPromotionMigration = "20260822230000_AddLegacyBybitCredentialPromotions";
-    private const string BybitRegionMigration = "20260825175754_AddBybitRegion";
 
     [Fact]
     public async Task EvolveAccountMigration_ShouldPreserveBybitMappingsAndScopeExternalIds()
@@ -75,7 +69,7 @@ public class AccountEvolutionMigrationTests
     }
 
     [Fact]
-    public async Task CredentialSagaMigrations_ShouldPreserveLegacyReadsAndCreateExpectedSqlServerSchema()
+    public async Task SimplifyCredentialsMigration_ShouldProduceCleanSchemaAndCanonicalReads()
     {
         await using var container = new MsSqlBuilder()
             .WithPassword($"T{Guid.NewGuid():N}aA1!")
@@ -86,78 +80,40 @@ public class AccountEvolutionMigrationTests
             .UseSqlServer(container.GetConnectionString())
             .Options;
         await using var context = new DataContext(options);
-        var migrator = context.Database.GetService<IMigrator>();
 
-        await migrator.MigrateAsync(PreCredentialSagaMigration);
-        await context.Database.ExecuteSqlRawAsync("""
-            INSERT INTO Users (FullName, Email, Password, Role, EmailConfirmed, CreatedAt)
-            VALUES ('Legacy credential user', 'legacy-credentials@example.com', 'hash', 0, 0, SYSUTCDATETIME());
-
-            INSERT INTO Accounts (IsSelected, UserId, Balance, Name, CreatedAt, AccountType, Enabled, Exchange, IsDeleted)
-            VALUES (1, 1, 0, 'Legacy Bybit', SYSUTCDATETIME(), 1, 1, 'Bybit', 0);
-
-            INSERT INTO SyncStatuses (UserId, AccountId, ExchangeName, Status, ErrorCount)
-            VALUES (1, 1, 'Bybit', 'Disconnected', 0);
-
-            INSERT INTO ExchangeIntegrations (UserId, Exchange, Status, Enabled, CreatedDate)
-            VALUES (1, 'Bybit', 'NotSetup', 1, SYSUTCDATETIME());
-            """);
-
-        await migrator.MigrateAsync(CredentialSagaMigration);
-        await migrator.MigrateAsync(CreatesAccountMigration);
-        await migrator.MigrateAsync(PriorVersionMigration);
-        await migrator.MigrateAsync(BybitRegionMigration);
+        await context.Database.MigrateAsync();
         context.ChangeTracker.Clear();
 
-        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'CredentialUpdateOperations'")).Should().Be(1);
+        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'CredentialUpdateOperations'")).Should().Be(0);
+        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'LegacyBybitCredentialPromotions'")).Should().Be(0);
         (await ScalarAsync(context, """
             SELECT COUNT(*) AS Value
             FROM sys.columns AS c
-            INNER JOIN sys.types AS t ON c.user_type_id = t.user_type_id
-            WHERE c.object_id = OBJECT_ID(N'[CredentialUpdateOperations]')
-              AND ((c.name = 'CreatesAccount' AND t.name = 'bit' AND c.is_nullable = 0)
-                OR (c.name = 'PreviousCredentialVersion' AND t.name = 'uniqueidentifier' AND c.is_nullable = 1)
-                OR (c.name = 'Version' AND t.name = 'uniqueidentifier' AND c.is_nullable = 0))
-            """)).Should().Be(3);
-        (await ScalarAsync(context, """
-            SELECT COUNT(*) AS Value
-            FROM sys.columns AS c
-            INNER JOIN sys.types AS t ON c.user_type_id = t.user_type_id
             WHERE c.object_id IN (OBJECT_ID(N'[SyncStatuses]'), OBJECT_ID(N'[ExchangeIntegrations]'))
-              AND ((c.name = 'ActiveCredentialSetId' AND t.name = 'nvarchar' AND c.max_length = 64 AND c.is_nullable = 1)
-                OR (c.name = 'CredentialVersion' AND t.name = 'uniqueidentifier' AND c.is_nullable = 0))
-            """)).Should().Be(4);
-        (await ScalarAsync(context, """
-            SELECT COUNT(*) AS Value
-            FROM sys.indexes
-            WHERE object_id = OBJECT_ID(N'[CredentialUpdateOperations]')
-              AND ((name = 'IX_CredentialUpdateOperations_OperationId' AND is_unique = 1)
-                OR (name = 'IX_CredentialUpdateOperations_UserId_Exchange_AccountId_State' AND is_unique = 0))
-            """)).Should().Be(2);
-        (await ScalarAsync(context, """
-            SELECT COUNT(*) AS Value
-            FROM sys.default_constraints AS d
-            INNER JOIN sys.columns AS c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id
-            WHERE (c.object_id IN (OBJECT_ID(N'[SyncStatuses]'), OBJECT_ID(N'[ExchangeIntegrations]')) AND c.name = 'CredentialVersion')
-               OR (c.object_id = OBJECT_ID(N'[CredentialUpdateOperations]') AND c.name = 'CreatesAccount')
-            """)).Should().Be(3);
+              AND (c.name = 'ActiveCredentialSetId' OR c.name = 'CredentialVersion')
+            """)).Should().Be(0);
 
-        var status = await context.SyncStatuses.SingleAsync();
-        var integration = await context.ExchangeIntegrations.SingleAsync();
-        status.ActiveCredentialSetId.Should().BeNull();
-        integration.ActiveCredentialSetId.Should().BeNull();
-        status.CredentialVersion.Should().Be(Guid.Empty);
-        integration.CredentialVersion.Should().Be(Guid.Empty);
-        context.Model.FindEntityType(typeof(SyncStatus))!.FindProperty(nameof(SyncStatus.CredentialVersion))!.IsConcurrencyToken.Should().BeTrue();
-        context.Model.FindEntityType(typeof(ExchangeIntegration))!.FindProperty(nameof(ExchangeIntegration.CredentialVersion))!.IsConcurrencyToken.Should().BeTrue();
+        await context.Database.ExecuteSqlRawAsync("""
+            INSERT INTO Users (FullName, Email, Password, Role, EmailConfirmed, CreatedAt)
+            VALUES ('Clean credential user', 'clean@example.com', 'hash', 0, 0, SYSUTCDATETIME());
+
+            INSERT INTO Accounts (IsSelected, UserId, Balance, Name, CreatedAt, AccountType, Enabled, Exchange, IsDeleted)
+            VALUES (1, 1, 0, 'Bybit', SYSUTCDATETIME(), 1, 1, 'Bybit', 0);
+
+            INSERT INTO SyncStatuses (UserId, AccountId, ExchangeName, Status, ErrorCount, Region)
+            VALUES (1, 1, 'Bybit', 'Disconnected', 0, 'global');
+
+            INSERT INTO ExchangeIntegrations (UserId, Exchange, Status, Enabled, CreatedDate, Region)
+            VALUES (1, 'Bybit', 'NotSetup', 1, SYSUTCDATETIME(), 'global');
+            """);
 
         var vault = new Mock<IKeyVaultService>();
         vault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, 1, "api-key")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-key"));
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "canonical-key"));
 
-        var read = await BybitCredentialReader.ReadAsync(context, vault.Object, 1, 1, "api-key");
+        var read = await BybitCredentialReader.ReadAsync(vault.Object, 1, 1, "api-key");
 
-        read.Should().Be(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-key"));
+        read.Should().Be(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "canonical-key"));
         vault.Verify(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, 1, "api-key")), Times.Once);
     }
 
@@ -202,19 +158,16 @@ public class AccountEvolutionMigrationTests
     }
 
     [Fact]
-    public async Task LegacyPromotionMigration_ShouldCreateDurableUniquePromotionSchema()
+    public async Task LatestMigration_ShouldDropLegacyPromotionTable()
     {
         await using var container = new MsSqlBuilder().WithPassword($"T{Guid.NewGuid():N}aA1!").Build();
         await container.StartAsync();
         var options = new DbContextOptionsBuilder<DataContext>().UseSqlServer(container.GetConnectionString()).Options;
         await using var context = new DataContext(options);
-        var migrator = context.Database.GetService<IMigrator>();
-        await migrator.MigrateAsync(PriorVersionMigration);
-        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'LegacyBybitCredentialPromotions'")).Should().Be(0);
-        await migrator.MigrateAsync(LegacyPromotionMigration);
 
-        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'LegacyBybitCredentialPromotions'")).Should().Be(1);
-        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.indexes WHERE object_id = OBJECT_ID(N'[LegacyBybitCredentialPromotions]') AND name = 'IX_LegacyBybitCredentialPromotions_UserId_Exchange' AND is_unique = 1")).Should().Be(1);
+        await context.Database.MigrateAsync();
+
+        (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'LegacyBybitCredentialPromotions'")).Should().Be(0);
     }
 
     private static async Task<int> ScalarAsync(DataContext context, string sql) =>

@@ -52,6 +52,17 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
         try
         {
+            var health = await _vault.GetSecretReadResultAsync("__bybit_health__");
+            if (health is { IsUnavailable: true })
+                return new SaveCredentialResult(false, true, KeyVaultSecretReadResult.UnavailableMessage);
+        }
+        catch (Exception)
+        {
+            return new SaveCredentialResult(false, true, KeyVaultSecretReadResult.UnavailableMessage);
+        }
+
+        try
+        {
             await _vault.SetSecretAsync(Key("api-key"), apiKey);
             await _vault.SetSecretAsync(Key("api-secret"), apiSecret);
             await _vault.SetSecretAsync(Key("webhook-secret"), webhookSecret ?? string.Empty);
@@ -59,7 +70,7 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Bybit credential save failed to write Key Vault for user {UserId}, account {AccountId}", userId, accountId);
-            return new SaveCredentialResult(false, true, KeyVaultSecretReadResult.UnavailableMessage);
+            return new SaveCredentialResult(false, false, "Failed to save credentials");
         }
 
         try
