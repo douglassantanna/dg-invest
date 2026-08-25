@@ -136,15 +136,98 @@ public class BybitServiceTests
     }
 
     [Fact]
-    public async Task TestConnectionAsync_WhenBybitReturnsNonzeroRetCode_ShouldReturnFalse()
+    public async Task TestConnectionAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
     {
         using var httpTest = new HttpTest();
         httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
 
-        var result = await _sut.TestConnectionAsync("api-key", "api-secret");
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.TestConnectionAsync("api-key", "api-secret"));
 
-        result.Should().BeFalse();
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
         httpTest.ShouldHaveCalled("https://api.bybit.com/v5/account/info")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetSubAccountsAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetSubAccountsAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/user/submembers")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetOrderHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetOrderHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/order/history")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetDepositHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetDepositHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/deposit/query-record")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetWithdrawalHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetWithdrawalHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/withdraw/query-record")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetSubAccountsAsync_WhenRegionIsEu_ShouldCallEuHost()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { subMembers = new object[] { } } });
+
+        await _sut.GetSubAccountsAsync("api-key", "api-key", BybitRegion.Eu);
+
+        httpTest.ShouldHaveCalled("https://api.bybit.eu/v5/user/submembers")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task TestConnectionAsync_WhenRegionIsEuAndTestnet_ShouldCallEuTestnetHost()
+    {
+        var settings = new BybitSettings { UseTestnet = true };
+        var sut = new BybitService(Options.Create(settings), Mock.Of<ILogger<BybitService>>());
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK" });
+
+        await sut.TestConnectionAsync("api-key", "api-secret", BybitRegion.Eu);
+
+        httpTest.ShouldHaveCalled("https://api-testnet.bybit.eu/v5/account/info")
             .WithVerb(HttpMethod.Get);
     }
 }

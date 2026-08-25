@@ -65,6 +65,16 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
                     status.Disable();
                 }
 
+                var bybitAccounts = await _context.Accounts
+                    .Where(account => account.UserId == request.UserId && !account.IsDeleted
+                                   && account.AccountType == api.Cryptos.Models.EAccountType.Exchange
+                                   && account.Exchange == "Bybit")
+                    .ToListAsync(cancellationToken);
+                foreach (var account in bybitAccounts)
+                {
+                    account.Disable();
+                }
+
                 var activeOrIncompleteOperations = await _context.CredentialUpdateOperations
                     .Where(operation => operation.UserId == request.UserId
                                         && operation.Exchange == "Bybit"

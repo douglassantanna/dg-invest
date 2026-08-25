@@ -195,6 +195,33 @@ describe('Exchange management', () => {
     cy.contains('Key Vault is temporarily unavailable').should('be.visible');
   });
 
+  it('surfaces Bybit discovery errors after credentials are saved', () => {
+    cy.intercept('GET', `${api}/bybit/connection-groups`, response([])).as('connectionGroups');
+    cy.intercept('GET', `${api}/bybit/sync-status`, response([])).as('syncStatus');
+    cy.intercept('GET', `${api}/bybit/sub-members`, response([])).as('subMembers');
+    cy.intercept('POST', `${api}/bybit/integration-credentials`, response(null, 'Integration credentials saved successfully')).as('saveIntegrationCredentials');
+    cy.intercept('POST', `${api}/bybit/sync-accounts`, {
+      statusCode: 400,
+      body: { message: 'Bybit rejected the integration credentials: 10003 - API key is invalid', isSuccess: false, data: 400 },
+    }).as('discoverAccounts');
+    authenticate();
+    cy.visit('/#/exchanges/bybit');
+    cy.wait('@connectionGroups');
+    cy.wait('@syncStatus');
+    cy.wait('@subMembers');
+
+    cy.get('#bybit-api-key').type('bad-key');
+    cy.get('#bybit-api-secret').type('bad-secret');
+    cy.contains('button', 'Connect Bybit').click();
+    cy.wait('@saveIntegrationCredentials');
+    cy.wait('@discoverAccounts');
+
+    cy.get('#bybit-api-key').should('have.value', '');
+    cy.get('#bybit-api-secret').should('have.value', '');
+    cy.contains('Bybit rejected the integration credentials: 10003 - API key is invalid').should('be.visible');
+    cy.contains('Trading account').should('not.exist');
+  });
+
   it('disconnects Bybit through the API with confirmation and reloads the setup state', () => {
     cy.intercept('POST', `${api}/bybit/disconnect`, response(null, 'Bybit integration disconnected')).as('disconnect');
     visitBybit();
@@ -211,6 +238,72 @@ describe('Exchange management', () => {
     cy.contains('Bybit integration disconnected').should('be.visible');
     cy.contains('button', 'Disconnect Bybit').should('not.exist');
     cy.contains('Setup required').should('be.visible');
+    cy.contains('Trading account').should('not.exist');
+  });
+
+  it('reconnects with different credentials and replaces discovered accounts', () => {
+    cy.intercept('POST', `${api}/bybit/disconnect`, response(null, 'Bybit integration disconnected')).as('disconnect');
+    visitBybit();
+    cy.window().then(win => cy.stub(win, 'confirm').returns(true));
+    cy.intercept('GET', `${api}/bybit/connection-groups`, groups([])).as('disconnectedGroups');
+    cy.intercept('GET', `${api}/bybit/sync-status`, response([])).as('disconnectedStatuses');
+    cy.intercept('GET', `${api}/bybit/sub-members`, response([])).as('disconnectedSubMembers');
+
+    cy.contains('button', 'Disconnect Bybit').click();
+    cy.wait('@disconnect');
+    cy.wait('@disconnectedGroups');
+    cy.wait('@disconnectedStatuses');
+    cy.wait('@disconnectedSubMembers');
+    cy.contains('Trading account').should('not.exist');
+
+    const newAccount = () => ({
+      accountId: 202,
+      name: 'New trading account',
+      externalId: '999999',
+      status: 'ok',
+      hasApiKey: true,
+      hasApiSecret: true,
+      hasWebhookSecret: true,
+      maskedApiKey: '....9999',
+      webhookUrl: '/api/tradewebhook/bybit/1/202',
+      lastVerifiedAt: 'Just now',
+      isEnabled: true,
+    });
+    const newGroups = (accounts = [newAccount()]) => response([
+      {
+        id: 'bybit-main',
+        name: 'Main account (Bybit login)',
+        subaccountCount: accounts.length,
+        maxSubaccounts: 10,
+        subaccounts: accounts,
+      },
+    ]);
+
+    cy.intercept('POST', `${api}/bybit/integration-credentials`, request => {
+      expect(request.body).to.deep.equal({ apiKey: 'new-key', apiSecret: 'new-secret' });
+      request.reply(response(null, 'Integration credentials saved successfully'));
+    }).as('saveIntegrationCredentials');
+    cy.intercept('POST', `${api}/bybit/sync-accounts`, response(null, 'Account discovery complete. 1 found, 1 created.')).as('discoverAccounts');
+    cy.intercept('GET', `${api}/bybit/connection-groups`, newGroups()).as('reconnectedGroups');
+    cy.intercept('GET', `${api}/bybit/sync-status`, statuses([newAccount()])).as('reconnectedStatuses');
+    cy.intercept('GET', `${api}/bybit/sub-members`, response([{
+      uid: '999999',
+      username: 'new-trading-account',
+      remark: 'New trading account',
+      mappedAccountName: 'New trading account',
+      accountId: 202,
+    }])).as('reconnectedSubMembers');
+
+    cy.get('#bybit-api-key').type('new-key');
+    cy.get('#bybit-api-secret').type('new-secret');
+    cy.contains('button', 'Connect Bybit').click();
+    cy.wait('@saveIntegrationCredentials');
+    cy.wait('@discoverAccounts');
+    cy.wait('@reconnectedGroups');
+    cy.wait('@reconnectedStatuses');
+    cy.wait('@reconnectedSubMembers');
+
+    cy.contains('New trading account').should('be.visible');
     cy.contains('Trading account').should('not.exist');
   });
 
@@ -234,6 +327,19 @@ describe('Exchange management', () => {
     cy.get('#account-api-key').should('have.value', '');
     cy.get('#account-api-secret').should('have.value', '');
     cy.get('#account-webhook-secret').should('have.value', '');
+  });
+
+  it('surfaces Bybit account test connection errors', () => {
+    cy.intercept('POST', `${api}/bybit/test-connection/101`, {
+      statusCode: 400,
+      body: { message: 'Bybit rejected the account credentials: 10003 - API key is invalid', isSuccess: false, data: 400 },
+    }).as('testConnection');
+    visitAccount();
+
+    cy.contains('button', 'Test connection').click();
+    cy.wait('@testConnection');
+
+    cy.contains('Bybit rejected the account credentials: 10003 - API key is invalid').should('be.visible');
   });
 
   it('supports account test, pause, mapping, logs, transactions, and removal', () => {

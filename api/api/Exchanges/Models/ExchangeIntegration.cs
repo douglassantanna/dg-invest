@@ -11,6 +11,7 @@ public class ExchangeIntegration : Entity
     public DateTime? LastSyncAt { get; private set; }
     public DateTime CreatedDate { get; private set; }
     public string? ActiveCredentialSetId { get; private set; }
+    public string Region { get; private set; } = "Global";
     public Guid CredentialVersion { get; private set; } = Guid.NewGuid();
 
     private ExchangeIntegration() { }
@@ -31,6 +32,7 @@ public class ExchangeIntegration : Entity
     }
     public void ToggleEnabled() => Enabled = !Enabled;
     public void MarkConfigured() => Status = "Configured";
+    public void SetRegion(string? region) => Region = string.IsNullOrWhiteSpace(region) ? "Global" : region;
     public void ActivateCredentialSet(string credentialSetId)
     {
         ActiveCredentialSetId = credentialSetId;

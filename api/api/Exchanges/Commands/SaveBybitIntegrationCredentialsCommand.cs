@@ -1,10 +1,11 @@
+using api.Exchanges.Bybit;
 using api.Exchanges.Services;
 using api.Shared;
 using FluentValidation;
 using MediatR;
 
 namespace api.Exchanges.Commands;
-public record SaveBybitIntegrationCredentialsCommand(int UserId, string ApiKey, string ApiSecret) : IRequest<Response>;
+public record SaveBybitIntegrationCredentialsCommand(int UserId, string ApiKey, string ApiSecret, BybitRegion Region = BybitRegion.Global) : IRequest<Response>;
 public class SaveBybitIntegrationCredentialsCommandValidator : AbstractValidator<SaveBybitIntegrationCredentialsCommand>
 {
     public SaveBybitIntegrationCredentialsCommandValidator()
@@ -20,7 +21,7 @@ public class SaveBybitIntegrationCredentialsCommandHandler : IRequestHandler<Sav
     {
         var validation = await new SaveBybitIntegrationCredentialsCommandValidator().ValidateAsync(request, cancellationToken);
         if (!validation.IsValid) return new("Validation failed", false, validation.Errors.Select(x => x.ErrorMessage).ToList());
-        var result = await _credentials.ReplaceAsync(request.UserId, null, new Dictionary<string, string> { ["api-key"] = request.ApiKey, ["api-secret"] = request.ApiSecret }, cancellationToken);
+        var result = await _credentials.ReplaceAsync(request.UserId, null, new Dictionary<string, string> { ["api-key"] = request.ApiKey, ["api-secret"] = request.ApiSecret }, cancellationToken, region: request.Region);
         if (result.Success) return new("Integration credentials saved successfully", true);
         return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save integration credentials; recovery may be required", false, 500);
     }

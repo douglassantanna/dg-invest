@@ -79,7 +79,13 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             List<BybitSubMember> subMembers;
             try
             {
-                subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!);
+                var region = BybitEndpoints.Parse(integration?.Region);
+                subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!, region);
+            }
+            catch (BybitApiException ex)
+            {
+                _logger.LogWarning(ex, "SyncBybitAccounts: Bybit rejected discovery request for user {UserId}", request.UserId);
+                return new Response($"Bybit rejected the integration credentials: {ex.RetCode} - {ex.RetMsg}", false, 400);
             }
             catch (Exception ex)
             {
@@ -87,18 +93,29 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 return new Response("Failed to fetch sub-accounts from Bybit", false, 500);
             }
 
-            var existingBybitUids = await _context.Accounts
+            var existingBybitAccounts = await _context.Accounts
                 .Where(a => a.UserId == request.UserId && !a.IsDeleted
                          && a.AccountType == EAccountType.Exchange && a.Exchange == "Bybit" && a.ExternalId != null)
-                .ToDictionaryAsync(a => a.ExternalId!, a => a, cancellationToken);
+                .ToListAsync(cancellationToken);
+
+            var existingByUid = existingBybitAccounts.ToDictionary(a => a.ExternalId!, a => a);
+            var currentUids = new HashSet<string>(subMembers.Select(m => m.Uid), StringComparer.Ordinal);
 
             int created = 0;
             int matched = 0;
+            int disabled = 0;
 
             foreach (var member in subMembers)
             {
-                if (existingBybitUids.TryGetValue(member.Uid, out var mappedAccount))
+                if (existingByUid.TryGetValue(member.Uid, out var mappedAccount))
                 {
+                    if (!mappedAccount.Enabled)
+                    {
+                        mappedAccount.Enable();
+                        _logger.LogInformation("SyncBybitAccounts: UID {Uid} re-enabled account '{Name}' for current connection",
+                            member.Uid, mappedAccount.Name);
+                    }
+
                     matched++;
                     _logger.LogInformation("SyncBybitAccounts: UID {Uid} already mapped to account '{Name}'",
                         member.Uid, mappedAccount.Name);
@@ -115,9 +132,21 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 _logger.LogInformation("SyncBybitAccounts: created account '{Name}' (Bybit UID: {Uid}) for user {UserId}",
                     tag, member.Uid, request.UserId);
             }
+
+            foreach (var existing in existingBybitAccounts)
+            {
+                if (existing.ExternalId != null && existing.Enabled && !currentUids.Contains(existing.ExternalId))
+                {
+                    existing.Disable();
+                    disabled++;
+                    _logger.LogInformation("SyncBybitAccounts: UID {Uid} not returned by current API key; disabling stale account '{Name}'",
+                        existing.ExternalId, existing.Name);
+                }
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
 
-            return new Response($"Sync complete. {matched} matched, {created} created.", true);
+            return new Response($"Sync complete. {matched} matched, {created} created, {disabled} disabled.", true);
         }
         catch (Exception ex)
         {

@@ -52,7 +52,19 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             return new Response("API key and secret are not configured for this account", false, 400);
         }
 
-        var success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!);
+        bool success;
+        try
+        {
+            var syncStatus = await _context.SyncStatuses
+                .FirstOrDefaultAsync(s => s.UserId == request.UserId && s.AccountId == request.AccountId && s.ExchangeName == "Bybit", cancellationToken);
+            var region = BybitEndpoints.Parse(syncStatus?.Region);
+            success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!, region);
+        }
+        catch (BybitApiException ex)
+        {
+            _logger.LogWarning(ex, "TestBybitConnection: Bybit rejected connection test for account {AccountId}", request.AccountId);
+            return new Response($"Bybit rejected the account credentials: {ex.RetCode} - {ex.RetMsg}", false, 400);
+        }
 
         if (success)
         {

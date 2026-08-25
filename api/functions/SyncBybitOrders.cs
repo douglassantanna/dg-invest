@@ -54,6 +54,7 @@ public class SyncBybitOrders
                 .Include(a => a.CryptoAssets)
                     .ThenInclude(ca => ca.Transactions)
                 .Where(a => a.ExternalId != null
+                            && a.Enabled
                             && !a.IsDeleted
                             && a.AccountType == EAccountType.Exchange
                             && a.Exchange == "Bybit"
@@ -133,7 +134,8 @@ public class SyncBybitOrders
                 ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
 
-            var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, limit: 50, startTime: startTime);
+            var region = BybitEndpoints.Parse(syncStatus.Region);
+            var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
             var hasFailures = false;
 
             if (orders.Count > 0)
@@ -154,7 +156,7 @@ public class SyncBybitOrders
                 _logger.LogInformation("SyncBybitOrders: no orders for account {AccountId}", accountId);
             }
 
-            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey.Value!, apiSecret.Value!, limit: 50, startTime: startTime);
+            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
             _logger.LogInformation("SyncBybitOrders: received {Count} deposits from Bybit for account {AccountId}: {TxIds}",
                 deposits.Count, accountId, string.Join(", ", deposits.Select(d => $"{d.TxId}({d.Status})")));
 
@@ -165,7 +167,7 @@ public class SyncBybitOrders
             }
             _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
-            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey.Value!, apiSecret.Value!, limit: 50, startTime: startTime);
+            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
             _logger.LogInformation("SyncBybitOrders: received {Count} withdrawals from Bybit for account {AccountId}: {TxIds}",
                 withdrawals.Count, accountId, string.Join(", ", withdrawals.Select(w => $"{w.TxId}({w.Status})")));
 
@@ -185,6 +187,16 @@ public class SyncBybitOrders
                 var lastOrderId = orders.Count > 0 ? orders.Last().OrderId : null;
                 await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
             }
+        }
+        catch (BybitApiException ex)
+        {
+            var message = $"Bybit rejected sync request: {ex.RetCode} - {ex.RetMsg}";
+            _logger.LogWarning(ex, "SyncBybitOrders: Bybit rejected sync request for account {AccountId}", account.Id);
+            try
+            {
+                await _orderSyncService.MarkSyncStatusErrorAsync(account.UserId, account.Id, message, cancellationToken);
+            }
+            catch { }
         }
         catch (Exception ex)
         {

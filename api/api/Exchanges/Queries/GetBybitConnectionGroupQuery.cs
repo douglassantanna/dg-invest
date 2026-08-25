@@ -52,7 +52,7 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
             return new Response("ok", true, EmptyGroup());
 
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && !a.IsDeleted
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted && a.Enabled
                      && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);

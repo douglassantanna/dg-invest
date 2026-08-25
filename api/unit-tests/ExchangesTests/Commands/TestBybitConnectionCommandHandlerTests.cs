@@ -23,21 +23,61 @@ public class TestBybitConnectionCommandHandlerTests
         context.Accounts.Add(account);
         await context.SaveChangesAsync();
 
+        const string credentialSetId = "account-set";
         var syncStatus = new SyncStatus(1, account.Id, "Bybit");
+        syncStatus.ActivateCredentialSet(credentialSetId);
         context.SyncStatuses.Add(syncStatus);
         await context.SaveChangesAsync();
 
         var keyVault = new Mock<IKeyVaultService>();
-        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(credentialSetId, "api-key")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "configured"));
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(credentialSetId, "api-secret")))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "configured"));
         var bybitService = new Mock<IBybitService>();
-        bybitService.Setup(x => x.TestConnectionAsync("configured", "configured")).ReturnsAsync(false);
+        bybitService.Setup(x => x.TestConnectionAsync("configured", "configured", It.IsAny<BybitRegion>())).ReturnsAsync(false);
         var logger = Mock.Of<ILogger<TestBybitConnectionCommandHandler>>();
         var handler = new TestBybitConnectionCommandHandler(keyVault.Object, bybitService.Object, context, logger);
 
         var result = await handler.Handle(new TestBybitConnectionCommand(1, account.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
+        syncStatus.LastVerifiedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WhenBybitRejectsCredentials_ShouldReturnBybitError()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+
+        const string credentialSetId = "account-set";
+        var syncStatus = new SyncStatus(1, account.Id, "Bybit");
+        syncStatus.ActivateCredentialSet(credentialSetId);
+        context.SyncStatuses.Add(syncStatus);
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(credentialSetId, "api-key")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "configured"));
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.SetKey(credentialSetId, "api-secret")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "configured"));
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.TestConnectionAsync("configured", "configured", It.IsAny<BybitRegion>()))
+            .ThrowsAsync(new BybitApiException(10003, "API key is invalid"));
+        var handler = new TestBybitConnectionCommandHandler(keyVault.Object, bybitService.Object, context,
+            Mock.Of<ILogger<TestBybitConnectionCommandHandler>>());
+
+        var result = await handler.Handle(new TestBybitConnectionCommand(1, account.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Data.Should().Be(400);
+        result.Message.Should().Be("Bybit rejected the account credentials: 10003 - API key is invalid");
         syncStatus.LastVerifiedAt.Should().BeNull();
     }
 
@@ -87,7 +127,7 @@ public class TestBybitConnectionCommandHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Data.Should().Be(400);
-        bybitService.Verify(x => x.TestConnectionAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        bybitService.Verify(x => x.TestConnectionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>()), Times.Never);
     }
 
     [Fact]
@@ -125,14 +165,14 @@ public class TestBybitConnectionCommandHandlerTests
                 ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, value)
                 : throw new InvalidOperationException($"Unexpected vault key: {key}")));
         var bybitService = new Mock<IBybitService>();
-        bybitService.Setup(x => x.TestConnectionAsync("immutable-api-key", "immutable-api-secret")).ReturnsAsync(true);
+        bybitService.Setup(x => x.TestConnectionAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>())).ReturnsAsync(true);
         var handler = new TestBybitConnectionCommandHandler(keyVault.Object, bybitService.Object, context,
             Mock.Of<ILogger<TestBybitConnectionCommandHandler>>());
 
         var result = await handler.Handle(new TestBybitConnectionCommand(1, account.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        bybitService.Verify(x => x.TestConnectionAsync("immutable-api-key", "immutable-api-secret"), Times.Once);
+        bybitService.Verify(x => x.TestConnectionAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>()), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(immutableApiKey), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(immutableApiSecret), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(legacyApiKey), Times.Never);

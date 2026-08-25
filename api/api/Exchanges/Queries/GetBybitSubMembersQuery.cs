@@ -59,13 +59,19 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
             return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
 
         List<BybitSubMember> subMembers;
-        try
-        {
-            subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "GetBybitSubMembers: failed to fetch from Bybit for user {UserId}", request.UserId);
+            try
+            {
+                var region = BybitEndpoints.Parse(integration?.Region);
+                subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!, region);
+            }
+            catch (BybitApiException ex)
+            {
+                _logger.LogWarning(ex, "GetBybitSubMembers: Bybit rejected request for user {UserId}", request.UserId);
+                return new Response($"Bybit rejected the integration credentials: {ex.RetCode} - {ex.RetMsg}", false, 400);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetBybitSubMembers: failed to fetch from Bybit for user {UserId}", request.UserId);
             return new Response("Failed to fetch sub-accounts from Bybit", false, 500);
         }
 

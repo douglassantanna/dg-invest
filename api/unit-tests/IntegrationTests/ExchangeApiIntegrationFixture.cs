@@ -174,10 +174,20 @@ public sealed class FakeBybitService : IBybitService
         new BybitSubMember { Uid = "integration-uid-1", Username = "Integration", Remark = "Integration subaccount" },
     ];
 
+    public string? LastApiKey { get; set; }
+    public BybitRegion? LastRegion { get; set; }
+    public BybitApiException? SubAccountsError { get; set; }
+
     public bool ValidateWebhookSignature(string rawBody, string signature, string timestamp, string webhookSecret) => true;
-    public Task<List<BybitSubMember>> GetSubAccountsAsync(string apiKey, string apiSecret) => Task.FromResult(SubAccounts);
-    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitOrderData>());
-    public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
-    public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
-    public Task<bool> TestConnectionAsync(string apiKey, string apiSecret) => Task.FromResult(true);
+    public Task<List<BybitSubMember>> GetSubAccountsAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)
+    {
+        LastApiKey = apiKey;
+        LastRegion = region;
+        if (SubAccountsError is not null) throw SubAccountsError;
+        return Task.FromResult(SubAccounts);
+    }
+    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitOrderData>());
+    public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
+    public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
+    public Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global) => Task.FromResult(true);
 }

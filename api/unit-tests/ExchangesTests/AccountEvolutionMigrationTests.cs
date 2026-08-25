@@ -20,6 +20,7 @@ public class AccountEvolutionMigrationTests
     private const string AccountExternalIdIndexMigration = "20260822220000_AlignAccountExternalIdIndex";
     private const string ExchangeOnlyExternalIdIndexMigration = "20260824210000_FilterAccountExternalIdIndexToExchangeAccounts";
     private const string LegacyPromotionMigration = "20260822230000_AddLegacyBybitCredentialPromotions";
+    private const string BybitRegionMigration = "20260825175754_AddBybitRegion";
 
     [Fact]
     public async Task EvolveAccountMigration_ShouldPreserveBybitMappingsAndScopeExternalIds()
@@ -105,6 +106,7 @@ public class AccountEvolutionMigrationTests
         await migrator.MigrateAsync(CredentialSagaMigration);
         await migrator.MigrateAsync(CreatesAccountMigration);
         await migrator.MigrateAsync(PriorVersionMigration);
+        await migrator.MigrateAsync(BybitRegionMigration);
         context.ChangeTracker.Clear();
 
         (await ScalarAsync(context, "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'CredentialUpdateOperations'")).Should().Be(1);

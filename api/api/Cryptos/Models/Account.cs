@@ -47,6 +47,8 @@ public class Account : Entity
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;
     public void ToggleEnabled() => Enabled = !Enabled;
+    public void Enable() => Enabled = true;
+    public void Disable() => Enabled = false;
     public void SoftDelete() => IsDeleted = true;
     public decimal TotalDeposited() => _accountTransactions.Where(x => x.TransactionType == EAccountTransactionType.DepositFiat).Sum(x => x.Amount);
     public IReadOnlyCollection<AccountTransaction> AccountTransactions => _accountTransactions.AsReadOnly();

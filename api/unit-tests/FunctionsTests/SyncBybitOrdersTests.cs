@@ -50,9 +50,9 @@ public class SyncBybitOrdersTests
                 ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, value)
                 : throw new InvalidOperationException($"Unexpected vault key: {key}")));
         var bybitService = new Mock<IBybitService>();
-        bybitService.Setup(x => x.GetOrderHistoryAsync("immutable-api-key", "immutable-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
-        bybitService.Setup(x => x.GetDepositHistoryAsync("immutable-api-key", "immutable-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
-        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("immutable-api-key", "immutable-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetOrderHistoryAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetDepositHistoryAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
@@ -64,9 +64,9 @@ public class SyncBybitOrdersTests
 
         await function.Run(null!, functionContext.Object);
 
-        bybitService.Verify(x => x.GetOrderHistoryAsync("immutable-api-key", "immutable-api-secret", 50, It.IsAny<long?>()), Times.Once);
-        bybitService.Verify(x => x.GetDepositHistoryAsync("immutable-api-key", "immutable-api-secret", 50, It.IsAny<long?>()), Times.Once);
-        bybitService.Verify(x => x.GetWithdrawalHistoryAsync("immutable-api-key", "immutable-api-secret", 50, It.IsAny<long?>()), Times.Once);
+        bybitService.Verify(x => x.GetOrderHistoryAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
+        bybitService.Verify(x => x.GetDepositHistoryAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
+        bybitService.Verify(x => x.GetWithdrawalHistoryAsync("immutable-api-key", "immutable-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(immutableApiKey), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(immutableApiSecret), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(legacyApiKey), Times.Never);
@@ -99,7 +99,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         keyVault.Verify(x => x.GetSecretReadResultAsync(It.IsAny<string>()), Times.Never);
-        bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<long?>()), Times.Never);
+        bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         keyVault.Verify(x => x.GetSecretReadResultAsync(It.IsAny<string>()), Times.Never);
-        bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<long?>()), Times.Never);
+        bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -150,9 +150,9 @@ public class SyncBybitOrdersTests
         keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.SetKey("account-set", "api-secret")))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
         var bybitService = new Mock<IBybitService>();
-        bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
-        bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
-        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
             Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
         var functionContext = new Mock<FunctionContext>();
@@ -160,7 +160,7 @@ public class SyncBybitOrdersTests
 
         await function.Run(null!, functionContext.Object);
 
-        bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", 50, It.IsAny<long?>()), Times.Once);
+        bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -185,9 +185,9 @@ public class SyncBybitOrdersTests
         keyVault.Setup(x => x.GetSecretReadResultAsync(legacyApiSecret))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-api-secret"));
         var bybitService = new Mock<IBybitService>();
-        bybitService.Setup(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
-        bybitService.Setup(x => x.GetDepositHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
-        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetDepositHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
             Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
         var functionContext = new Mock<FunctionContext>();
@@ -195,7 +195,47 @@ public class SyncBybitOrdersTests
 
         await function.Run(null!, functionContext.Object);
 
-        bybitService.Verify(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", 50, It.IsAny<long?>()), Times.Once);
+        bybitService.Verify(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Run_WhenBybitRejectsHistoryRequest_ShouldRecordBybitError()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.ActivateCredentialSet("integration-set");
+        context.AddRange(account, integration);
+        await context.SaveChangesAsync();
+
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        status.ActivateCredentialSet("account-set");
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.SetKey("account-set", "api-key")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-key"));
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.SetKey("account-set", "api-secret")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()))
+            .ThrowsAsync(new BybitApiException(10003, "API key is invalid"));
+        var orderSyncService = new Mock<IBybitOrderSyncService>();
+        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
+            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+
+        orderSyncService.Verify(x => x.MarkSyncStatusErrorAsync(1, account.Id,
+            "Bybit rejected sync request: 10003 - API key is invalid", It.IsAny<CancellationToken>()), Times.Once);
+        bybitService.Verify(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>()), Times.Never);
+        bybitService.Verify(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>()), Times.Never);
     }
 
     private static IConfiguration EnabledConfiguration() => new ConfigurationBuilder()

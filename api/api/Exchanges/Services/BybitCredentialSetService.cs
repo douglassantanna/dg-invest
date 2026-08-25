@@ -1,5 +1,6 @@
 using api.AzureKeyVault;
 using api.Data;
+using api.Exchanges.Bybit;
 using api.Exchanges.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,7 +45,7 @@ public static class BybitCredentialReader
 
 public interface IBybitCredentialSetService
 {
-    Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false, bool verifyDestination = false, Func<CredentialUpdateOperation, Task>? operationCreated = null);
+    Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false, bool verifyDestination = false, BybitRegion region = BybitRegion.Global, Func<CredentialUpdateOperation, Task>? operationCreated = null);
     Task<KeyVaultSecretReadResult> ReadAsync(int userId, int? accountId, string suffix, CancellationToken cancellationToken = default);
     Task<int> ReconcileAsync(CancellationToken cancellationToken);
 }
@@ -66,7 +67,7 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         return await BybitCredentialReader.ReadAsync(_context, _vault, userId, accountId, suffix, cancellationToken);
     }
 
-    public async Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false, bool verifyDestination = false, Func<CredentialUpdateOperation, Task>? operationCreated = null)
+    public async Task<CredentialUpdateResult> ReplaceAsync(int userId, int? accountId, IReadOnlyDictionary<string, string> replacements, CancellationToken cancellationToken, bool createsAccount = false, bool verifyDestination = false, BybitRegion region = BybitRegion.Global, Func<CredentialUpdateOperation, Task>? operationCreated = null)
     {
         string? priorSet;
         Guid? priorVersion;
@@ -157,10 +158,12 @@ public class BybitCredentialSetService : IBybitCredentialSetService
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
                         .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.IsEnabled, true)
+                        .SetProperty(x => x.Region, region.ToString())
                         .SetProperty(x => x.BybitCredentialsSetAt, x => x.BybitCredentialsSetAt ?? now), cancellationToken) == 1
                     : await query.ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
                         .SetProperty(x => x.CredentialVersion, newVersion)
+                        .SetProperty(x => x.Region, region.ToString())
                         .SetProperty(x => x.BybitCredentialsSetAt, x => x.BybitCredentialsSetAt ?? now), cancellationToken) == 1;
             }
             else if (priorVersion is { } integrationVersion)
@@ -173,22 +176,26 @@ public class BybitCredentialSetService : IBybitCredentialSetService
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
                         .SetProperty(x => x.CredentialVersion, newVersion)
                         .SetProperty(x => x.Enabled, true)
+                        .SetProperty(x => x.Region, region.ToString())
                         .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1
                     : await query.ExecuteUpdateAsync(setters => setters
                         .SetProperty(x => x.ActiveCredentialSetId, operation.NewCredentialSetId)
                         .SetProperty(x => x.CredentialVersion, newVersion)
+                        .SetProperty(x => x.Region, region.ToString())
                         .SetProperty(x => x.Status, "Configured"), cancellationToken) == 1;
             }
             else if (accountId is { } accountToCreate)
             {
                 var status = new SyncStatus(userId, accountToCreate, "Bybit");
                 status.ActivateCredentialSet(operation.NewCredentialSetId);
+                status.SetRegion(region.ToString());
                 _context.SyncStatuses.Add(status);
             }
             else
             {
                 var integration = new ExchangeIntegration(userId, "Bybit");
                 integration.ActivateCredentialSet(operation.NewCredentialSetId);
+                integration.SetRegion(region.ToString());
                 _context.ExchangeIntegrations.Add(integration);
             }
             if (!activated)

@@ -112,6 +112,7 @@ export class BybitIntegrationComponent implements OnInit {
         if (response.isSuccess) this.load();
       },
       error: error => {
+        this.saving = false;
         this.discovering = false;
         const message = this.errorMessage(error, fromOnboarding ? 'Credentials saved, but account discovery failed' : 'Account discovery failed');
         if (fromOnboarding) this.loadError = message;

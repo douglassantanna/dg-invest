@@ -1,5 +1,6 @@
 using api.Cryptos.Models;
 using api.Data;
+using api.Exchanges.Bybit;
 using api.Exchanges.Services;
 using api.Shared;
 using FluentValidation;
@@ -7,7 +8,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Exchanges.Commands;
-public record SaveBybitCredentialsCommand(int UserId, int AccountId, string ApiKey, string ApiSecret, string WebhookSecret, string? Name = null, string? ExternalId = null) : IRequest<Response>;
+public record SaveBybitCredentialsCommand(int UserId, int AccountId, string ApiKey, string ApiSecret, string WebhookSecret, string? Name = null, string? ExternalId = null, BybitRegion Region = BybitRegion.Global) : IRequest<Response>;
 public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitCredentialsCommand>
 {
     public SaveBybitCredentialsCommandValidator()
@@ -51,7 +52,7 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
         if (!string.IsNullOrWhiteSpace(request.ApiKey)) { replacements["api-key"] = request.ApiKey; replacements["api-secret"] = request.ApiSecret; }
         if (!string.IsNullOrWhiteSpace(request.WebhookSecret)) replacements["webhook-secret"] = request.WebhookSecret;
         if (replacements.Count == 0) return new("No credential changes supplied", true);
-        var result = await _credentials.ReplaceAsync(request.UserId, accountId, replacements, cancellationToken, createdAccount != null);
+        var result = await _credentials.ReplaceAsync(request.UserId, accountId, replacements, cancellationToken, createdAccount != null, region: request.Region);
         if (result.Success) return new("Credentials saved successfully", true);
         return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save credentials; recovery may be required", false, 500);
     }
