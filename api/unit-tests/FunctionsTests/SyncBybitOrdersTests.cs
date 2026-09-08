@@ -226,15 +226,17 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
-        var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
+        var orderSyncService = new Mock<IBybitOrderSyncService>();
+        orderSyncService.Setup(x => x.ProcessOpeningBalanceAsync(account, 1, 10000m, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
             Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
         await function.Run(null!, functionContext.Object);
 
-        var saved = await context.Accounts.SingleAsync(candidate => candidate.Id == account.Id);
-        saved.Balance.Should().Be(10000m);
+        orderSyncService.Verify(x => x.ProcessOpeningBalanceAsync(account, 1, 10000m, It.IsAny<CancellationToken>()), Times.Once);
         bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
     }
 

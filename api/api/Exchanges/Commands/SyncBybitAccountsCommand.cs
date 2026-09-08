@@ -16,17 +16,20 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
     private readonly IBybitService _bybitService;
     private readonly IKeyVaultService _keyVaultService;
     private readonly DataContext _context;
+    private readonly IBybitOrderSyncService _orderSyncService;
     private readonly ILogger<SyncBybitAccountsCommandHandler> _logger;
 
     public SyncBybitAccountsCommandHandler(
         IBybitService bybitService,
         IKeyVaultService keyVaultService,
         DataContext context,
+        IBybitOrderSyncService orderSyncService,
         ILogger<SyncBybitAccountsCommandHandler> logger)
     {
         _bybitService = bybitService;
         _keyVaultService = keyVaultService;
         _context = context;
+        _orderSyncService = orderSyncService;
         _logger = logger;
     }
 
@@ -164,7 +167,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, accountType, coin, memberId);
                 balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
             }
-            account.SetInitialBalance(balance);
+            await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
         }
         catch (Exception ex)
         {

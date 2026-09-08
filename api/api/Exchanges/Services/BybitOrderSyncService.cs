@@ -292,6 +292,42 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         return true;
     }
 
+    public async Task<bool> ProcessOpeningBalanceAsync(Account account, int userId, decimal balance, CancellationToken cancellationToken)
+    {
+        if (balance <= 0 || account.Balance != 0)
+            return true;
+
+        var exchangeTransactionId = $"bybit-opening-balance-{account.Id}";
+        var existingTx = await _context.AccountTransactions
+            .AnyAsync(t => t.ExchangeTransactionId == exchangeTransactionId, cancellationToken);
+        if (existingTx)
+            return true;
+
+        var accountTx = new AccountTransaction(
+            date: DateTime.UtcNow,
+            transactionType: EAccountTransactionType.DepositFiat,
+            amount: balance,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: "Opening balance from Bybit",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: 0,
+            exchangeTransactionId: exchangeTransactionId,
+            exchangeStatus: "OpeningBalance");
+
+        var result = _transactionService.ExecuteTransaction(account, accountTx);
+        if (!result.IsSuccess)
+        {
+            _logger.LogError("Bybit sync: opening balance transaction failed for account {AccountId}: {Message}", account.Id, result.Message);
+            return false;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+        return true;
+    }
+
     public async Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken)
     {
         var status = await _context.SyncStatuses

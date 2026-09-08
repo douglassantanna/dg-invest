@@ -50,11 +50,6 @@ public class Account : Entity
     public void Enable() => Enabled = true;
     public void Disable() => Enabled = false;
     public void SoftDelete() => IsDeleted = true;
-    public void SetInitialBalance(decimal balance)
-    {
-        if (Balance == 0 && balance > 0)
-            Balance = balance;
-    }
     public decimal TotalDeposited() => _accountTransactions.Sum(x => x.TransactionType switch
     {
         EAccountTransactionType.DepositFiat => x.Amount,

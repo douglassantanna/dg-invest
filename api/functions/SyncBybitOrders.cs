@@ -216,8 +216,7 @@ public class SyncBybitOrders
                 var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, "UNIFIED", coin, account.ExternalId);
                 balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
             }
-            account.SetInitialBalance(balance);
-            await _context.SaveChangesAsync(cancellationToken);
+            await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
         }
         catch (Exception ex)
         {
