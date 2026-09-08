@@ -110,4 +110,18 @@ public class AccountTests
         // Assert
         account.TotalDeposited().Should().Be(0);
     }
+
+    [Fact]
+    public void TotalDeposited_WhenAccountHasMoneyInAndOut_ShouldReturnNetDeposited()
+    {
+        // Arrange
+        var account = new Account("main", 1);
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.DepositFiat, 1_000m, "Initial deposit"));
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.TransferIn, 250m, "Transfer in"));
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.WithdrawToBank, 100m, "Withdraw"));
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.TransferOut, 50m, "Transfer out"));
+
+        // Assert
+        account.TotalDeposited().Should().Be(1_100m);
+    }
 }

@@ -55,7 +55,14 @@ public class Account : Entity
         if (Balance == 0 && balance > 0)
             Balance = balance;
     }
-    public decimal TotalDeposited() => _accountTransactions.Where(x => x.TransactionType == EAccountTransactionType.DepositFiat).Sum(x => x.Amount);
+    public decimal TotalDeposited() => _accountTransactions.Sum(x => x.TransactionType switch
+    {
+        EAccountTransactionType.DepositFiat => x.Amount,
+        EAccountTransactionType.TransferIn => x.Amount,
+        EAccountTransactionType.WithdrawToBank => -x.Amount,
+        EAccountTransactionType.TransferOut => -x.Amount,
+        _ => 0
+    });
     public IReadOnlyCollection<AccountTransaction> AccountTransactions => _accountTransactions.AsReadOnly();
     internal void AddTransaction(AccountTransaction accountTransaction)
     {
