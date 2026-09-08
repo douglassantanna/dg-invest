@@ -304,6 +304,64 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetInternalTransferHistoryAsync_WhenBybitReturnsTransfers_ShouldReturnRows()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "success",
+            result = new
+            {
+                list = new[]
+                {
+                    new
+                    {
+                        transferId = "transfer-1",
+                        coin = "USDT",
+                        amount = "250.50",
+                        fromAccountType = "FUND",
+                        toAccountType = "UNIFIED",
+                        fromMemberId = "",
+                        toMemberId = "12345",
+                        timestamp = "1790000000000"
+                    }
+                },
+                nextPageCursor = "next"
+            }
+        });
+
+        var result = await _sut.GetInternalTransferHistoryAsync("api-key", "api-secret", BybitRegion.Global, 50, 1700000000000);
+
+        result.Should().ContainSingle();
+        var transfer = result.Single();
+        transfer.TransferId.Should().Be("transfer-1");
+        transfer.Coin.Should().Be("USDT");
+        transfer.Amount.Should().Be("250.50");
+        transfer.FromAccountType.Should().Be("FUND");
+        transfer.ToAccountType.Should().Be("UNIFIED");
+        transfer.ToMemberId.Should().Be("12345");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-inter-transfer-list")
+            .WithQueryParam("limit", "50")
+            .WithQueryParam("startTime", "1700000000000")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetInternalTransferHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetInternalTransferHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-inter-transfer-list")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
     public async Task GetSubAccountsAsync_WhenRegionIsEu_ShouldCallEuHost()
     {
         using var httpTest = new HttpTest();
