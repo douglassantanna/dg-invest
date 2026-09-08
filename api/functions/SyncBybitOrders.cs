@@ -172,6 +172,17 @@ public class SyncBybitOrders
             }
             _logger.LogInformation("SyncBybitOrders: finished processing {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
 
+            var internalTransfers = await _bybitService.GetInternalTransferHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
+            _logger.LogInformation("SyncBybitOrders: received {Count} internal transfers from Bybit for account {AccountId}: {TransferIds}",
+                internalTransfers.Count, accountId, string.Join(", ", internalTransfers.Select(t => t.TransferId)));
+
+            foreach (var internalTransfer in internalTransfers)
+            {
+                if (!await _orderSyncService.ProcessInternalTransferAsync(internalTransfer, account, userId, cancellationToken))
+                    hasFailures = true;
+            }
+            _logger.LogInformation("SyncBybitOrders: finished processing {Count} internal transfers for account {AccountId}", internalTransfers.Count, accountId);
+
             if (hasFailures)
             {
                 _logger.LogWarning("SyncBybitOrders: one or more items failed for account {AccountId}, cursor not advanced", accountId);

@@ -241,6 +241,57 @@ public class SyncBybitOrdersTests
     }
 
     [Fact]
+    public async Task Run_WhenInternalTransfersExist_ShouldProcessTransfersForAccount()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.MarkEnabled();
+        context.AddRange(account, integration);
+        await context.SaveChangesAsync();
+
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        status.EnableForCredentials();
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-key")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-key"));
+        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-secret")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
+
+        var transfer = new BybitInternalTransferRow
+        {
+            TransferId = "transfer-1",
+            Coin = "USDT",
+            Amount = "250",
+            ToAccountType = "UNIFIED",
+            ToMemberId = "UID-001",
+            Timestamp = "1790000000000"
+        };
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetInternalTransferHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([transfer]);
+        var orderSyncService = new Mock<IBybitOrderSyncService>();
+        orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, account, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
+            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+
+        orderSyncService.Verify(x => x.ProcessInternalTransferAsync(transfer, account, 1, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Run_WhenBybitRejectsHistoryRequest_ShouldRecordBybitError()
     {
         var options = new DbContextOptionsBuilder<DataContext>()
