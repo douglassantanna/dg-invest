@@ -366,6 +366,57 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         return true;
     }
 
+    public async Task<bool> ProcessInternalTransferAsync(BybitInternalTransferRow transfer, Account account, int userId, CancellationToken cancellationToken)
+    {
+        if (!IsCashCoin(transfer.Coin))
+            return true;
+
+        if (!decimal.TryParse(transfer.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount))
+            return false;
+
+        var isTransferIn = IsTransferMatch(account, transfer.ToAccountType, transfer.ToMemberId);
+        var isTransferOut = IsTransferMatch(account, transfer.FromAccountType, transfer.FromMemberId);
+        if (!isTransferIn && !isTransferOut)
+            return true;
+
+        var direction = isTransferIn ? "in" : "out";
+        var exchangeTransactionId = $"bybit-internal-transfer-{transfer.TransferId}-{direction}-{account.Id}";
+        var existingTx = await _context.AccountTransactions
+            .AnyAsync(t => t.ExchangeTransactionId == exchangeTransactionId, cancellationToken);
+        if (existingTx)
+            return true;
+
+        var transactionType = isTransferIn
+            ? EAccountTransactionType.TransferIn
+            : EAccountTransactionType.TransferOut;
+        var timestamp = long.TryParse(transfer.Timestamp, out var unixMilliseconds)
+            ? DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).DateTime
+            : DateTime.UtcNow;
+        var accountTx = new AccountTransaction(
+            date: timestamp,
+            transactionType: transactionType,
+            amount: amount,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: $"Auto-synced from Bybit {transfer.Coin} internal transfer {transfer.TransferId}",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: 0,
+            exchangeTransactionId: exchangeTransactionId,
+            exchangeStatus: "InternalTransfer");
+
+        var result = _transactionService.ExecuteTransaction(account, accountTx);
+        if (!result.IsSuccess)
+        {
+            _logger.LogError("Bybit sync: internal transfer {TransferId} failed for account {AccountId}: {Message}", transfer.TransferId, account.Id, result.Message);
+            return false;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+        return true;
+    }
+
     public async Task<bool> ProcessOpeningBalanceAsync(Account account, int userId, decimal balance, CancellationToken cancellationToken)
     {
         if (balance <= 0 || account.Balance != 0)
@@ -558,6 +609,16 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     }
 
     private static bool IsCashCoin(string symbol) => BybitCashBalance.CashCoins.Contains(symbol, StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsTransferMatch(Account account, string accountType, string memberId)
+    {
+        if (account.AccountType == EAccountType.Manual && account.Name == "main")
+            return accountType.Equals("FUND", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(memberId);
+
+        return account.AccountType == EAccountType.Exchange
+            && accountType.Equals("UNIFIED", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(account.ExternalId, memberId, StringComparison.Ordinal);
+    }
 
     private async Task<decimal> GetMarketPriceAsync(string symbol, CancellationToken cancellationToken)
     {

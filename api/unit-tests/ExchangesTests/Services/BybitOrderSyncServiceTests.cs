@@ -91,6 +91,92 @@ public class BybitOrderSyncServiceTests
         transaction.Amount.Should().Be(125.50m);
     }
 
+    [Fact]
+    public async Task ProcessInternalTransferAsync_WhenAccountReceivesStablecoin_ShouldCreateTransferInLedgerTransaction()
+    {
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        var transfer = new BybitInternalTransferRow
+        {
+            TransferId = "transfer-1",
+            Coin = "USDT",
+            Amount = "250.50",
+            FromAccountType = "FUND",
+            ToAccountType = "UNIFIED",
+            ToMemberId = "UID-001",
+            Timestamp = "1790000000000"
+        };
+
+        var result = await sut.ProcessInternalTransferAsync(transfer, account, 1, CancellationToken.None);
+
+        result.Should().BeTrue();
+        account.Balance.Should().Be(250.50m);
+        account.TotalDeposited().Should().Be(250.50m);
+        var transaction = await context.AccountTransactions.SingleAsync();
+        transaction.TransactionType.Should().Be(EAccountTransactionType.TransferIn);
+        transaction.ExchangeTransactionId.Should().Be($"bybit-internal-transfer-{transfer.TransferId}-in-{account.Id}");
+    }
+
+    [Fact]
+    public async Task ProcessInternalTransferAsync_WhenAccountSendsStablecoin_ShouldCreateTransferOutLedgerTransaction()
+    {
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        await sut.ProcessOpeningBalanceAsync(account, 1, 1_000m, CancellationToken.None);
+        var transfer = new BybitInternalTransferRow
+        {
+            TransferId = "transfer-2",
+            Coin = "USDC",
+            Amount = "125.50",
+            FromAccountType = "UNIFIED",
+            ToAccountType = "FUND",
+            FromMemberId = "UID-001",
+            Timestamp = "1790000000000"
+        };
+
+        var result = await sut.ProcessInternalTransferAsync(transfer, account, 1, CancellationToken.None);
+
+        result.Should().BeTrue();
+        account.Balance.Should().Be(874.50m);
+        account.TotalDeposited().Should().Be(874.50m);
+        var transaction = await context.AccountTransactions.SingleAsync(t => t.ExchangeTransactionId == $"bybit-internal-transfer-{transfer.TransferId}-out-{account.Id}");
+        transaction.TransactionType.Should().Be(EAccountTransactionType.TransferOut);
+        transaction.Amount.Should().Be(125.50m);
+    }
+
+    [Fact]
+    public async Task ProcessInternalTransferAsync_WhenCalledTwice_ShouldNotDuplicateTransaction()
+    {
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        var transfer = new BybitInternalTransferRow
+        {
+            TransferId = "transfer-3",
+            Coin = "USDT",
+            Amount = "50",
+            ToAccountType = "UNIFIED",
+            ToMemberId = "UID-001",
+            Timestamp = "1790000000000"
+        };
+
+        var first = await sut.ProcessInternalTransferAsync(transfer, account, 1, CancellationToken.None);
+        var second = await sut.ProcessInternalTransferAsync(transfer, account, 1, CancellationToken.None);
+
+        first.Should().BeTrue();
+        second.Should().BeTrue();
+        account.Balance.Should().Be(50m);
+        (await context.AccountTransactions.CountAsync()).Should().Be(1);
+    }
+
     private static DataContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<DataContext>()
@@ -103,7 +189,9 @@ public class BybitOrderSyncServiceTests
     {
         var transactionService = new TransactionService([
             new FiatDepositTransaction(Mock.Of<ILogger<FiatDepositTransaction>>()),
-            new WithdrawDepositTransaction(Mock.Of<ILogger<WithdrawDepositTransaction>>())
+            new WithdrawDepositTransaction(Mock.Of<ILogger<WithdrawDepositTransaction>>()),
+            new TransferInTransaction(Mock.Of<ILogger<TransferInTransaction>>()),
+            new TransferOutTransaction(Mock.Of<ILogger<TransferOutTransaction>>())
         ]);
         var blobStorage = new Mock<IBlobStorageService>();
         blobStorage.Setup(x => x.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), It.IsAny<CancellationToken>()))
