@@ -13,6 +13,7 @@ public class BybitService : IBybitService
     private const string DepositHistoryEndpoint = "/v5/asset/deposit/query-record";
     private const string WithdrawalHistoryEndpoint = "/v5/asset/withdraw/query-record";
     private const string InternalTransferHistoryEndpoint = "/v5/asset/transfer/query-inter-transfer-list";
+    private const string UniversalTransferHistoryEndpoint = "/v5/asset/transfer/query-universal-transfer-list";
     private const string WalletBalanceEndpoint = "/v5/account/wallet-balance";
     private const string AccountCoinBalanceEndpoint = "/v5/asset/transfer/query-account-coin-balance";
     private const string AccountInfoEndpoint = "/v5/account/info";
@@ -303,6 +304,49 @@ public class BybitService : IBybitService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching Bybit internal transfer history");
+            throw;
+        }
+    }
+
+    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var queryDict = new Dictionary<string, object> { ["limit"] = limit!.Value };
+            if (startTime.HasValue)
+                queryDict["startTime"] = startTime.Value;
+
+            var queryParams = BuildQueryString(queryDict);
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var hashBytes = hmac.ComputeHash(paramBytes);
+            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
+
+            var baseUrl = GetBaseUrl(region);
+            var response = await baseUrl
+                .AppendPathSegment(UniversalTransferHistoryEndpoint)
+                .SetQueryParams(queryDict)
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<BybitInternalTransferResponse>();
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogError("Bybit GetUniversalTransferHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
+                throw new BybitApiException(response.RetCode, response.RetMsg);
+            }
+
+            return response.Result.List;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit universal transfer history");
             throw;
         }
     }
