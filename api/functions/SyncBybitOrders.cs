@@ -147,43 +147,45 @@ public class SyncBybitOrders
                     _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
                 }
             }
-            else
-            {
-                _logger.LogInformation("SyncBybitOrders: no orders for account {AccountId}", accountId);
-            }
 
             var deposits = await _bybitService.GetDepositHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
-            _logger.LogInformation("SyncBybitOrders: received {Count} deposits from Bybit for account {AccountId}: {TxIds}",
-                deposits.Count, accountId, string.Join(", ", deposits.Select(d => $"{d.TxId}({d.Status})")));
+            if (deposits.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: received {Count} deposits from Bybit for account {AccountId}: {TxIds}",
+                    deposits.Count, accountId, string.Join(", ", deposits.Select(d => $"{d.TxId}({d.Status})")));
 
             foreach (var deposit in deposits)
             {
                 if (!await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken))
                     hasFailures = true;
             }
-            _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
+            if (deposits.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
 
             var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
-            _logger.LogInformation("SyncBybitOrders: received {Count} withdrawals from Bybit for account {AccountId}: {TxIds}",
-                withdrawals.Count, accountId, string.Join(", ", withdrawals.Select(w => $"{w.TxId}({w.Status})")));
+            if (withdrawals.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: received {Count} withdrawals from Bybit for account {AccountId}: {TxIds}",
+                    withdrawals.Count, accountId, string.Join(", ", withdrawals.Select(w => $"{w.TxId}({w.Status})")));
 
             foreach (var withdrawal in withdrawals)
             {
                 if (!await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken))
                     hasFailures = true;
             }
-            _logger.LogInformation("SyncBybitOrders: finished processing {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
+            if (withdrawals.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: finished processing {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
 
             var internalTransfers = await _bybitService.GetInternalTransferHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
-            _logger.LogInformation("SyncBybitOrders: received {Count} internal transfers from Bybit for account {AccountId}: {TransferIds}",
-                internalTransfers.Count, accountId, string.Join(", ", internalTransfers.Select(t => t.TransferId)));
+            if (internalTransfers.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: received {Count} internal transfers from Bybit for account {AccountId}: {TransferIds}",
+                    internalTransfers.Count, accountId, string.Join(", ", internalTransfers.Select(t => t.TransferId)));
 
             foreach (var internalTransfer in internalTransfers)
             {
                 if (!await _orderSyncService.ProcessInternalTransferAsync(internalTransfer, account, userId, cancellationToken))
                     hasFailures = true;
             }
-            _logger.LogInformation("SyncBybitOrders: finished processing {Count} internal transfers for account {AccountId}", internalTransfers.Count, accountId);
+            if (internalTransfers.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: finished processing {Count} internal transfers for account {AccountId}", internalTransfers.Count, accountId);
 
             if (hasFailures)
             {
@@ -259,8 +261,9 @@ public class SyncBybitOrders
             var region = BybitEndpoints.Parse(integration.Region);
             var universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
                 apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime);
-            _logger.LogInformation("SyncBybitOrders: received {Count} universal transfers from Bybit for user {UserId}: {TransferIds}",
-                universalTransfers.Count, userId, string.Join(", ", universalTransfers.Select(t => t.TransferId)));
+            if (universalTransfers.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: received {Count} universal transfers from Bybit for user {UserId}: {TransferIds}",
+                    universalTransfers.Count, userId, string.Join(", ", universalTransfers.Select(t => t.TransferId)));
 
             var mainAccount = await _context.Accounts
                 .Include(a => a.CryptoAssets)
@@ -278,7 +281,8 @@ public class SyncBybitOrders
                 }
             }
 
-            _logger.LogInformation("SyncBybitOrders: finished processing {Count} universal transfers for user {UserId}", universalTransfers.Count, userId);
+            if (universalTransfers.Count > 0)
+                _logger.LogInformation("SyncBybitOrders: finished processing {Count} universal transfers for user {UserId}", universalTransfers.Count, userId);
             if (!hasFailures)
             {
                 integration.MarkSynced(DateTime.UtcNow);

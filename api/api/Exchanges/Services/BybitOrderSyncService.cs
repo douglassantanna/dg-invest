@@ -616,7 +616,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return accountType.Equals("FUND", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(memberId);
 
         return account.AccountType == EAccountType.Exchange
-            && accountType.Equals("UNIFIED", StringComparison.OrdinalIgnoreCase)
+            && (accountType.Equals("UNIFIED", StringComparison.OrdinalIgnoreCase)
+                || accountType.Equals("FUND", StringComparison.OrdinalIgnoreCase))
             && string.Equals(account.ExternalId, memberId, StringComparison.Ordinal);
     }
 

@@ -1,0 +1,31 @@
+@bybit-host = https://api.bybit.com
+@api-key = YOUR_BYBIT_API_KEY
+@api-secret = YOUR_BYBIT_API_SECRET
+@timestamp = {{$timestamp}}
+@recv-window = 60000
+@limit = 50
+@start-time = 0
+@signature = YOUR_BYBIT_SIGNATURE
+
+# Replace @api-key, @api-secret, and @signature before sending.
+# Sign the exact query string in alphabetical order:
+# GET /v5/asset/transfer/query-universal-transfer-list
+# query: limit={{limit}}&startTime={{start-time}}
+# payload: {{timestamp}}{{api-key}}{{recv-window}}limit={{limit}}&startTime={{start-time}}
+# signature: HMAC-SHA256(payload, api-secret), lowercase hexadecimal
+
+### Main Funding -> subaccount Funding or Unified
+GET {{bybit-host}}/v5/asset/transfer/query-universal-transfer-list?limit={{limit}}&startTime={{start-time}}
+X-BAPI-API-KEY: {{api-key}}
+X-BAPI-SIGN: {{signature}}
+X-BAPI-SIGN-TYPE: 2
+X-BAPI-TIMESTAMP: {{timestamp}}
+X-BAPI-RECV-WINDOW: {{recv-window}}
+
+### Same-UID Funding <-> Unified transfers
+GET {{bybit-host}}/v5/asset/transfer/query-inter-transfer-list?limit={{limit}}&startTime={{start-time}}
+X-BAPI-API-KEY: {{api-key}}
+X-BAPI-SIGN: {{signature}}
+X-BAPI-SIGN-TYPE: 2
+X-BAPI-TIMESTAMP: {{timestamp}}
+X-BAPI-RECV-WINDOW: {{recv-window}}

@@ -151,6 +151,34 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessInternalTransferAsync_WhenFundTransferTargetsSubaccount_ShouldCreateTransferInLedgerTransaction()
+    {
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        var transfer = new BybitInternalTransferRow
+        {
+            TransferId = "transfer-fund-1",
+            Coin = "USDC",
+            Amount = "10",
+            FromAccountType = "FUND",
+            ToAccountType = "FUND",
+            ToMemberId = "UID-001",
+            Timestamp = "1790000000000"
+        };
+
+        var result = await sut.ProcessInternalTransferAsync(transfer, account, 1, CancellationToken.None);
+
+        result.Should().BeTrue();
+        account.Balance.Should().Be(10m);
+        var transaction = await context.AccountTransactions.SingleAsync();
+        transaction.TransactionType.Should().Be(EAccountTransactionType.TransferIn);
+        transaction.ExchangeTransactionId.Should().Be($"bybit-internal-transfer-{transfer.TransferId}-in-{account.Id}");
+    }
+
+    [Fact]
     public async Task ProcessInternalTransferAsync_WhenCalledTwice_ShouldNotDuplicateTransaction()
     {
         using var context = CreateContext();
