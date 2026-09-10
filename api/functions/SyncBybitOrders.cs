@@ -76,6 +76,8 @@ public class SyncBybitOrders
             {
                 await SyncAccountOrdersAsync(account, cancellationToken);
             }
+
+            await SyncUniversalTransfersAsync(accounts, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -232,6 +234,56 @@ public class SyncBybitOrders
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "SyncBybitOrders: failed to fetch initial cash balance for account {AccountId}", account.Id);
+        }
+    }
+
+    private async Task SyncUniversalTransfersAsync(IReadOnlyCollection<Account> exchangeAccounts, CancellationToken cancellationToken)
+    {
+        foreach (var accountsByUser in exchangeAccounts.GroupBy(account => account.UserId))
+        {
+            var userId = accountsByUser.Key;
+            var integration = await _context.ExchangeIntegrations
+                .FirstOrDefaultAsync(i => i.UserId == userId && i.Exchange == "Bybit" && i.Enabled, cancellationToken);
+            if (integration is null)
+                continue;
+
+            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, null, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, null, "api-secret", cancellationToken);
+            if (apiKey is null || apiSecret is null || apiKey.IsUnavailable || apiSecret.IsUnavailable
+                || string.IsNullOrWhiteSpace(apiKey.Value) || string.IsNullOrWhiteSpace(apiSecret.Value))
+                continue;
+
+            var startTime = integration.LastSyncAt is { } lastSyncAt
+                ? new DateTimeOffset(lastSyncAt, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                : (long?)null;
+            var region = BybitEndpoints.Parse(integration.Region);
+            var universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
+                apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime);
+            _logger.LogInformation("SyncBybitOrders: received {Count} universal transfers from Bybit for user {UserId}: {TransferIds}",
+                universalTransfers.Count, userId, string.Join(", ", universalTransfers.Select(t => t.TransferId)));
+
+            var mainAccount = await _context.Accounts
+                .Include(a => a.CryptoAssets)
+                    .ThenInclude(ca => ca.Transactions)
+                .FirstOrDefaultAsync(a => a.UserId == userId && a.AccountType == EAccountType.Manual && a.Name == "main", cancellationToken);
+            var candidateAccounts = accountsByUser.Append(mainAccount).Where(account => account is not null).Cast<Account>().ToList();
+            var hasFailures = false;
+
+            foreach (var transfer in universalTransfers)
+            {
+                foreach (var account in candidateAccounts)
+                {
+                    if (!await _orderSyncService.ProcessInternalTransferAsync(transfer, account, userId, cancellationToken))
+                        hasFailures = true;
+                }
+            }
+
+            _logger.LogInformation("SyncBybitOrders: finished processing {Count} universal transfers for user {UserId}", universalTransfers.Count, userId);
+            if (!hasFailures)
+            {
+                integration.MarkSynced(DateTime.UtcNow);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
         }
     }
 }
