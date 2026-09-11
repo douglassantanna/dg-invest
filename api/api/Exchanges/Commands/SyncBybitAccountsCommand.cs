@@ -85,7 +85,8 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
             var existingBybitAccounts = await _context.Accounts
                 .Where(a => a.UserId == request.UserId && !a.IsDeleted
-                         && a.AccountType == EAccountType.Exchange && a.Exchange == "Bybit" && a.ExternalId != null)
+                         && a.AccountType == EAccountType.Exchange && a.Exchange == "Bybit" && a.ExternalId != null
+                         && a.Id != integration.MasterAccountId)
                 .ToListAsync(cancellationToken);
 
             var existingByUid = existingBybitAccounts.ToDictionary(a => a.ExternalId!, a => a);
@@ -95,10 +96,18 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             int matched = 0;
             int disabled = 0;
 
-            var mainAccount = await _context.Accounts
-                .SingleOrDefaultAsync(a => a.UserId == request.UserId && a.AccountType == EAccountType.Manual && a.Name == "main", cancellationToken);
-            if (mainAccount is not null)
-                await PopulateInitialCashBalanceAsync(mainAccount, apiKey.Value!, apiSecret.Value!, region, "FUND", null, cancellationToken);
+            var masterAccount = integration.MasterAccountId is { } masterAccountId
+                ? await _context.Accounts.SingleOrDefaultAsync(a => a.Id == masterAccountId && !a.IsDeleted, cancellationToken)
+                : null;
+            if (masterAccount is not null)
+                await PopulateInitialCashBalanceAsync(masterAccount, apiKey.Value!, apiSecret.Value!, region, "FUND", null, cancellationToken);
+            else
+            {
+                var legacyMainAccount = await _context.Accounts
+                    .SingleOrDefaultAsync(a => a.UserId == request.UserId && a.AccountType == EAccountType.Manual && a.Name == "main", cancellationToken);
+                if (legacyMainAccount is not null)
+                    await PopulateInitialCashBalanceAsync(legacyMainAccount, apiKey.Value!, apiSecret.Value!, region, "FUND", null, cancellationToken);
+            }
 
             foreach (var member in subMembers)
             {

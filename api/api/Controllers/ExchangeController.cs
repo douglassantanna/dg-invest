@@ -85,7 +85,7 @@ public class ExchangeController : ControllerBase
         if (userId == null)
             return Unauthorized(new Response("Invalid user ID", false));
 
-        var result = await _mediator.Send(new SaveBybitIntegrationCredentialsCommand(userId.Value, request.ApiKey, request.ApiSecret, request.Region));
+        var result = await _mediator.Send(new SaveBybitIntegrationCredentialsCommand(userId.Value, request.ApiKey, request.ApiSecret, request.Region, request.MasterUid));
         if (!result.IsSuccess)
             return Failure(result);
 
@@ -275,7 +275,7 @@ public record SaveBybitCredentialsRequest(
     public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
 }
 
-public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret, BybitRegion Region = BybitRegion.Global);
+public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret, string? MasterUid = null, BybitRegion Region = BybitRegion.Global);
 
 public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
 {

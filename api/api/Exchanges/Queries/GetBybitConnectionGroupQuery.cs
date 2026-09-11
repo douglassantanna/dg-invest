@@ -28,7 +28,8 @@ public record BybitSubaccountRowDto(
     string? MaskedApiKey,
     string WebhookUrl,
     string? LastVerifiedAt,
-    bool IsEnabled)
+    bool IsEnabled,
+    bool IsMaster = false)
 {
     public string? BybitUid => ExternalId;
 }
@@ -119,13 +120,14 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
                 MaskedApiKey: maskedApiKey,
                 WebhookUrl: webhookUrl,
                 LastVerifiedAt: lastVerifiedAt,
-                IsEnabled: syncStatus?.IsEnabled ?? false));
+                IsEnabled: syncStatus?.IsEnabled ?? false,
+                IsMaster: account.Id == integration?.MasterAccountId));
         }
 
         var group = new BybitConnectionGroupDto(
             Id: "bybit-main",
             Name: "Main account (Bybit login)",
-            SubaccountCount: rows.Count,
+            SubaccountCount: rows.Count(row => !row.IsMaster),
             MaxSubaccounts: maxSubaccounts,
             Subaccounts: rows);
 

@@ -23,9 +23,9 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         var keyVault = new Mock<IKeyVaultService>();
         keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
-        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object));
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object), context);
 
-        var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "api-key", "api-secret", BybitRegion.Eu), CancellationToken.None);
+        var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "api-key", "api-secret", BybitRegion.Eu, "10001"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         var integration = await context.ExchangeIntegrations.SingleAsync();
@@ -33,6 +33,10 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         integration.Status.Should().Be("Configured");
         integration.Enabled.Should().BeTrue();
         integration.Region.Should().Be("Eu");
+        integration.MasterAccountId.Should().NotBeNull();
+        var masterAccount = await context.Accounts.SingleAsync();
+        masterAccount.ExternalId.Should().Be("10001");
+        masterAccount.AccountType.Should().Be(EAccountType.Exchange);
         keyVault.Verify(x => x.SetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(1, "api-key"), "api-key"), Times.Once);
         keyVault.Verify(x => x.SetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(1, "api-secret"), "api-secret"), Times.Once);
     }
@@ -50,9 +54,9 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         var calls = 0;
         keyVault.Setup(x => x.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((_, _) => ++calls == failingCall ? Task.FromException(new Exception("failed")) : Task.CompletedTask);
-        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object));
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object), context);
 
-        var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "key", "secret", BybitRegion.Global), CancellationToken.None);
+        var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "key", "secret", BybitRegion.Global, "10001"), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Contain("recovery may be required");

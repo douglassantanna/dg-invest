@@ -34,7 +34,7 @@
         <div>
           <h2 class="font-semibold text-gray-900 dark:text-gray-100">Connection setup</h2>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            These discovery credentials stay in server-side Key Vault after save.
+            Start with the Bybit master account. Its credentials stay in server-side Key Vault after save.
           </p>
         </div>
       </div>
@@ -51,6 +51,12 @@
             class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/30 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
         </div>
         <div>
+          <label for="bybit-master-uid" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Master Bybit UID</label>
+          <input id="bybit-master-uid" name="masterUid" [(ngModel)]="masterUid" required inputmode="numeric" autocomplete="off"
+            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/30 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">This links the master Bybit account separately from the manual main portfolio.</p>
+        </div>
+        <div>
           <label for="bybit-region" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Region</label>
           <select id="bybit-region" name="region" [(ngModel)]="region"
             class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/30 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
@@ -61,7 +67,7 @@
             Choose <span class="font-medium">EU</span> if your Bybit account is registered under the EU entity.
           </p>
         </div>
-        <button type="submit" [disabled]="saving || discovering || !apiKey || !apiSecret"
+        <button type="submit" [disabled]="saving || discovering || !apiKey || !apiSecret || !masterUid"
           class="w-full rounded-lg bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
           {{ saving ? 'Saving...' : discovering ? 'Discovering accounts...' : 'Connect Bybit' }}
         </button>
@@ -123,6 +129,9 @@
                       <a [routerLink]="['/exchanges', 'bybit', account.accountId]" class="font-semibold text-gray-900 hover:text-yellow-700 dark:text-gray-100 dark:hover:text-yellow-400">
                         {{ account.name }}
                       </a>
+                      @if (account.isMaster) {
+                        <span class="ml-2 inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">Master</span>
+                      }
                       <div class="mt-1 font-mono text-xs text-gray-500 dark:text-gray-400">UID {{ account.externalId || 'Not mapped' }}</div>
                     </td>
                     <td class="px-5 py-4">

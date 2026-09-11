@@ -18,4 +18,5 @@ export interface BybitSubaccountRowDto {
   webhookUrl: string;
   lastVerifiedAt: string | null;
   isEnabled: boolean;
+  isMaster: boolean;
 }

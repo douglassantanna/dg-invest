@@ -145,7 +145,7 @@ describe('Exchange management', () => {
     cy.intercept('GET', `${api}/bybit/sync-status`, response([])).as('syncStatus');
     cy.intercept('GET', `${api}/bybit/sub-members`, response([])).as('subMembers');
     cy.intercept('POST', `${api}/bybit/integration-credentials`, request => {
-      expect(request.body).to.deep.equal({ apiKey: 'api-key', apiSecret: 'api-secret' });
+      expect(request.body).to.deep.equal({ apiKey: 'api-key', apiSecret: 'api-secret', masterUid: '10001', region: 'Global' });
       request.reply(response(null, 'Integration credentials saved successfully'));
     }).as('saveIntegrationCredentials');
     cy.intercept('POST', `${api}/bybit/sync-accounts`, response(null, 'Account discovery complete. 1 found, 1 created.')).as('discoverAccounts');
@@ -159,10 +159,12 @@ describe('Exchange management', () => {
 
     cy.get('#bybit-api-key').type('api-key');
     cy.get('#bybit-api-secret').type('api-secret');
+    cy.get('#bybit-master-uid').type('10001');
     cy.contains('button', 'Connect Bybit').click();
     cy.wait('@saveIntegrationCredentials');
     cy.get('#bybit-api-key').should('have.value', '');
     cy.get('#bybit-api-secret').should('have.value', '');
+    cy.get('#bybit-master-uid').should('have.value', '');
     cy.wait('@discoverAccounts');
     cy.wait('@updatedGroups');
     cy.wait('@updatedStatuses');
@@ -188,10 +190,12 @@ describe('Exchange management', () => {
 
     cy.get('#bybit-api-key').type('api-key');
     cy.get('#bybit-api-secret').type('api-secret');
+    cy.get('#bybit-master-uid').type('10001');
     cy.contains('button', 'Connect Bybit').click();
     cy.wait('@saveIntegrationCredentials');
     cy.get('#bybit-api-key').should('have.value', '');
     cy.get('#bybit-api-secret').should('have.value', '');
+    cy.get('#bybit-master-uid').should('have.value', '');
     cy.contains('Key Vault is temporarily unavailable').should('be.visible');
   });
 
@@ -212,6 +216,7 @@ describe('Exchange management', () => {
 
     cy.get('#bybit-api-key').type('bad-key');
     cy.get('#bybit-api-secret').type('bad-secret');
+    cy.get('#bybit-master-uid').type('10001');
     cy.contains('button', 'Connect Bybit').click();
     cy.wait('@saveIntegrationCredentials');
     cy.wait('@discoverAccounts');
@@ -280,7 +285,7 @@ describe('Exchange management', () => {
     ]);
 
     cy.intercept('POST', `${api}/bybit/integration-credentials`, request => {
-      expect(request.body).to.deep.equal({ apiKey: 'new-key', apiSecret: 'new-secret' });
+      expect(request.body).to.deep.equal({ apiKey: 'new-key', apiSecret: 'new-secret', masterUid: '10001', region: 'Global' });
       request.reply(response(null, 'Integration credentials saved successfully'));
     }).as('saveIntegrationCredentials');
     cy.intercept('POST', `${api}/bybit/sync-accounts`, response(null, 'Account discovery complete. 1 found, 1 created.')).as('discoverAccounts');
@@ -296,6 +301,7 @@ describe('Exchange management', () => {
 
     cy.get('#bybit-api-key').type('new-key');
     cy.get('#bybit-api-secret').type('new-secret');
+    cy.get('#bybit-master-uid').type('10001');
     cy.contains('button', 'Connect Bybit').click();
     cy.wait('@saveIntegrationCredentials');
     cy.wait('@discoverAccounts');
