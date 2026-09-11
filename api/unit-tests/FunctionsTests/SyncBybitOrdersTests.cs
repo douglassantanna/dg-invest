@@ -406,6 +406,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         orderSyncService.Verify(x => x.ProcessInternalTransferAsync(It.IsAny<BybitInternalTransferRow>(), It.IsAny<Account>(), 1, It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Null(integration.LastSyncAt);
     }
 
     [Fact]

@@ -317,6 +317,7 @@ public class SyncBybitOrders
                 var destinationAccount = FindTransferAccount(candidateAccounts, transfer.ToAccountType, transfer.ToMemberId);
                 if (sourceAccount is null || destinationAccount is null)
                 {
+                    hasFailures = true;
                     _logger.LogWarning("SyncBybitOrders: skipped universal transfer {TransferId}; source account {SourceMemberId} or destination account {DestinationMemberId} is not linked",
                         transfer.TransferId, transfer.FromMemberId, transfer.ToMemberId);
                     continue;
@@ -324,6 +325,7 @@ public class SyncBybitOrders
 
                 if (!readyAccountIds.Contains(sourceAccount.Id) || !readyAccountIds.Contains(destinationAccount.Id))
                 {
+                    hasFailures = true;
                     _logger.LogWarning("SyncBybitOrders: skipped universal transfer {TransferId}; source account {SourceAccountId} or destination account {DestinationAccountId} is not credential-ready",
                         transfer.TransferId, sourceAccount.Id, destinationAccount.Id);
                     continue;
