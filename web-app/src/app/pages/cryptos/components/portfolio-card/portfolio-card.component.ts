@@ -14,4 +14,5 @@ export class PortfolioCardComponent {
   totalMarketValue = input.required<number>();
   investmentChangePercent = input.required<number>();
   totalDeposited = input.required<number>();
+  isBybitCombinedWallet = input<boolean>(false);
 }

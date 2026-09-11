@@ -38,6 +38,7 @@ export interface AccountDto {
   pageSize: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  isBybitCombinedWallet: boolean;
 }
 
 export interface UserDto {
