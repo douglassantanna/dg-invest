@@ -297,19 +297,42 @@ public class SyncBybitOrders
                 }
             }
 
-            var mainAccount = await _context.Accounts
-                .Include(a => a.CryptoAssets)
-                    .ThenInclude(ca => ca.Transactions)
-                .FirstOrDefaultAsync(a => a.UserId == userId && a.AccountType == EAccountType.Manual && a.Name == "main", cancellationToken);
-            var candidateAccounts = accountsByUser.Append(mainAccount).Where(account => account is not null).Cast<Account>().ToList();
+            var candidateAccounts = accountsByUser
+                .Where(account => account.Enabled && !account.IsDeleted)
+                .ToList();
+            var readyAccountIds = new HashSet<int>();
+            foreach (var account in candidateAccounts)
+            {
+                var accountApiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, account.Id, "api-key", cancellationToken);
+                var accountApiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, account.Id, "api-secret", cancellationToken);
+                if (accountApiKey.IsFound && !string.IsNullOrWhiteSpace(accountApiKey.Value)
+                    && accountApiSecret.IsFound && !string.IsNullOrWhiteSpace(accountApiSecret.Value))
+                    readyAccountIds.Add(account.Id);
+            }
             var hasFailures = false;
 
             foreach (var transfer in universalTransfers)
             {
-                foreach (var account in candidateAccounts)
+                var sourceAccount = FindTransferAccount(candidateAccounts, transfer.FromAccountType, transfer.FromMemberId);
+                var destinationAccount = FindTransferAccount(candidateAccounts, transfer.ToAccountType, transfer.ToMemberId);
+                if (sourceAccount is null || destinationAccount is null)
                 {
-                    if (!await _orderSyncService.ProcessInternalTransferAsync(transfer, account, userId, cancellationToken))
-                        hasFailures = true;
+                    _logger.LogWarning("SyncBybitOrders: skipped universal transfer {TransferId}; source account {SourceMemberId} or destination account {DestinationMemberId} is not linked",
+                        transfer.TransferId, transfer.FromMemberId, transfer.ToMemberId);
+                    continue;
+                }
+
+                if (!readyAccountIds.Contains(sourceAccount.Id) || !readyAccountIds.Contains(destinationAccount.Id))
+                {
+                    _logger.LogWarning("SyncBybitOrders: skipped universal transfer {TransferId}; source account {SourceAccountId} or destination account {DestinationAccountId} is not credential-ready",
+                        transfer.TransferId, sourceAccount.Id, destinationAccount.Id);
+                    continue;
+                }
+
+                if (!await _orderSyncService.ProcessInternalTransferAsync(transfer, sourceAccount, userId, cancellationToken)
+                    || !await _orderSyncService.ProcessInternalTransferAsync(transfer, destinationAccount, userId, cancellationToken))
+                {
+                    hasFailures = true;
                 }
             }
 
@@ -322,4 +345,10 @@ public class SyncBybitOrders
             }
         }
     }
+
+    private static Account? FindTransferAccount(IEnumerable<Account> accounts, string accountType, string memberId) =>
+        accounts.FirstOrDefault(account => account.AccountType == EAccountType.Exchange
+            && (accountType.Equals("FUND", StringComparison.OrdinalIgnoreCase)
+                || accountType.Equals("UNIFIED", StringComparison.OrdinalIgnoreCase))
+            && string.Equals(account.ExternalId, memberId, StringComparison.Ordinal));
 }
