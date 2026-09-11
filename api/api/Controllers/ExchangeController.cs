@@ -1,15 +1,11 @@
 using System.Security.Claims;
-using api.AzureKeyVault;
 using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
 using api.Exchanges.Queries;
-using api.Exchanges.Services;
-using api.Data;
 using api.Shared;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Controllers;
 
@@ -19,17 +15,8 @@ namespace api.Controllers;
 public class ExchangeController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IBybitService _bybitService;
-    private readonly IKeyVaultService _keyVaultService;
-    private readonly DataContext _context;
 
-    public ExchangeController(IMediator mediator, IBybitService bybitService, IKeyVaultService keyVaultService, DataContext context)
-    {
-        _mediator = mediator;
-        _bybitService = bybitService;
-        _keyVaultService = keyVaultService;
-        _context = context;
-    }
+    public ExchangeController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet("accounts")]
     public async Task<ActionResult<Response>> GetExchangeAccounts()
@@ -117,31 +104,6 @@ public class ExchangeController : ControllerBase
             return Failure(result);
 
         return Ok(result);
-    }
-
-    // Temporary diagnostic endpoint. Remove after Bybit transfer mapping is verified.
-    [HttpGet("bybit/internal-transfers")]
-    public async Task<ActionResult<Response>> GetBybitInternalTransfers([FromQuery] int limit = 50, [FromQuery] long? startTime = null)
-    {
-        var userId = GetUserId();
-        if (userId == null)
-            return Unauthorized(new Response("Invalid user ID", false));
-
-        var integration = await _context.ExchangeIntegrations
-            .SingleOrDefaultAsync(x => x.UserId == userId.Value && x.Exchange == "Bybit", HttpContext.RequestAborted);
-        if (integration is null || !integration.Enabled)
-            return BadRequest(new Response("Bybit integration credentials not found or disconnected", false, 400));
-
-        var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, userId.Value, null, "api-key", HttpContext.RequestAborted);
-        var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, userId.Value, null, "api-secret", HttpContext.RequestAborted);
-        if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503));
-        if (string.IsNullOrWhiteSpace(apiKey.Value) || string.IsNullOrWhiteSpace(apiSecret.Value))
-            return BadRequest(new Response("Bybit integration credentials not found", false, 400));
-
-        var transfers = await _bybitService.GetInternalTransferHistoryAsync(
-            apiKey.Value, apiSecret.Value, BybitEndpoints.Parse(integration.Region), limit, startTime);
-        return Ok(new Response("ok", true, transfers));
     }
 
     /// <summary>

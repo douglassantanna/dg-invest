@@ -176,8 +176,24 @@ public class SyncBybitOrders
 
             var internalTransfers = await _bybitService.GetInternalTransferHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
             if (internalTransfers.Count > 0)
+            {
                 _logger.LogInformation("SyncBybitOrders: received {Count} internal transfers from Bybit for account {AccountId}: {TransferIds}",
                     internalTransfers.Count, accountId, string.Join(", ", internalTransfers.Select(t => t.TransferId)));
+                foreach (var transfer in internalTransfers)
+                {
+                    _logger.LogInformation(
+                        "SyncBybitOrders: internal transfer {TransferId}: {Amount} {Coin}, from {FromAccountType}/{FromMemberId} to {ToAccountType}/{ToMemberId}, timestamp {Timestamp}, account {AccountId}",
+                        transfer.TransferId,
+                        transfer.Amount,
+                        transfer.Coin,
+                        transfer.FromAccountType,
+                        string.IsNullOrWhiteSpace(transfer.FromMemberId) ? "main" : transfer.FromMemberId,
+                        transfer.ToAccountType,
+                        string.IsNullOrWhiteSpace(transfer.ToMemberId) ? "main" : transfer.ToMemberId,
+                        transfer.Timestamp,
+                        accountId);
+                }
+            }
 
             foreach (var internalTransfer in internalTransfers)
             {
@@ -262,8 +278,24 @@ public class SyncBybitOrders
             var universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
                 apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime);
             if (universalTransfers.Count > 0)
+            {
                 _logger.LogInformation("SyncBybitOrders: received {Count} universal transfers from Bybit for user {UserId}: {TransferIds}",
                     universalTransfers.Count, userId, string.Join(", ", universalTransfers.Select(t => t.TransferId)));
+                foreach (var transfer in universalTransfers)
+                {
+                    _logger.LogInformation(
+                        "SyncBybitOrders: universal transfer {TransferId}: {Amount} {Coin}, from {FromAccountType}/{FromMemberId} to {ToAccountType}/{ToMemberId}, timestamp {Timestamp}, user {UserId}",
+                        transfer.TransferId,
+                        transfer.Amount,
+                        transfer.Coin,
+                        transfer.FromAccountType,
+                        string.IsNullOrWhiteSpace(transfer.FromMemberId) ? "main" : transfer.FromMemberId,
+                        transfer.ToAccountType,
+                        string.IsNullOrWhiteSpace(transfer.ToMemberId) ? "main" : transfer.ToMemberId,
+                        transfer.Timestamp,
+                        userId);
+                }
+            }
 
             var mainAccount = await _context.Accounts
                 .Include(a => a.CryptoAssets)
