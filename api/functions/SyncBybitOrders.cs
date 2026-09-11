@@ -136,8 +136,14 @@ public class SyncBybitOrders
             var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
             var hasFailures = false;
             var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
-            _logger.LogInformation("SyncBybitOrders: fetched {OrderCount} orders ({FilledOrderCount} filled) for user {UserId}, account {AccountId}, UID {ExternalId}, startTime {StartTime}",
-                orders.Count, filledOrders.Count, userId, accountId, account.ExternalId, startTime);
+            _logger.LogInformation("SyncBybitOrders: fetched {OrderCount} orders ({FilledOrderCount} filled) for user {UserId}, account {AccountId}, UID {ExternalId}, startTime {StartTime}, statuses {Statuses}",
+                orders.Count,
+                filledOrders.Count,
+                userId,
+                accountId,
+                account.ExternalId,
+                startTime,
+                string.Join(", ", orders.Select(order => $"{order.OrderId}:{order.OrderStatus}")));
 
             if (orders.Count > 0)
             {
