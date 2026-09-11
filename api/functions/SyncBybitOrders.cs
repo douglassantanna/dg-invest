@@ -285,8 +285,36 @@ public class SyncBybitOrders
                 ? new DateTimeOffset(lastSyncAt, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
             var region = BybitEndpoints.Parse(integration.Region);
-            var universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
-                apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime);
+            List<BybitInternalTransferRow> universalTransfers;
+            try
+            {
+                universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
+                    apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime);
+            }
+            catch (BybitApiException ex)
+            {
+                integration.MarkError();
+                await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogError(ex,
+                    "SyncBybitOrders: universal transfer request rejected for user {UserId}; region {Region}, testnet {UseTestnet}, error {RetCode}: {RetMsg}",
+                    userId,
+                    region,
+                    _configuration.GetValue<bool>("BybitSettings:UseTestnet"),
+                    ex.RetCode,
+                    ex.RetMsg);
+                continue;
+            }
+            catch (Exception ex)
+            {
+                integration.MarkError();
+                await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogError(ex,
+                    "SyncBybitOrders: universal transfer request failed for user {UserId}; region {Region}, testnet {UseTestnet}",
+                    userId,
+                    region,
+                    _configuration.GetValue<bool>("BybitSettings:UseTestnet"));
+                continue;
+            }
             if (universalTransfers.Count > 0)
             {
                 _logger.LogInformation("SyncBybitOrders: received {Count} universal transfers from Bybit for user {UserId}: {TransferIds}",
