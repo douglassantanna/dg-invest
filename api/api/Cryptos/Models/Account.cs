@@ -37,6 +37,7 @@ public class Account : Entity
     }
 
     public void SetExternalId(string externalId) => ExternalId = NormalizeExternalId(externalId);
+    public void SetName(string name) => Name = name.Trim();
     public void SetExchange(string exchange) => Exchange = exchange;
     public void ConfigureExchange(string exchange, string externalId)
     {

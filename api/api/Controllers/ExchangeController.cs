@@ -247,6 +247,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("bybit/name/{accountId}")]
+    public async Task<ActionResult<Response>> RenameBybitAccount(int accountId, [FromBody] RenameBybitAccountRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new RenameBybitAccountCommand(userId.Value, accountId, request.Name));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -276,6 +290,7 @@ public record SaveBybitCredentialsRequest(
 }
 
 public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret, string? MasterUid = null, BybitRegion Region = BybitRegion.Global);
+public record RenameBybitAccountRequest(string Name);
 
 public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
 {

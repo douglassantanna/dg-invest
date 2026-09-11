@@ -30,12 +30,14 @@ export class BybitAccountComponent implements OnInit {
   apiKey = '';
   apiSecret = '';
   webhookSecret = '';
+  nickname = '';
   region: 'Global' | 'Eu' = 'Global';
   selectedExternalId = '';
   loading = true;
   saving = false;
   testing = false;
   toggling = false;
+  savingNickname = false;
   mapping = false;
   removing = false;
   loadError = '';
@@ -73,6 +75,7 @@ export class BybitAccountComponent implements OnInit {
         return;
       }
       this.account = detail.data;
+      this.nickname = detail.data.accountName;
       this.transactions = transactions.data ?? [];
       this.logs = logs.data ?? [];
       this.subMembers = subMembers.data ?? [];
@@ -131,6 +134,23 @@ export class BybitAccountComponent implements OnInit {
       error: error => {
         this.toggling = false;
         this.toast(this.errorMessage(error, 'Could not update synchronization'));
+      },
+    });
+  }
+
+  saveNickname(): void {
+    const name = this.nickname.trim();
+    if (this.savingNickname || !name || name === this.account?.accountName) return;
+    this.savingNickname = true;
+    this.exchangeService.renameBybitAccount(this.accountId, name).subscribe({
+      next: response => {
+        this.savingNickname = false;
+        this.toast(response.message);
+        if (response.isSuccess) this.load();
+      },
+      error: error => {
+        this.savingNickname = false;
+        this.toast(this.errorMessage(error, 'Could not save account nickname'));
       },
     });
   }

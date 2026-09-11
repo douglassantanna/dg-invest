@@ -79,4 +79,8 @@ export class ExchangeService {
   toggleBybitAccount(accountId: number): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/toggle/${accountId}`, {});
   }
+
+  renameBybitAccount(accountId: number, name: string): Observable<Response<any>> {
+    return this.http.put<Response<any>>(`${url}/bybit/name/${accountId}`, { name });
+  }
 }
