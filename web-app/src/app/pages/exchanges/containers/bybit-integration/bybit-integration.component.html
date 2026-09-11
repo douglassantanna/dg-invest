@@ -73,6 +73,14 @@
           {{ discovering ? 'Discovering...' : 'Discover accounts again' }}
         </button>
       }
+
+      <div class="mt-5 border-t border-dashed border-yellow-300 pt-4 dark:border-yellow-700">
+        <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">Temporary diagnostic</div>
+        <button type="button" (click)="loadInternalTransfers()" [disabled]="loadingInternalTransfers"
+          class="w-full rounded-lg border border-yellow-400 px-4 py-2 text-sm font-medium text-yellow-800 hover:bg-yellow-50 disabled:opacity-50 dark:border-yellow-600 dark:text-yellow-300 dark:hover:bg-yellow-900/20">
+          {{ loadingInternalTransfers ? 'Loading transfers...' : 'Load Bybit internal transfers' }}
+        </button>
+      </div>
     </div>
 
     <div class="min-w-0 space-y-5">
@@ -150,6 +158,39 @@
           </div>
         }
       </section>
+
+      @if (internalTransfers.length > 0) {
+        <section class="overflow-hidden rounded-2xl border border-yellow-300 bg-yellow-50/40 dark:border-yellow-700 dark:bg-yellow-900/10">
+          <div class="border-b border-yellow-200 p-5 dark:border-yellow-800">
+            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Raw Bybit internal transfers</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Temporary diagnostic output from the integration credentials.</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-yellow-200 text-left text-xs uppercase tracking-wider text-gray-500 dark:border-yellow-800 dark:text-gray-400">
+                  <th class="px-5 py-3 font-medium">Transfer</th>
+                  <th class="px-5 py-3 font-medium">Amount</th>
+                  <th class="px-5 py-3 font-medium">From</th>
+                  <th class="px-5 py-3 font-medium">To</th>
+                  <th class="px-5 py-3 font-medium">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (transfer of internalTransfers; track transfer.transferId) {
+                  <tr class="border-b border-yellow-100 last:border-0 dark:border-yellow-900/50">
+                    <td class="px-5 py-3 font-mono text-xs text-gray-700 dark:text-gray-300">{{ transfer.transferId }}</td>
+                    <td class="px-5 py-3 text-gray-900 dark:text-gray-100">{{ transfer.amount }} {{ transfer.coin }}</td>
+                    <td class="px-5 py-3 text-xs text-gray-600 dark:text-gray-400">{{ transfer.fromAccountType }} / {{ transfer.fromMemberId || 'main' }}</td>
+                    <td class="px-5 py-3 text-xs text-gray-600 dark:text-gray-400">{{ transfer.toAccountType }} / {{ transfer.toMemberId || 'main' }}</td>
+                    <td class="px-5 py-3 text-xs text-gray-600 dark:text-gray-400">{{ transfer.timestamp }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
     </div>
   </section>
 

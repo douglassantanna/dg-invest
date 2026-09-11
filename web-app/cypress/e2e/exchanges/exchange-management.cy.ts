@@ -241,6 +241,28 @@ describe('Exchange management', () => {
     cy.contains('Trading account').should('not.exist');
   });
 
+  it('loads temporary Bybit internal transfer diagnostics', () => {
+    cy.intercept('GET', `${api}/bybit/internal-transfers*`, response([{
+      transferId: 'transfer-debug-1',
+      coin: 'USDC',
+      amount: '10',
+      fromAccountType: 'FUND',
+      toAccountType: 'FUND',
+      fromMemberId: '',
+      toMemberId: '123456',
+      timestamp: '1790000000000',
+    }])).as('internalTransfers');
+    visitBybit();
+
+    cy.contains('button', 'Load Bybit internal transfers').click();
+    cy.wait('@internalTransfers');
+
+    cy.contains('Raw Bybit internal transfers').should('be.visible');
+    cy.contains('transfer-debug-1').should('be.visible');
+    cy.contains('FUND / main').should('be.visible');
+    cy.contains('FUND / 123456').should('be.visible');
+  });
+
   it('reconnects with different credentials and replaces discovered accounts', () => {
     cy.intercept('POST', `${api}/bybit/disconnect`, response(null, 'Bybit integration disconnected')).as('disconnect');
     visitBybit();

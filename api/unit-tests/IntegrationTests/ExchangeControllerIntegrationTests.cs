@@ -72,6 +72,22 @@ public class ExchangeControllerIntegrationTests
 
         await AssertIntegrationCredentialsAsync(userId);
 
+        _fixture.Factory.Bybit.InternalTransfers.Clear();
+        _fixture.Factory.Bybit.InternalTransfers.Add(new BybitInternalTransferRow
+        {
+            TransferId = "debug-transfer-1",
+            Coin = "USDC",
+            Amount = "10",
+            FromAccountType = "FUND",
+            ToAccountType = "FUND",
+            FromMemberId = "",
+            ToMemberId = "integration-uid-1",
+            Timestamp = "1790000000000"
+        });
+        var internalTransfers = await client.GetAsync("/api/Exchange/bybit/internal-transfers?limit=50&startTime=1700000000000");
+        internalTransfers.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await internalTransfers.Content.ReadAsStringAsync()).Should().Contain("debug-transfer-1");
+
         var syncAccounts = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
         syncAccounts.StatusCode.Should().Be(HttpStatusCode.OK);
 

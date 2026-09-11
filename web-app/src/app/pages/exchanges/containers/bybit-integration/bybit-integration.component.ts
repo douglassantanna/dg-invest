@@ -16,6 +16,17 @@ export interface BybitAccountRow extends BybitSubaccountRowDto {
   lastErrorMessage: string | null;
 }
 
+interface BybitInternalTransferRow {
+  transferId: string;
+  coin: string;
+  amount: string;
+  fromAccountType: string;
+  toAccountType: string;
+  fromMemberId: string;
+  toMemberId: string;
+  timestamp: string;
+}
+
 @Component({
   selector: 'app-bybit-integration',
   standalone: true,
@@ -37,6 +48,8 @@ export class BybitIntegrationComponent implements OnInit {
   disconnecting = false;
   loadError = '';
   toastMessage = '';
+  internalTransfers: BybitInternalTransferRow[] = [];
+  loadingInternalTransfers = false;
 
   ngOnInit(): void {
     this.load();
@@ -121,6 +134,26 @@ export class BybitIntegrationComponent implements OnInit {
       },
       complete: () => {
         this.saving = false;
+      },
+    });
+  }
+
+  loadInternalTransfers(): void {
+    if (this.loadingInternalTransfers) return;
+    this.loadingInternalTransfers = true;
+    this.exchangeService.getBybitInternalTransfers().subscribe({
+      next: response => {
+        this.loadingInternalTransfers = false;
+        if (response.isSuccess) {
+          this.internalTransfers = response.data ?? [];
+          this.toast(`Loaded ${this.internalTransfers.length} internal transfer(s)`);
+        } else {
+          this.toast(response.message || 'Could not load internal transfers');
+        }
+      },
+      error: error => {
+        this.loadingInternalTransfers = false;
+        this.toast(this.errorMessage(error, 'Could not load internal transfers'));
       },
     });
   }

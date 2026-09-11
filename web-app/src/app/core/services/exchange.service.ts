@@ -42,6 +42,12 @@ export class ExchangeService {
     return this.http.post<Response<any>>(`${url}/bybit/sync-accounts`, {});
   }
 
+  getBybitInternalTransfers(limit = 50, startTime?: number): Observable<Response<any[]>> {
+    let params = new HttpParams().set('limit', limit);
+    if (startTime !== undefined) params = params.set('startTime', startTime);
+    return this.http.get<Response<any[]>>(`${url}/bybit/internal-transfers`, { params });
+  }
+
   getBybitSubMembers(): Observable<Response<BybitSubMemberDto[]>> {
     return this.http.get<Response<BybitSubMemberDto[]>>(`${url}/bybit/sub-members`);
   }
