@@ -64,7 +64,8 @@ public class SyncBybitOrders
                 .ToListAsync(cancellationToken);
 
             _logger.LogInformation("SyncBybitOrders: found {Count} Bybit accounts", accounts.Count);
-            _logger.LogInformation("SyncBybitOrders: processing accounts {AccountIds}", string.Join(", ", accounts.Select(a => a.Id)));
+            _logger.LogInformation("SyncBybitOrders: processing accounts {Accounts}",
+                string.Join(", ", accounts.Select(a => $"user {a.UserId}/account {a.Id}/UID {a.ExternalId}")));
 
             if (accounts.Count == 0)
             {
@@ -96,13 +97,14 @@ public class SyncBybitOrders
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
             if (syncStatus == null)
             {
-                _logger.LogInformation("SyncBybitOrders: no sync status for account {AccountId} (credentials may predate safeguard), skipping", accountId);
+                _logger.LogInformation("SyncBybitOrders: no sync status for user {UserId}, account {AccountId}, UID {ExternalId} (credentials may predate safeguard), skipping",
+                    userId, accountId, account.ExternalId);
                 return;
             }
 
             if (!syncStatus.IsEnabled)
             {
-                _logger.LogInformation("SyncBybitOrders: account {AccountId} is disabled, skipping", accountId);
+                _logger.LogInformation("SyncBybitOrders: account {AccountId}, UID {ExternalId} is disabled, skipping", accountId, account.ExternalId);
                 return;
             }
 
@@ -119,7 +121,7 @@ public class SyncBybitOrders
 
             if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
             {
-                _logger.LogInformation("SyncBybitOrders: no credentials for account {AccountId} (user {UserId})", accountId, userId);
+                _logger.LogInformation("SyncBybitOrders: no credentials for user {UserId}, account {AccountId}, UID {ExternalId}", userId, accountId, account.ExternalId);
                 return;
             }
 
@@ -133,10 +135,12 @@ public class SyncBybitOrders
 
             var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
             var hasFailures = false;
+            var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
+            _logger.LogInformation("SyncBybitOrders: fetched {OrderCount} orders ({FilledOrderCount} filled) for user {UserId}, account {AccountId}, UID {ExternalId}, startTime {StartTime}",
+                orders.Count, filledOrders.Count, userId, accountId, account.ExternalId, startTime);
 
             if (orders.Count > 0)
             {
-                var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
                 if (filledOrders.Count > 0)
                 {
                     foreach (var order in filledOrders)
@@ -318,8 +322,16 @@ public class SyncBybitOrders
                 if (sourceAccount is null || destinationAccount is null)
                 {
                     hasFailures = true;
-                    _logger.LogWarning("SyncBybitOrders: skipped universal transfer {TransferId}; source account {SourceMemberId} or destination account {DestinationMemberId} is not linked",
-                        transfer.TransferId, transfer.FromMemberId, transfer.ToMemberId);
+                    _logger.LogWarning(
+                        "SyncBybitOrders: skipped universal transfer {TransferId} for user {UserId}; source UID {SourceMemberId} linked: {SourceLinked} (account {SourceAccountId}), destination UID {DestinationMemberId} linked: {DestinationLinked} (account {DestinationAccountId})",
+                        transfer.TransferId,
+                        userId,
+                        transfer.FromMemberId,
+                        sourceAccount is not null,
+                        sourceAccount?.Id,
+                        transfer.ToMemberId,
+                        destinationAccount is not null,
+                        destinationAccount?.Id);
                     continue;
                 }
 
