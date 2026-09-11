@@ -376,6 +376,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         var isTransferIn = IsTransferMatch(account, transfer.ToAccountType, transfer.ToMemberId);
         var isTransferOut = IsTransferMatch(account, transfer.FromAccountType, transfer.FromMemberId);
+        if (isTransferIn && isTransferOut)
+            return true;
         if (!isTransferIn && !isTransferOut)
             return true;
 
@@ -419,13 +421,27 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
     public async Task<bool> ProcessOpeningBalanceAsync(Account account, int userId, decimal balance, CancellationToken cancellationToken)
     {
-        if (balance <= 0 || account.Balance != 0)
+        if (balance <= 0)
             return true;
 
         var exchangeTransactionId = $"bybit-opening-balance-{account.Id}";
         var existingTx = await _context.AccountTransactions
-            .AnyAsync(t => t.ExchangeTransactionId == exchangeTransactionId, cancellationToken);
-        if (existingTx)
+            .SingleOrDefaultAsync(t => t.ExchangeTransactionId == exchangeTransactionId, cancellationToken);
+        if (existingTx is not null)
+        {
+            var hasLedgerHistory = await _context.AccountTransactions
+                .AnyAsync(t => EF.Property<int>(t, "AccountId") == account.Id && t.Id != existingTx.Id, cancellationToken);
+            if (!hasLedgerHistory && account.Balance != balance)
+            {
+                account.AddToBalance(balance - account.Balance);
+                existingTx.UpdateAmount(balance);
+                await _context.SaveChangesAsync(cancellationToken);
+                _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+            }
+            return true;
+        }
+
+        if (account.Balance != 0)
             return true;
 
         var accountTx = new AccountTransaction(

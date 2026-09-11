@@ -221,6 +221,10 @@ public class SyncBybitOrdersTests
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
 
         var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.GetAccountCoinBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "FUND", "USDT", "UID-001"))
+            .ReturnsAsync(AccountCoinBalance("FUND", "USDT", "1000", "UID-001"));
+        bybitService.Setup(x => x.GetAccountCoinBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "FUND", "USDC", "UID-001"))
+            .ReturnsAsync(AccountCoinBalance("FUND", "USDC", "0", "UID-001"));
         bybitService.Setup(x => x.GetAccountCoinBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "UNIFIED", "USDT", "UID-001"))
             .ReturnsAsync(AccountCoinBalance("UNIFIED", "USDT", "6000", "UID-001"));
         bybitService.Setup(x => x.GetAccountCoinBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "UNIFIED", "USDC", "UID-001"))
@@ -229,7 +233,7 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
-        orderSyncService.Setup(x => x.ProcessOpeningBalanceAsync(account, 1, 10000m, It.IsAny<CancellationToken>()))
+        orderSyncService.Setup(x => x.ProcessOpeningBalanceAsync(account, 1, 11000m, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
             Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
@@ -238,7 +242,7 @@ public class SyncBybitOrdersTests
 
         await function.Run(null!, functionContext.Object);
 
-        orderSyncService.Verify(x => x.ProcessOpeningBalanceAsync(account, 1, 10000m, It.IsAny<CancellationToken>()), Times.Once);
+        orderSyncService.Verify(x => x.ProcessOpeningBalanceAsync(account, 1, 11000m, It.IsAny<CancellationToken>()), Times.Once);
         bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()), Times.Once);
     }
 

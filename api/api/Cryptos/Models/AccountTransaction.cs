@@ -62,4 +62,9 @@ public class AccountTransaction : Entity
     {
         ExchangeStatus = status;
     }
+
+    public void UpdateAmount(decimal amount)
+    {
+        Amount = amount;
+    }
 }

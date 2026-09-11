@@ -252,10 +252,20 @@ public class SyncBybitOrders
         try
         {
             var balance = 0m;
-            foreach (var coin in BybitCashBalance.CashCoins)
+            foreach (var accountType in new[] { "FUND", "UNIFIED" })
             {
-                var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, "UNIFIED", coin, account.ExternalId);
-                balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+                foreach (var coin in BybitCashBalance.CashCoins)
+                {
+                    try
+                    {
+                        var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, accountType, coin, account.ExternalId);
+                        balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "SyncBybitOrders: failed to fetch {AccountType} {Coin} balance for account {AccountId}", accountType, coin, account.Id);
+                    }
+                }
             }
             await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
         }

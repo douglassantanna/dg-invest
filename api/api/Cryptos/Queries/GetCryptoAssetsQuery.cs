@@ -113,7 +113,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
 
             if (!cryptoAssetDtos.Any())
             {
-                result = [new UserCryptoAssetDto(account.Balance, account.Name, [], account.TotalDeposited())];
+                result = [new UserCryptoAssetDto(account.Balance, account.Name, [], account.TotalDeposited(), account.Exchange == "Bybit")];
             }
             else
             {
@@ -124,7 +124,8 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                         account.Balance,
                         account.Name,
                         cryptoAssetDtos,
-                        account.TotalDeposited()
+                        account.TotalDeposited(),
+                        account.Exchange == "Bybit"
                     )
                 ];
             }

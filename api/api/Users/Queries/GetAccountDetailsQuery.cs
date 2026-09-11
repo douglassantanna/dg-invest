@@ -111,7 +111,8 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
             page,
             pageSize,
             page * pageSize < totalCount,
-            page > 1
+            page > 1,
+            account.Exchange == "Bybit"
         );
 
         return new Response("", true, accountDto);

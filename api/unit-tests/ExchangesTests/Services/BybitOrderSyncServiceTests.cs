@@ -33,6 +33,24 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessOpeningBalanceAsync_WhenOnlyOpeningBalanceExists_ShouldReconcileWalletAggregation()
+    {
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        await sut.ProcessOpeningBalanceAsync(account, 1, 1_000m, CancellationToken.None);
+        var result = await sut.ProcessOpeningBalanceAsync(account, 1, 11_000m, CancellationToken.None);
+
+        result.Should().BeTrue();
+        account.Balance.Should().Be(11_000m);
+        (await context.AccountTransactions.CountAsync()).Should().Be(1);
+        (await context.AccountTransactions.SingleAsync()).Amount.Should().Be(11_000m);
+    }
+
+    [Fact]
     public async Task ProcessDepositAsync_WhenDepositIsStablecoin_ShouldCreateFiatDepositLedgerTransaction()
     {
         using var context = CreateContext();
@@ -202,6 +220,34 @@ public class BybitOrderSyncServiceTests
         first.Should().BeTrue();
         second.Should().BeTrue();
         account.Balance.Should().Be(50m);
+        (await context.AccountTransactions.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ProcessInternalTransferAsync_WhenTransferOnlyMovesBetweenWallets_ShouldNotChangeAccountBalance()
+    {
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        await sut.ProcessOpeningBalanceAsync(account, 1, 100m, CancellationToken.None);
+        var transfer = new BybitInternalTransferRow
+        {
+            TransferId = "wallet-move-1",
+            Coin = "USDT",
+            Amount = "25",
+            FromAccountType = "FUND",
+            FromMemberId = "UID-001",
+            ToAccountType = "UNIFIED",
+            ToMemberId = "UID-001",
+            Timestamp = "1790000000000"
+        };
+
+        var result = await sut.ProcessInternalTransferAsync(transfer, account, 1, CancellationToken.None);
+
+        result.Should().BeTrue();
+        account.Balance.Should().Be(100m);
         (await context.AccountTransactions.CountAsync()).Should().Be(1);
     }
 

@@ -100,13 +100,15 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 ? await _context.Accounts.SingleOrDefaultAsync(a => a.Id == masterAccountId && !a.IsDeleted, cancellationToken)
                 : null;
             if (masterAccount is not null)
-                await PopulateInitialCashBalanceAsync(masterAccount, apiKey.Value!, apiSecret.Value!, region, "FUND", null, cancellationToken);
+                await PopulateInitialCashBalanceAsync(masterAccount, apiKey.Value!, apiSecret.Value!, region,
+                    [("FUND", null), ("UNIFIED", null)], cancellationToken);
             else
             {
                 var legacyMainAccount = await _context.Accounts
                     .SingleOrDefaultAsync(a => a.UserId == request.UserId && a.AccountType == EAccountType.Manual && a.Name == "main", cancellationToken);
                 if (legacyMainAccount is not null)
-                    await PopulateInitialCashBalanceAsync(legacyMainAccount, apiKey.Value!, apiSecret.Value!, region, "FUND", null, cancellationToken);
+                    await PopulateInitialCashBalanceAsync(legacyMainAccount, apiKey.Value!, apiSecret.Value!, region,
+                        [("FUND", null), ("UNIFIED", null)], cancellationToken);
             }
 
             foreach (var member in subMembers)
@@ -123,7 +125,8 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                     matched++;
                     _logger.LogInformation("SyncBybitAccounts: UID {Uid} already mapped to account '{Name}'",
                         member.Uid, mappedAccount.Name);
-                    await PopulateInitialCashBalanceAsync(mappedAccount, apiKey.Value!, apiSecret.Value!, region, "UNIFIED", member.Uid, cancellationToken);
+                    await PopulateInitialCashBalanceAsync(mappedAccount, apiKey.Value!, apiSecret.Value!, region,
+                        [("FUND", member.Uid), ("UNIFIED", member.Uid)], cancellationToken);
                     continue;
                 }
 
@@ -133,7 +136,8 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
                 var newAccount = new Account(tag, request.UserId, EAccountType.Exchange, "Bybit", member.Uid);
                 _context.Accounts.Add(newAccount);
-                await PopulateInitialCashBalanceAsync(newAccount, apiKey.Value!, apiSecret.Value!, region, "UNIFIED", member.Uid, cancellationToken);
+                await PopulateInitialCashBalanceAsync(newAccount, apiKey.Value!, apiSecret.Value!, region,
+                    [("FUND", member.Uid), ("UNIFIED", member.Uid)], cancellationToken);
                 created++;
                 _logger.LogInformation("SyncBybitAccounts: created account '{Name}' (Bybit UID: {Uid}) for user {UserId}",
                     tag, member.Uid, request.UserId);
@@ -163,7 +167,13 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
     }
 
-    private async Task PopulateInitialCashBalanceAsync(Account account, string apiKey, string apiSecret, BybitRegion region, string accountType, string? memberId, CancellationToken cancellationToken)
+    private async Task PopulateInitialCashBalanceAsync(
+        Account account,
+        string apiKey,
+        string apiSecret,
+        BybitRegion region,
+        IReadOnlyList<(string AccountType, string? MemberId)> walletScopes,
+        CancellationToken cancellationToken)
     {
         if (account.Balance != 0)
             return;
@@ -171,16 +181,26 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
         try
         {
             var balance = 0m;
-            foreach (var coin in BybitCashBalance.CashCoins)
+            foreach (var (accountType, memberId) in walletScopes)
             {
-                var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, accountType, coin, memberId);
-                balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+                foreach (var coin in BybitCashBalance.CashCoins)
+                {
+                    try
+                    {
+                        var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, accountType, coin, memberId);
+                        balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "SyncBybitAccounts: failed to fetch {AccountType} {Coin} balance for account {AccountId}", accountType, coin, account.Id);
+                    }
+                }
             }
             await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "SyncBybitAccounts: failed to fetch {AccountType} cash balance for account {AccountId}", accountType, account.Id);
+            _logger.LogWarning(ex, "SyncBybitAccounts: failed to populate cash balance for account {AccountId}", account.Id);
         }
     }
 }
