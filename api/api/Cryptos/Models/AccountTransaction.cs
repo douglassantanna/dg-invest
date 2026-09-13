@@ -20,7 +20,9 @@ public class AccountTransaction : Entity
             CryptoAsset? cryptoAsset,
             decimal? fee,
             string? exchangeTransactionId = null,
-            string? exchangeStatus = null)
+            string? exchangeStatus = null,
+            string? feeCurrency = null,
+            decimal? feeQuoteValue = null)
     {
         Date = date;
         TransactionType = transactionType;
@@ -33,6 +35,8 @@ public class AccountTransaction : Entity
         Fee = fee ?? 0;
         ExchangeTransactionId = exchangeTransactionId;
         ExchangeStatus = exchangeStatus;
+        FeeCurrency = feeCurrency;
+        FeeQuoteValue = feeQuoteValue;
     }
     public AccountTransaction(
             DateTime date,
@@ -55,6 +59,8 @@ public class AccountTransaction : Entity
     public int? CryptoAssetId { get; private set; }
     public CryptoAsset? CryptoAsset { get; set; }
     public decimal Fee { get; private set; }
+    public string? FeeCurrency { get; private set; }
+    public decimal? FeeQuoteValue { get; private set; }
     public string? ExchangeTransactionId { get; private set; }
     public string? ExchangeStatus { get; private set; }
 

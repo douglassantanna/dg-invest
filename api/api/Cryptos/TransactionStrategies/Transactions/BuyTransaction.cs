@@ -20,7 +20,8 @@ public class BuyTransaction : ITransactionStrategy
         _logger.LogInformation("Executing transaction for account ID: {AccountId}, transaction amount: {Amount}, current crypto price: {CryptoPrice}",
             account.Id, accountTransaction.Amount, accountTransaction.CryptoCurrentPrice);
 
-        decimal totalCost = CalculateTransactionCost(accountTransaction.Amount, accountTransaction.CryptoCurrentPrice, accountTransaction.Fee);
+        decimal totalCost = CalculateTransactionCost(accountTransaction.Amount, accountTransaction.CryptoCurrentPrice,
+            accountTransaction.FeeQuoteValue ?? accountTransaction.Fee);
         var insufficientFunds = account.Balance < totalCost;
         if (insufficientFunds)
         {
