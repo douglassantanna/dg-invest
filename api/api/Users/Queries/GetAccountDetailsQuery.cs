@@ -64,11 +64,24 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
         {
             var status = request.Status.ToLower();
             if (status == "completed")
-                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus == "3");
+                transactionsQuery = transactionsQuery.Where(at =>
+                    at.ExchangeStatus == "3" ||
+                    (at.ExchangeStatus != null &&
+                        (at.ExchangeStatus.ToLower() == "success" || at.ExchangeStatus.ToLower() == "filled")));
             else if (status == "failed")
-                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus == "4");
+                transactionsQuery = transactionsQuery.Where(at =>
+                    at.ExchangeStatus == "4" ||
+                    (at.ExchangeStatus != null &&
+                        (at.ExchangeStatus.ToLower() == "failed" || at.ExchangeStatus.ToLower() == "fail")));
             else if (status == "pending")
-                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus != "3" && at.ExchangeStatus != "4");
+                transactionsQuery = transactionsQuery.Where(at =>
+                    at.ExchangeStatus != "3" &&
+                    at.ExchangeStatus != "4" &&
+                    (at.ExchangeStatus == null ||
+                        (at.ExchangeStatus.ToLower() != "success" &&
+                         at.ExchangeStatus.ToLower() != "filled" &&
+                         at.ExchangeStatus.ToLower() != "failed" &&
+                         at.ExchangeStatus.ToLower() != "fail")));
         }
 
         var sortedTransactions = transactionsQuery

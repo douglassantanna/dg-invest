@@ -103,18 +103,22 @@ export class AccountTransactionCardComponent {
   }
 
   getStatusLabel(status: string): string {
-    switch (status) {
-      case '3': return 'Completed';
-      case '4': return 'Failed';
-      default: return 'Pending';
-    }
+    if (this.isCompletedStatus(status)) return 'Completed';
+    if (this.isFailedStatus(status)) return 'Failed';
+    return 'Pending';
   }
 
   getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case '3': return 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100';
-      case '4': return 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100';
-      default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100';
-    }
+    if (this.isCompletedStatus(status)) return 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100';
+    if (this.isFailedStatus(status)) return 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100';
+    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100';
+  }
+
+  private isCompletedStatus(status: string): boolean {
+    return ['3', 'success', 'filled'].includes(status.toLowerCase());
+  }
+
+  private isFailedStatus(status: string): boolean {
+    return ['4', 'failed', 'fail'].includes(status.toLowerCase());
   }
 }
