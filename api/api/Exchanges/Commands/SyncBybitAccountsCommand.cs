@@ -175,9 +175,6 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
         IReadOnlyList<(string AccountType, string? MemberId)> walletScopes,
         CancellationToken cancellationToken)
     {
-        if (account.Balance != 0)
-            return;
-
         try
         {
             var balance = 0m;

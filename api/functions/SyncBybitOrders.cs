@@ -246,9 +246,6 @@ public class SyncBybitOrders
 
     private async Task PopulateInitialCashBalanceAsync(Account account, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken)
     {
-        if (account.Balance != 0)
-            return;
-
         try
         {
             var balance = 0m;
