@@ -42,14 +42,11 @@ public class ToggleBybitAccountCommandHandler : IRequestHandler<ToggleBybitAccou
 
         if (!syncStatus.IsEnabled)
         {
-            if (syncStatus.ActiveCredentialSetId == null)
-                return new Response("Cannot enable account without active Bybit credentials", false, 400);
-
             var integration = await _context.ExchangeIntegrations
                 .Where(x => x.UserId == request.UserId && x.Exchange == "Bybit")
-                .Select(x => new { x.Enabled, x.ActiveCredentialSetId })
+                .Select(x => new { x.Enabled })
                 .SingleOrDefaultAsync(cancellationToken);
-            if (integration is not null && (!integration.Enabled || integration.ActiveCredentialSetId == null))
+            if (integration is not null && !integration.Enabled)
                 return new Response("Cannot enable account while Bybit integration is disconnected", false, 400);
         }
 

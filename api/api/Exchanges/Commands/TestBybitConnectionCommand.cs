@@ -41,8 +41,8 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             return new Response("Account not found", false, 404);
         }
 
-        var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
-        var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
+        var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken, _logger);
+        var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken, _logger);
 
         if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
             return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
@@ -52,7 +52,24 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             return new Response("API key and secret are not configured for this account", false, 400);
         }
 
-        var success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!);
+        if (!string.IsNullOrEmpty(apiKey.Value) && apiKey.Value == apiSecret.Value)
+        {
+            return new Response("Stored Bybit credentials appear corrupted (API key and secret are identical). Please re-enter them.", false, 400);
+        }
+
+        bool success;
+        try
+        {
+            var syncStatus = await _context.SyncStatuses
+                .FirstOrDefaultAsync(s => s.UserId == request.UserId && s.AccountId == request.AccountId && s.ExchangeName == "Bybit", cancellationToken);
+            var region = BybitEndpoints.Parse(syncStatus?.Region);
+            success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!, region);
+        }
+        catch (BybitApiException ex)
+        {
+            _logger.LogWarning(ex, "TestBybitConnection: Bybit rejected connection test for account {AccountId}", request.AccountId);
+            return new Response($"Bybit rejected the account credentials: {ex.RetCode} - {ex.RetMsg}", false, 400);
+        }
 
         if (success)
         {

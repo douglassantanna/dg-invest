@@ -69,7 +69,12 @@
           <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             <div>Amount: {{ transaction.amount }}</div>
             <div>Unit Price: {{ transaction.cryptoCurrentPrice | currency:'USD':'symbol':'1.2-2' }}</div>
+            @if (transaction.feeCurrency) {
+            <div>Fee: {{ transaction.fee | number:'1.0-8' }} {{ transaction.feeCurrency }}
+              ({{ transaction.feeQuoteValue ?? 0 | currency:'USD':'symbol':'1.2-4' }})</div>
+            } @else {
             <div>Fee: {{ transaction.fee | currency:'USD':'symbol':'1.2-2' }}</div>
+            }
             <div>Subtotal: {{ getTransactionSubtotalValue(transaction) | currency:'USD':'symbol':'1.2-2' }}</div>
           </div>
           }

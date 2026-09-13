@@ -44,22 +44,39 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _cacheService = cacheService;
     }
 
-    public async Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
+    public Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
+        => ProcessOrderAsync(order, account, userId, importSource, cancellationToken, null);
+
+    public async Task<bool> ProcessOrderAsync(
+        BybitOrderData order,
+        Account account,
+        int userId,
+        string importSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<BybitExecutionData>? executions)
     {
         var quoteCurrencies = await GetQuoteCurrenciesAsync();
         var baseSymbol = ExtractBaseSymbol(order.Symbol, quoteCurrencies);
         var logId = Guid.NewGuid().ToString();
 
         var alreadyProcessed = await _context.CryptoTransactions
-            .AnyAsync(t => t.ExchangeOrderId == order.OrderId, cancellationToken);
+            .Where(t => t.ExchangeOrderId == order.OrderId)
+            .Join(
+                _context.CryptoAssets,
+                transaction => EF.Property<int>(transaction, "CryptoAssetId"),
+                asset => asset.Id,
+                (_, asset) => asset)
+            .AnyAsync(asset => EF.Property<int>(asset, "AccountId") == account.Id, cancellationToken);
         if (alreadyProcessed)
         {
+            if (TryParseOrderValues(order, out var existingPrice, out _, out _))
+                await ReconcileExistingOrderFeeAsync(order, account, baseSymbol, existingPrice, executions, cancellationToken);
             _logger.LogInformation("Bybit sync: order {OrderId} already saved, skipping", order.OrderId);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Duplicate", null, importSource, logId, cancellationToken);
             return true;
         }
 
-        if (!TryParseOrderValues(order, out var price, out var qty, out var fee))
+        if (!TryParseOrderValues(order, out var price, out var qty, out _))
         {
             _logger.LogError("Bybit sync: could not parse numeric values for order {OrderId}", order.OrderId);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", "Could not parse numeric values", importSource, logId, cancellationToken);
@@ -78,8 +95,11 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? ETransactionType.Buy
             : ETransactionType.Sell;
 
+        var fee = ResolveFee(order, executions, baseSymbol, price);
+
         var purchaseDate = DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(order.CreatedTime));
-        var cryptoTx = new CryptoTransaction(qty, price, purchaseDate, "Bybit", transactionType, fee, order.OrderId);
+        var cryptoTx = new CryptoTransaction(qty, price, purchaseDate, "Bybit", transactionType,
+            fee.Amount, order.OrderId, fee.Currency, fee.QuoteValue, fee.ExecutionId);
 
         var accountTransactionType = transactionType == ETransactionType.Buy
             ? EAccountTransactionType.Out
@@ -94,7 +114,12 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             notes: $"Auto-synced from Bybit order {order.OrderId}",
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
-            fee: fee);
+            fee: fee.Amount,
+            exchangeTransactionId: order.OrderId,
+            exchangeStatus: order.OrderStatus,
+            feeCurrency: fee.Currency,
+            feeQuoteValue: fee.QuoteValue,
+            exchangeExecutionId: fee.ExecutionId);
 
         var result = _transactionService.ExecuteTransaction(account, accountTx);
         if (!result.IsSuccess)
@@ -147,6 +172,9 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Skipped", $"Non-success status: {deposit.Status}", "BybitDeposit", logId, cancellationToken);
             return true;
         }
+
+        if (IsCashCoin(symbol))
+            return await ProcessCashDepositAsync(deposit, account, userId, amount, symbol, logId, cancellationToken);
 
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, symbol, cancellationToken);
         if (cryptoAsset == null)
@@ -240,6 +268,9 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return true;
         }
 
+        if (IsCashCoin(symbol))
+            return await ProcessCashWithdrawalAsync(withdrawal, account, userId, amount, fee, symbol, logId, cancellationToken);
+
         var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, symbol, cancellationToken);
         if (cryptoAsset == null)
         {
@@ -287,6 +318,177 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Success", null, "BybitWithdrawal", logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved withdrawal {TxId} ({Amount} {Symbol}, Status: {Status})", withdrawal.TxId, amount, symbol, withdrawal.Status);
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+        return true;
+    }
+
+    private async Task<bool> ProcessCashDepositAsync(BybitDepositWithdrawalRow deposit, Account account, int userId, decimal amount, string symbol, string logId, CancellationToken cancellationToken)
+    {
+        var successAt = DateTimeOffset.TryParse(deposit.SuccessAt, out var parsed)
+            ? parsed.DateTime
+            : DateTime.UtcNow;
+
+        var accountTx = new AccountTransaction(
+            date: successAt,
+            transactionType: EAccountTransactionType.DepositFiat,
+            amount: amount,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: $"Auto-synced from Bybit {symbol} deposit {deposit.TxId ?? "unknown"}",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: 0,
+            exchangeTransactionId: deposit.TxId,
+            exchangeStatus: deposit.Status);
+
+        var result = _transactionService.ExecuteTransaction(account, accountTx);
+        if (!result.IsSuccess)
+        {
+            _logger.LogError("Bybit sync: transaction strategy failed for deposit {TxId}: {Message}", deposit.TxId, result.Message);
+            await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Failed", result.Message, "BybitDeposit", logId, cancellationToken);
+            return false;
+        }
+
+        await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Success", null, "BybitDeposit", logId, cancellationToken);
+        _logger.LogInformation("Bybit sync: saved cash deposit {TxId} ({Amount} {Symbol}, Status: {Status})", deposit.TxId, amount, symbol, deposit.Status);
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+        return true;
+    }
+
+    private async Task<bool> ProcessCashWithdrawalAsync(BybitDepositWithdrawalRow withdrawal, Account account, int userId, decimal amount, decimal fee, string symbol, string logId, CancellationToken cancellationToken)
+    {
+        var successAt = DateTimeOffset.TryParse(withdrawal.SuccessAt, out var parsed)
+            ? parsed.DateTime
+            : DateTime.UtcNow;
+
+        var accountTx = new AccountTransaction(
+            date: successAt,
+            transactionType: EAccountTransactionType.WithdrawToBank,
+            amount: amount,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: $"Auto-synced from Bybit {symbol} withdrawal {withdrawal.TxId ?? "unknown"}",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: fee,
+            exchangeTransactionId: withdrawal.TxId,
+            exchangeStatus: withdrawal.Status);
+
+        var result = _transactionService.ExecuteTransaction(account, accountTx);
+        if (!result.IsSuccess)
+        {
+            _logger.LogError("Bybit sync: transaction strategy failed for withdrawal {TxId}: {Message}", withdrawal.TxId, result.Message);
+            await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Failed", result.Message, "BybitWithdrawal", logId, cancellationToken);
+            return false;
+        }
+
+        await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Success", null, "BybitWithdrawal", logId, cancellationToken);
+        _logger.LogInformation("Bybit sync: saved cash withdrawal {TxId} ({Amount} {Symbol}, Status: {Status})", withdrawal.TxId, amount, symbol, withdrawal.Status);
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+        return true;
+    }
+
+    public async Task<bool> ProcessInternalTransferAsync(BybitInternalTransferRow transfer, Account account, int userId, CancellationToken cancellationToken)
+    {
+        if (!IsCashCoin(transfer.Coin))
+            return true;
+
+        if (!decimal.TryParse(transfer.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount))
+            return false;
+
+        var isTransferIn = IsTransferMatch(account, transfer.ToAccountType, transfer.ToMemberId);
+        var isTransferOut = IsTransferMatch(account, transfer.FromAccountType, transfer.FromMemberId);
+        if (isTransferIn && isTransferOut)
+            return true;
+        if (!isTransferIn && !isTransferOut)
+            return true;
+
+        var direction = isTransferIn ? "in" : "out";
+        var exchangeTransactionId = $"bybit-internal-transfer-{transfer.TransferId}-{direction}-{account.Id}";
+        var existingTx = await _context.AccountTransactions
+            .AnyAsync(t => t.ExchangeTransactionId == exchangeTransactionId, cancellationToken);
+        if (existingTx)
+            return true;
+
+        var transactionType = isTransferIn
+            ? EAccountTransactionType.TransferIn
+            : EAccountTransactionType.TransferOut;
+        var timestamp = long.TryParse(transfer.Timestamp, out var unixMilliseconds)
+            ? DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).DateTime
+            : DateTime.UtcNow;
+        var accountTx = new AccountTransaction(
+            date: timestamp,
+            transactionType: transactionType,
+            amount: amount,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: $"Auto-synced from Bybit {transfer.Coin} internal transfer {transfer.TransferId}",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: 0,
+            exchangeTransactionId: exchangeTransactionId,
+            exchangeStatus: "InternalTransfer");
+
+        var result = _transactionService.ExecuteTransaction(account, accountTx);
+        if (!result.IsSuccess)
+        {
+            _logger.LogError("Bybit sync: internal transfer {TransferId} failed for account {AccountId}: {Message}", transfer.TransferId, account.Id, result.Message);
+            return false;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+        return true;
+    }
+
+    public async Task<bool> ProcessOpeningBalanceAsync(Account account, int userId, decimal balance, CancellationToken cancellationToken)
+    {
+        if (balance <= 0)
+            return true;
+
+        var exchangeTransactionId = $"bybit-opening-balance-{account.Id}";
+        var existingTx = await _context.AccountTransactions
+            .SingleOrDefaultAsync(t => t.ExchangeTransactionId == exchangeTransactionId, cancellationToken);
+        if (existingTx is not null)
+        {
+            var hasLedgerHistory = await _context.AccountTransactions
+                .AnyAsync(t => EF.Property<int>(t, "AccountId") == account.Id && t.Id != existingTx.Id, cancellationToken);
+            if (!hasLedgerHistory && account.Balance != balance)
+            {
+                account.AddToBalance(balance - account.Balance);
+                existingTx.UpdateAmount(balance);
+                await _context.SaveChangesAsync(cancellationToken);
+                _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+            }
+            return true;
+        }
+
+        if (account.Balance != 0)
+            return true;
+
+        var accountTx = new AccountTransaction(
+            date: DateTime.UtcNow,
+            transactionType: EAccountTransactionType.DepositFiat,
+            amount: balance,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: "Opening balance from Bybit",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: 0,
+            exchangeTransactionId: exchangeTransactionId,
+            exchangeStatus: "OpeningBalance");
+
+        var result = _transactionService.ExecuteTransaction(account, accountTx);
+        if (!result.IsSuccess)
+        {
+            _logger.LogError("Bybit sync: opening balance transaction failed for account {AccountId}: {Message}", account.Id, result.Message);
+            return false;
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
         _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
         return true;
@@ -445,6 +647,127 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     private static bool TryParseDepositWithdrawalAmount(BybitDepositWithdrawalRow row, out decimal amount)
     {
         return decimal.TryParse(row.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount);
+    }
+
+    private ResolvedBybitFee ResolveFee(
+        BybitOrderData order,
+        IReadOnlyList<BybitExecutionData>? executions,
+        string baseSymbol,
+        decimal executionPrice)
+    {
+        var quoteSymbol = order.Symbol[..^baseSymbol.Length].ToUpperInvariant();
+        var feeAmount = 0m;
+        string? feeCurrency = null;
+
+        var executionFees = executions?
+            .Where(execution => decimal.TryParse(execution.ExecFee, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out _)
+                && !string.IsNullOrWhiteSpace(execution.FeeCurrency))
+            .GroupBy(execution => execution.FeeCurrency, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new
+            {
+                Currency = group.Key,
+                Amount = group.Sum(execution => decimal.Parse(execution.ExecFee, System.Globalization.CultureInfo.InvariantCulture))
+            })
+            .ToList() ?? [];
+
+        if (executionFees.Count == 1)
+        {
+            feeCurrency = executionFees[0].Currency.ToUpperInvariant();
+            feeAmount = executionFees[0].Amount;
+        }
+        else if (order.CumFeeDetail.Count == 1)
+        {
+            var feeDetail = order.CumFeeDetail.Single();
+            feeCurrency = feeDetail.Key.ToUpperInvariant();
+            decimal.TryParse(feeDetail.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out feeAmount);
+        }
+        else if (decimal.TryParse(order.CumExecFee, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var legacyFee)
+            && legacyFee > 0)
+        {
+            _logger.LogWarning("Bybit order {OrderId} returned a fee without currency; quote accounting will not assume USDT", order.OrderId);
+            return new ResolvedBybitFee(legacyFee, "UNKNOWN", 0m, null);
+        }
+
+        if (feeAmount == 0 || feeCurrency is null)
+            return new ResolvedBybitFee(0m, null, 0m, null);
+
+        var quoteValue = feeCurrency.Equals(quoteSymbol, StringComparison.OrdinalIgnoreCase)
+            ? feeAmount
+            : feeCurrency.Equals(baseSymbol, StringComparison.OrdinalIgnoreCase)
+                ? feeAmount * executionPrice
+                : 0m;
+
+        if (quoteValue == 0m && !feeCurrency.Equals(quoteSymbol, StringComparison.OrdinalIgnoreCase)
+            && !feeCurrency.Equals(baseSymbol, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Bybit order {OrderId} fee currency {FeeCurrency} cannot be converted to {QuoteCurrency}",
+                order.OrderId, feeCurrency, quoteSymbol);
+        }
+
+        var executionId = executions is not null
+            ? string.Join(",", executions
+                .Where(execution => string.Equals(execution.FeeCurrency, feeCurrency, StringComparison.OrdinalIgnoreCase))
+                .Select(execution => execution.ExecId)
+                .Where(id => !string.IsNullOrWhiteSpace(id)))
+            : null;
+
+        return new ResolvedBybitFee(feeAmount, feeCurrency, quoteValue,
+            string.IsNullOrWhiteSpace(executionId) ? null : executionId);
+    }
+
+    private async Task ReconcileExistingOrderFeeAsync(
+        BybitOrderData order,
+        Account account,
+        string baseSymbol,
+        decimal price,
+        IReadOnlyList<BybitExecutionData>? executions,
+        CancellationToken cancellationToken)
+    {
+        var cryptoAsset = account.CryptoAssets.FirstOrDefault(asset => asset.Symbol.Equals(baseSymbol, StringComparison.OrdinalIgnoreCase));
+        var cryptoTransaction = cryptoAsset?.Transactions.FirstOrDefault(transaction => transaction.ExchangeOrderId == order.OrderId);
+        if (cryptoAsset is null || cryptoTransaction is null)
+            return;
+
+        var accountTransaction = await _context.AccountTransactions
+            .FirstOrDefaultAsync(transaction =>
+                EF.Property<int?>(transaction, "AccountId") == account.Id &&
+                transaction.CryptoAssetId == cryptoAsset.Id &&
+                (transaction.ExchangeTransactionId == order.OrderId || transaction.Notes.Contains(order.OrderId)), cancellationToken);
+        if (accountTransaction is null)
+            return;
+
+        var fee = ResolveFee(order, executions, baseSymbol, price);
+        var previousQuoteValue = accountTransaction.FeeInQuoteValue;
+        var currentQuoteValue = fee.QuoteValue ?? 0m;
+        var delta = currentQuoteValue - previousQuoteValue;
+
+        if (delta != 0)
+        {
+            if (accountTransaction.TransactionType == EAccountTransactionType.Out)
+                account.SubtractFromBalance(delta);
+            else if (accountTransaction.TransactionType == EAccountTransactionType.In)
+                account.AddToBalance(-delta);
+        }
+
+        accountTransaction.UpdateFee(fee.Amount, fee.Currency, fee.QuoteValue, fee.ExecutionId);
+        cryptoTransaction.UpdateFee(fee.Amount, fee.Currency, fee.QuoteValue, fee.ExecutionId);
+        cryptoAsset.RecalculateFromTransactions();
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private sealed record ResolvedBybitFee(decimal Amount, string? Currency, decimal? QuoteValue, string? ExecutionId);
+
+    private static bool IsCashCoin(string symbol) => BybitCashBalance.CashCoins.Contains(symbol, StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsTransferMatch(Account account, string accountType, string memberId)
+    {
+        if (account.AccountType == EAccountType.Manual && account.Name == "main")
+            return accountType.Equals("FUND", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(memberId);
+
+        return account.AccountType == EAccountType.Exchange
+            && (accountType.Equals("UNIFIED", StringComparison.OrdinalIgnoreCase)
+                || accountType.Equals("FUND", StringComparison.OrdinalIgnoreCase))
+            && string.Equals(account.ExternalId, memberId, StringComparison.Ordinal);
     }
 
     private async Task<decimal> GetMarketPriceAsync(string symbol, CancellationToken cancellationToken)

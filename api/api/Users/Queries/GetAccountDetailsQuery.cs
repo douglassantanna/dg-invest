@@ -64,11 +64,27 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
         {
             var status = request.Status.ToLower();
             if (status == "completed")
-                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus == "3");
+                transactionsQuery = transactionsQuery.Where(at =>
+                    at.ExchangeStatus == "3" ||
+                    (at.ExchangeStatus != null &&
+                        (at.ExchangeStatus.ToLower() == "success" ||
+                         at.ExchangeStatus.ToLower() == "filled" ||
+                         at.ExchangeStatus.ToLower() == "internaltransfer")));
             else if (status == "failed")
-                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus == "4");
+                transactionsQuery = transactionsQuery.Where(at =>
+                    at.ExchangeStatus == "4" ||
+                    (at.ExchangeStatus != null &&
+                        (at.ExchangeStatus.ToLower() == "failed" || at.ExchangeStatus.ToLower() == "fail")));
             else if (status == "pending")
-                transactionsQuery = transactionsQuery.Where(at => at.ExchangeStatus != "3" && at.ExchangeStatus != "4");
+                transactionsQuery = transactionsQuery.Where(at =>
+                    at.ExchangeStatus != "3" &&
+                    at.ExchangeStatus != "4" &&
+                    (at.ExchangeStatus == null ||
+                        (at.ExchangeStatus.ToLower() != "success" &&
+                         at.ExchangeStatus.ToLower() != "filled" &&
+                         at.ExchangeStatus.ToLower() != "internaltransfer" &&
+                         at.ExchangeStatus.ToLower() != "failed" &&
+                         at.ExchangeStatus.ToLower() != "fail")));
         }
 
         var sortedTransactions = transactionsQuery
@@ -97,7 +113,9 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                     at.CryptoCurrentPrice,
                     at.CryptoAsset?.Symbol.ToLower() ?? "",
                     at.Fee,
-                    at.ExchangeStatus
+                    at.ExchangeStatus,
+                    at.FeeCurrency,
+                    at.FeeQuoteValue
                 )).ToList()
             ))
             .OrderByDescending(g => g.Date)
@@ -111,7 +129,8 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
             page,
             pageSize,
             page * pageSize < totalCount,
-            page > 1
+            page > 1,
+            account.Exchange == "Bybit"
         );
 
         return new Response("", true, accountDto);
@@ -127,6 +146,8 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
             EAccountTransactionType.In => "Sell",
             EAccountTransactionType.Out => "Buy",
             EAccountTransactionType.WithdrawCrypto => "Withdraw Crypto",
+            EAccountTransactionType.TransferIn => "Transfer In",
+            EAccountTransactionType.TransferOut => "Transfer Out",
             _ => ""
         };
     }

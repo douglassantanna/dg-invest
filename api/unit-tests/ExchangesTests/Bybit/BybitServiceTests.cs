@@ -136,15 +136,308 @@ public class BybitServiceTests
     }
 
     [Fact]
-    public async Task TestConnectionAsync_WhenBybitReturnsNonzeroRetCode_ShouldReturnFalse()
+    public async Task TestConnectionAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
     {
         using var httpTest = new HttpTest();
         httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
 
-        var result = await _sut.TestConnectionAsync("api-key", "api-secret");
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.TestConnectionAsync("api-key", "api-secret"));
 
-        result.Should().BeFalse();
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
         httpTest.ShouldHaveCalled("https://api.bybit.com/v5/account/info")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetSubAccountsAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetSubAccountsAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/user/submembers")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetOrderHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetOrderHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/order/history")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetDepositHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetDepositHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/deposit/query-record")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetWithdrawalHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetWithdrawalHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/withdraw/query-record")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetWalletBalanceAsync_WhenBybitReturnsBalance_ShouldReturnWalletResponse()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "OK",
+            result = new
+            {
+                list = new[]
+                {
+                    new
+                    {
+                        accountType = "UNIFIED",
+                        totalEquity = "10000.50",
+                        coin = new[]
+                        {
+                            new { coin = "USDT", walletBalance = "6000.25", availableBalance = "5900.25", usdValue = "6000.25" },
+                            new { coin = "USDC", walletBalance = "4000.25", availableBalance = "4000.25", usdValue = "4000.25" }
+                        }
+                    }
+                }
+            }
+        });
+
+        var result = await _sut.GetWalletBalanceAsync("api-key", "api-secret", BybitRegion.Global, "UNIFIED");
+
+        result.Result.List.Should().ContainSingle();
+        var wallet = result.Result.List.Single();
+        wallet.AccountType.Should().Be("UNIFIED");
+        wallet.TotalEquity.Should().Be("10000.50");
+        wallet.Coin.Should().HaveCount(2);
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/account/wallet-balance")
+            .WithQueryParam("accountType", "UNIFIED")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetWalletBalanceAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetWalletBalanceAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/account/wallet-balance")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetAccountCoinBalanceAsync_WhenBybitReturnsBalance_ShouldReturnSingleCoinBalance()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "success",
+            result = new
+            {
+                accountType = "UNIFIED",
+                memberId = "12345",
+                balance = new { coin = "USDT", walletBalance = "6000.25", transferBalance = "5900.25" }
+            }
+        });
+
+        var result = await _sut.GetAccountCoinBalanceAsync("api-key", "api-secret", BybitRegion.Global, "UNIFIED", "USDT", "12345");
+
+        result.Result.AccountType.Should().Be("UNIFIED");
+        result.Result.MemberId.Should().Be("12345");
+        result.Result.Balance.Coin.Should().Be("USDT");
+        result.Result.Balance.WalletBalance.Should().Be("6000.25");
+        result.Result.Balance.TransferBalance.Should().Be("5900.25");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-account-coin-balance")
+            .WithQueryParam("accountType", "UNIFIED")
+            .WithQueryParam("coin", "USDT")
+            .WithQueryParam("memberId", "12345")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetAccountCoinBalanceAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetAccountCoinBalanceAsync("api-key", "api-secret", BybitRegion.Global, "FUND", "USDC"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-account-coin-balance")
+            .WithQueryParam("accountType", "FUND")
+            .WithQueryParam("coin", "USDC")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetInternalTransferHistoryAsync_WhenBybitReturnsTransfers_ShouldReturnRows()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "success",
+            result = new
+            {
+                list = new[]
+                {
+                    new
+                    {
+                        transferId = "transfer-1",
+                        coin = "USDT",
+                        amount = "250.50",
+                        fromAccountType = "FUND",
+                        toAccountType = "UNIFIED",
+                        fromMemberId = "",
+                        toMemberId = "12345",
+                        timestamp = "1790000000000"
+                    }
+                },
+                nextPageCursor = "next"
+            }
+        });
+
+        var result = await _sut.GetInternalTransferHistoryAsync("api-key", "api-secret", BybitRegion.Global, 50, 1700000000000);
+
+        result.Should().ContainSingle();
+        var transfer = result.Single();
+        transfer.TransferId.Should().Be("transfer-1");
+        transfer.Coin.Should().Be("USDT");
+        transfer.Amount.Should().Be("250.50");
+        transfer.FromAccountType.Should().Be("FUND");
+        transfer.ToAccountType.Should().Be("UNIFIED");
+        transfer.ToMemberId.Should().Be("12345");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-inter-transfer-list")
+            .WithQueryParam("limit", "50")
+            .WithQueryParam("startTime", "1700000000000")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetInternalTransferHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetInternalTransferHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-inter-transfer-list")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetUniversalTransferHistoryAsync_WhenBybitReturnsTransfers_ShouldReturnRows()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "success",
+            result = new
+            {
+                list = new[]
+                {
+                    new
+                    {
+                        transferId = "universal-transfer-1",
+                        coin = "USDC",
+                        amount = "125.50",
+                        fromAccountType = "FUND",
+                        toAccountType = "UNIFIED",
+                        fromMemberId = "",
+                        toMemberId = "12345",
+                        timestamp = "1790000000000"
+                    }
+                }
+            }
+        });
+
+        var result = await _sut.GetUniversalTransferHistoryAsync("api-key", "api-secret", BybitRegion.Global, 50, 1700000000000);
+
+        result.Should().ContainSingle();
+        var transfer = result.Single();
+        transfer.TransferId.Should().Be("universal-transfer-1");
+        transfer.Coin.Should().Be("USDC");
+        transfer.ToMemberId.Should().Be("12345");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-universal-transfer-list")
+            .WithQueryParam("limit", "50")
+            .WithQueryParam("startTime", "1700000000000")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetUniversalTransferHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetUniversalTransferHistoryAsync("api-key", "api-secret"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-universal-transfer-list")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetSubAccountsAsync_WhenRegionIsEu_ShouldCallEuHost()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { subMembers = new object[] { } } });
+
+        await _sut.GetSubAccountsAsync("api-key", "api-key", BybitRegion.Eu);
+
+        httpTest.ShouldHaveCalled("https://api.bybit.eu/v5/user/submembers")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task TestConnectionAsync_WhenRegionIsEuAndTestnet_ShouldCallEuTestnetHost()
+    {
+        var settings = new BybitSettings { UseTestnet = true };
+        var sut = new BybitService(Options.Create(settings), Mock.Of<ILogger<BybitService>>());
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK" });
+
+        await sut.TestConnectionAsync("api-key", "api-secret", BybitRegion.Eu);
+
+        httpTest.ShouldHaveCalled("https://api-testnet.bybit.eu/v5/account/info")
             .WithVerb(HttpMethod.Get);
     }
 }

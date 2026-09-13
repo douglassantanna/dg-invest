@@ -34,7 +34,8 @@ public class GetUserAccountsQueryHandler : IRequestHandler<GetUserAccountsQuery,
                     .AsNoTracking()
                     .Where(x => x.UserId == request.UserId && !x.IsDeleted)
                     .OrderByDescending(x => x.IsSelected == true)
-                    .Select(x => new SimpleAccountDto(x.Id, x.Name, x.Balance, x.IsSelected))
+                    .Select(x => new SimpleAccountDto(x.Id, x.Name, x.Balance, x.IsSelected,
+                        x.Exchange == "Bybit"))
                     .ToListAsync(ct);
             },
             absoluteExpirationRelativeToNow,

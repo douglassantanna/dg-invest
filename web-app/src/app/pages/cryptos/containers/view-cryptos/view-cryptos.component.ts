@@ -41,6 +41,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalMarketValue = signal(0);
   investmentChangePercent = signal(0);
   accountBalance = signal(0);
+  isBybitCombinedWallet = signal(false);
   totalDeposited = signal(0);
   isModalOpen = signal(false);
   loading = signal(false);
@@ -80,6 +81,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
         next: (response) => {
           const portfolioArray = response.items[0].cryptoAssetDto;
           this.accountBalance.set(response.items[0].accountBalance);
+          this.isBybitCombinedWallet.set(response.items[0].isBybitCombinedWallet);
           this.isCryptoAssetListEmpty.set(portfolioArray.length > 0);
           this.totalInvested.set(this.sumTotalInvested(portfolioArray));
           this.totalMarketValue.set(this.sumTotalMarketValue(portfolioArray));
@@ -107,6 +109,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
           this.loading.set(false);
           const portfolioArray = response.items[0].cryptoAssetDto;
           this.accountBalance.set(response.items[0].accountBalance);
+          this.isBybitCombinedWallet.set(response.items[0].isBybitCombinedWallet);
           this.isCryptoAssetListEmpty.set(portfolioArray.length > 0);
           this.totalInvested.set(this.sumTotalInvested(portfolioArray));
           this.totalMarketValue.set(this.sumTotalMarketValue(portfolioArray));

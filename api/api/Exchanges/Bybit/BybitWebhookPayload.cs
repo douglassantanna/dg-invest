@@ -42,9 +42,39 @@ public class BybitOrderData
     [JsonPropertyName("cumExecFee")]
     public string CumExecFee { get; set; } = string.Empty;
 
+    [JsonPropertyName("cumFeeDetail")]
+    public Dictionary<string, string> CumFeeDetail { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     [JsonPropertyName("createdTime")]
     public string CreatedTime { get; set; } = string.Empty;
 
     [JsonPropertyName("category")]
     public string Category { get; set; } = string.Empty;
+}
+
+public class BybitExecutionData
+{
+    [JsonPropertyName("execId")]
+    public string ExecId { get; set; } = string.Empty;
+
+    [JsonPropertyName("orderId")]
+    public string OrderId { get; set; } = string.Empty;
+
+    [JsonPropertyName("execPrice")]
+    public string ExecPrice { get; set; } = string.Empty;
+
+    [JsonPropertyName("execQty")]
+    public string ExecQty { get; set; } = string.Empty;
+
+    [JsonPropertyName("execValue")]
+    public string ExecValue { get; set; } = string.Empty;
+
+    [JsonPropertyName("execFee")]
+    public string ExecFee { get; set; } = string.Empty;
+
+    [JsonPropertyName("feeCurrency")]
+    public string FeeCurrency { get; set; } = string.Empty;
+
+    [JsonPropertyName("execTime")]
+    public string ExecTime { get; set; } = string.Empty;
 }

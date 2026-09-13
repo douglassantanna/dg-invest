@@ -99,6 +99,10 @@ namespace api.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ExchangeExecutionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar");
+
                     b.Property<string>("ExchangeName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -113,6 +117,14 @@ namespace api.Migrations
                         .HasColumnType("varchar");
 
                     b.Property<decimal>("Fee")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<string>("FeeCurrency")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar");
+
+                    b.Property<decimal?>("FeeQuoteValue")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
@@ -227,74 +239,6 @@ namespace api.Migrations
                     b.ToTable("UserPortfolioSnapshots");
                 });
 
-            modelBuilder.Entity("api.Exchanges.Models.CredentialUpdateOperation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AccountId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("CreatesAccount")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Error")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("Exchange")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("NewCredentialSetId")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("OperationId")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("PreviousCredentialSetId")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<Guid?>("PreviousCredentialVersion")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("Version")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OperationId")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "Exchange", "AccountId", "State");
-
-                    b.ToTable("CredentialUpdateOperations", (string)null);
-                });
-
             modelBuilder.Entity("api.Exchanges.Models.ExchangeIntegration", b =>
                 {
                     b.Property<int>("Id")
@@ -303,16 +247,8 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ActiveCredentialSetId")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CredentialVersion")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
@@ -325,6 +261,13 @@ namespace api.Migrations
                     b.Property<DateTime?>("LastSyncAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("MasterAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -335,61 +278,14 @@ namespace api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MasterAccountId")
+                        .IsUnique()
+                        .HasFilter("[MasterAccountId] IS NOT NULL");
+
                     b.HasIndex("UserId", "Exchange")
                         .IsUnique();
 
                     b.ToTable("ExchangeIntegrations", (string)null);
-                });
-
-            modelBuilder.Entity("api.Exchanges.Models.LegacyBybitCredentialPromotion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CredentialOperationId")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("CredentialSetId")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("Exchange")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Outcome")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<int>("SourceAccountId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Exchange")
-                        .IsUnique();
-
-                    b.ToTable("LegacyBybitCredentialPromotions", (string)null);
                 });
 
             modelBuilder.Entity("api.Exchanges.Models.SyncStatus", b =>
@@ -403,16 +299,8 @@ namespace api.Migrations
                     b.Property<int>("AccountId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ActiveCredentialSetId")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
                     b.Property<DateTime?>("BybitCredentialsSetAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CredentialVersion")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("ErrorCount")
                         .HasColumnType("int");
@@ -438,6 +326,10 @@ namespace api.Migrations
 
                     b.Property<DateTime?>("LastVerifiedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -523,6 +415,10 @@ namespace api.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
 
+                    b.Property<string>("ExchangeExecutionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar");
+
                     b.Property<string>("ExchangeName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -532,6 +428,14 @@ namespace api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Fee")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<string>("FeeCurrency")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar");
+
+                    b.Property<decimal?>("FeeQuoteValue")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
@@ -622,6 +526,16 @@ namespace api.Migrations
                         .IsRequired();
 
                     b.Navigation("CryptoAsset");
+                });
+
+            modelBuilder.Entity("api.Exchanges.Models.ExchangeIntegration", b =>
+                {
+                    b.HasOne("api.Cryptos.Models.Account", "MasterAccount")
+                        .WithMany()
+                        .HasForeignKey("MasterAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("MasterAccount");
                 });
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>

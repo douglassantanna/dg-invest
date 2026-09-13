@@ -8,6 +8,7 @@ import { SyncLogEntry } from '../models/sync-log-entry';
 import { BybitSubMemberDto } from '../models/bybit-sub-member';
 import { CredentialsStatusDto } from '../models/credentials-status';
 import { BybitConnectionGroupDto } from '../models/bybit-connection-group';
+import { ExchangeAccountDetailDto, ExchangeTransactionDto } from '../models/exchange-account';
 
 const url = `${environment.apiUrl}/Exchange`;
 
@@ -15,16 +16,34 @@ const url = `${environment.apiUrl}/Exchange`;
 export class ExchangeService {
   private http = inject(HttpClient);
 
-  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId });
+  saveBybitIntegrationCredentials(apiKey: string, apiSecret: string, masterUid: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/integration-credentials`, { apiKey, apiSecret, masterUid, region });
+  }
+
+  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId, region });
+  }
+
+  getExchangeAccountDetail(accountId: number): Observable<Response<ExchangeAccountDetailDto>> {
+    return this.http.get<Response<ExchangeAccountDetailDto>>(`${url}/${accountId}`);
+  }
+
+  getExchangeTransactions(accountId: number, limit = 20): Observable<Response<ExchangeTransactionDto[]>> {
+    return this.http.get<Response<ExchangeTransactionDto[]>>(`${url}/${accountId}/transactions`, {
+      params: new HttpParams().set('limit', limit),
+    });
+  }
+
+  disconnectBybit(): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/disconnect`, {});
   }
 
   syncBybitAccounts(): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/sync-accounts`, {});
   }
 
-  getBybitSubMembers(): Observable<Response<any>> {
-    return this.http.get<Response<any>>(`${url}/bybit/sub-members`);
+  getBybitSubMembers(): Observable<Response<BybitSubMemberDto[]>> {
+    return this.http.get<Response<BybitSubMemberDto[]>>(`${url}/bybit/sub-members`);
   }
 
   mapBybitAccount(accountId: number, externalId: string): Observable<Response<any>> {
@@ -59,5 +78,9 @@ export class ExchangeService {
 
   toggleBybitAccount(accountId: number): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/toggle/${accountId}`, {});
+  }
+
+  renameBybitAccount(accountId: number, name: string): Observable<Response<any>> {
+    return this.http.put<Response<any>>(`${url}/bybit/name/${accountId}`, { name });
   }
 }

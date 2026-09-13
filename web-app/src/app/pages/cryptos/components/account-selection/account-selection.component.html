@@ -16,6 +16,11 @@
       <div class="flex items-center gap-2">
         <i class="material-icons text-lg">account_balance_wallet</i>
         <span>{{ account.name }}</span>
+        @if (account.isBybitCombinedWallet) {
+        <span class="material-icons text-sm text-gray-400" role="img"
+          aria-label="This balance combines Bybit Funding and Unified wallets"
+          title="This balance combines Bybit Funding and Unified wallets. For wallet-level details, check the Exchange page.">info_outline</span>
+        }
       </div>
       <span class="text-sm">{{ account.balance | currency }} USD</span>
     </div>

@@ -52,7 +52,7 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
 
                 if (integration != null)
                 {
-                    integration.DeactivateCredentialSet();
+                    integration.MarkDisabled();
                     integration.MarkDisconnected();
                 }
 
@@ -61,22 +61,17 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
                     .ToListAsync(cancellationToken);
                 foreach (var status in statuses)
                 {
-                    status.DeactivateCredentialSet();
                     status.Disable();
                 }
 
-                var activeOrIncompleteOperations = await _context.CredentialUpdateOperations
-                    .Where(operation => operation.UserId == request.UserId
-                                        && operation.Exchange == "Bybit"
-                                        && (operation.State == "Pending"
-                                            || operation.State == "VaultWritten"
-                                            || operation.State == "RecoveryRequired"
-                                            || operation.State == "Active"))
+                var bybitAccounts = await _context.Accounts
+                    .Where(account => account.UserId == request.UserId && !account.IsDeleted
+                                    && account.AccountType == api.Cryptos.Models.EAccountType.Exchange
+                                    && account.Exchange == "Bybit")
                     .ToListAsync(cancellationToken);
-                foreach (var operation in activeOrIncompleteOperations)
+                foreach (var account in bybitAccounts)
                 {
-                    if (operation.State == "Active") operation.MarkRetired();
-                    else operation.MarkSuperseded();
+                    account.Disable();
                 }
 
                 await _context.SaveChangesAsync(cancellationToken);

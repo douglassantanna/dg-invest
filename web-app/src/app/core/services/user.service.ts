@@ -22,6 +22,8 @@ export interface AccountTransactionDto {
   cryptoSymbol: string;
   fee: number;
   exchangeStatus?: string;
+  feeCurrency?: string;
+  feeQuoteValue?: number;
 }
 
 export interface GroupedAccountTransactionsDto {
@@ -38,6 +40,7 @@ export interface AccountDto {
   pageSize: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  isBybitCombinedWallet: boolean;
 }
 
 export interface UserDto {

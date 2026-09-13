@@ -28,7 +28,8 @@ public record BybitSubaccountRowDto(
     string? MaskedApiKey,
     string WebhookUrl,
     string? LastVerifiedAt,
-    bool IsEnabled)
+    bool IsEnabled,
+    bool IsMaster = false)
 {
     public string? BybitUid => ExternalId;
 }
@@ -46,8 +47,13 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
     public async Task<Response> Handle(GetBybitConnectionGroupQuery request, CancellationToken cancellationToken)
     {
+        var integration = await _context.ExchangeIntegrations
+            .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
+        if (integration != null && !integration.Enabled)
+            return new Response("ok", true, EmptyGroup());
+
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId && !a.IsDeleted
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted && a.Enabled
                      && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
@@ -61,9 +67,9 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
         foreach (var account in accounts)
         {
-            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
-            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
-            var webhookSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
+            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
+            var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
 
             if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
                 return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
@@ -114,18 +120,29 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
                 MaskedApiKey: maskedApiKey,
                 WebhookUrl: webhookUrl,
                 LastVerifiedAt: lastVerifiedAt,
-                IsEnabled: syncStatus?.IsEnabled ?? false));
+                IsEnabled: syncStatus?.IsEnabled ?? false,
+                IsMaster: account.Id == integration?.MasterAccountId));
         }
 
         var group = new BybitConnectionGroupDto(
             Id: "bybit-main",
             Name: "Main account (Bybit login)",
-            SubaccountCount: rows.Count,
+            SubaccountCount: rows.Count(row => !row.IsMaster),
             MaxSubaccounts: maxSubaccounts,
             Subaccounts: rows);
 
         return new Response("ok", true, new List<BybitConnectionGroupDto> { group });
     }
+
+    private static List<BybitConnectionGroupDto> EmptyGroup() =>
+    [
+        new(
+            Id: "bybit-main",
+            Name: "Main account (Bybit login)",
+            SubaccountCount: 0,
+            MaxSubaccounts: 10,
+            Subaccounts: [])
+    ];
 
     private static string FormatRelativeTime(DateTime utc)
     {

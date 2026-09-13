@@ -147,6 +147,9 @@ public sealed class InMemoryKeyVault : IKeyVaultService
 
     public Task SetSecretAsync(string secretName, string value)
     {
+        if (!IsAvailable)
+            throw new InvalidOperationException(KeyVaultSecretReadResult.UnavailableMessage);
+
         if (FailWrites)
             throw new InvalidOperationException("Key Vault write failed");
 
@@ -174,10 +177,56 @@ public sealed class FakeBybitService : IBybitService
         new BybitSubMember { Uid = "integration-uid-1", Username = "Integration", Remark = "Integration subaccount" },
     ];
 
+    public string? LastApiKey { get; set; }
+    public BybitRegion? LastRegion { get; set; }
+    public BybitApiException? SubAccountsError { get; set; }
+    public Dictionary<string, BybitWalletBalanceResponse> WalletBalancesByAccountType { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     public bool ValidateWebhookSignature(string rawBody, string signature, string timestamp, string webhookSecret) => true;
-    public Task<List<BybitSubMember>> GetSubAccountsAsync(string apiKey, string apiSecret) => Task.FromResult(SubAccounts);
-    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitOrderData>());
-    public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
-    public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
-    public Task<bool> TestConnectionAsync(string apiKey, string apiSecret) => Task.FromResult(true);
+    public Task<List<BybitSubMember>> GetSubAccountsAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)
+    {
+        LastApiKey = apiKey;
+        LastRegion = region;
+        if (SubAccountsError is not null) throw SubAccountsError;
+        return Task.FromResult(SubAccounts);
+    }
+    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitOrderData>());
+    public Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId) => Task.FromResult(new List<BybitExecutionData>());
+    public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
+    public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
+    public Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitInternalTransferRow>());
+    public Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitInternalTransferRow>());
+    public Task<BybitWalletBalanceResponse> GetWalletBalanceAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, string accountType = "UNIFIED", string? memberId = null)
+    {
+        LastApiKey = apiKey;
+        LastRegion = region;
+        return Task.FromResult(WalletBalancesByAccountType.TryGetValue(accountType, out var response)
+            ? response
+            : new BybitWalletBalanceResponse());
+    }
+    public Task<BybitAccountCoinBalanceResponse> GetAccountCoinBalanceAsync(string apiKey, string apiSecret, BybitRegion region, string accountType, string coin, string? memberId = null)
+    {
+        LastApiKey = apiKey;
+        LastRegion = region;
+        var wallet = WalletBalancesByAccountType.TryGetValue(accountType, out var response)
+            ? response.Result.List.FirstOrDefault()?.Coin.FirstOrDefault(item => string.Equals(item.Coin, coin, StringComparison.OrdinalIgnoreCase))
+            : null;
+        return Task.FromResult(new BybitAccountCoinBalanceResponse
+        {
+            RetCode = 0,
+            RetMsg = "success",
+            Result = new BybitAccountCoinBalanceResult
+            {
+                AccountType = accountType,
+                MemberId = memberId ?? string.Empty,
+                Balance = new BybitAccountCoinBalance
+                {
+                    Coin = coin,
+                    WalletBalance = wallet?.WalletBalance ?? "0",
+                    TransferBalance = wallet?.AvailableBalance ?? wallet?.WalletBalance ?? "0"
+                }
+            }
+        });
+    }
+    public Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global) => Task.FromResult(true);
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
 using api.Exchanges.Queries;
 using api.Shared;
@@ -67,7 +68,8 @@ public class ExchangeController : ControllerBase
             request.ApiSecret,
             request.WebhookSecret,
             request.ResolvedName,
-            request.ResolvedExternalId);
+            request.ResolvedExternalId,
+            request.Region);
 
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
@@ -83,7 +85,7 @@ public class ExchangeController : ControllerBase
         if (userId == null)
             return Unauthorized(new Response("Invalid user ID", false));
 
-        var result = await _mediator.Send(new SaveBybitIntegrationCredentialsCommand(userId.Value, request.ApiKey, request.ApiSecret));
+        var result = await _mediator.Send(new SaveBybitIntegrationCredentialsCommand(userId.Value, request.ApiKey, request.ApiSecret, request.Region, request.MasterUid));
         if (!result.IsSuccess)
             return Failure(result);
 
@@ -245,6 +247,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("bybit/name/{accountId}")]
+    public async Task<ActionResult<Response>> RenameBybitAccount(int accountId, [FromBody] RenameBybitAccountRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new RenameBybitAccountCommand(userId.Value, accountId, request.Name));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -266,13 +282,15 @@ public record SaveBybitCredentialsRequest(
     string? Name = null,
     string? ExternalId = null,
     string? SubaccountTag = null,
-    string? BybitUid = null)
+    string? BybitUid = null,
+    BybitRegion Region = BybitRegion.Global)
 {
     public string? ResolvedName => string.IsNullOrWhiteSpace(Name) ? SubaccountTag : Name;
     public string? ResolvedExternalId => string.IsNullOrWhiteSpace(ExternalId) ? BybitUid : ExternalId;
 }
 
-public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret);
+public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret, string? MasterUid = null, BybitRegion Region = BybitRegion.Global);
+public record RenameBybitAccountRequest(string Name);
 
 public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
 {

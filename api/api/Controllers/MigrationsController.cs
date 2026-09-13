@@ -29,8 +29,4 @@ public class MigrationsController : ControllerBase
         }
         return Ok();
     }
-
-    [HttpPost("bybit-legacy-credentials")]
-    public async Task<ActionResult<IReadOnlyList<LegacyBybitCredentialPromotionReport>>> PromoteLegacyBybitCredentials([FromQuery] bool? dryRun, [FromServices] ILegacyBybitCredentialPromotionService promotions = null!, CancellationToken cancellationToken = default)
-        => Ok(await promotions.PromoteAsync(dryRun ?? true, cancellationToken));
 }

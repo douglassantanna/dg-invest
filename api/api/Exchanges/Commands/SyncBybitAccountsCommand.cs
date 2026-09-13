@@ -16,17 +16,20 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
     private readonly IBybitService _bybitService;
     private readonly IKeyVaultService _keyVaultService;
     private readonly DataContext _context;
+    private readonly IBybitOrderSyncService _orderSyncService;
     private readonly ILogger<SyncBybitAccountsCommandHandler> _logger;
 
     public SyncBybitAccountsCommandHandler(
         IBybitService bybitService,
         IKeyVaultService keyVaultService,
         DataContext context,
+        IBybitOrderSyncService orderSyncService,
         ILogger<SyncBybitAccountsCommandHandler> logger)
     {
         _bybitService = bybitService;
         _keyVaultService = keyVaultService;
         _context = context;
+        _orderSyncService = orderSyncService;
         _logger = logger;
     }
 
@@ -45,27 +48,14 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
             if (integration == null)
             {
-                var legacyMainAccount = await _context.Accounts.SingleOrDefaultAsync(
-                    account => account.UserId == request.UserId && !account.IsDeleted && account.Name == "main",
-                    cancellationToken);
-                if (legacyMainAccount != null)
-                {
-                    var legacyApiKey = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-key"));
-                    var legacyApiSecret = await _keyVaultService.GetSecretReadResultAsync(SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, legacyMainAccount.Id, "api-secret"));
-                    if (legacyApiKey.IsUnavailable || legacyApiSecret.IsUnavailable)
-                        return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
-                    if (!string.IsNullOrEmpty(legacyApiKey.Value) && !string.IsNullOrEmpty(legacyApiSecret.Value))
-                        return new Response("Your existing Bybit discovery credentials need migration to the integration model. They remain unchanged while migration is prepared.", false, 409);
-                }
-
                 return new Response("Bybit integration credentials not found. Please save your API key and secret first.", false, 400);
             }
 
             if (!integration.Enabled)
                 return new Response("Bybit integration is disconnected. Save integration credentials to reconnect.", false, 400);
 
-            var apiKey = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-key", cancellationToken);
-            var apiSecret = await BybitCredentialReader.ReadAsync(_context, _keyVaultService, request.UserId, null, "api-secret", cancellationToken);
+            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, null, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, null, "api-secret", cancellationToken);
 
             if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
                 return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
@@ -76,10 +66,16 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 return new Response("Bybit credentials not found. Please save your API key and secret first.", false, 400);
             }
 
+            var region = BybitEndpoints.Parse(integration.Region);
             List<BybitSubMember> subMembers;
             try
             {
-                subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!);
+                subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!, region);
+            }
+            catch (BybitApiException ex)
+            {
+                _logger.LogWarning(ex, "SyncBybitAccounts: Bybit rejected discovery request for user {UserId}", request.UserId);
+                return new Response($"Bybit rejected the integration credentials: {ex.RetCode} - {ex.RetMsg}", false, 400);
             }
             catch (Exception ex)
             {
@@ -87,21 +83,50 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 return new Response("Failed to fetch sub-accounts from Bybit", false, 500);
             }
 
-            var existingBybitUids = await _context.Accounts
+            var existingBybitAccounts = await _context.Accounts
                 .Where(a => a.UserId == request.UserId && !a.IsDeleted
-                         && a.AccountType == EAccountType.Exchange && a.Exchange == "Bybit" && a.ExternalId != null)
-                .ToDictionaryAsync(a => a.ExternalId!, a => a, cancellationToken);
+                         && a.AccountType == EAccountType.Exchange && a.Exchange == "Bybit" && a.ExternalId != null
+                         && a.Id != integration.MasterAccountId)
+                .ToListAsync(cancellationToken);
+
+            var existingByUid = existingBybitAccounts.ToDictionary(a => a.ExternalId!, a => a);
+            var currentUids = new HashSet<string>(subMembers.Select(m => m.Uid), StringComparer.Ordinal);
 
             int created = 0;
             int matched = 0;
+            int disabled = 0;
+
+            var masterAccount = integration.MasterAccountId is { } masterAccountId
+                ? await _context.Accounts.SingleOrDefaultAsync(a => a.Id == masterAccountId && !a.IsDeleted, cancellationToken)
+                : null;
+            if (masterAccount is not null)
+                await PopulateInitialCashBalanceAsync(masterAccount, apiKey.Value!, apiSecret.Value!, region,
+                    [("FUND", null), ("UNIFIED", null)], cancellationToken);
+            else
+            {
+                var legacyMainAccount = await _context.Accounts
+                    .SingleOrDefaultAsync(a => a.UserId == request.UserId && a.AccountType == EAccountType.Manual && a.Name == "main", cancellationToken);
+                if (legacyMainAccount is not null)
+                    await PopulateInitialCashBalanceAsync(legacyMainAccount, apiKey.Value!, apiSecret.Value!, region,
+                        [("FUND", null), ("UNIFIED", null)], cancellationToken);
+            }
 
             foreach (var member in subMembers)
             {
-                if (existingBybitUids.TryGetValue(member.Uid, out var mappedAccount))
+                if (existingByUid.TryGetValue(member.Uid, out var mappedAccount))
                 {
+                    if (!mappedAccount.Enabled)
+                    {
+                        mappedAccount.Enable();
+                        _logger.LogInformation("SyncBybitAccounts: UID {Uid} re-enabled account '{Name}' for current connection",
+                            member.Uid, mappedAccount.Name);
+                    }
+
                     matched++;
                     _logger.LogInformation("SyncBybitAccounts: UID {Uid} already mapped to account '{Name}'",
                         member.Uid, mappedAccount.Name);
+                    await PopulateInitialCashBalanceAsync(mappedAccount, apiKey.Value!, apiSecret.Value!, region,
+                        [("FUND", member.Uid), ("UNIFIED", member.Uid)], cancellationToken);
                     continue;
                 }
 
@@ -111,13 +136,27 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
                 var newAccount = new Account(tag, request.UserId, EAccountType.Exchange, "Bybit", member.Uid);
                 _context.Accounts.Add(newAccount);
+                await PopulateInitialCashBalanceAsync(newAccount, apiKey.Value!, apiSecret.Value!, region,
+                    [("FUND", member.Uid), ("UNIFIED", member.Uid)], cancellationToken);
                 created++;
                 _logger.LogInformation("SyncBybitAccounts: created account '{Name}' (Bybit UID: {Uid}) for user {UserId}",
                     tag, member.Uid, request.UserId);
             }
+
+            foreach (var existing in existingBybitAccounts)
+            {
+                if (existing.ExternalId != null && existing.Enabled && !currentUids.Contains(existing.ExternalId))
+                {
+                    existing.Disable();
+                    disabled++;
+                    _logger.LogInformation("SyncBybitAccounts: UID {Uid} not returned by current API key; disabling stale account '{Name}'",
+                        existing.ExternalId, existing.Name);
+                }
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
 
-            return new Response($"Sync complete. {matched} matched, {created} created.", true);
+            return new Response($"Sync complete. {matched} matched, {created} created, {disabled} disabled.", true);
         }
         catch (Exception ex)
         {
@@ -126,5 +165,39 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
         }
 
 
+    }
+
+    private async Task PopulateInitialCashBalanceAsync(
+        Account account,
+        string apiKey,
+        string apiSecret,
+        BybitRegion region,
+        IReadOnlyList<(string AccountType, string? MemberId)> walletScopes,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var balance = 0m;
+            foreach (var (accountType, memberId) in walletScopes)
+            {
+                foreach (var coin in BybitCashBalance.CashCoins)
+                {
+                    try
+                    {
+                        var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, accountType, coin, memberId);
+                        balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "SyncBybitAccounts: failed to fetch {AccountType} {Coin} balance for account {AccountId}", accountType, coin, account.Id);
+                    }
+                }
+            }
+            await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SyncBybitAccounts: failed to populate cash balance for account {AccountId}", account.Id);
+        }
     }
 }

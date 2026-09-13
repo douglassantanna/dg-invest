@@ -8,6 +8,7 @@ export interface SimpleAccountDto {
   balance: number;
   id: number;
   isSelected: boolean;
+  isBybitCombinedWallet: boolean;
 }
 
 @Component({
@@ -63,7 +64,7 @@ export class AccountSelectionComponent implements OnInit {
       this.accountService.createAccount(command).subscribe({
         next: () => {
           this.loading.set(false);
-          this.accounts().push({ name: this.newAccountName(), balance: 0, id: 0, isSelected: false });
+          this.accounts().push({ name: this.newAccountName(), balance: 0, id: 0, isSelected: false, isBybitCombinedWallet: false });
           this.newAccountName.set('');
           this.showNewAccountInput.set(false);
           this.errorMessage.set('');

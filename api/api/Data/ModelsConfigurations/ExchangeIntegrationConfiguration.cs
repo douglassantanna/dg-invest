@@ -11,8 +11,13 @@ public class ExchangeIntegrationConfiguration : IEntityTypeConfiguration<Exchang
         builder.ToTable("ExchangeIntegrations");
         builder.Property(x => x.Exchange).HasColumnType("varchar").HasMaxLength(50).IsRequired();
         builder.Property(x => x.Status).HasColumnType("varchar").HasMaxLength(50).IsRequired();
-        builder.Property(x => x.ActiveCredentialSetId).HasMaxLength(32);
-        builder.Property(x => x.CredentialVersion).IsConcurrencyToken();
         builder.HasIndex(x => new { x.UserId, x.Exchange }).IsUnique();
+        builder.HasOne(x => x.MasterAccount)
+            .WithMany()
+            .HasForeignKey(x => x.MasterAccountId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.MasterAccountId)
+            .IsUnique()
+            .HasFilter("[MasterAccountId] IS NOT NULL");
     }
 }

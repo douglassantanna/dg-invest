@@ -37,6 +37,7 @@ public class Account : Entity
     }
 
     public void SetExternalId(string externalId) => ExternalId = NormalizeExternalId(externalId);
+    public void SetName(string name) => Name = name.Trim();
     public void SetExchange(string exchange) => Exchange = exchange;
     public void ConfigureExchange(string exchange, string externalId)
     {
@@ -47,8 +48,17 @@ public class Account : Entity
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;
     public void ToggleEnabled() => Enabled = !Enabled;
+    public void Enable() => Enabled = true;
+    public void Disable() => Enabled = false;
     public void SoftDelete() => IsDeleted = true;
-    public decimal TotalDeposited() => _accountTransactions.Where(x => x.TransactionType == EAccountTransactionType.DepositFiat).Sum(x => x.Amount);
+    public decimal TotalDeposited() => _accountTransactions.Sum(x => x.TransactionType switch
+    {
+        EAccountTransactionType.DepositFiat => x.Amount,
+        EAccountTransactionType.TransferIn => x.Amount,
+        EAccountTransactionType.WithdrawToBank => -x.Amount,
+        EAccountTransactionType.TransferOut => -x.Amount,
+        _ => 0
+    });
     public IReadOnlyCollection<AccountTransaction> AccountTransactions => _accountTransactions.AsReadOnly();
     internal void AddTransaction(AccountTransaction accountTransaction)
     {

@@ -10,7 +10,10 @@ public class CryptoTransaction : Entity
                              string exchangeName,
                              ETransactionType transactionType,
                              decimal fee,
-                             string? exchangeOrderId = null)
+                             string? exchangeOrderId = null,
+                             string? feeCurrency = null,
+                             decimal? feeQuoteValue = null,
+                             string? exchangeExecutionId = null)
     {
         Amount = amount;
         Price = price;
@@ -20,6 +23,9 @@ public class CryptoTransaction : Entity
         Enabled = true;
         Fee = fee;
         ExchangeOrderId = exchangeOrderId;
+        FeeCurrency = feeCurrency;
+        FeeQuoteValue = feeQuoteValue;
+        ExchangeExecutionId = exchangeExecutionId;
     }
     public decimal Amount { get; private set; }
     public decimal Price { get; private set; }
@@ -28,8 +34,20 @@ public class CryptoTransaction : Entity
     public ETransactionType TransactionType { get; private set; }
     public bool Enabled { get; private set; }
     public decimal Fee { get; set; }
+    public string? FeeCurrency { get; private set; }
+    public decimal? FeeQuoteValue { get; private set; }
     // Null for manual entries; set for exchange-synced trades (used for deduplication).
     public string? ExchangeOrderId { get; private set; }
+    public string? ExchangeExecutionId { get; private set; }
+    public decimal FeeInQuoteValue => FeeQuoteValue ?? (FeeCurrency is null ? Fee : 0m);
+
+    public void UpdateFee(decimal fee, string? feeCurrency, decimal? feeQuoteValue, string? exchangeExecutionId)
+    {
+        Fee = fee;
+        FeeCurrency = feeCurrency;
+        FeeQuoteValue = feeQuoteValue;
+        ExchangeExecutionId = exchangeExecutionId;
+    }
 
     internal void Disable()
     {

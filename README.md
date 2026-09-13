@@ -231,9 +231,48 @@ Bybit (order filled)
             ├─ Status tracked (Pending / Success / Failed)
             └─ Saved to database + balance updated
 
-     Sync logs are written to Azure Blob Storage (JSONL format)
-     and can be viewed in the Exchange Management UI.
+      Sync logs are written to Azure Blob Storage (JSONL format)
+      and can be viewed in the Exchange Management UI.
 ```
+
+#### Retrying a missed Bybit order
+
+If an order was skipped because the sync cursor advanced before the importer was corrected, rewind the cursor for only the affected user and account. This changes no balances and deletes no transactions; it only makes the next timer run request recent Bybit activity again.
+
+Inspect the current cursor first:
+
+```sql
+SELECT Id, UserId, AccountId, ExchangeName, LastSyncAt, LastOrderId, Status
+FROM SyncStatuses
+WHERE UserId = 6
+  AND AccountId = 33
+  AND ExchangeName = 'Bybit';
+```
+
+Reset it inside a transaction:
+
+```sql
+BEGIN TRANSACTION;
+
+UPDATE SyncStatuses
+SET LastSyncAt = DATEADD(minute, -15, SYSUTCDATETIME()),
+    LastOrderId = NULL
+WHERE UserId = 6
+  AND AccountId = 33
+  AND ExchangeName = 'Bybit';
+
+SELECT Id, UserId, AccountId, ExchangeName, LastSyncAt, LastOrderId, Status
+FROM SyncStatuses
+WHERE UserId = 6
+  AND AccountId = 33
+  AND ExchangeName = 'Bybit';
+
+COMMIT TRANSACTION;
+```
+
+Replace `UserId` and `AccountId` with the affected records. A 15-minute rewind may re-fetch other recent activity, but the sync deduplication prevents existing orders, deposits, withdrawals, and transfers from being recorded twice. Order deduplication is scoped to the current exchange account, so an order saved for another account can be imported correctly. After the next Function run, verify the log reports `saved order` rather than `already saved`.
+
+Run this only against the intended environment database. `LastOrderId` is informational; `LastSyncAt` controls the replay window.
 
 #### Setup
 
