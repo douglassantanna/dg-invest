@@ -39,6 +39,10 @@ export class AccountTransactionCardComponent {
         return 'Buy';
       case AccountTransactionType.WithdrawCrypto:
         return 'Withdraw Crypto';
+      case AccountTransactionType.TransferIn:
+        return 'Transfer In';
+      case AccountTransactionType.TransferOut:
+        return 'Transfer Out';
       default:
         return 'Unknown';
     }
@@ -55,6 +59,10 @@ export class AccountTransactionCardComponent {
       case AccountTransactionType.In:
         return 'money-in';
       case AccountTransactionType.Out:
+        return 'money-out';
+      case AccountTransactionType.TransferIn:
+        return 'money-in';
+      case AccountTransactionType.TransferOut:
         return 'money-out';
       default:
         return 'unknown';
@@ -75,6 +83,10 @@ export class AccountTransactionCardComponent {
       case AccountTransactionType.WithdrawCrypto:
       case AccountTransactionType.Out:
         return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) + accountTransaction.fee;
+      case AccountTransactionType.TransferIn:
+        return accountTransaction.amount * accountTransaction.cryptoCurrentPrice;
+      case AccountTransactionType.TransferOut:
+        return accountTransaction.amount * accountTransaction.cryptoCurrentPrice;
       default:
         return 0;
     }
@@ -89,13 +101,15 @@ export class AccountTransactionCardComponent {
   isIncoming(transactionType: AccountTransactionType): boolean {
     return transactionType === AccountTransactionType.DepositFiat ||
       transactionType === AccountTransactionType.DepositCrypto ||
-      transactionType === AccountTransactionType.In;
+      transactionType === AccountTransactionType.In ||
+      transactionType === AccountTransactionType.TransferIn;
   }
 
   isOutgoing(transactionType: AccountTransactionType): boolean {
     return transactionType === AccountTransactionType.WithdrawToBank ||
       transactionType === AccountTransactionType.WithdrawCrypto ||
-      transactionType === AccountTransactionType.Out;
+      transactionType === AccountTransactionType.Out ||
+      transactionType === AccountTransactionType.TransferOut;
   }
 
   getTransactionSign(transactionType: AccountTransactionType): string {
@@ -115,7 +129,7 @@ export class AccountTransactionCardComponent {
   }
 
   private isCompletedStatus(status: string): boolean {
-    return ['3', 'success', 'filled'].includes(status.toLowerCase());
+    return ['3', 'success', 'filled', 'internaltransfer'].includes(status.toLowerCase());
   }
 
   private isFailedStatus(status: string): boolean {

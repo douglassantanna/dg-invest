@@ -67,7 +67,9 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                 transactionsQuery = transactionsQuery.Where(at =>
                     at.ExchangeStatus == "3" ||
                     (at.ExchangeStatus != null &&
-                        (at.ExchangeStatus.ToLower() == "success" || at.ExchangeStatus.ToLower() == "filled")));
+                        (at.ExchangeStatus.ToLower() == "success" ||
+                         at.ExchangeStatus.ToLower() == "filled" ||
+                         at.ExchangeStatus.ToLower() == "internaltransfer")));
             else if (status == "failed")
                 transactionsQuery = transactionsQuery.Where(at =>
                     at.ExchangeStatus == "4" ||
@@ -80,6 +82,7 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                     (at.ExchangeStatus == null ||
                         (at.ExchangeStatus.ToLower() != "success" &&
                          at.ExchangeStatus.ToLower() != "filled" &&
+                         at.ExchangeStatus.ToLower() != "internaltransfer" &&
                          at.ExchangeStatus.ToLower() != "failed" &&
                          at.ExchangeStatus.ToLower() != "fail")));
         }
@@ -141,6 +144,8 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
             EAccountTransactionType.In => "Sell",
             EAccountTransactionType.Out => "Buy",
             EAccountTransactionType.WithdrawCrypto => "Withdraw Crypto",
+            EAccountTransactionType.TransferIn => "Transfer In",
+            EAccountTransactionType.TransferOut => "Transfer Out",
             _ => ""
         };
     }
