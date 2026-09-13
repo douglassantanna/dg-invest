@@ -3,13 +3,14 @@ import { Component, Input, input } from '@angular/core';
 import { AccountTransaction, AccountTransactionType } from '../../containers/account/account.component';
 import { AccountTransactionDto, GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
 import { CryptoSymbolPipe } from 'src/app/core/pipes/crypto-symbol.pipe';
-import { CurrencyPipe, DatePipe, NgClass, UpperCasePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe, NgClass, UpperCasePipe } from '@angular/common';
 
 @Component({
   selector: 'app-account-transaction-card',
   standalone: true,
   imports: [
     DatePipe,
+    DecimalPipe,
     NgClass,
     CurrencyPipe,
     UpperCasePipe,

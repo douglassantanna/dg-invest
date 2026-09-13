@@ -21,7 +21,7 @@ public class BuyTransaction : ITransactionStrategy
             account.Id, accountTransaction.Amount, accountTransaction.CryptoCurrentPrice);
 
         decimal totalCost = CalculateTransactionCost(accountTransaction.Amount, accountTransaction.CryptoCurrentPrice,
-            accountTransaction.FeeQuoteValue ?? accountTransaction.Fee);
+            accountTransaction.FeeInQuoteValue);
         var insufficientFunds = account.Balance < totalCost;
         if (insufficientFunds)
         {

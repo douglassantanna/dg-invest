@@ -63,6 +63,7 @@ public class AccountTransaction : Entity
     public decimal? FeeQuoteValue { get; private set; }
     public string? ExchangeTransactionId { get; private set; }
     public string? ExchangeStatus { get; private set; }
+    public decimal FeeInQuoteValue => FeeQuoteValue ?? (FeeCurrency is null ? Fee : 0m);
 
     public void UpdateExchangeStatus(string status)
     {

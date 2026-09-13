@@ -113,7 +113,9 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                     at.CryptoCurrentPrice,
                     at.CryptoAsset?.Symbol.ToLower() ?? "",
                     at.Fee,
-                    at.ExchangeStatus
+                    at.ExchangeStatus,
+                    at.FeeCurrency,
+                    at.FeeQuoteValue
                 )).ToList()
             ))
             .OrderByDescending(g => g.Date)

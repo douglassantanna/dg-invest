@@ -151,7 +151,17 @@ public class SyncBybitOrders
                 {
                     foreach (var order in filledOrders)
                     {
-                        if (!await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken))
+                        IReadOnlyList<BybitExecutionData> executions = [];
+                        try
+                        {
+                            executions = await _bybitService.GetExecutionHistoryAsync(apiKey.Value!, apiSecret.Value!, region, order.OrderId);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "SyncBybitOrders: execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
+                        }
+
+                        if (!await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken, executions))
                             hasFailures = true;
                     }
                     _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);

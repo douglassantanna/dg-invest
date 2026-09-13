@@ -44,7 +44,16 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _cacheService = cacheService;
     }
 
-    public async Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
+    public Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
+        => ProcessOrderAsync(order, account, userId, importSource, cancellationToken, null);
+
+    public async Task<bool> ProcessOrderAsync(
+        BybitOrderData order,
+        Account account,
+        int userId,
+        string importSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<BybitExecutionData>? executions)
     {
         var quoteCurrencies = await GetQuoteCurrenciesAsync();
         var baseSymbol = ExtractBaseSymbol(order.Symbol, quoteCurrencies);
@@ -65,7 +74,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return true;
         }
 
-        if (!TryParseOrderValues(order, out var price, out var qty, out var fee))
+        if (!TryParseOrderValues(order, out var price, out var qty, out _))
         {
             _logger.LogError("Bybit sync: could not parse numeric values for order {OrderId}", order.OrderId);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", "Could not parse numeric values", importSource, logId, cancellationToken);
@@ -84,8 +93,11 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ? ETransactionType.Buy
             : ETransactionType.Sell;
 
+        var fee = ResolveFee(order, executions, baseSymbol, price);
+
         var purchaseDate = DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(order.CreatedTime));
-        var cryptoTx = new CryptoTransaction(qty, price, purchaseDate, "Bybit", transactionType, fee, order.OrderId);
+        var cryptoTx = new CryptoTransaction(qty, price, purchaseDate, "Bybit", transactionType,
+            fee.Amount, order.OrderId, fee.Currency, fee.QuoteValue);
 
         var accountTransactionType = transactionType == ETransactionType.Buy
             ? EAccountTransactionType.Out
@@ -100,9 +112,11 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             notes: $"Auto-synced from Bybit order {order.OrderId}",
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
-            fee: fee,
+            fee: fee.Amount,
             exchangeTransactionId: order.OrderId,
-            exchangeStatus: order.OrderStatus);
+            exchangeStatus: order.OrderStatus,
+            feeCurrency: fee.Currency,
+            feeQuoteValue: fee.QuoteValue);
 
         var result = _transactionService.ExecuteTransaction(account, accountTx);
         if (!result.IsSuccess)
@@ -631,6 +645,66 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     {
         return decimal.TryParse(row.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount);
     }
+
+    private ResolvedBybitFee ResolveFee(
+        BybitOrderData order,
+        IReadOnlyList<BybitExecutionData>? executions,
+        string baseSymbol,
+        decimal executionPrice)
+    {
+        var quoteSymbol = order.Symbol[..^baseSymbol.Length].ToUpperInvariant();
+        var feeAmount = 0m;
+        string? feeCurrency = null;
+
+        var executionFees = executions?
+            .Where(execution => decimal.TryParse(execution.ExecFee, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out _)
+                && !string.IsNullOrWhiteSpace(execution.FeeCurrency))
+            .GroupBy(execution => execution.FeeCurrency, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new
+            {
+                Currency = group.Key,
+                Amount = group.Sum(execution => decimal.Parse(execution.ExecFee, System.Globalization.CultureInfo.InvariantCulture))
+            })
+            .ToList() ?? [];
+
+        if (executionFees.Count == 1)
+        {
+            feeCurrency = executionFees[0].Currency.ToUpperInvariant();
+            feeAmount = executionFees[0].Amount;
+        }
+        else if (order.CumFeeDetail.Count == 1)
+        {
+            var feeDetail = order.CumFeeDetail.Single();
+            feeCurrency = feeDetail.Key.ToUpperInvariant();
+            decimal.TryParse(feeDetail.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out feeAmount);
+        }
+        else if (decimal.TryParse(order.CumExecFee, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var legacyFee)
+            && legacyFee > 0)
+        {
+            _logger.LogWarning("Bybit order {OrderId} returned a fee without currency; quote accounting will not assume USDT", order.OrderId);
+            return new ResolvedBybitFee(legacyFee, "UNKNOWN", 0m);
+        }
+
+        if (feeAmount == 0 || feeCurrency is null)
+            return new ResolvedBybitFee(0m, null, 0m);
+
+        var quoteValue = feeCurrency.Equals(quoteSymbol, StringComparison.OrdinalIgnoreCase)
+            ? feeAmount
+            : feeCurrency.Equals(baseSymbol, StringComparison.OrdinalIgnoreCase)
+                ? feeAmount * executionPrice
+                : 0m;
+
+        if (quoteValue == 0m && !feeCurrency.Equals(quoteSymbol, StringComparison.OrdinalIgnoreCase)
+            && !feeCurrency.Equals(baseSymbol, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Bybit order {OrderId} fee currency {FeeCurrency} cannot be converted to {QuoteCurrency}",
+                order.OrderId, feeCurrency, quoteSymbol);
+        }
+
+        return new ResolvedBybitFee(feeAmount, feeCurrency, quoteValue);
+    }
+
+    private sealed record ResolvedBybitFee(decimal Amount, string? Currency, decimal? QuoteValue);
 
     private static bool IsCashCoin(string symbol) => BybitCashBalance.CashCoins.Contains(symbol, StringComparer.OrdinalIgnoreCase);
 

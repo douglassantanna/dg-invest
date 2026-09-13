@@ -97,7 +97,7 @@ public class CryptoAsset : Entity
             {
                 case ETransactionType.Buy:
                     Balance += t.Amount;
-                    TotalInvested += (t.Amount * t.Price) + (t.FeeQuoteValue ?? t.Fee);
+                    TotalInvested += (t.Amount * t.Price) + t.FeeInQuoteValue;
                     break;
 
                 case ETransactionType.Sell:
@@ -160,7 +160,7 @@ public class CryptoAsset : Entity
         if (transaction.Amount <= 0)
             throw new CryptoAssetException("Buy amount must be greater than zero");
 
-        decimal totalCost = (transaction.Amount * transaction.Price) + (transaction.FeeQuoteValue ?? transaction.Fee);
+        decimal totalCost = (transaction.Amount * transaction.Price) + transaction.FeeInQuoteValue;
         Balance += transaction.Amount;
         TotalInvested += totalCost;
     }

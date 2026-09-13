@@ -77,7 +77,16 @@ public class BybitOrderSyncServiceTests
             CumExecQty = "0.00004",
             CumExecFee = "0",
             CreatedTime = "1790000000000"
-        }, currentAccount, 1, "REST", CancellationToken.None);
+        }, currentAccount, 1, "REST", CancellationToken.None,
+        [new BybitExecutionData
+        {
+            OrderId = orderId,
+            ExecId = "execution-1",
+            ExecFee = "0.000000025",
+            FeeCurrency = "BTC",
+            ExecPrice = "50000",
+            ExecQty = "0.00004"
+        }]);
 
         result.Should().BeTrue();
         var transaction = await context.AccountTransactions
@@ -87,6 +96,10 @@ public class BybitOrderSyncServiceTests
             .Select(t => EF.Property<int?>(t, "AccountId"))
             .SingleAsync()).Should().Be(currentAccount.Id);
         transaction.Amount.Should().Be(0.00004m);
+        transaction.Fee.Should().Be(0.000000025m);
+        transaction.FeeCurrency.Should().Be("BTC");
+        transaction.FeeQuoteValue.Should().Be(0.00125m);
+        currentAccount.Balance.Should().Be(99_997.99875m);
     }
 
     [Fact]

@@ -36,7 +36,7 @@ public class SellTransaction : ITransactionStrategy
         account.AddTransaction(accountTransaction);
 
          decimal totalBalance = CalculateTransactionValue(accountTransaction.Amount, accountTransaction.CryptoCurrentPrice,
-             accountTransaction.FeeQuoteValue ?? accountTransaction.Fee);
+             accountTransaction.FeeInQuoteValue);
         account.AddToBalance(totalBalance);
 
         _logger.LogInformation("Sell transaction executed successfully for account ID: {AccountId}, new balance: {NewBalance}",

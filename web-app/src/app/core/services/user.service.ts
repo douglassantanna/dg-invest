@@ -22,6 +22,8 @@ export interface AccountTransactionDto {
   cryptoSymbol: string;
   fee: number;
   exchangeStatus?: string;
+  feeCurrency?: string;
+  feeQuoteValue?: number;
 }
 
 export interface GroupedAccountTransactionsDto {

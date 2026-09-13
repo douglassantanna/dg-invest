@@ -6,6 +6,7 @@ namespace api.Exchanges.Services;
 public interface IBybitOrderSyncService
 {
     Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken);
+    Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken, IReadOnlyList<BybitExecutionData>? executions);
     Task<bool> ProcessDepositAsync(BybitDepositWithdrawalRow deposit, Account account, int userId, CancellationToken cancellationToken);
     Task<bool> ProcessWithdrawalAsync(BybitDepositWithdrawalRow withdrawal, Account account, int userId, CancellationToken cancellationToken);
     Task<bool> ProcessInternalTransferAsync(BybitInternalTransferRow transfer, Account account, int userId, CancellationToken cancellationToken);

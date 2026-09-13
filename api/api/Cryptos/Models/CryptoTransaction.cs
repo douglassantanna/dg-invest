@@ -36,6 +36,7 @@ public class CryptoTransaction : Entity
     public decimal? FeeQuoteValue { get; private set; }
     // Null for manual entries; set for exchange-synced trades (used for deduplication).
     public string? ExchangeOrderId { get; private set; }
+    public decimal FeeInQuoteValue => FeeQuoteValue ?? (FeeCurrency is null ? Fee : 0m);
 
     internal void Disable()
     {
