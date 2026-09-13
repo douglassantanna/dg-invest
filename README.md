@@ -123,6 +123,17 @@ To run only the Exchange API integration flow:
 dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~ExchangeControllerIntegrationTests
 ```
 
+### Full-stack deployment database migrations
+
+The `full-stack-deployment.yml` workflow applies EF Core migrations from a GitHub-hosted runner. The migration job temporarily allows that runner's public IPv4 address through the Azure SQL firewall and removes the rule after the migration, including when the migration fails.
+
+Configure these values in each GitHub Environment used by the workflow:
+
+- Secret `CONNECTION_STRING`: the environment's Azure SQL connection string.
+- Variables `AZURE_SQL_RESOURCE_GROUP` and `AZURE_SQL_SERVER_NAME`: the target Azure SQL resource.
+
+The Azure OIDC identity used by the workflow must be allowed to create, read, and delete firewall rules on the target SQL Server. The database must allow public network access for this temporary rule approach. Do not run untrusted pull request workflows with this deployment identity.
+
 ---
 #### Running everything locally (standalone)
 #### 1. Installation steps
