@@ -320,6 +320,7 @@ describe('Exchange management', () => {
         apiKey: 'new-key',
         apiSecret: 'new-secret',
         webhookSecret: 'new-webhook',
+        region: 'Global',
       });
       request.reply(response(null, 'Credentials saved successfully'));
     }).as('saveCredentials');
@@ -368,7 +369,7 @@ describe('Exchange management', () => {
     cy.wait('@testConnection');
     cy.contains('button', 'Pause sync').click();
     cy.wait('@toggleAccount');
-    cy.get('select').select('123456');
+    cy.get('select[name="externalId"]').select('123456');
     cy.contains('button', 'Map account').click();
     cy.wait('@mapAccount');
     cy.contains('button', 'Remove exchange account').click();
