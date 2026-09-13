@@ -127,15 +127,15 @@ public class ExchangeControllerIntegrationTests
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             var main = await context.Accounts.SingleAsync(account => account.Id == mainAccountId);
             var sub = await context.Accounts.SingleAsync(account => account.UserId == userId && account.ExternalId == "sub-uid-1");
-            main.Balance.Should().Be(5000m);
-            sub.Balance.Should().Be(10000m);
+            main.Balance.Should().Be(15000m);
+            sub.Balance.Should().Be(15000m);
 
             var openingTransactions = await context.AccountTransactions
                 .Where(transaction => transaction.ExchangeTransactionId != null && transaction.ExchangeTransactionId.StartsWith("bybit-opening-balance-"))
                 .ToListAsync();
             openingTransactions.Should().HaveCount(2);
-            openingTransactions.Should().Contain(transaction => transaction.Amount == 5000m && transaction.TransactionType == EAccountTransactionType.DepositFiat);
-            openingTransactions.Should().Contain(transaction => transaction.Amount == 10000m && transaction.TransactionType == EAccountTransactionType.DepositFiat);
+            openingTransactions.Should().Contain(transaction => transaction.Amount == 15000m && transaction.TransactionType == EAccountTransactionType.DepositFiat);
+            openingTransactions.Should().Contain(transaction => transaction.Amount == 15000m && transaction.TransactionType == EAccountTransactionType.DepositFiat);
         }
         finally
         {

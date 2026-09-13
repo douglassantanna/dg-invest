@@ -191,6 +191,7 @@ public sealed class FakeBybitService : IBybitService
         return Task.FromResult(SubAccounts);
     }
     public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitOrderData>());
+    public Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId) => Task.FromResult(new List<BybitExecutionData>());
     public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
     public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
     public Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitInternalTransferRow>());

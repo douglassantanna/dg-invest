@@ -10,6 +10,7 @@ public class BybitService : IBybitService
 {
     private const string SubMembersEndpoint = "/v5/user/submembers";
     private const string OrderHistoryEndpoint = "/v5/order/history";
+    private const string ExecutionHistoryEndpoint = "/v5/execution/list";
     private const string DepositHistoryEndpoint = "/v5/asset/deposit/query-record";
     private const string WithdrawalHistoryEndpoint = "/v5/asset/withdraw/query-record";
     private const string InternalTransferHistoryEndpoint = "/v5/asset/transfer/query-inter-transfer-list";
@@ -175,6 +176,45 @@ public class BybitService : IBybitService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching Bybit order history");
+            throw;
+        }
+    }
+
+    public async Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var queryDict = new Dictionary<string, object>
+            {
+                ["category"] = "spot",
+                ["orderId"] = orderId,
+                ["limit"] = 100
+            };
+            var queryParams = BuildQueryString(queryDict);
+            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
+            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+
+            using var hmac = new HMACSHA256(keyBytes);
+            var signature = Convert.ToHexString(hmac.ComputeHash(paramBytes)).ToLowerInvariant();
+            var response = await GetBaseUrl(region)
+                .AppendPathSegment(ExecutionHistoryEndpoint)
+                .SetQueryParams(queryDict)
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<BybitExecutionHistoryResponse>();
+
+            if (response.RetCode != 0)
+                throw new BybitApiException(response.RetCode, response.RetMsg);
+
+            return response.Result.List;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit execution history for order {OrderId}", orderId);
             throw;
         }
     }
