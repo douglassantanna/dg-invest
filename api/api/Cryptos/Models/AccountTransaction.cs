@@ -22,7 +22,8 @@ public class AccountTransaction : Entity
             string? exchangeTransactionId = null,
             string? exchangeStatus = null,
             string? feeCurrency = null,
-            decimal? feeQuoteValue = null)
+            decimal? feeQuoteValue = null,
+            string? exchangeExecutionId = null)
     {
         Date = date;
         TransactionType = transactionType;
@@ -37,6 +38,7 @@ public class AccountTransaction : Entity
         ExchangeStatus = exchangeStatus;
         FeeCurrency = feeCurrency;
         FeeQuoteValue = feeQuoteValue;
+        ExchangeExecutionId = exchangeExecutionId;
     }
     public AccountTransaction(
             DateTime date,
@@ -62,6 +64,7 @@ public class AccountTransaction : Entity
     public string? FeeCurrency { get; private set; }
     public decimal? FeeQuoteValue { get; private set; }
     public string? ExchangeTransactionId { get; private set; }
+    public string? ExchangeExecutionId { get; private set; }
     public string? ExchangeStatus { get; private set; }
     public decimal FeeInQuoteValue => FeeQuoteValue ?? (FeeCurrency is null ? Fee : 0m);
 
@@ -73,5 +76,13 @@ public class AccountTransaction : Entity
     public void UpdateAmount(decimal amount)
     {
         Amount = amount;
+    }
+
+    public void UpdateFee(decimal fee, string? feeCurrency, decimal? feeQuoteValue, string? exchangeExecutionId)
+    {
+        Fee = fee;
+        FeeCurrency = feeCurrency;
+        FeeQuoteValue = feeQuoteValue;
+        ExchangeExecutionId = exchangeExecutionId;
     }
 }

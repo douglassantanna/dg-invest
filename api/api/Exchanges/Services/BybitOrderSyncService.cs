@@ -69,6 +69,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             .AnyAsync(asset => EF.Property<int>(asset, "AccountId") == account.Id, cancellationToken);
         if (alreadyProcessed)
         {
+            if (TryParseOrderValues(order, out var existingPrice, out _, out _))
+                await ReconcileExistingOrderFeeAsync(order, account, baseSymbol, existingPrice, executions, cancellationToken);
             _logger.LogInformation("Bybit sync: order {OrderId} already saved, skipping", order.OrderId);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Duplicate", null, importSource, logId, cancellationToken);
             return true;
@@ -97,7 +99,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         var purchaseDate = DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(order.CreatedTime));
         var cryptoTx = new CryptoTransaction(qty, price, purchaseDate, "Bybit", transactionType,
-            fee.Amount, order.OrderId, fee.Currency, fee.QuoteValue);
+            fee.Amount, order.OrderId, fee.Currency, fee.QuoteValue, fee.ExecutionId);
 
         var accountTransactionType = transactionType == ETransactionType.Buy
             ? EAccountTransactionType.Out
@@ -116,7 +118,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             exchangeTransactionId: order.OrderId,
             exchangeStatus: order.OrderStatus,
             feeCurrency: fee.Currency,
-            feeQuoteValue: fee.QuoteValue);
+            feeQuoteValue: fee.QuoteValue,
+            exchangeExecutionId: fee.ExecutionId);
 
         var result = _transactionService.ExecuteTransaction(account, accountTx);
         if (!result.IsSuccess)
@@ -682,11 +685,11 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             && legacyFee > 0)
         {
             _logger.LogWarning("Bybit order {OrderId} returned a fee without currency; quote accounting will not assume USDT", order.OrderId);
-            return new ResolvedBybitFee(legacyFee, "UNKNOWN", 0m);
+            return new ResolvedBybitFee(legacyFee, "UNKNOWN", 0m, null);
         }
 
         if (feeAmount == 0 || feeCurrency is null)
-            return new ResolvedBybitFee(0m, null, 0m);
+            return new ResolvedBybitFee(0m, null, 0m, null);
 
         var quoteValue = feeCurrency.Equals(quoteSymbol, StringComparison.OrdinalIgnoreCase)
             ? feeAmount
@@ -701,10 +704,58 @@ public class BybitOrderSyncService : IBybitOrderSyncService
                 order.OrderId, feeCurrency, quoteSymbol);
         }
 
-        return new ResolvedBybitFee(feeAmount, feeCurrency, quoteValue);
+        var executionId = executions is not null
+            ? string.Join(",", executions
+                .Where(execution => string.Equals(execution.FeeCurrency, feeCurrency, StringComparison.OrdinalIgnoreCase))
+                .Select(execution => execution.ExecId)
+                .Where(id => !string.IsNullOrWhiteSpace(id)))
+            : null;
+
+        return new ResolvedBybitFee(feeAmount, feeCurrency, quoteValue,
+            string.IsNullOrWhiteSpace(executionId) ? null : executionId);
     }
 
-    private sealed record ResolvedBybitFee(decimal Amount, string? Currency, decimal? QuoteValue);
+    private async Task ReconcileExistingOrderFeeAsync(
+        BybitOrderData order,
+        Account account,
+        string baseSymbol,
+        decimal price,
+        IReadOnlyList<BybitExecutionData>? executions,
+        CancellationToken cancellationToken)
+    {
+        var cryptoAsset = account.CryptoAssets.FirstOrDefault(asset => asset.Symbol.Equals(baseSymbol, StringComparison.OrdinalIgnoreCase));
+        var cryptoTransaction = cryptoAsset?.Transactions.FirstOrDefault(transaction => transaction.ExchangeOrderId == order.OrderId);
+        if (cryptoAsset is null || cryptoTransaction is null)
+            return;
+
+        var accountTransaction = await _context.AccountTransactions
+            .FirstOrDefaultAsync(transaction =>
+                EF.Property<int?>(transaction, "AccountId") == account.Id &&
+                transaction.CryptoAssetId == cryptoAsset.Id &&
+                (transaction.ExchangeTransactionId == order.OrderId || transaction.Notes.Contains(order.OrderId)), cancellationToken);
+        if (accountTransaction is null)
+            return;
+
+        var fee = ResolveFee(order, executions, baseSymbol, price);
+        var previousQuoteValue = accountTransaction.FeeInQuoteValue;
+        var currentQuoteValue = fee.QuoteValue ?? 0m;
+        var delta = currentQuoteValue - previousQuoteValue;
+
+        if (delta != 0)
+        {
+            if (accountTransaction.TransactionType == EAccountTransactionType.Out)
+                account.SubtractFromBalance(delta);
+            else if (accountTransaction.TransactionType == EAccountTransactionType.In)
+                account.AddToBalance(-delta);
+        }
+
+        accountTransaction.UpdateFee(fee.Amount, fee.Currency, fee.QuoteValue, fee.ExecutionId);
+        cryptoTransaction.UpdateFee(fee.Amount, fee.Currency, fee.QuoteValue, fee.ExecutionId);
+        cryptoAsset.RecalculateFromTransactions();
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private sealed record ResolvedBybitFee(decimal Amount, string? Currency, decimal? QuoteValue, string? ExecutionId);
 
     private static bool IsCashCoin(string symbol) => BybitCashBalance.CashCoins.Contains(symbol, StringComparer.OrdinalIgnoreCase);
 

@@ -12,7 +12,8 @@ public class CryptoTransaction : Entity
                              decimal fee,
                              string? exchangeOrderId = null,
                              string? feeCurrency = null,
-                             decimal? feeQuoteValue = null)
+                             decimal? feeQuoteValue = null,
+                             string? exchangeExecutionId = null)
     {
         Amount = amount;
         Price = price;
@@ -24,6 +25,7 @@ public class CryptoTransaction : Entity
         ExchangeOrderId = exchangeOrderId;
         FeeCurrency = feeCurrency;
         FeeQuoteValue = feeQuoteValue;
+        ExchangeExecutionId = exchangeExecutionId;
     }
     public decimal Amount { get; private set; }
     public decimal Price { get; private set; }
@@ -36,7 +38,16 @@ public class CryptoTransaction : Entity
     public decimal? FeeQuoteValue { get; private set; }
     // Null for manual entries; set for exchange-synced trades (used for deduplication).
     public string? ExchangeOrderId { get; private set; }
+    public string? ExchangeExecutionId { get; private set; }
     public decimal FeeInQuoteValue => FeeQuoteValue ?? (FeeCurrency is null ? Fee : 0m);
+
+    public void UpdateFee(decimal fee, string? feeCurrency, decimal? feeQuoteValue, string? exchangeExecutionId)
+    {
+        Fee = fee;
+        FeeCurrency = feeCurrency;
+        FeeQuoteValue = feeQuoteValue;
+        ExchangeExecutionId = exchangeExecutionId;
+    }
 
     internal void Disable()
     {

@@ -103,6 +103,41 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessOrderAsync_WhenDuplicateHasMoreAccurateExecutionFee_ShouldReconcileExistingTransaction()
+    {
+        using var context = CreateContext();
+        var account = new Account("Current", 1, EAccountType.Exchange, "Bybit", "UID-CURRENT");
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        account.AddCryptoAsset(asset).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        await sut.ProcessOpeningBalanceAsync(account, 1, 100_000m, CancellationToken.None);
+        var order = new BybitOrderData
+        {
+            OrderId = "order-fee-repair",
+            Symbol = "BTCUSDT",
+            Side = "Buy",
+            OrderStatus = "Filled",
+            AvgPrice = "50000",
+            CumExecQty = "0.00004",
+            CumExecFee = "0",
+            CumFeeDetail = new Dictionary<string, string> { ["BTC"] = "0.00000003" },
+            CreatedTime = "1790000000000"
+        };
+
+        await sut.ProcessOrderAsync(order, account, 1, "REST", CancellationToken.None);
+        await sut.ProcessOrderAsync(order, account, 1, "REST", CancellationToken.None,
+            [new BybitExecutionData { OrderId = order.OrderId, ExecId = "execution-repair", ExecFee = "0.000000025", FeeCurrency = "BTC" }]);
+
+        var transaction = await context.AccountTransactions.SingleAsync(t => t.ExchangeTransactionId == order.OrderId);
+        transaction.Fee.Should().Be(0.000000025m);
+        transaction.FeeQuoteValue.Should().Be(0.00125m);
+        transaction.ExchangeExecutionId.Should().Be("execution-repair");
+        account.Balance.Should().Be(99_997.99875m);
+    }
+
+    [Fact]
     public async Task ProcessDepositAsync_WhenDepositIsStablecoin_ShouldCreateFiatDepositLedgerTransaction()
     {
         using var context = CreateContext();
