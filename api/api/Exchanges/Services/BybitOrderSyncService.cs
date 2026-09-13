@@ -51,7 +51,13 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         var logId = Guid.NewGuid().ToString();
 
         var alreadyProcessed = await _context.CryptoTransactions
-            .AnyAsync(t => t.ExchangeOrderId == order.OrderId, cancellationToken);
+            .Where(t => t.ExchangeOrderId == order.OrderId)
+            .Join(
+                _context.CryptoAssets,
+                transaction => EF.Property<int>(transaction, "CryptoAssetId"),
+                asset => asset.Id,
+                (_, asset) => asset)
+            .AnyAsync(asset => EF.Property<int>(asset, "AccountId") == account.Id, cancellationToken);
         if (alreadyProcessed)
         {
             _logger.LogInformation("Bybit sync: order {OrderId} already saved, skipping", order.OrderId);
@@ -94,7 +100,9 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             notes: $"Auto-synced from Bybit order {order.OrderId}",
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
-            fee: fee);
+            fee: fee,
+            exchangeTransactionId: order.OrderId,
+            exchangeStatus: order.OrderStatus);
 
         var result = _transactionService.ExecuteTransaction(account, accountTx);
         if (!result.IsSuccess)

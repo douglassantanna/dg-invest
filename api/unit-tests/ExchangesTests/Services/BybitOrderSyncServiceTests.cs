@@ -51,6 +51,45 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessOrderAsync_WhenOrderExistsOnAnotherAccount_ShouldImportForCurrentAccount()
+    {
+        using var context = CreateContext();
+        const string orderId = "order-shared-between-accounts";
+        var otherAccount = new Account("Other", 1, EAccountType.Exchange, "Bybit", "UID-OTHER");
+        var currentAccount = new Account("Current", 1, EAccountType.Exchange, "Bybit", "UID-CURRENT");
+        var otherAsset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        var currentAsset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        otherAsset.AddTransaction(new CryptoTransaction(1m, 1m, DateTimeOffset.UtcNow, "Bybit", ETransactionType.Buy, 0, orderId));
+        otherAccount.AddCryptoAsset(otherAsset).IsSuccess.Should().BeTrue();
+        currentAccount.AddCryptoAsset(currentAsset).IsSuccess.Should().BeTrue();
+        context.Accounts.AddRange(otherAccount, currentAccount);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        await sut.ProcessOpeningBalanceAsync(currentAccount, 1, 100_000m, CancellationToken.None);
+
+        var result = await sut.ProcessOrderAsync(new BybitOrderData
+        {
+            OrderId = orderId,
+            Symbol = "BTCUSDT",
+            Side = "Buy",
+            OrderStatus = "Filled",
+            AvgPrice = "50000",
+            CumExecQty = "0.00004",
+            CumExecFee = "0",
+            CreatedTime = "1790000000000"
+        }, currentAccount, 1, "REST", CancellationToken.None);
+
+        result.Should().BeTrue();
+        var transaction = await context.AccountTransactions
+            .SingleAsync(t => t.ExchangeTransactionId == orderId);
+        (await context.AccountTransactions
+            .Where(t => t.ExchangeTransactionId == orderId)
+            .Select(t => EF.Property<int?>(t, "AccountId"))
+            .SingleAsync()).Should().Be(currentAccount.Id);
+        transaction.Amount.Should().Be(0.00004m);
+    }
+
+    [Fact]
     public async Task ProcessDepositAsync_WhenDepositIsStablecoin_ShouldCreateFiatDepositLedgerTransaction()
     {
         using var context = CreateContext();
@@ -265,7 +304,9 @@ public class BybitOrderSyncServiceTests
             new FiatDepositTransaction(Mock.Of<ILogger<FiatDepositTransaction>>()),
             new WithdrawDepositTransaction(Mock.Of<ILogger<WithdrawDepositTransaction>>()),
             new TransferInTransaction(Mock.Of<ILogger<TransferInTransaction>>()),
-            new TransferOutTransaction(Mock.Of<ILogger<TransferOutTransaction>>())
+            new TransferOutTransaction(Mock.Of<ILogger<TransferOutTransaction>>()),
+            new BuyTransaction(Mock.Of<ILogger<BuyTransaction>>()),
+            new SellTransaction(Mock.Of<ILogger<SellTransaction>>())
         ]);
         var blobStorage = new Mock<IBlobStorageService>();
         blobStorage.Setup(x => x.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), It.IsAny<CancellationToken>()))
