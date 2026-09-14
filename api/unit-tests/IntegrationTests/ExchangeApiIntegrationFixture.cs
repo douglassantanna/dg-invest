@@ -67,6 +67,7 @@ public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
 public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
 {
     private const string JwtSecret = "integration-test-secret-that-is-long-enough-for-hmac";
+    public const string MigrationToken = "integration-migration-token";
     private readonly string _connectionString;
 
     public InMemoryKeyVault KeyVault { get; } = new();
@@ -99,6 +100,8 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
         {
             ["ConnectionStrings:DefaultConnection"] = _connectionString,
             ["JWTSettings:Secret"] = JwtSecret,
+            ["Migrations:RemoteTriggerEnabled"] = "true",
+            ["Migrations:RemoteTriggerToken"] = MigrationToken,
             ["RateLimiterSettings:RequestsPermitLimit"] = "1000",
             ["RateLimiterSettings:WindowLimitInMinutes"] = "1",
         }));

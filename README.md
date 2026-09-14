@@ -125,14 +125,19 @@ dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~ExchangeCon
 
 ### Full-stack deployment database migrations
 
-The `full-stack-deployment.yml` workflow applies EF Core migrations from a GitHub-hosted runner. The migration job temporarily allows that runner's public IPv4 address through the Azure SQL firewall and removes the rule after the migration, including when the migration fails.
+The `full-stack-deployment.yml` workflow deploys the API and then calls the existing migration endpoint on that deployed API. The API applies EF Core migrations using its existing Azure SQL network access, so the GitHub-hosted runner does not need direct database access or Azure SQL firewall permissions.
 
 Configure these values in each GitHub Environment used by the workflow:
 
-- Secret `CONNECTION_STRING`: the environment's Azure SQL connection string.
-- Variables `AZURE_SQL_RESOURCE_GROUP` and `AZURE_SQL_SERVER_NAME`: the target Azure SQL resource.
+- Secret `MIGRATION_TOKEN`: a long random token shared with the API App Service setting.
+- Variable `AZURE_API_BASE_URL`: the deployed API base URL, including `https://` and without a trailing slash.
 
-The Azure OIDC identity used by the workflow must be allowed to create, read, and delete firewall rules on the target SQL Server. The database must allow public network access for this temporary rule approach. Do not run untrusted pull request workflows with this deployment identity.
+Configure these API App Service settings for the target environment:
+
+- `Migrations__RemoteTriggerEnabled=true`
+- `Migrations__RemoteTriggerToken=<same value as MIGRATION_TOKEN>`
+
+The endpoint also remains available to authenticated administrators. The remote trigger is disabled unless explicitly enabled and never logs the token. The API's normal database connection string remains an App Service setting and is not copied into GitHub Actions.
 
 ---
 #### Running everything locally (standalone)

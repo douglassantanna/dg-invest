@@ -771,6 +771,24 @@ public class ExchangeControllerIntegrationTests
         (await admin.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task RunMigrations_AcceptsConfiguredMigrationToken()
+    {
+        using var client = _fixture.Factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Migration-Token", ExchangeApiFactory.MigrationToken);
+
+        (await client.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task RunMigrations_RejectsInvalidMigrationToken()
+    {
+        using var client = _fixture.Factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Migration-Token", "invalid-token");
+
+        (await client.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     private async Task<int> GetAccountIdAsync(int userId, string name, EAccountType? accountType = null)
     {
         using var scope = _fixture.Factory.Services.CreateScope();
