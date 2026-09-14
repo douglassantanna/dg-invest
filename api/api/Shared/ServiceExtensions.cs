@@ -71,6 +71,7 @@ public static class ServiceExtensions
         services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
         services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
         services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
+        services.Configure<MigrationsSettings>(config.GetSection("Migrations"));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
