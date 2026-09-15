@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
+using api.AzureStorage.Blob;
 using api.Shared;
 using MediatR;
 using Serilog;
@@ -8,7 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.ConfiguraMemoryCache();
-builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
+builder.Host.UseSerilog((context, config) => config
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+    .WriteTo.Console()
+    .WriteToBlobLogs(context.Configuration, "api"));
 builder.Services.ConfigureJwt(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);
 builder.Services.ConfigureServices();

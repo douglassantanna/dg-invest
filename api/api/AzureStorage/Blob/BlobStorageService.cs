@@ -54,7 +54,14 @@ public class BlobStorageService : IBlobStorageService
             var appendBlob = container.GetAppendBlobClient(blobPath);
 
             if (!await appendBlob.ExistsAsync(cancellationToken))
-                await appendBlob.CreateAsync(cancellationToken: cancellationToken);
+            {
+                await appendBlob.CreateAsync(
+                    new AppendBlobCreateOptions
+                    {
+                        HttpHeaders = new BlobHttpHeaders { ContentType = "application/jsonl" }
+                    },
+                    cancellationToken);
+            }
 
             var json = JsonSerializer.Serialize(entry) + Environment.NewLine;
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));

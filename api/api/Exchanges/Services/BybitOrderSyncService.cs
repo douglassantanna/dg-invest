@@ -542,8 +542,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             Timestamp: DateTime.UtcNow,
             ImportSource: importSource);
 
-        var blobPath = $"{userId}/{accountId}/{DateTime.UtcNow:yyyy-MM-dd}.jsonl";
-        await _blobStorageService.AppendLogAsync(_storageSettings.SyncLogsContainer, blobPath, entry, cancellationToken);
+        var blobPath = BlobLogPaths.Daily("sync", DateTime.UtcNow);
+        await _blobStorageService.AppendLogAsync(_storageSettings.LogContainer, blobPath, entry, cancellationToken);
     }
 
     private async Task<CryptoAsset?> FindOrCreateCryptoAssetAsync(Account account, string symbol, CancellationToken cancellationToken)
@@ -640,8 +640,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             Timestamp: DateTime.UtcNow,
             ImportSource: importSource);
 
-        var blobPath = $"{userId}/{accountId}/{DateTime.UtcNow:yyyy-MM-dd}.jsonl";
-        await _blobStorageService.AppendLogAsync(_storageSettings.SyncLogsContainer, blobPath, entry, cancellationToken);
+        var blobPath = BlobLogPaths.Daily("sync", DateTime.UtcNow);
+        await _blobStorageService.AppendLogAsync(_storageSettings.LogContainer, blobPath, entry, cancellationToken);
     }
 
     private static bool TryParseDepositWithdrawalAmount(BybitDepositWithdrawalRow row, out decimal amount)
