@@ -49,32 +49,13 @@ Before running the API you need to configure the settings file:
   },
   "RunMigrations": false,
   "Serilog": {
-    "Enrich": [
-      "FromLogContext",
-      "WithMachineName",
-      "WithThreadId"
-    ],
     "MinimumLevel": {
-      "Default": "Error",
+      "Default": "Information",
       "Override": {
-        "Microsoft": "Error",
-        "System": "Error"
+        "Microsoft": "Warning",
+        "System": "Warning"
       }
-    },
-    "Using": [
-      "Serilog.Sinks.AzureBlobStorage"
-    ],
-    "WriteTo": [
-      {
-        "Name": "AzureBlobStorage",
-        "Args": {
-          "connectionString": "YourSerilogConnectionStringHere",
-          "restrictedToMinimumLevel": "Information",
-          "storageContainerName": "logs",
-          "storageFileName": "log-{yyyy}-{MM}-{dd}.json"
-        }
-      }
-    ]
+    }
   },
   "ConnectionStrings": {
     "DefaultConnection": "YourSqlAzureConnectionStringHere"
@@ -138,6 +119,18 @@ Configure these API App Service settings for the target environment:
 - `Migrations__RemoteTriggerToken=<same value as MIGRATION_TOKEN>`
 
 The endpoint also remains available to authenticated administrators. The remote trigger is disabled unless explicitly enabled and never logs the token. The API's normal database connection string remains an App Service setting and is not copied into GitHub Actions.
+
+### Blob logging
+
+Each environment uses its own Blob container. The API, Azure Functions, and Bybit sync records use the configured `AzureStorageSettings:LogContainer` container with UTC date-partitioned JSONL blobs:
+
+```text
+2026/09/15/api.jsonl
+2026/09/15/functions.jsonl
+2026/09/15/sync.jsonl
+```
+
+Configure `AzureStorageSettings__ConnectionString` and `AzureStorageSettings__LogContainer` in both the API App Service and Function App. User and account identifiers are stored in sync records, not in blob paths.
 
 ---
 #### Running everything locally (standalone)
