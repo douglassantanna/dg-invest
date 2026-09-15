@@ -104,7 +104,7 @@ jobs:
   deploy_backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    needs: [build_frontend, migrate_database]
+    needs: build_frontend
     environment:
       name: ${{ github.event.inputs.environment }}
 
@@ -131,74 +131,23 @@ jobs:
   migrate_database:
     name: Apply EF Core Migrations
     runs-on: ubuntu-latest
-    needs: build_backend
+    needs: deploy_backend
     environment:
       name: ${{ github.event.inputs.environment }}
-    permissions:
-      contents: read
-      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.x"
-
-      - name: Install dotnet-ef tool
-        run: dotnet tool install --global dotnet-ef --version 8.0.7
-
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F658D4E23CC64BD9867C60926DB443A2 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_90749159632E4B86A6E42BDBD348C970 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CEF2E26C8C1843A9ADBD8E3F229A3EAF }}
-
-      - name: Allow this runner through Azure SQL firewall
+      - name: Run database migrations through deployed API
         env:
-          AZURE_SQL_RESOURCE_GROUP: ${{ vars.AZURE_SQL_RESOURCE_GROUP }}
-          AZURE_SQL_SERVER_NAME: ${{ vars.AZURE_SQL_SERVER_NAME }}
-          FIREWALL_RULE_NAME: github-actions-${{ github.run_id }}
+          API_BASE_URL: ${{ vars.AZURE_API_BASE_URL }}
+          MIGRATION_TOKEN: ${{ secrets.MIGRATION_TOKEN }}
         run: |
-          RUNNER_IP=$(curl -4 -s https://api.ipify.org)
-          test -n "$RUNNER_IP"
-          echo "Allowing GitHub Actions runner IP $RUNNER_IP through Azure SQL firewall"
-          az sql server firewall-rule create \
-            --resource-group "$AZURE_SQL_RESOURCE_GROUP" \
-            --server "$AZURE_SQL_SERVER_NAME" \
-            --name "$FIREWALL_RULE_NAME" \
-            --start-ip-address "$RUNNER_IP" \
-            --end-ip-address "$RUNNER_IP"
-
-      - name: Apply database migrations
-        env:
-          ConnectionStrings__DefaultConnection: ${{ secrets.CONNECTION_STRING }}
-        run: |
-          export PATH="$PATH:$HOME/.dotnet/tools"
-          dotnet ef database update \
-            --project api/api/api.csproj \
-            --startup-project api/api/api.csproj
-
-      - name: Remove temporary Azure SQL firewall rule
-        if: ${{ always() }}
-        env:
-          AZURE_SQL_RESOURCE_GROUP: ${{ vars.AZURE_SQL_RESOURCE_GROUP }}
-          AZURE_SQL_SERVER_NAME: ${{ vars.AZURE_SQL_SERVER_NAME }}
-          FIREWALL_RULE_NAME: github-actions-${{ github.run_id }}
-        run: |
-          if az sql server firewall-rule show \
-            --resource-group "$AZURE_SQL_RESOURCE_GROUP" \
-            --server "$AZURE_SQL_SERVER_NAME" \
-            --name "$FIREWALL_RULE_NAME" \
-            >/dev/null 2>&1; then
-            az sql server firewall-rule delete \
-              --resource-group "$AZURE_SQL_RESOURCE_GROUP" \
-              --server "$AZURE_SQL_SERVER_NAME" \
-              --name "$FIREWALL_RULE_NAME" \
-              --yes
-          fi
+          test -n "$API_BASE_URL"
+          test -n "$MIGRATION_TOKEN"
+          curl --fail-with-body --silent --show-error \
+            --retry 12 --retry-delay 5 --retry-all-errors \
+            --request POST \
+            --header "X-Migration-Token: $MIGRATION_TOKEN" \
+            "$API_BASE_URL/api/Migrations/run"
 
   deploy_functions:
     name: Deploy Azure Functions
