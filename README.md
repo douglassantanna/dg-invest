@@ -6,7 +6,7 @@ This project is a full cryptocurrency investment manager and analytics suite tha
 #### Prerequisites
 You can run the project either directly on your machine or inside Docker.
 #### Option 1: Local Environment
-- .NET 8
+- .NET 10
 - Node.js v18+
 - Angular v18
 - SQL Server
@@ -135,7 +135,7 @@ Configure `AzureStorageSettings__ConnectionString` and `AzureStorageSettings__Lo
 ---
 #### Running everything locally (standalone)
 #### 1. Installation steps
-Install SQL Server Express, Azure Functions Core Tools, Azurite (VS Code extension or npm), .NET 8, EF Core tools, Node.js V18+, NPM and Angular CLI V18
+Install SQL Server Express, Azure Functions Core Tools, Azurite (VS Code extension or npm), .NET 10, EF Core tools, Node.js V18+, NPM and Angular CLI V18
 #### 2. Set up the database
 1. Create a database named `dg-invest` in SQL Server
 2. Copy its connection string into `appsettings.json` under `ConnectionString:Default`
@@ -444,7 +444,7 @@ dg-invest/
 │   └── workflows/               # CI/CD pipelines
 │
 ├── api/
-│   ├── api/                     # .NET 8 Web API
+│   ├── api/                     # .NET 10 Web API
 │   ├── functions/               # Azure Functions (background workers)
 │   ├── unit-tests/              # Automated tests
 │   ├── dg-invest.api.sln        # Solution file
