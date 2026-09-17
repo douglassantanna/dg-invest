@@ -139,26 +139,6 @@ public class SyncBybitOrders
             var hasFailures = false;
             var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
 
-            _logger.LogInformation(
-                "Bybit diagnostic: fetched {OrderCount} order history records for account {AccountId}, user {UserId}, startTime {StartTime}; logging up to 20 records",
-                orders.Count,
-                accountId,
-                userId,
-                startTime);
-            foreach (var order in orders.Take(20))
-            {
-                _logger.LogInformation(
-                    "Bybit diagnostic: order {OrderId}, symbol {Symbol}, side {Side}, status {Status}, createdTime {CreatedTime}, avgPrice {AvgPrice}, cumExecQty {CumExecQty}, cumExecFee {CumExecFee}",
-                    order.OrderId,
-                    order.Symbol,
-                    order.Side,
-                    order.OrderStatus,
-                    order.CreatedTime,
-                    order.AvgPrice,
-                    order.CumExecQty,
-                    order.CumExecFee);
-            }
-
             if (orders.Count > 0)
             {
                 if (filledOrders.Count > 0)
