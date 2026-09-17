@@ -13,6 +13,8 @@ namespace functions;
 
 public class SyncBybitOrders
 {
+    private static readonly TimeSpan SyncOverlap = TimeSpan.FromMinutes(5);
+
     private readonly IBybitService _bybitService;
     private readonly IBybitOrderSyncService _orderSyncService;
     private readonly IKeyVaultService _keyVaultService;
@@ -130,7 +132,7 @@ public class SyncBybitOrders
 
             var cutoff = syncStatus.LastSyncAt ?? syncStatus.BybitCredentialsSetAt;
             var startTime = cutoff is { } dt
-                ? new DateTimeOffset(dt, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                ? new DateTimeOffset(dt.Subtract(SyncOverlap), TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
 
             var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
