@@ -8,7 +8,10 @@ using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Data;
 using api.Exchanges.Bybit;
+using api.Exchanges.Services;
 using api.Users.Models;
+using functions;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +67,24 @@ public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
             .SingleAsync();
         return (user.Id, mainAccountId);
     }
+
+    public async Task RunBybitOrderSyncAsync()
+    {
+        using var scope = Factory.Services.CreateScope();
+        var function = new SyncBybitOrders(
+            Factory.Bybit,
+            scope.ServiceProvider.GetRequiredService<IBybitOrderSyncService>(),
+            Factory.KeyVault,
+            scope.ServiceProvider.GetRequiredService<DataContext>(),
+            scope.ServiceProvider.GetRequiredService<ILogger<SyncBybitOrders>>(),
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
+                .Build());
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(context => context.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+    }
 }
 
 public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
@@ -105,6 +126,7 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
             ["JWTSettings:Secret"] = JwtSecret,
             ["Migrations:RemoteTriggerEnabled"] = "true",
             ["Migrations:RemoteTriggerToken"] = MigrationToken,
+            ["BybitSync:Enabled"] = "true",
             ["RateLimiterSettings:RequestsPermitLimit"] = "1000",
             ["RateLimiterSettings:WindowLimitInMinutes"] = "1",
         }));

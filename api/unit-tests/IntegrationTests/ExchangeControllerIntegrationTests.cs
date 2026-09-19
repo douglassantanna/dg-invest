@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using api.AzureKeyVault;
 using api.Cryptos.Models;
+using api.CoinMarketCap;
 using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
@@ -19,6 +20,87 @@ public class ExchangeControllerIntegrationTests
     private readonly ExchangeApiIntegrationFixture _fixture;
 
     public ExchangeControllerIntegrationTests(ExchangeApiIntegrationFixture fixture) => _fixture = fixture;
+
+    [Fact]
+    public async Task BybitOrderSync_WithFilledBuy_ShouldPersistAndExposeTransaction()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["XRP"] = new Coin(
+            52,
+            "XRP",
+            "XRP",
+            DateTime.UtcNow,
+            new Quote(new USD(0, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("USDT", "100"));
+        _fixture.Factory.Bybit.OrderHistory.Add(new BybitOrderData
+        {
+            OrderId = "order-xrp-buy-1",
+            Symbol = "XRPUSDT",
+            Side = "Buy",
+            OrderStatus = "Filled",
+            AvgPrice = "1.3153",
+            CumExecQty = "3.80",
+            CumExecFee = "0",
+            CreatedTime = DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeMilliseconds().ToString()
+        });
+
+        try
+        {
+            using (var setupScope = _fixture.Factory.Services.CreateScope())
+            {
+                var setupContext = setupScope.ServiceProvider.GetRequiredService<DataContext>();
+                (await setupContext.Accounts.SingleAsync(account => account.Id == accountId)).Enabled.Should().BeTrue();
+                (await setupContext.ExchangeIntegrations.SingleAsync(integration => integration.UserId == userId)).Enabled.Should().BeTrue();
+                (await setupContext.SyncStatuses.SingleAsync(status => status.AccountId == accountId)).IsEnabled.Should().BeTrue();
+            }
+
+            await _fixture.RunBybitOrderSyncAsync();
+
+            using (var verificationScope = _fixture.Factory.Services.CreateScope())
+            {
+                var verificationContext = verificationScope.ServiceProvider.GetRequiredService<DataContext>();
+                _fixture.Factory.Bybit.OrderHistoryCallCount.Should().Be(1);
+                var syncStatus = await verificationContext.SyncStatuses
+                    .SingleAsync(status => status.AccountId == accountId && status.ExchangeName == "Bybit");
+                syncStatus.LastErrorMessage.Should().BeNull();
+                (await verificationContext.Database.GetAppliedMigrationsAsync())
+                    .Should().Contain("20260919000000_RepairMissingExchangeOrderId");
+                (await verificationContext.CryptoTransactions.CountAsync(transaction =>
+                    transaction.ExchangeOrderId == "order-xrp-buy-1")).Should().Be(1);
+            }
+
+            using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+            var response = await client.GetAsync($"/api/Exchange/{accountId}/transactions");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            using var responseJson = JsonDocument.Parse(responseBody);
+            var transactionJson = responseJson.RootElement
+                .GetProperty("data")
+                .EnumerateArray()
+                .Single(transaction => transaction.GetProperty("asset").GetString() == "XRP");
+            transactionJson.GetProperty("amount").GetDecimal().Should().Be(3.80m);
+            transactionJson.GetProperty("price").GetDecimal().Should().Be(1.3153m);
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var account = await context.Accounts.SingleAsync(candidate => candidate.Id == accountId);
+            var cryptoTransaction = await context.CryptoTransactions
+                .SingleAsync(transaction => transaction.ExchangeOrderId == "order-xrp-buy-1");
+            cryptoTransaction.Amount.Should().Be(3.80m);
+            cryptoTransaction.Price.Should().Be(1.3153m);
+            account.Balance.Should().Be(95.00186m);
+            (await context.AccountTransactions.CountAsync(transaction =>
+                EF.Property<int>(transaction, "AccountId") == accountId
+                && transaction.ExchangeTransactionId == "order-xrp-buy-1")).Should().Be(1);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
 
     [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
@@ -787,6 +869,33 @@ public class ExchangeControllerIntegrationTests
         client.DefaultRequestHeaders.Add("X-Migration-Token", "invalid-token");
 
         (await client.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private async Task<(int UserId, int AccountId)> CreateExchangeSyncAccountAsync()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var account = new Account("Bybit integration", userId, EAccountType.Exchange, "Bybit", "integration-account");
+        var integration = new ExchangeIntegration(userId, "Bybit");
+
+        integration.MarkEnabled();
+        context.AddRange(account, integration);
+        await context.SaveChangesAsync();
+
+        var status = new SyncStatus(userId, account.Id, "Bybit");
+        status.EnableForCredentials();
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+
+        await _fixture.Factory.KeyVault.SetSecretAsync(
+            BybitCredentialKeys.LegacyAccountKey(userId, account.Id, "api-key"),
+            "integration-api-key");
+        await _fixture.Factory.KeyVault.SetSecretAsync(
+            BybitCredentialKeys.LegacyAccountKey(userId, account.Id, "api-secret"),
+            "integration-api-secret");
+
+        return (userId, account.Id);
     }
 
     private async Task<int> GetAccountIdAsync(int userId, string name, EAccountType? accountType = null)
