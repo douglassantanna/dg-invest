@@ -248,6 +248,86 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitOrderSync_ShouldRequestFiveMinuteOverlapAndAdvanceCheckpoint()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["XRP"] = new Coin(
+            52,
+            "XRP",
+            "XRP",
+            DateTime.UtcNow,
+            new Quote(new USD(0, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("USDT", "100"));
+        var order = FilledOrder("order-xrp-overlap-1", "1.3153", "2026-09-19T21:00:01Z");
+        _fixture.Factory.Bybit.OrderHistory.Add(order);
+
+        DateTime previousSyncAt;
+        using (var setupScope = _fixture.Factory.Services.CreateScope())
+        {
+            var setupContext = setupScope.ServiceProvider.GetRequiredService<DataContext>();
+            var status = await setupContext.SyncStatuses.SingleAsync(candidate => candidate.AccountId == accountId);
+            status.MarkConnected("previous-order");
+            previousSyncAt = status.LastSyncAt!.Value;
+            await setupContext.SaveChangesAsync();
+        }
+
+        try
+        {
+            await _fixture.RunBybitOrderSyncAsync();
+
+            var expectedStartTime = new DateTimeOffset(previousSyncAt.AddMinutes(-5), TimeSpan.Zero).ToUnixTimeMilliseconds();
+            _fixture.Factory.Bybit.LastOrderHistoryStartTime.Should().BeInRange(expectedStartTime - 1000, expectedStartTime + 1000);
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var status = await context.SyncStatuses.SingleAsync(candidate => candidate.AccountId == accountId);
+            status.LastOrderId.Should().Be(order.OrderId);
+            status.LastSyncAt.Should().BeAfter(previousSyncAt);
+            (await context.CryptoTransactions.CountAsync(transaction =>
+                transaction.ExchangeOrderId == order.OrderId)).Should().Be(1);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.ExecutionsByOrderId.Clear();
+            _fixture.Factory.Bybit.OrderHistoryApiKey = null;
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
+    public async Task BybitOrderSync_WhenBybitRejectsHistory_ShouldMarkErrorWithoutAdvancingCheckpoint()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
+        _fixture.Factory.Bybit.OrderHistoryError = new BybitApiException(10003, "API key is invalid");
+
+        try
+        {
+            await _fixture.RunBybitOrderSyncAsync();
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var status = await context.SyncStatuses.SingleAsync(candidate => candidate.AccountId == accountId);
+            status.Status.Should().Be("Error");
+            status.ErrorCount.Should().Be(1);
+            status.LastErrorMessage.Should().Contain("API key is invalid");
+            status.LastSyncAt.Should().BeNull();
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.OrderHistoryError = null;
+            _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.ExecutionsByOrderId.Clear();
+            _fixture.Factory.Bybit.OrderHistoryApiKey = null;
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
