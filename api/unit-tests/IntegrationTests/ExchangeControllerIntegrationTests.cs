@@ -437,8 +437,11 @@ public class ExchangeControllerIntegrationTests
             main.Balance.Should().Be(15000m);
             sub.Balance.Should().Be(15000m);
 
+            var accountIds = new[] { mainAccountId, sub.Id };
             var openingTransactions = await context.AccountTransactions
-                .Where(transaction => transaction.ExchangeTransactionId != null && transaction.ExchangeTransactionId.StartsWith("bybit-opening-balance-"))
+                .Where(transaction => accountIds.Contains(EF.Property<int>(transaction, "AccountId"))
+                    && transaction.ExchangeTransactionId != null
+                    && transaction.ExchangeTransactionId.StartsWith("bybit-opening-balance-"))
                 .ToListAsync();
             openingTransactions.Should().HaveCount(2);
             openingTransactions.Should().Contain(transaction => transaction.Amount == 15000m && transaction.TransactionType == EAccountTransactionType.DepositFiat);
