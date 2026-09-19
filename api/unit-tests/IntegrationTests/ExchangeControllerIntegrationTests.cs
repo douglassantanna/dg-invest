@@ -156,6 +156,98 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitOrderSync_WhenOrderFails_ShouldNotAdvanceCheckpoint()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["XRP"] = new Coin(
+            52,
+            "XRP",
+            "XRP",
+            DateTime.UtcNow,
+            new Quote(new USD(0, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.OrderHistory.Add(FilledOrder(
+            "order-xrp-failure-1",
+            "1.3153",
+            "2026-09-17T14:34:01Z"));
+
+        try
+        {
+            await _fixture.RunBybitOrderSyncAsync();
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var syncStatus = await context.SyncStatuses.SingleAsync(status => status.AccountId == accountId && status.ExchangeName == "Bybit");
+            syncStatus.LastSyncAt.Should().BeNull();
+            (await context.CryptoTransactions.CountAsync(transaction =>
+                transaction.ExchangeOrderId == "order-xrp-failure-1")).Should().Be(0);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.ExecutionsByOrderId.Clear();
+            _fixture.Factory.Bybit.OrderHistoryApiKey = null;
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
+    public async Task BybitOrderSync_WithExecutionFee_ShouldPersistFeeAndQuoteValue()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["XRP"] = new Coin(
+            52,
+            "XRP",
+            "XRP",
+            DateTime.UtcNow,
+            new Quote(new USD(0, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("USDT", "100"));
+        var order = FilledOrder("order-xrp-fee-1", "1.3153", "2026-09-17T14:35:01Z");
+        _fixture.Factory.Bybit.OrderHistory.Add(order);
+        _fixture.Factory.Bybit.ExecutionsByOrderId[order.OrderId] =
+        [
+            new BybitExecutionData
+            {
+                OrderId = order.OrderId,
+                ExecId = "execution-xrp-fee-1",
+                ExecFee = "0.01",
+                FeeCurrency = "USDT"
+            }
+        ];
+
+        try
+        {
+            await _fixture.RunBybitOrderSyncAsync();
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var account = await context.Accounts.SingleAsync(candidate => candidate.Id == accountId);
+            var cryptoTransaction = await context.CryptoTransactions
+                .SingleAsync(transaction => transaction.ExchangeOrderId == order.OrderId);
+            var accountTransaction = await context.AccountTransactions
+                .SingleAsync(transaction => EF.Property<int>(transaction, "AccountId") == accountId
+                    && transaction.ExchangeTransactionId == order.OrderId);
+
+            cryptoTransaction.Fee.Should().Be(0.01m);
+            cryptoTransaction.FeeCurrency.Should().Be("USDT");
+            cryptoTransaction.FeeQuoteValue.Should().Be(0.01m);
+            cryptoTransaction.ExchangeExecutionId.Should().Be("execution-xrp-fee-1");
+            accountTransaction.FeeQuoteValue.Should().Be(0.01m);
+            account.Balance.Should().Be(94.99186m);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.ExecutionsByOrderId.Clear();
+            _fixture.Factory.Bybit.OrderHistoryApiKey = null;
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
