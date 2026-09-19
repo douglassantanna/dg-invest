@@ -4,6 +4,8 @@ using System.Security.Claims;
 using System.Text;
 using api.AzureKeyVault;
 using api.AzureStorage.Blob;
+using api.CoinMarketCap;
+using api.CoinMarketCap.Service;
 using api.Data;
 using api.Exchanges.Bybit;
 using api.Users.Models;
@@ -72,6 +74,7 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
 
     public InMemoryKeyVault KeyVault { get; } = new();
     public FakeBybitService Bybit { get; } = new();
+    public FakeCoinMarketCapService CoinMarketCap { get; } = new();
 
     public ExchangeApiFactory(string connectionString) => _connectionString = connectionString;
 
@@ -115,12 +118,38 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IKeyVaultService>();
             services.RemoveAll<IBybitService>();
+            services.RemoveAll<ICoinMarketCapService>();
             services.RemoveAll<IBlobStorageService>();
             services.AddSingleton<IKeyVaultService>(KeyVault);
             services.AddSingleton<IBybitService>(Bybit);
+            services.AddSingleton<ICoinMarketCapService>(CoinMarketCap);
             services.AddSingleton<IBlobStorageService, InMemoryBlobStorage>();
         });
     }
+}
+
+public sealed class FakeCoinMarketCapService : ICoinMarketCapService
+{
+    public Dictionary<string, Coin> CoinsBySymbol { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Task<GetQuoteResponse> GetQuoteBySymbol(string symbol)
+    {
+        var data = CoinsBySymbol.TryGetValue(symbol, out var coin)
+            ? new Dictionary<string, Coin> { [symbol] = coin }
+            : new Dictionary<string, Coin>();
+        return Task.FromResult(new GetQuoteResponse(new Status(0, null), data));
+    }
+
+    public Task<GetQuoteResponse> GetQuotesByIds(string[] ids)
+    {
+        var data = CoinsBySymbol
+            .Where(pair => ids.Contains(pair.Value.Id.ToString(), StringComparer.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+        return Task.FromResult(new GetQuoteResponse(new Status(0, null), data));
+    }
+
+    public decimal GetCryptoCurrencyPriceById(int coinMarketCapId, GetQuoteResponse cmpResponse) =>
+        cmpResponse.Data.Values.FirstOrDefault(coin => coin.Id == coinMarketCapId)?.Quote.USD.Price ?? 0;
 }
 
 public sealed class InMemoryKeyVault : IKeyVaultService
@@ -183,6 +212,11 @@ public sealed class FakeBybitService : IBybitService
     public string? LastApiKey { get; set; }
     public BybitRegion? LastRegion { get; set; }
     public BybitApiException? SubAccountsError { get; set; }
+    public List<BybitOrderData> OrderHistory { get; } = [];
+    public Dictionary<string, List<BybitExecutionData>> ExecutionsByOrderId { get; } = new(StringComparer.Ordinal);
+    public BybitApiException? OrderHistoryError { get; set; }
+    public long? LastOrderHistoryStartTime { get; private set; }
+    public int OrderHistoryCallCount { get; private set; }
     public Dictionary<string, BybitWalletBalanceResponse> WalletBalancesByAccountType { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public bool ValidateWebhookSignature(string rawBody, string signature, string timestamp, string webhookSecret) => true;
@@ -193,8 +227,21 @@ public sealed class FakeBybitService : IBybitService
         if (SubAccountsError is not null) throw SubAccountsError;
         return Task.FromResult(SubAccounts);
     }
-    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitOrderData>());
-    public Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId) => Task.FromResult(new List<BybitExecutionData>());
+    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    {
+        LastApiKey = apiKey;
+        LastRegion = region;
+        LastOrderHistoryStartTime = startTime;
+        OrderHistoryCallCount++;
+        if (OrderHistoryError is not null)
+            throw OrderHistoryError;
+        return Task.FromResult(OrderHistory.Take(limit ?? OrderHistory.Count).ToList());
+    }
+
+    public Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId) =>
+        Task.FromResult(ExecutionsByOrderId.TryGetValue(orderId, out var executions)
+            ? executions.ToList()
+            : new List<BybitExecutionData>());
     public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
     public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
     public Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitInternalTransferRow>());
