@@ -25,6 +25,7 @@ public class ExchangeControllerIntegrationTests
     public async Task BybitOrderSync_WithFilledBuy_ShouldPersistAndExposeTransaction()
     {
         var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
         _fixture.Factory.CoinMarketCap.CoinsBySymbol["XRP"] = new Coin(
             52,
             "XRP",
@@ -34,7 +35,7 @@ public class ExchangeControllerIntegrationTests
         _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("USDT", "100"));
         _fixture.Factory.Bybit.OrderHistory.Add(new BybitOrderData
         {
-            OrderId = "order-xrp-buy-1",
+            OrderId = "order-xrp-basic-buy-1",
             Symbol = "XRPUSDT",
             Side = "Buy",
             OrderStatus = "Filled",
@@ -54,19 +55,20 @@ public class ExchangeControllerIntegrationTests
                 (await setupContext.SyncStatuses.SingleAsync(status => status.AccountId == accountId)).IsEnabled.Should().BeTrue();
             }
 
+            var initialOrderHistoryCallCount = _fixture.Factory.Bybit.OrderHistoryCallCount;
             await _fixture.RunBybitOrderSyncAsync();
 
             using (var verificationScope = _fixture.Factory.Services.CreateScope())
             {
                 var verificationContext = verificationScope.ServiceProvider.GetRequiredService<DataContext>();
-                _fixture.Factory.Bybit.OrderHistoryCallCount.Should().Be(1);
+                _fixture.Factory.Bybit.OrderHistoryCallCount.Should().BeGreaterThan(initialOrderHistoryCallCount);
                 var syncStatus = await verificationContext.SyncStatuses
                     .SingleAsync(status => status.AccountId == accountId && status.ExchangeName == "Bybit");
                 syncStatus.LastErrorMessage.Should().BeNull();
                 (await verificationContext.Database.GetAppliedMigrationsAsync())
                     .Should().Contain("20260919000000_RepairMissingExchangeOrderId");
                 (await verificationContext.CryptoTransactions.CountAsync(transaction =>
-                    transaction.ExchangeOrderId == "order-xrp-buy-1")).Should().Be(1);
+                    transaction.ExchangeOrderId == "order-xrp-basic-buy-1")).Should().Be(1);
             }
 
             using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
@@ -74,6 +76,7 @@ public class ExchangeControllerIntegrationTests
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             var responseBody = await response.Content.ReadAsStringAsync();
+            responseBody.Should().Contain("XRP", "API response was {0}", responseBody);
             using var responseJson = JsonDocument.Parse(responseBody);
             var transactionJson = responseJson.RootElement
                 .GetProperty("data")
@@ -86,17 +89,67 @@ public class ExchangeControllerIntegrationTests
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             var account = await context.Accounts.SingleAsync(candidate => candidate.Id == accountId);
             var cryptoTransaction = await context.CryptoTransactions
-                .SingleAsync(transaction => transaction.ExchangeOrderId == "order-xrp-buy-1");
+                .SingleAsync(transaction => transaction.ExchangeOrderId == "order-xrp-basic-buy-1");
             cryptoTransaction.Amount.Should().Be(3.80m);
             cryptoTransaction.Price.Should().Be(1.3153m);
             account.Balance.Should().Be(95.00186m);
             (await context.AccountTransactions.CountAsync(transaction =>
                 EF.Property<int>(transaction, "AccountId") == accountId
-                && transaction.ExchangeTransactionId == "order-xrp-buy-1")).Should().Be(1);
+                && transaction.ExchangeTransactionId == "order-xrp-basic-buy-1")).Should().Be(1);
         }
         finally
         {
             _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.OrderHistoryApiKey = null;
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
+    public async Task BybitOrderSync_WhenHistoryReplays_ShouldRecoverMissingOrderWithoutDuplicates()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["XRP"] = new Coin(
+            52,
+            "XRP",
+            "XRP",
+            DateTime.UtcNow,
+            new Quote(new USD(0, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("USDT", "100"));
+        var firstOrder = FilledOrder("order-xrp-replay-buy-1", "1.3153", "2026-09-17T14:32:01Z");
+        var secondOrder = FilledOrder("order-xrp-replay-buy-2", "1.3140", "2026-09-17T14:33:28Z");
+        _fixture.Factory.Bybit.OrderHistory.Add(secondOrder);
+
+        try
+        {
+            await _fixture.RunBybitOrderSyncAsync();
+            _fixture.Factory.Bybit.OrderHistory.Insert(0, firstOrder);
+
+            await _fixture.RunBybitOrderSyncAsync();
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            (await context.CryptoTransactions.CountAsync(transaction =>
+                transaction.ExchangeOrderId == firstOrder.OrderId
+                || transaction.ExchangeOrderId == secondOrder.OrderId)).Should().Be(2);
+            (await context.AccountTransactions.CountAsync(transaction =>
+                EF.Property<int>(transaction, "AccountId") == accountId
+                && (transaction.ExchangeTransactionId == firstOrder.OrderId
+                    || transaction.ExchangeTransactionId == secondOrder.OrderId))).Should().Be(2);
+            (await context.Accounts.SingleAsync(account => account.Id == accountId)).Balance.Should().Be(90.00866m);
+
+            using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+            var response = await client.GetAsync($"/api/Exchange/{accountId}/transactions");
+            var responseBody = await response.Content.ReadAsStringAsync();
+            responseBody.Should().Contain("1.3153");
+            responseBody.Should().Contain("1.314");
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.OrderHistoryApiKey = null;
             _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
             _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
         }
@@ -890,10 +943,10 @@ public class ExchangeControllerIntegrationTests
 
         await _fixture.Factory.KeyVault.SetSecretAsync(
             BybitCredentialKeys.LegacyAccountKey(userId, account.Id, "api-key"),
-            "integration-api-key");
+            $"integration-api-key-{userId}");
         await _fixture.Factory.KeyVault.SetSecretAsync(
             BybitCredentialKeys.LegacyAccountKey(userId, account.Id, "api-secret"),
-            "integration-api-secret");
+            $"integration-api-secret-{userId}");
 
         return (userId, account.Id);
     }
@@ -906,6 +959,18 @@ public class ExchangeControllerIntegrationTests
             .Select(account => account.Id)
             .SingleAsync();
     }
+
+    private static BybitOrderData FilledOrder(string orderId, string price, string createdTime) => new()
+    {
+        OrderId = orderId,
+        Symbol = "XRPUSDT",
+        Side = "Buy",
+        OrderStatus = "Filled",
+        AvgPrice = price,
+        CumExecQty = "3.80",
+        CumExecFee = "0",
+        CreatedTime = DateTimeOffset.Parse(createdTime).ToUnixTimeMilliseconds().ToString()
+    };
 
     private async Task AssertIntegrationCredentialsAsync(int userId)
     {

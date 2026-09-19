@@ -237,6 +237,7 @@ public sealed class FakeBybitService : IBybitService
     public List<BybitOrderData> OrderHistory { get; } = [];
     public Dictionary<string, List<BybitExecutionData>> ExecutionsByOrderId { get; } = new(StringComparer.Ordinal);
     public BybitApiException? OrderHistoryError { get; set; }
+    public string? OrderHistoryApiKey { get; set; }
     public long? LastOrderHistoryStartTime { get; private set; }
     public int OrderHistoryCallCount { get; private set; }
     public Dictionary<string, BybitWalletBalanceResponse> WalletBalancesByAccountType { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -257,6 +258,8 @@ public sealed class FakeBybitService : IBybitService
         OrderHistoryCallCount++;
         if (OrderHistoryError is not null)
             throw OrderHistoryError;
+        if (OrderHistoryApiKey is not null && !string.Equals(OrderHistoryApiKey, apiKey, StringComparison.Ordinal))
+            return Task.FromResult(new List<BybitOrderData>());
         return Task.FromResult(OrderHistory.Take(limit ?? OrderHistory.Count).ToList());
     }
 
