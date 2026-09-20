@@ -328,6 +328,46 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitManualSync_ShouldRunAccountSyncAndReturnSuccess()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["XRP"] = new Coin(
+            52,
+            "XRP",
+            "XRP",
+            DateTime.UtcNow,
+            new Quote(new USD(0, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("USDT", "100"));
+        _fixture.Factory.Bybit.OrderHistory.Add(FilledOrder(
+            "order-xrp-manual-sync-1",
+            "1.3153",
+            "2026-09-19T21:10:01Z"));
+
+        try
+        {
+            using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+            var response = await client.PostAsync($"/api/Exchange/bybit/sync/{accountId}", null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await response.Content.ReadAsStringAsync()).Should().Contain("synchronized");
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            (await context.CryptoTransactions.CountAsync(transaction =>
+                transaction.ExchangeOrderId == "order-xrp-manual-sync-1")).Should().Be(1);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.OrderHistory.Clear();
+            _fixture.Factory.Bybit.ExecutionsByOrderId.Clear();
+            _fixture.Factory.Bybit.OrderHistoryApiKey = null;
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
     {
         var (userId, _) = await _fixture.CreateUserAsync();

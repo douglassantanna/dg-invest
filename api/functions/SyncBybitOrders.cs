@@ -17,6 +17,7 @@ public class SyncBybitOrders
 
     private readonly IBybitService _bybitService;
     private readonly IBybitOrderSyncService _orderSyncService;
+    private readonly IBybitAccountSyncService? _accountSyncService;
     private readonly IKeyVaultService _keyVaultService;
     private readonly DataContext _context;
     private readonly ILogger<SyncBybitOrders> _logger;
@@ -29,9 +30,22 @@ public class SyncBybitOrders
         DataContext context,
         ILogger<SyncBybitOrders> logger,
         IConfiguration configuration)
+        : this(bybitService, orderSyncService, null, keyVaultService, context, logger, configuration)
+    {
+    }
+
+    public SyncBybitOrders(
+        IBybitService bybitService,
+        IBybitOrderSyncService orderSyncService,
+        IBybitAccountSyncService? accountSyncService,
+        IKeyVaultService keyVaultService,
+        DataContext context,
+        ILogger<SyncBybitOrders> logger,
+        IConfiguration configuration)
     {
         _bybitService = bybitService;
         _orderSyncService = orderSyncService;
+        _accountSyncService = accountSyncService;
         _keyVaultService = keyVaultService;
         _context = context;
         _logger = logger;
@@ -77,7 +91,10 @@ public class SyncBybitOrders
 
             foreach (var account in accounts)
             {
-                await SyncAccountOrdersAsync(account, cancellationToken);
+                if (_accountSyncService is null)
+                    await SyncAccountOrdersAsync(account, cancellationToken);
+                else
+                    await _accountSyncService.SyncAsync(account, cancellationToken);
             }
 
             await SyncUniversalTransfersAsync(accounts, cancellationToken);

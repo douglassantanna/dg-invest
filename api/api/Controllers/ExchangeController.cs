@@ -106,6 +106,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("bybit/sync/{accountId:int}")]
+    public async Task<ActionResult<Response>> SyncBybitAccount(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new SyncBybitAccountCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
     /// <summary>
     /// Returns all Bybit sub-members with their UIDs and whether they are already
     /// mapped to an app account. Use this to identify which Bybit UID belongs to

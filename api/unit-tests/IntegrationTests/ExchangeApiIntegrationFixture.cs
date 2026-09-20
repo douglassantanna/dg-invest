@@ -74,6 +74,7 @@ public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
         var function = new SyncBybitOrders(
             Factory.Bybit,
             scope.ServiceProvider.GetRequiredService<IBybitOrderSyncService>(),
+            scope.ServiceProvider.GetRequiredService<IBybitAccountSyncService>(),
             Factory.KeyVault,
             scope.ServiceProvider.GetRequiredService<DataContext>(),
             scope.ServiceProvider.GetRequiredService<ILogger<SyncBybitOrders>>(),
