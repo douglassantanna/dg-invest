@@ -163,6 +163,18 @@ describe('Exchange management', () => {
     cy.contains('a', 'Manage account').should('have.attr', 'href', '#/exchanges/bybit/101');
   });
 
+  it('runs a manual sync from the Bybit account page', () => {
+    visitAccount();
+    cy.intercept('POST', `${api}/bybit/sync/101`, request => {
+      expect(request.body).to.deep.equal({});
+      request.reply(response(null, 'Bybit account synchronized successfully'));
+    }).as('manualSync');
+
+    cy.contains('button', 'Sync now').click();
+    cy.wait('@manualSync');
+    cy.contains('Bybit account synchronized successfully').should('be.visible');
+  });
+
   it('onboards Bybit, clears credential fields, discovers accounts, and routes to account management', () => {
     cy.intercept('GET', `${api}/bybit/connection-groups`, response([])).as('connectionGroups');
     cy.intercept('GET', `${api}/bybit/sync-status`, response([])).as('syncStatus');

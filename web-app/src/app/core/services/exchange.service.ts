@@ -46,6 +46,10 @@ export class ExchangeService {
     return this.http.post<Response<any>>(`${url}/bybit/sync-accounts`, {});
   }
 
+  syncBybitAccount(accountId: number): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/sync/${accountId}`, {});
+  }
+
   getBybitSubMembers(): Observable<Response<BybitSubMemberDto[]>> {
     return this.http.get<Response<BybitSubMemberDto[]>>(`${url}/bybit/sub-members`);
   }
