@@ -28,6 +28,10 @@
           class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-yellow-500 hover:text-yellow-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:text-yellow-400">
           {{ testing ? 'Testing...' : 'Test connection' }}
         </button>
+        <button type="button" (click)="syncNow()" [disabled]="syncing"
+          class="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
+          {{ syncing ? 'Syncing...' : 'Sync now' }}
+        </button>
         <button type="button" (click)="toggle()" [disabled]="toggling"
           class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-yellow-500 hover:text-yellow-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:text-yellow-400">
           {{ toggling ? 'Saving...' : connectionRow?.isEnabled ? 'Pause sync' : 'Enable sync' }}

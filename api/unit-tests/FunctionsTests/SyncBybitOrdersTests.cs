@@ -8,6 +8,7 @@ using functions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace unit_tests.FunctionsTests;
 
@@ -54,8 +55,7 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -89,8 +89,7 @@ public class SyncBybitOrdersTests
         var keyVault = new Mock<IKeyVaultService>();
         var bybitService = new Mock<IBybitService>();
         var orderSyncService = new Mock<IBybitOrderSyncService>();
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -117,8 +116,7 @@ public class SyncBybitOrdersTests
         var keyVault = new Mock<IKeyVaultService>();
         var bybitService = new Mock<IBybitService>();
         var orderSyncService = new Mock<IBybitOrderSyncService>();
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -151,8 +149,7 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
-        var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -186,8 +183,7 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetDepositHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
-        var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -235,8 +231,7 @@ public class SyncBybitOrdersTests
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService.Setup(x => x.ProcessOpeningBalanceAsync(account, 1, 11000m, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -287,8 +282,7 @@ public class SyncBybitOrdersTests
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, account, 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -352,8 +346,7 @@ public class SyncBybitOrdersTests
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, sourceAccount, 1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, destinationAccount, 1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -402,8 +395,7 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([transfer]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -440,8 +432,7 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()))
             .ThrowsAsync(new BybitApiException(10003, "API key is invalid"));
         var orderSyncService = new Mock<IBybitOrderSyncService>();
-        var function = new SyncBybitOrders(bybitService.Object, orderSyncService.Object, keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -480,8 +471,7 @@ public class SyncBybitOrdersTests
         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()))
             .ThrowsAsync(new BybitApiException(10003, "API key is invalid"));
-        var function = new SyncBybitOrders(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context,
-            Mock.Of<ILogger<SyncBybitOrders>>(), EnabledConfiguration());
+        var function = CreateFunction(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
@@ -494,6 +484,24 @@ public class SyncBybitOrdersTests
     private static IConfiguration EnabledConfiguration() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
         .Build();
+
+    private static SyncBybitOrders CreateFunction(
+        IBybitService bybitService,
+        IBybitOrderSyncService orderSyncService,
+        IKeyVaultService keyVaultService,
+        DataContext context) => new(
+            bybitService,
+            orderSyncService,
+            new BybitAccountSyncService(
+                bybitService,
+                orderSyncService,
+                keyVaultService,
+                context,
+                NullLogger<BybitAccountSyncService>.Instance),
+            keyVaultService,
+            context,
+            Mock.Of<ILogger<SyncBybitOrders>>(),
+            EnabledConfiguration());
 
     private static BybitAccountCoinBalanceResponse AccountCoinBalance(string accountType, string coin, string balance, string memberId = "") => new()
     {

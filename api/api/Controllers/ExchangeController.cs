@@ -106,6 +106,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("bybit/sync/{accountId:int}")]
+    public async Task<ActionResult<Response>> SyncBybitAccount(int accountId)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new SyncBybitAccountCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
     /// <summary>
     /// Returns all Bybit sub-members with their UIDs and whether they are already
     /// mapped to an app account. Use this to identify which Bybit UID belongs to
@@ -267,11 +281,25 @@ public class ExchangeController : ControllerBase
         return int.TryParse(claim, out var id) ? id : null;
     }
 
-    private ActionResult<Response> Failure(Response result) =>
-        IsKeyVaultUnavailable(result) ? StatusCode(StatusCodes.Status503ServiceUnavailable, result) : BadRequest(result);
+    private ActionResult<Response> Failure(Response result)
+    {
+        if (TryGetStatusCode(result, out var statusCode))
+            return StatusCode(statusCode, result);
 
-    private static bool IsKeyVaultUnavailable(Response result) =>
-        result.Data is 503 || string.Equals(result.Data?.ToString(), "503", StringComparison.Ordinal);
+        return BadRequest(result);
+    }
+
+    private static bool TryGetStatusCode(Response result, out int statusCode)
+    {
+        statusCode = result.Data switch
+        {
+            int code => code,
+            string value when int.TryParse(value, out var parsedCode) => parsedCode,
+            _ => 0
+        };
+
+        return statusCode is >= 400 and <= 599;
+    }
 }
 
 public record SaveBybitCredentialsRequest(

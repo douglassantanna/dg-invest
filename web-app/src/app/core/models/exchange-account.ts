@@ -1,3 +1,13 @@
+export interface ExchangeAccountDto {
+  accountId: number;
+  accountName: string;
+  exchangeName: string;
+  status: string;
+  lastSyncAt: string | null;
+  errorCount: number;
+  lastErrorMessage: string | null;
+}
+
 export interface ExchangeConnectionDto {
   exchangeName: string;
   status: string;

@@ -107,6 +107,7 @@ public static class ServiceExtensions
         services.AddScoped<IBybitService, BybitService>();
         services.AddScoped<IBlobStorageService, BlobStorageService>();
         services.AddScoped<IBybitOrderSyncService, BybitOrderSyncService>();
+        services.AddScoped<IBybitAccountSyncService, BybitAccountSyncService>();
         services.AddScoped<IBybitCredentialSetService, BybitCredentialSetService>();
 
         return services;
@@ -120,6 +121,7 @@ public static class ServiceExtensions
         services.AddScoped<IBybitService, BybitService>();
         services.AddScoped<IBlobStorageService, BlobStorageService>();
         services.AddScoped<IBybitOrderSyncService, BybitOrderSyncService>();
+        services.AddScoped<IBybitAccountSyncService, BybitAccountSyncService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransactionStrategy, BuyTransaction>();
         services.AddScoped<ITransactionStrategy, SellTransaction>();

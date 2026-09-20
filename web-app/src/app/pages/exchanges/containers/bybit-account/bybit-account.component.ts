@@ -36,6 +36,7 @@ export class BybitAccountComponent implements OnInit {
   loading = true;
   saving = false;
   testing = false;
+  syncing = false;
   toggling = false;
   savingNickname = false;
   mapping = false;
@@ -119,6 +120,22 @@ export class BybitAccountComponent implements OnInit {
       error: error => {
         this.testing = false;
         this.toast(this.errorMessage(error, 'Connection test failed'));
+      },
+    });
+  }
+
+  syncNow(): void {
+    if (this.syncing) return;
+    this.syncing = true;
+    this.exchangeService.syncBybitAccount(this.accountId).subscribe({
+      next: response => {
+        this.syncing = false;
+        this.toast(response.message);
+        if (response.isSuccess) this.load();
+      },
+      error: error => {
+        this.syncing = false;
+        this.toast(this.errorMessage(error, 'Could not synchronize account'));
       },
     });
   }
