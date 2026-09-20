@@ -655,7 +655,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         string baseSymbol,
         decimal executionPrice)
     {
-        var quoteSymbol = order.Symbol[..^baseSymbol.Length].ToUpperInvariant();
+        var quoteSymbol = order.Symbol[baseSymbol.Length..].ToUpperInvariant();
         var feeAmount = 0m;
         string? feeCurrency = null;
 
