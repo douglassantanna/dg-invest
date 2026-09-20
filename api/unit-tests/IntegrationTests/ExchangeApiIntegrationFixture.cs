@@ -91,6 +91,7 @@ public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
 public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
 {
     private const string JwtSecret = "integration-test-secret-that-is-long-enough-for-hmac";
+    private const string JwtIssuer = "https://integration-tests.dg-invest";
     public const string MigrationToken = "integration-migration-token";
     private readonly string _connectionString;
 
@@ -108,6 +109,7 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
             SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
             claims: [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, role.ToString())],
+            issuer: JwtIssuer,
             expires: DateTime.UtcNow.AddMinutes(5),
             signingCredentials: credentials);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
@@ -119,12 +121,14 @@ public sealed class ExchangeApiFactory : WebApplicationFactory<Program>
     {
         builder.UseSetting("ConnectionStrings:DefaultConnection", _connectionString);
         builder.UseSetting("JWTSettings:Secret", JwtSecret);
+        builder.UseSetting("JWTSettings:Issuer", JwtIssuer);
         builder.UseSetting("RateLimiterSettings:RequestsPermitLimit", "1000");
         builder.UseSetting("RateLimiterSettings:WindowLimitInMinutes", "1");
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:DefaultConnection"] = _connectionString,
             ["JWTSettings:Secret"] = JwtSecret,
+            ["JWTSettings:Issuer"] = JwtIssuer,
             ["Migrations:RemoteTriggerEnabled"] = "true",
             ["Migrations:RemoteTriggerToken"] = MigrationToken,
             ["BybitSync:Enabled"] = "true",
