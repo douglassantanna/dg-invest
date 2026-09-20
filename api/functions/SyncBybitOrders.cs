@@ -81,6 +81,11 @@ public class SyncBybitOrders
 
             await SyncUniversalTransfersAsync(accounts, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("SyncBybitOrders: cancellation requested");
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SyncBybitOrders: unexpected error");

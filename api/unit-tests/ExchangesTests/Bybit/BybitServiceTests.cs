@@ -178,6 +178,65 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetExecutionHistoryAsync_ShouldSignTheExactQueryStringSentToBybit()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "OK",
+            result = new { list = Array.Empty<object>() }
+        });
+
+        const string apiKey = "api-key";
+        const string apiSecret = "api-secret";
+        var result = await _sut.GetExecutionHistoryAsync(apiKey, apiSecret, BybitRegion.Global, "order-1");
+
+        result.Should().BeEmpty();
+        var request = httpTest.CallLog.Should().ContainSingle().Subject.Request;
+        var timestamp = request.Headers.First(header => header.Name == "X-BAPI-TIMESTAMP").Value;
+        var expectedPayload = $"{timestamp}{apiKey}60000category=spot&limit=100&orderId=order-1";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(apiSecret));
+        var expectedSignature = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(expectedPayload))).ToLowerInvariant();
+
+        request.Url.Query.Should().Be("category=spot&limit=100&orderId=order-1");
+        request.Headers.First(header => header.Name == "X-BAPI-SIGN").Value.Should().Be(expectedSignature);
+    }
+
+    [Fact]
+    public async Task GetOrderHistoryAsync_ShouldFetchAllPages()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+            {
+                retCode = 0,
+                retMsg = "OK",
+                result = new
+                {
+                    list = new[] { new { orderId = "order-1", symbol = "BTCUSDT" } },
+                    nextPageCursor = "cursor-1"
+                }
+            })
+            .RespondWithJson(new
+            {
+                retCode = 0,
+                retMsg = "OK",
+                result = new
+                {
+                    list = new[] { new { orderId = "order-2", symbol = "ETHUSDT" } },
+                    nextPageCursor = ""
+                }
+            });
+
+        var result = await _sut.GetOrderHistoryAsync("api-key", "api-secret", limit: 50);
+
+        result.Select(order => order.OrderId).Should().Equal("order-1", "order-2");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/order/history")
+            .WithQueryParam("cursor", "cursor-1")
+            .Times(1);
+    }
+
+    [Fact]
     public async Task GetDepositHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
     {
         using var httpTest = new HttpTest();
@@ -307,7 +366,8 @@ public class BybitServiceTests
     public async Task GetInternalTransferHistoryAsync_WhenBybitReturnsTransfers_ShouldReturnRows()
     {
         using var httpTest = new HttpTest();
-        httpTest.RespondWithJson(new
+        httpTest
+            .RespondWithJson(new
         {
             retCode = 0,
             retMsg = "success",
@@ -329,7 +389,17 @@ public class BybitServiceTests
                 },
                 nextPageCursor = "next"
             }
-        });
+            })
+            .RespondWithJson(new
+            {
+                retCode = 0,
+                retMsg = "success",
+                result = new
+                {
+                    list = Array.Empty<object>(),
+                    nextPageCursor = ""
+                }
+            });
 
         var result = await _sut.GetInternalTransferHistoryAsync("api-key", "api-secret", BybitRegion.Global, 50, 1700000000000);
 

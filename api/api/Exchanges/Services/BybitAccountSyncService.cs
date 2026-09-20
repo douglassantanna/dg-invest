@@ -159,6 +159,11 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
             return BybitAccountSyncResult.Succeeded($"Bybit account {account.Name} synchronized successfully");
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("Bybit sync canceled for account {AccountId}", account.Id);
+            throw;
+        }
         catch (BybitApiException ex)
         {
             var message = $"Bybit rejected sync request: {ex.RetCode} - {ex.RetMsg}";

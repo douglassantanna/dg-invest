@@ -481,6 +481,56 @@ public class SyncBybitOrdersTests
         integration.Enabled.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Run_WhenCancellationIsRequested_ShouldPropagateCancellation()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.MarkEnabled();
+        context.AddRange(account, integration);
+        await context.SaveChangesAsync();
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        status.EnableForCredentials();
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+
+        using var cancellation = new CancellationTokenSource();
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "credential"));
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>()))
+            .ReturnsAsync([new BybitOrderData { OrderId = "order-1", OrderStatus = "Filled" }]);
+        bybitService.Setup(x => x.GetExecutionHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<string>()))
+            .ReturnsAsync([]);
+        bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>())).ReturnsAsync([]);
+        var orderSyncService = new Mock<IBybitOrderSyncService>();
+        orderSyncService
+            .Setup(x => x.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(),
+                It.IsAny<Account>(),
+                It.IsAny<int>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IReadOnlyList<BybitExecutionData>?>()))
+            .Returns((BybitOrderData _, Account _, int _, string _, CancellationToken token, IReadOnlyList<BybitExecutionData>? _) =>
+            {
+                cancellation.Cancel();
+                return Task.FromCanceled<bool>(token);
+            });
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(x => x.CancellationToken).Returns(cancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => function.Run(null!, functionContext.Object));
+    }
+
     private static IConfiguration EnabledConfiguration() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
         .Build();

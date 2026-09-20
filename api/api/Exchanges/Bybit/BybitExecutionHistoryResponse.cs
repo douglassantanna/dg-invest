@@ -18,4 +18,7 @@ public class BybitExecutionHistoryResult
 {
     [JsonPropertyName("list")]
     public List<BybitExecutionData> List { get; set; } = new();
+
+    [JsonPropertyName("nextPageCursor")]
+    public string? NextPageCursor { get; set; }
 }
