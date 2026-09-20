@@ -8,7 +8,6 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace functions;
 
@@ -21,29 +20,6 @@ public class SyncBybitOrders
     private readonly DataContext _context;
     private readonly ILogger<SyncBybitOrders> _logger;
     private readonly IConfiguration _configuration;
-
-    public SyncBybitOrders(
-        IBybitService bybitService,
-        IBybitOrderSyncService orderSyncService,
-        IKeyVaultService keyVaultService,
-        DataContext context,
-        ILogger<SyncBybitOrders> logger,
-        IConfiguration configuration)
-        : this(
-            bybitService,
-            orderSyncService,
-            new BybitAccountSyncService(
-                bybitService,
-                orderSyncService,
-                keyVaultService,
-                context,
-                NullLogger<BybitAccountSyncService>.Instance),
-            keyVaultService,
-            context,
-            logger,
-            configuration)
-    {
-    }
 
     public SyncBybitOrders(
         IBybitService bybitService,
