@@ -32,7 +32,7 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
     {
         var accounts = await _context.Accounts
             .Where(a => a.UserId == request.UserId && !a.IsDeleted && a.Enabled && a.AccountType == api.Cryptos.Models.EAccountType.Exchange)
-            .Select(a => new { a.Id, a.Name })
+            .Select(a => new { a.Id, a.Name, a.Exchange })
             .ToListAsync(cancellationToken);
 
         var syncStatuses = await _context.SyncStatuses
@@ -67,7 +67,7 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
                 result.Add(new ExchangeAccountDto(
                     account.Id,
                     account.Name,
-                    string.Empty,
+                    account.Exchange ?? string.Empty,
                     "NotConfigured",
                     null,
                     0,

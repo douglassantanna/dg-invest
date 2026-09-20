@@ -27,6 +27,7 @@ public sealed class SyncBybitAccountCommandHandler : IRequestHandler<SyncBybitAc
             .FirstOrDefaultAsync(candidate => candidate.Id == request.AccountId
                 && candidate.UserId == request.UserId
                 && !candidate.IsDeleted
+                && candidate.Enabled
                 && candidate.AccountType == api.Cryptos.Models.EAccountType.Exchange
                 && candidate.Exchange == "Bybit", cancellationToken);
 

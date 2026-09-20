@@ -368,6 +368,56 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitManualSync_WhenAccountDoesNotExist_ShouldReturnNotFound()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+
+        var response = await client.PostAsync("/api/Exchange/bybit/sync/999999", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Bybit exchange account not found");
+    }
+
+    [Fact]
+    public async Task BybitManualSync_WhenAccountIsDisabled_ShouldReturnNotFoundWithoutCallingBybit()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var account = await context.Accounts.SingleAsync(candidate => candidate.Id == accountId);
+            account.Disable();
+            await context.SaveChangesAsync();
+        }
+
+        var initialOrderHistoryCallCount = _fixture.Factory.Bybit.OrderHistoryCallCount;
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.PostAsync($"/api/Exchange/bybit/sync/{accountId}", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        _fixture.Factory.Bybit.OrderHistoryCallCount.Should().Be(initialOrderHistoryCallCount);
+    }
+
+    [Fact]
+    public async Task ExchangeAccounts_WhenSyncStatusIsMissing_ShouldReturnAccountExchangeName()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            context.Accounts.Add(new Account("Unconfigured Bybit", userId, EAccountType.Exchange, "Bybit", "unconfigured-uid"));
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.GetAsync("/api/Exchange/accounts");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("\"exchangeName\":\"Bybit\"");
+    }
+
+    [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
@@ -1049,7 +1099,7 @@ public class ExchangeControllerIntegrationTests
                 : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Pending account", bybitUid = "pending-uid", apiKey = "api-key", apiSecret = "api-secret", webhookSecret = "webhook-secret" });
 
             var body = await response.Content.ReadAsStringAsync();
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
             body.Should().Contain("recovery may be required");
         }
         finally
@@ -1089,7 +1139,7 @@ public class ExchangeControllerIntegrationTests
         accounts.StatusCode.Should().Be(HttpStatusCode.OK);
         (await accounts.Content.ReadAsStringAsync()).Should().NotContain("\"accountName\":\"main\"");
 
-        (await client.GetAsync($"/api/Exchange/{mainAccountId}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetAsync($"/api/Exchange/{mainAccountId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         var transactions = await client.GetAsync($"/api/Exchange/{mainAccountId}/transactions");
         transactions.StatusCode.Should().Be(HttpStatusCode.OK);
         (await transactions.Content.ReadAsStringAsync()).Should().Contain("Account not found");
@@ -1103,7 +1153,7 @@ public class ExchangeControllerIntegrationTests
 
         (await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new { accountId = mainAccountId, apiKey = "key", apiSecret = "secret", webhookSecret = "" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await client.PostAsync($"/api/Exchange/bybit/test-connection/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.PostAsync($"/api/Exchange/bybit/test-connection/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await client.PostAsync($"/api/Exchange/bybit/toggle/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await client.PostAsJsonAsync("/api/Exchange/bybit/map-account", new { accountId = mainAccountId, externalId = "manual-uid" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
