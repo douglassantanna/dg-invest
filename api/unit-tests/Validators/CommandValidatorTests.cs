@@ -164,6 +164,22 @@ public class CommandValidatorTests
     }
 
     [Fact]
+    public void AuthenticateCommandValidator_WhenPasswordHasSixCharacters_ShouldPass()
+    {
+        // Arrange
+        var validator = new AuthenticateCommandValidator();
+        var command = new AuthenticateCommand(
+            Email: "test@example.com",
+            Password: "123456");
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
     public void WithdrawFundCommandValidator_WhenCommandIsValid_ShouldPass()
     {
         // Arrange

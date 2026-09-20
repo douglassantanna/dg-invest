@@ -43,6 +43,9 @@ Before running the API you need to configure the settings file:
   "KeyVaultSettings": {
     "VaultUri": "https://your-keyvault-name.vault.azure.net/"
   },
+  "AllowedOrigins": [
+    "http://localhost:4200"
+  ],
   "RateLimiterSettings": {
     "RequestsPermitLimit": 320,
     "WindowLimitInMinutes": 10

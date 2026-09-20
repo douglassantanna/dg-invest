@@ -15,12 +15,12 @@ builder.Host.UseSerilog((context, config) => config
     .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
     .WriteTo.Console()
     .WriteToBlobLogs(context.Configuration, "api"));
-builder.Services.ConfigureJwt(builder.Configuration);
+builder.Services.ConfigureJwt(builder.Configuration, builder.Environment);
 builder.Services.ConfigureOptions(builder.Configuration);
 builder.Services.ConfigureServices();
 builder.Services.ConfigureDatabase(builder.Configuration);
 builder.Services.ConfigureCustomRateLimiter(builder.Configuration);
-builder.Services.ConfigureCORS();
+builder.Services.ConfigureCORS(builder.Configuration);
 builder.Services.AddControllers(opt =>
 {
     opt.Filters.Add<GlobalExceptionFilter>();

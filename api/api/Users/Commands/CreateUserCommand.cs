@@ -59,7 +59,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Respo
         if (await _userRepository.IsUnique(request.Email))
             return new Response("Email already exists", false);
 
-        var randomPassword = "111111"; //_passwordHelper.RandomPassword();
+        var randomPassword = _passwordHelper.RandomPassword();
 
         var user = new User(request.FullName,
                             request.Email,

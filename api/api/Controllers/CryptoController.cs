@@ -31,7 +31,6 @@ public class CryptoController : ControllerBase
     // }
 
     [HttpPost("create-crypto")]
-    [AllowAnonymous]
     public async Task<ActionResult> CreateCrypto([FromBody] CreateCryptoCommand command)
     {
 
