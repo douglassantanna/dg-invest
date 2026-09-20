@@ -8,16 +8,15 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace functions;
 
 public class SyncBybitOrders
 {
-    private static readonly TimeSpan SyncOverlap = TimeSpan.FromMinutes(5);
-
     private readonly IBybitService _bybitService;
     private readonly IBybitOrderSyncService _orderSyncService;
-    private readonly IBybitAccountSyncService? _accountSyncService;
+    private readonly IBybitAccountSyncService _accountSyncService;
     private readonly IKeyVaultService _keyVaultService;
     private readonly DataContext _context;
     private readonly ILogger<SyncBybitOrders> _logger;
@@ -30,14 +29,26 @@ public class SyncBybitOrders
         DataContext context,
         ILogger<SyncBybitOrders> logger,
         IConfiguration configuration)
-        : this(bybitService, orderSyncService, null, keyVaultService, context, logger, configuration)
+        : this(
+            bybitService,
+            orderSyncService,
+            new BybitAccountSyncService(
+                bybitService,
+                orderSyncService,
+                keyVaultService,
+                context,
+                NullLogger<BybitAccountSyncService>.Instance),
+            keyVaultService,
+            context,
+            logger,
+            configuration)
     {
     }
 
     public SyncBybitOrders(
         IBybitService bybitService,
         IBybitOrderSyncService orderSyncService,
-        IBybitAccountSyncService? accountSyncService,
+        IBybitAccountSyncService accountSyncService,
         IKeyVaultService keyVaultService,
         DataContext context,
         ILogger<SyncBybitOrders> logger,
@@ -90,206 +101,13 @@ public class SyncBybitOrders
             }
 
             foreach (var account in accounts)
-            {
-                if (_accountSyncService is null)
-                    await SyncAccountOrdersAsync(account, cancellationToken);
-                else
-                    await _accountSyncService.SyncAsync(account, cancellationToken);
-            }
+                await _accountSyncService.SyncAsync(account, cancellationToken);
 
             await SyncUniversalTransfersAsync(accounts, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SyncBybitOrders: unexpected error");
-        }
-    }
-
-    private async Task SyncAccountOrdersAsync(Account account, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var userId = account.UserId;
-            var accountId = account.Id;
-
-            var syncStatus = await _context.SyncStatuses
-                .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
-            if (syncStatus == null)
-            {
-                _logger.LogInformation("SyncBybitOrders: no sync status for user {UserId}, account {AccountId}, UID {ExternalId} (credentials may predate safeguard), skipping",
-                    userId, accountId, account.ExternalId);
-                return;
-            }
-
-            if (!syncStatus.IsEnabled)
-            {
-                _logger.LogInformation("SyncBybitOrders: account {AccountId}, UID {ExternalId} is disabled, skipping", accountId, account.ExternalId);
-                return;
-            }
-
-            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, accountId, "api-key", cancellationToken);
-            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, accountId, "api-secret", cancellationToken);
-
-            if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
-            {
-                const string errorMessage = "Credential storage is temporarily unavailable";
-                _logger.LogError("SyncBybitOrders: Key Vault unavailable for account {AccountId} (user {UserId})", accountId, userId);
-                await _orderSyncService.MarkSyncStatusErrorAsync(userId, accountId, errorMessage, cancellationToken);
-                return;
-            }
-
-            if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
-            {
-                _logger.LogInformation("SyncBybitOrders: no credentials for user {UserId}, account {AccountId}, UID {ExternalId}", userId, accountId, account.ExternalId);
-                return;
-            }
-
-            var region = BybitEndpoints.Parse(syncStatus.Region);
-            await PopulateInitialCashBalanceAsync(account, apiKey.Value!, apiSecret.Value!, region, cancellationToken);
-
-            var cutoff = syncStatus.LastSyncAt ?? syncStatus.BybitCredentialsSetAt;
-            var startTime = cutoff is { } dt
-                ? new DateTimeOffset(dt.Subtract(SyncOverlap), TimeSpan.Zero).ToUnixTimeMilliseconds()
-                : (long?)null;
-
-            var orders = await _bybitService.GetOrderHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
-            var hasFailures = false;
-            var filledOrders = orders.Where(o => o.OrderStatus == "Filled").ToList();
-
-            if (orders.Count > 0)
-            {
-                if (filledOrders.Count > 0)
-                {
-                    foreach (var order in filledOrders)
-                    {
-                        IReadOnlyList<BybitExecutionData> executions = [];
-                        try
-                        {
-                            executions = await _bybitService.GetExecutionHistoryAsync(apiKey.Value!, apiSecret.Value!, region, order.OrderId);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "SyncBybitOrders: execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
-                        }
-
-                        if (!await _orderSyncService.ProcessOrderAsync(order, account, userId, "RestPoll", cancellationToken, executions))
-                            hasFailures = true;
-                    }
-                    _logger.LogInformation("SyncBybitOrders: processed {Count} orders for account {AccountId}", filledOrders.Count, accountId);
-                }
-            }
-
-            var deposits = await _bybitService.GetDepositHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
-            if (deposits.Count > 0)
-                _logger.LogInformation("SyncBybitOrders: received {Count} deposits from Bybit for account {AccountId}: {TxIds}",
-                    deposits.Count, accountId, string.Join(", ", deposits.Select(d => $"{d.TxId}({d.Status})")));
-
-            foreach (var deposit in deposits)
-            {
-                if (!await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken))
-                    hasFailures = true;
-            }
-            if (deposits.Count > 0)
-                _logger.LogInformation("SyncBybitOrders: finished processing {Count} deposits for account {AccountId}", deposits.Count, accountId);
-
-            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
-            if (withdrawals.Count > 0)
-                _logger.LogInformation("SyncBybitOrders: received {Count} withdrawals from Bybit for account {AccountId}: {TxIds}",
-                    withdrawals.Count, accountId, string.Join(", ", withdrawals.Select(w => $"{w.TxId}({w.Status})")));
-
-            foreach (var withdrawal in withdrawals)
-            {
-                if (!await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken))
-                    hasFailures = true;
-            }
-            if (withdrawals.Count > 0)
-                _logger.LogInformation("SyncBybitOrders: finished processing {Count} withdrawals for account {AccountId}", withdrawals.Count, accountId);
-
-            var internalTransfers = await _bybitService.GetInternalTransferHistoryAsync(apiKey.Value!, apiSecret.Value!, region, limit: 50, startTime: startTime);
-            if (internalTransfers.Count > 0)
-            {
-                _logger.LogInformation("SyncBybitOrders: received {Count} internal transfers from Bybit for account {AccountId}: {TransferIds}",
-                    internalTransfers.Count, accountId, string.Join(", ", internalTransfers.Select(t => t.TransferId)));
-                foreach (var transfer in internalTransfers)
-                {
-                    _logger.LogInformation(
-                        "SyncBybitOrders: internal transfer {TransferId}: {Amount} {Coin}, from {FromAccountType}/{FromMemberId} to {ToAccountType}/{ToMemberId}, timestamp {Timestamp}, account {AccountId}",
-                        transfer.TransferId,
-                        transfer.Amount,
-                        transfer.Coin,
-                        transfer.FromAccountType,
-                        string.IsNullOrWhiteSpace(transfer.FromMemberId) ? "main" : transfer.FromMemberId,
-                        transfer.ToAccountType,
-                        string.IsNullOrWhiteSpace(transfer.ToMemberId) ? "main" : transfer.ToMemberId,
-                        transfer.Timestamp,
-                        accountId);
-                }
-            }
-
-            foreach (var internalTransfer in internalTransfers)
-            {
-                if (!await _orderSyncService.ProcessInternalTransferAsync(internalTransfer, account, userId, cancellationToken))
-                    hasFailures = true;
-            }
-            if (internalTransfers.Count > 0)
-                _logger.LogInformation("SyncBybitOrders: finished processing {Count} internal transfers for account {AccountId}", internalTransfers.Count, accountId);
-
-            if (hasFailures)
-            {
-                _logger.LogWarning("SyncBybitOrders: one or more items failed for account {AccountId}, cursor not advanced", accountId);
-            }
-            else
-            {
-                var lastOrderId = orders.Count > 0 ? orders.Last().OrderId : null;
-                await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
-            }
-        }
-        catch (BybitApiException ex)
-        {
-            var message = $"Bybit rejected sync request: {ex.RetCode} - {ex.RetMsg}";
-            _logger.LogWarning(ex, "SyncBybitOrders: Bybit rejected sync request for account {AccountId}", account.Id);
-            try
-            {
-                await _orderSyncService.MarkSyncStatusErrorAsync(account.UserId, account.Id, message, cancellationToken);
-            }
-            catch { }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "SyncBybitOrders: error syncing orders for account {AccountId}", account.Id);
-            try
-            {
-                await _orderSyncService.MarkSyncStatusErrorAsync(account.UserId, account.Id, ex.Message, cancellationToken);
-            }
-            catch { }
-        }
-    }
-
-    private async Task PopulateInitialCashBalanceAsync(Account account, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var balance = 0m;
-            foreach (var accountType in new[] { "FUND", "UNIFIED" })
-            {
-                foreach (var coin in BybitCashBalance.CashCoins)
-                {
-                    try
-                    {
-                        var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(apiKey, apiSecret, region, accountType, coin, account.ExternalId);
-                        balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "SyncBybitOrders: failed to fetch {AccountType} {Coin} balance for account {AccountId}", accountType, coin, account.Id);
-                    }
-                }
-            }
-            await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "SyncBybitOrders: failed to fetch initial cash balance for account {AccountId}", account.Id);
         }
     }
 
