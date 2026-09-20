@@ -8,7 +8,7 @@ import { SyncLogEntry } from '../models/sync-log-entry';
 import { BybitSubMemberDto } from '../models/bybit-sub-member';
 import { CredentialsStatusDto } from '../models/credentials-status';
 import { BybitConnectionGroupDto } from '../models/bybit-connection-group';
-import { ExchangeAccountDetailDto, ExchangeTransactionDto } from '../models/exchange-account';
+import { ExchangeAccountDetailDto, ExchangeAccountDto, ExchangeTransactionDto } from '../models/exchange-account';
 
 const url = `${environment.apiUrl}/Exchange`;
 
@@ -22,6 +22,10 @@ export class ExchangeService {
 
   saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId, region });
+  }
+
+  getExchangeAccounts(): Observable<Response<ExchangeAccountDto[]>> {
+    return this.http.get<Response<ExchangeAccountDto[]>>(`${url}/accounts`);
   }
 
   getExchangeAccountDetail(accountId: number): Observable<Response<ExchangeAccountDetailDto>> {

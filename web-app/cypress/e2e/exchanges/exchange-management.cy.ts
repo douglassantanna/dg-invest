@@ -130,14 +130,37 @@ describe('Exchange management', () => {
   beforeEach(() => cy.clearLocalStorage());
 
   it('routes from the exchange index to the Bybit integration', () => {
+    cy.intercept('GET', `${api}/accounts`, response([])).as('exchangeAccounts');
     authenticate();
     cy.visit('/#/exchanges');
+    cy.wait('@exchangeAccounts');
 
     cy.contains('Connect exchanges').should('be.visible');
     cy.contains('Bybit').should('be.visible');
     cy.contains('Manage integration').click();
 
     cy.location('hash').should('eq', '#/exchanges/bybit');
+  });
+
+  it('loads exchange accounts through the exchange-agnostic account contract', () => {
+    cy.intercept('GET', `${api}/accounts`, response([
+      {
+        accountId: 101,
+        accountName: 'Trading account',
+        exchangeName: 'Bybit',
+        status: 'Connected',
+        lastSyncAt: '2026-08-19T12:00:00Z',
+        errorCount: 0,
+        lastErrorMessage: null,
+      },
+    ])).as('exchangeAccounts');
+    authenticate();
+    cy.visit('/#/exchanges');
+    cy.wait('@exchangeAccounts');
+
+    cy.contains('Trading account').should('be.visible');
+    cy.contains('Connected').should('be.visible');
+    cy.contains('a', 'Manage account').should('have.attr', 'href', '#/exchanges/bybit/101');
   });
 
   it('onboards Bybit, clears credential fields, discovers accounts, and routes to account management', () => {
