@@ -31,16 +31,7 @@ public partial class RepairMissingExchangeOrderId : Migration
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql("""
-            IF EXISTS (
-                SELECT 1
-                FROM sys.indexes
-                WHERE name = 'IX_CryptoTransactions_ExchangeOrderId'
-                  AND object_id = OBJECT_ID('dbo.CryptoTransactions'))
-                DROP INDEX IX_CryptoTransactions_ExchangeOrderId ON dbo.CryptoTransactions;
-
-            IF COL_LENGTH('dbo.CryptoTransactions', 'ExchangeOrderId') IS NOT NULL
-                ALTER TABLE dbo.CryptoTransactions DROP COLUMN ExchangeOrderId;
-            """);
+        // This migration repairs schema that may predate its migration history entry.
+        // Keeping the repaired objects on rollback avoids deleting existing order IDs.
     }
 }
