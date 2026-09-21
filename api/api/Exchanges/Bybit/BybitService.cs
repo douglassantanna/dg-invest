@@ -57,23 +57,8 @@ public class BybitService : IBybitService
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(SubMembersEndpoint)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitSubAccountResponse>();
+            var response = await SendPrivateGetAsync<BybitSubAccountResponse>(
+                apiKey, apiSecret, region, SubMembersEndpoint, new Dictionary<string, object>());
 
             if (response.RetCode != 0)
             {
@@ -94,23 +79,8 @@ public class BybitService : IBybitService
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(AccountInfoEndpoint)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitAccountInfoResponse>();
+            var response = await SendPrivateGetAsync<BybitAccountInfoResponse>(
+                apiKey, apiSecret, region, AccountInfoEndpoint, new Dictionary<string, object>());
 
             if (response.RetCode != 0)
             {
@@ -137,41 +107,28 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryDict = new Dictionary<string, object> { ["category"] = "spot", ["limit"] = limit!.Value };
-            if (startTime.HasValue)
-                queryDict["startTime"] = startTime.Value;
+            return await GetPagedAsync(
+                cursor =>
+                {
+                    var query = new Dictionary<string, object>
+                    {
+                        ["category"] = "spot",
+                        ["limit"] = limit ?? 50
+                    };
+                    if (startTime.HasValue)
+                        query["startTime"] = startTime.Value;
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                        query["cursor"] = cursor;
 
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(OrderHistoryEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitOrderHistoryResponse>();
-
-            if (response.RetCode != 0)
-            {
-                _logger.LogError("Bybit GetOrderHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
-            }
-
-            return response.Result.List;
+                    return SendPrivateGetAsync<BybitOrderHistoryResponse>(
+                        apiKey, apiSecret, region, OrderHistoryEndpoint, query, cancellationToken);
+                },
+                response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
+                "order history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -180,37 +137,27 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId)
+    public async Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryDict = new Dictionary<string, object>
-            {
-                ["category"] = "spot",
-                ["orderId"] = orderId,
-                ["limit"] = 100
-            };
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
+            return await GetPagedAsync(
+                cursor =>
+                {
+                    var query = new Dictionary<string, object>
+                    {
+                        ["category"] = "spot",
+                        ["limit"] = 100,
+                        ["orderId"] = orderId
+                    };
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                        query["cursor"] = cursor;
 
-            using var hmac = new HMACSHA256(keyBytes);
-            var signature = Convert.ToHexString(hmac.ComputeHash(paramBytes)).ToLowerInvariant();
-            var response = await GetBaseUrl(region)
-                .AppendPathSegment(ExecutionHistoryEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitExecutionHistoryResponse>();
-
-            if (response.RetCode != 0)
-                throw new BybitApiException(response.RetCode, response.RetMsg);
-
-            return response.Result.List;
+                    return SendPrivateGetAsync<BybitExecutionHistoryResponse>(
+                        apiKey, apiSecret, region, ExecutionHistoryEndpoint, query, cancellationToken);
+                },
+                response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
+                $"execution history for order {orderId}", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -219,41 +166,24 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryDict = new Dictionary<string, object> { ["limit"] = limit!.Value };
-            if (startTime.HasValue)
-                queryDict["startTime"] = startTime.Value;
+            return await GetPagedAsync(
+                cursor =>
+                {
+                    var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
+                    if (startTime.HasValue)
+                        query["startTime"] = startTime.Value;
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                        query["cursor"] = cursor;
 
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(DepositHistoryEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitDepositHistoryResponse>();
-
-            if (response.RetCode != 0)
-            {
-                _logger.LogError("Bybit GetDepositHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
-            }
-
-            return response.Result.Rows;
+                    return SendPrivateGetAsync<BybitDepositHistoryResponse>(
+                        apiKey, apiSecret, region, DepositHistoryEndpoint, query, cancellationToken);
+                },
+                response => (response.RetCode, response.RetMsg, response.Result.Rows, response.Result.NextPageCursor),
+                "deposit history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -262,41 +192,24 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryDict = new Dictionary<string, object> { ["limit"] = limit!.Value };
-            if (startTime.HasValue)
-                queryDict["startTime"] = startTime.Value;
+            return await GetPagedAsync(
+                cursor =>
+                {
+                    var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
+                    if (startTime.HasValue)
+                        query["startTime"] = startTime.Value;
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                        query["cursor"] = cursor;
 
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(WithdrawalHistoryEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitWithdrawalHistoryResponse>();
-
-            if (response.RetCode != 0)
-            {
-                _logger.LogError("Bybit GetWithdrawalHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
-            }
-
-            return response.Result.Rows;
+                    return SendPrivateGetAsync<BybitWithdrawalHistoryResponse>(
+                        apiKey, apiSecret, region, WithdrawalHistoryEndpoint, query, cancellationToken);
+                },
+                response => (response.RetCode, response.RetMsg, response.Result.Rows, response.Result.NextPageCursor),
+                "withdrawal history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -305,41 +218,24 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryDict = new Dictionary<string, object> { ["limit"] = limit!.Value };
-            if (startTime.HasValue)
-                queryDict["startTime"] = startTime.Value;
+            return await GetPagedAsync(
+                cursor =>
+                {
+                    var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
+                    if (startTime.HasValue)
+                        query["startTime"] = startTime.Value;
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                        query["cursor"] = cursor;
 
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(InternalTransferHistoryEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitInternalTransferResponse>();
-
-            if (response.RetCode != 0)
-            {
-                _logger.LogError("Bybit GetInternalTransferHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
-            }
-
-            return response.Result.List;
+                    return SendPrivateGetAsync<BybitInternalTransferResponse>(
+                        apiKey, apiSecret, region, InternalTransferHistoryEndpoint, query, cancellationToken);
+                },
+                response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
+                "internal transfer history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -348,41 +244,24 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var queryDict = new Dictionary<string, object> { ["limit"] = limit!.Value };
-            if (startTime.HasValue)
-                queryDict["startTime"] = startTime.Value;
+            return await GetPagedAsync(
+                cursor =>
+                {
+                    var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
+                    if (startTime.HasValue)
+                        query["startTime"] = startTime.Value;
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                        query["cursor"] = cursor;
 
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(UniversalTransferHistoryEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitInternalTransferResponse>();
-
-            if (response.RetCode != 0)
-            {
-                _logger.LogError("Bybit GetUniversalTransferHistory returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
-            }
-
-            return response.Result.List;
+                    return SendPrivateGetAsync<BybitInternalTransferResponse>(
+                        apiKey, apiSecret, region, UniversalTransferHistoryEndpoint, query, cancellationToken);
+                },
+                response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
+                "universal transfer history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -395,28 +274,11 @@ public class BybitService : IBybitService
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
             var queryDict = new Dictionary<string, object> { ["accountType"] = accountType };
             if (!string.IsNullOrWhiteSpace(memberId))
                 queryDict["memberId"] = memberId;
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(WalletBalanceEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitWalletBalanceResponse>();
+            var response = await SendPrivateGetAsync<BybitWalletBalanceResponse>(
+                apiKey, apiSecret, region, WalletBalanceEndpoint, queryDict);
 
             if (response.RetCode != 0)
             {
@@ -437,29 +299,11 @@ public class BybitService : IBybitService
     {
         try
         {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
             var queryDict = new Dictionary<string, object> { ["accountType"] = accountType, ["coin"] = coin };
             if (!string.IsNullOrWhiteSpace(memberId))
                 queryDict["memberId"] = memberId;
-
-            var queryParams = BuildQueryString(queryDict);
-            var paramStr = $"{timestamp}{apiKey}{RecvWindow}{queryParams}";
-            var keyBytes = Encoding.UTF8.GetBytes(apiSecret);
-            var paramBytes = Encoding.UTF8.GetBytes(paramStr);
-
-            using var hmac = new HMACSHA256(keyBytes);
-            var hashBytes = hmac.ComputeHash(paramBytes);
-            var signature = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-            var baseUrl = GetBaseUrl(region);
-            var response = await baseUrl
-                .AppendPathSegment(AccountCoinBalanceEndpoint)
-                .SetQueryParams(queryDict)
-                .WithHeader("X-BAPI-API-KEY", apiKey)
-                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-                .WithHeader("X-BAPI-SIGN", signature)
-                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-                .GetJsonAsync<BybitAccountCoinBalanceResponse>();
+            var response = await SendPrivateGetAsync<BybitAccountCoinBalanceResponse>(
+                apiKey, apiSecret, region, AccountCoinBalanceEndpoint, queryDict);
 
             if (response.RetCode != 0)
             {
@@ -476,8 +320,58 @@ public class BybitService : IBybitService
         }
     }
 
-    private static string BuildQueryString(Dictionary<string, object> parameters)
+    private async Task<TResponse> SendPrivateGetAsync<TResponse>(
+        string apiKey,
+        string apiSecret,
+        BybitRegion region,
+        string endpoint,
+        IReadOnlyDictionary<string, object> parameters,
+        CancellationToken cancellationToken = default)
     {
-        return string.Join("&", parameters.OrderBy(p => p.Key).Select(p => $"{p.Key}={p.Value}"));
+        cancellationToken.ThrowIfCancellationRequested();
+        var url = GetBaseUrl(region).AppendPathSegment(endpoint);
+        foreach (var parameter in parameters.OrderBy(parameter => parameter.Key, StringComparer.Ordinal))
+            url = url.SetQueryParam(parameter.Key, parameter.Value);
+
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+        var payload = $"{timestamp}{apiKey}{RecvWindow}{url.Query}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(apiSecret));
+        var signature = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+
+        return await url
+            .WithHeader("X-BAPI-API-KEY", apiKey)
+            .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+            .WithHeader("X-BAPI-SIGN", signature)
+            .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+            .GetJsonAsync<TResponse>(cancellationToken);
+    }
+
+    private static async Task<List<TItem>> GetPagedAsync<TResponse, TItem>(
+        Func<string?, Task<TResponse>> fetchPage,
+        Func<TResponse, (int RetCode, string RetMsg, List<TItem> Items, string? NextCursor)> readPage,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        var items = new List<TItem>();
+        var seenCursors = new HashSet<string>(StringComparer.Ordinal);
+        string? cursor = null;
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var response = await fetchPage(cursor);
+            var pageResult = readPage(response);
+            if (pageResult.RetCode != 0)
+                throw new BybitApiException(pageResult.RetCode, pageResult.RetMsg);
+
+            items.AddRange(pageResult.Items);
+            if (string.IsNullOrWhiteSpace(pageResult.NextCursor))
+                return items;
+
+            if (!seenCursors.Add(pageResult.NextCursor!))
+                throw new InvalidOperationException($"Bybit {operation} returned a repeated page cursor");
+
+            cursor = pageResult.NextCursor;
+        }
     }
 }

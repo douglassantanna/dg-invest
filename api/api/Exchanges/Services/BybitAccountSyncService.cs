@@ -82,7 +82,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 apiSecret.Value,
                 region,
                 limit: 50,
-                startTime: startTime);
+                startTime: startTime,
+                cancellationToken: cancellationToken);
             var hasFailures = false;
 
             foreach (var order in orders.Where(order => order.OrderStatus == "Filled"))
@@ -94,7 +95,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                         apiKey.Value,
                         apiSecret.Value,
                         region,
-                        order.OrderId);
+                        order.OrderId,
+                        cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -118,7 +120,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 apiSecret.Value,
                 region,
                 limit: 50,
-                startTime: startTime);
+                startTime: startTime,
+                cancellationToken: cancellationToken);
             foreach (var deposit in deposits)
             {
                 if (!await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken))
@@ -130,7 +133,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 apiSecret.Value,
                 region,
                 limit: 50,
-                startTime: startTime);
+                startTime: startTime,
+                cancellationToken: cancellationToken);
             foreach (var withdrawal in withdrawals)
             {
                 if (!await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken))
@@ -142,7 +146,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 apiSecret.Value,
                 region,
                 limit: 50,
-                startTime: startTime);
+                startTime: startTime,
+                cancellationToken: cancellationToken);
             foreach (var internalTransfer in internalTransfers)
             {
                 if (!await _orderSyncService.ProcessInternalTransferAsync(internalTransfer, account, userId, cancellationToken))
@@ -158,6 +163,11 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             var lastOrderId = orders.Count > 0 ? orders.Last().OrderId : null;
             await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
             return BybitAccountSyncResult.Succeeded($"Bybit account {account.Name} synchronized successfully");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("Bybit sync canceled for account {AccountId}", account.Id);
+            throw;
         }
         catch (BybitApiException ex)
         {

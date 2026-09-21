@@ -81,6 +81,11 @@ public class SyncBybitOrders
 
             await SyncUniversalTransfersAsync(accounts, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("SyncBybitOrders: cancellation requested");
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SyncBybitOrders: unexpected error");
@@ -111,7 +116,7 @@ public class SyncBybitOrders
             try
             {
                 universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
-                    apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime);
+                    apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime, cancellationToken: cancellationToken);
             }
             catch (BybitApiException ex)
             {
