@@ -116,7 +116,7 @@ public class SyncBybitOrders
             try
             {
                 universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
-                    apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime);
+                    apiKey.Value, apiSecret.Value, region, limit: 50, startTime: startTime, cancellationToken: cancellationToken);
             }
             catch (BybitApiException ex)
             {

@@ -19,7 +19,6 @@ public class BybitService : IBybitService
     private const string AccountCoinBalanceEndpoint = "/v5/asset/transfer/query-account-coin-balance";
     private const string AccountInfoEndpoint = "/v5/account/info";
     private const int RecvWindow = 60000;
-    private const int MaxHistoryPages = 100;
 
     private readonly bool _useTestnet;
     private readonly ILogger<BybitService> _logger;
@@ -108,7 +107,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -126,10 +125,10 @@ public class BybitService : IBybitService
                         query["cursor"] = cursor;
 
                     return SendPrivateGetAsync<BybitOrderHistoryResponse>(
-                        apiKey, apiSecret, region, OrderHistoryEndpoint, query);
+                        apiKey, apiSecret, region, OrderHistoryEndpoint, query, cancellationToken);
                 },
                 response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
-                "order history");
+                "order history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -138,7 +137,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId)
+    public async Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -155,10 +154,10 @@ public class BybitService : IBybitService
                         query["cursor"] = cursor;
 
                     return SendPrivateGetAsync<BybitExecutionHistoryResponse>(
-                        apiKey, apiSecret, region, ExecutionHistoryEndpoint, query);
+                        apiKey, apiSecret, region, ExecutionHistoryEndpoint, query, cancellationToken);
                 },
                 response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
-                $"execution history for order {orderId}");
+                $"execution history for order {orderId}", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -167,7 +166,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -181,10 +180,10 @@ public class BybitService : IBybitService
                         query["cursor"] = cursor;
 
                     return SendPrivateGetAsync<BybitDepositHistoryResponse>(
-                        apiKey, apiSecret, region, DepositHistoryEndpoint, query);
+                        apiKey, apiSecret, region, DepositHistoryEndpoint, query, cancellationToken);
                 },
                 response => (response.RetCode, response.RetMsg, response.Result.Rows, response.Result.NextPageCursor),
-                "deposit history");
+                "deposit history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -193,7 +192,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -207,10 +206,10 @@ public class BybitService : IBybitService
                         query["cursor"] = cursor;
 
                     return SendPrivateGetAsync<BybitWithdrawalHistoryResponse>(
-                        apiKey, apiSecret, region, WithdrawalHistoryEndpoint, query);
+                        apiKey, apiSecret, region, WithdrawalHistoryEndpoint, query, cancellationToken);
                 },
                 response => (response.RetCode, response.RetMsg, response.Result.Rows, response.Result.NextPageCursor),
-                "withdrawal history");
+                "withdrawal history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -219,7 +218,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -233,10 +232,10 @@ public class BybitService : IBybitService
                         query["cursor"] = cursor;
 
                     return SendPrivateGetAsync<BybitInternalTransferResponse>(
-                        apiKey, apiSecret, region, InternalTransferHistoryEndpoint, query);
+                        apiKey, apiSecret, region, InternalTransferHistoryEndpoint, query, cancellationToken);
                 },
                 response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
-                "internal transfer history");
+                "internal transfer history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -245,7 +244,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -259,10 +258,10 @@ public class BybitService : IBybitService
                         query["cursor"] = cursor;
 
                     return SendPrivateGetAsync<BybitInternalTransferResponse>(
-                        apiKey, apiSecret, region, UniversalTransferHistoryEndpoint, query);
+                        apiKey, apiSecret, region, UniversalTransferHistoryEndpoint, query, cancellationToken);
                 },
                 response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
-                "universal transfer history");
+                "universal transfer history", cancellationToken);
         }
         catch (Exception ex)
         {
@@ -326,8 +325,10 @@ public class BybitService : IBybitService
         string apiSecret,
         BybitRegion region,
         string endpoint,
-        IReadOnlyDictionary<string, object> parameters)
+        IReadOnlyDictionary<string, object> parameters,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var url = GetBaseUrl(region).AppendPathSegment(endpoint);
         foreach (var parameter in parameters.OrderBy(parameter => parameter.Key, StringComparer.Ordinal))
             url = url.SetQueryParam(parameter.Key, parameter.Value);
@@ -342,20 +343,22 @@ public class BybitService : IBybitService
             .WithHeader("X-BAPI-TIMESTAMP", timestamp)
             .WithHeader("X-BAPI-SIGN", signature)
             .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-            .GetJsonAsync<TResponse>();
+            .GetJsonAsync<TResponse>(cancellationToken);
     }
 
     private static async Task<List<TItem>> GetPagedAsync<TResponse, TItem>(
         Func<string?, Task<TResponse>> fetchPage,
         Func<TResponse, (int RetCode, string RetMsg, List<TItem> Items, string? NextCursor)> readPage,
-        string operation)
+        string operation,
+        CancellationToken cancellationToken)
     {
         var items = new List<TItem>();
         var seenCursors = new HashSet<string>(StringComparer.Ordinal);
         string? cursor = null;
 
-        for (var page = 0; page < MaxHistoryPages; page++)
+        while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var response = await fetchPage(cursor);
             var pageResult = readPage(response);
             if (pageResult.RetCode != 0)
@@ -370,7 +373,5 @@ public class BybitService : IBybitService
 
             cursor = pageResult.NextCursor;
         }
-
-        throw new InvalidOperationException($"Bybit {operation} exceeded the maximum page limit");
     }
 }

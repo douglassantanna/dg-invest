@@ -255,7 +255,7 @@ public sealed class FakeBybitService : IBybitService
         if (SubAccountsError is not null) throw SubAccountsError;
         return Task.FromResult(SubAccounts);
     }
-    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null)
+    public Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
     {
         LastApiKey = apiKey;
         LastRegion = region;
@@ -268,14 +268,14 @@ public sealed class FakeBybitService : IBybitService
         return Task.FromResult(OrderHistory.Take(limit ?? OrderHistory.Count).ToList());
     }
 
-    public Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId) =>
+    public Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId, CancellationToken cancellationToken = default) =>
         Task.FromResult(ExecutionsByOrderId.TryGetValue(orderId, out var executions)
             ? executions.ToList()
             : new List<BybitExecutionData>());
-    public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
-    public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
-    public Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitInternalTransferRow>());
-    public Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null) => Task.FromResult(new List<BybitInternalTransferRow>());
+    public Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
+    public Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default) => Task.FromResult(new List<BybitDepositWithdrawalRow>());
+    public Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default) => Task.FromResult(new List<BybitInternalTransferRow>());
+    public Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default) => Task.FromResult(new List<BybitInternalTransferRow>());
     public Task<BybitWalletBalanceResponse> GetWalletBalanceAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, string accountType = "UNIFIED", string? memberId = null)
     {
         LastApiKey = apiKey;

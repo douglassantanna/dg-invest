@@ -237,6 +237,43 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetOrderHistoryAsync_WhenCancellationIsAlreadyRequested_ShouldNotSendARequest()
+    {
+        using var httpTest = new HttpTest();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _sut.GetOrderHistoryAsync("api-key", "api-secret", cancellationToken: cancellation.Token));
+
+        httpTest.CallLog.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetOrderHistoryAsync_ShouldProcessMoreThanOneHundredPages()
+    {
+        using var httpTest = new HttpTest();
+        for (var page = 0; page <= 100; page++)
+        {
+            httpTest.RespondWithJson(new
+            {
+                retCode = 0,
+                retMsg = "OK",
+                result = new
+                {
+                    list = Array.Empty<object>(),
+                    nextPageCursor = page == 100 ? "" : $"cursor-{page}"
+                }
+            });
+        }
+
+        var result = await _sut.GetOrderHistoryAsync("api-key", "api-secret");
+
+        result.Should().BeEmpty();
+        httpTest.CallLog.Should().HaveCount(101);
+    }
+
+    [Fact]
     public async Task GetDepositHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
     {
         using var httpTest = new HttpTest();
