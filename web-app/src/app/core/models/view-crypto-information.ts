@@ -15,4 +15,5 @@ export interface UserCryptoAssetDto {
   accountTag: string;
   cryptoAssetDto: ViewCryptoInformation[];
   totalDeposited: number;
+  isBybitCombinedWallet: boolean;
 }

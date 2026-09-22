@@ -7,7 +7,9 @@ import { roleGuard } from './core/guards/role.guard';
 import { AccountComponent } from './pages/cryptos/containers/account/account.component';
 import { DepositComponent } from './pages/cryptos/containers/deposit/deposit.component';
 import { WithdrawComponent } from './pages/cryptos/containers/withdraw/withdraw.component';
-import { ExchangeManagementComponent } from './pages/exchanges/containers/exchange-management/exchange-management.component';
+import { ExchangeIndexComponent } from './pages/exchanges/containers/exchange-index/exchange-index.component';
+import { BybitIntegrationComponent } from './pages/exchanges/containers/bybit-integration/bybit-integration.component';
+import { BybitAccountComponent } from './pages/exchanges/containers/bybit-account/bybit-account.component';
 
 export const routes: Routes = [
   {
@@ -43,7 +45,17 @@ export const routes: Routes = [
   {
     path: "exchanges",
     canActivate: [authGuard],
-    component: ExchangeManagementComponent,
+    component: ExchangeIndexComponent,
+  },
+  {
+    path: "exchanges/bybit/:accountId",
+    canActivate: [authGuard],
+    component: BybitAccountComponent,
+  },
+  {
+    path: "exchanges/bybit",
+    canActivate: [authGuard],
+    component: BybitIntegrationComponent,
   },
   {
     path: "login",

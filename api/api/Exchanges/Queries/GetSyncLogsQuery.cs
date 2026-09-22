@@ -23,11 +23,18 @@ public class GetSyncLogsQueryHandler : IRequestHandler<GetSyncLogsQuery, Respons
     public async Task<Response> Handle(GetSyncLogsQuery request, CancellationToken cancellationToken)
     {
         var date = request.Date ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
-        var blobPath = $"{request.UserId}/{request.AccountId}/{date}.jsonl";
+        if (!DateTime.TryParseExact(date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.AssumeUniversal, out var parsedDate))
+        {
+            return new Response("Invalid date", false);
+        }
+
+        var blobPath = BlobLogPaths.Daily("sync", parsedDate.ToUniversalTime());
 
         var entries = await _blobStorageService.ReadLogsAsync<SyncLogEntry>(
-            _settings.SyncLogsContainer, blobPath, cancellationToken);
+            _settings.LogContainer, blobPath, cancellationToken);
 
-        return new Response("ok", true, entries);
+        return new Response("ok", true, entries
+            .Where(entry => entry.UserId == request.UserId && entry.AccountId == request.AccountId)
+            .ToList());
     }
 }

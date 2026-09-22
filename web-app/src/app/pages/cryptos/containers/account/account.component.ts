@@ -28,7 +28,9 @@ export enum AccountTransactionType {
   WithdrawToBank = 3,
   In = 4,
   Out = 5,
-  WithdrawCrypto = 6
+  WithdrawCrypto = 6,
+  TransferIn = 7,
+  TransferOut = 8
 }
 @Component({
   selector: 'app-account',

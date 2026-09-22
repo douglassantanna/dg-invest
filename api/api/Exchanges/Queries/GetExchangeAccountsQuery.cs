@@ -9,12 +9,15 @@ public record GetExchangeAccountsQuery(int UserId) : IRequest<Response>;
 
 public record ExchangeAccountDto(
     int AccountId,
-    string AccountTag,
+    string AccountName,
     string ExchangeName,
     string Status,
     DateTime? LastSyncAt,
     int ErrorCount,
-    string? LastErrorMessage);
+    string? LastErrorMessage)
+{
+    public string AccountTag => AccountName;
+}
 
 public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccountsQuery, Response>
 {
@@ -28,8 +31,8 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
     public async Task<Response> Handle(GetExchangeAccountsQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId)
-            .Select(a => new { a.Id, a.SubaccountTag })
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted && a.Enabled && a.AccountType == api.Cryptos.Models.EAccountType.Exchange)
+            .Select(a => new { a.Id, a.Name, a.Exchange })
             .ToListAsync(cancellationToken);
 
         var syncStatuses = await _context.SyncStatuses
@@ -51,7 +54,7 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
                 {
                     result.Add(new ExchangeAccountDto(
                         account.Id,
-                        account.SubaccountTag,
+                        account.Name,
                         s.ExchangeName,
                         s.Status,
                         s.LastSyncAt,
@@ -63,8 +66,8 @@ public class GetExchangeAccountsQueryHandler : IRequestHandler<GetExchangeAccoun
             {
                 result.Add(new ExchangeAccountDto(
                     account.Id,
-                    account.SubaccountTag,
-                    string.Empty,
+                    account.Name,
+                    account.Exchange ?? string.Empty,
                     "NotConfigured",
                     null,
                     0,

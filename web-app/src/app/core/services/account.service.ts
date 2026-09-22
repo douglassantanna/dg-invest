@@ -9,7 +9,7 @@ import { AddTransactionCommand } from '../models/add-transaction-command';
 import { SimpleAccountDto } from 'src/app/pages/cryptos/components/account-selection/account-selection.component';
 
 export interface CreateAccountCommand {
-  subaccountTag: string;
+  name: string;
 }
 
 export interface AddCryptoAssetRequest {

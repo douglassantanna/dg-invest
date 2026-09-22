@@ -32,6 +32,7 @@ public class RecalculateController : ControllerBase
         }
 
         var accounts = await _context.Accounts
+            .Where(a => !a.IsDeleted)
             .Include(a => a.CryptoAssets)
                 .ThenInclude(ca => ca.Transactions)
             .ToListAsync();

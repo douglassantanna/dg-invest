@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { AccountService, CreateAccountCommand, SelectAccountRequest } from 'src/app/core/services/account.service';
 
 export interface SimpleAccountDto {
-  subaccountTag: string;
+  name: string;
   balance: number;
   id: number;
   isSelected: boolean;
+  isBybitCombinedWallet: boolean;
 }
 
 @Component({
@@ -54,16 +55,16 @@ export class AccountSelectionComponent implements OnInit {
 
   saveNewAccount() {
     this.loading.set(true);
-    const duplicate = this.accounts().some(account => account.subaccountTag.toLowerCase() === this.newAccountName().trim().toLowerCase());
+    const duplicate = this.accounts().some(account => account.name.toLowerCase() === this.newAccountName().trim().toLowerCase());
     if (duplicate) {
       this.loading.set(false);
       this.errorMessage.set('Account name already exists.');
     } else {
-      let command = { subaccountTag: this.newAccountName() } as CreateAccountCommand;
+      let command = { name: this.newAccountName() } as CreateAccountCommand;
       this.accountService.createAccount(command).subscribe({
         next: () => {
           this.loading.set(false);
-          this.accounts().push({ subaccountTag: this.newAccountName(), balance: 0, id: 0, isSelected: false });
+          this.accounts().push({ name: this.newAccountName(), balance: 0, id: 0, isSelected: false, isBybitCombinedWallet: false });
           this.newAccountName.set('');
           this.showNewAccountInput.set(false);
           this.errorMessage.set('');

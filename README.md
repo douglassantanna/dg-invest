@@ -6,7 +6,7 @@ This project is a full cryptocurrency investment manager and analytics suite tha
 #### Prerequisites
 You can run the project either directly on your machine or inside Docker.
 #### Option 1: Local Environment
-- .NET 8
+- .NET 10
 - Node.js v18+
 - Angular v18
 - SQL Server
@@ -43,38 +43,22 @@ Before running the API you need to configure the settings file:
   "KeyVaultSettings": {
     "VaultUri": "https://your-keyvault-name.vault.azure.net/"
   },
+  "AllowedOrigins": [
+    "http://localhost:4200"
+  ],
   "RateLimiterSettings": {
     "RequestsPermitLimit": 320,
     "WindowLimitInMinutes": 10
   },
   "RunMigrations": false,
   "Serilog": {
-    "Enrich": [
-      "FromLogContext",
-      "WithMachineName",
-      "WithThreadId"
-    ],
     "MinimumLevel": {
-      "Default": "Error",
+      "Default": "Information",
       "Override": {
-        "Microsoft": "Error",
-        "System": "Error"
+        "Microsoft": "Warning",
+        "System": "Warning"
       }
-    },
-    "Using": [
-      "Serilog.Sinks.AzureBlobStorage"
-    ],
-    "WriteTo": [
-      {
-        "Name": "AzureBlobStorage",
-        "Args": {
-          "connectionString": "YourSerilogConnectionStringHere",
-          "restrictedToMinimumLevel": "Information",
-          "storageContainerName": "logs",
-          "storageFileName": "log-{yyyy}-{MM}-{dd}.json"
-        }
-      }
-    ]
+    }
   },
   "ConnectionStrings": {
     "DefaultConnection": "YourSqlAzureConnectionStringHere"
@@ -107,9 +91,54 @@ Use these credentials:
 - password: admin123
 
 ---
+### Testing
+
+Run the backend test suite from the `api` directory:
+
+```bash
+dotnet test unit-tests/unit-tests.csproj
+```
+
+Docker Desktop must be running. The suite includes API integration tests that start a disposable SQL Server instance with Testcontainers, apply the production EF Core migrations, and call the authenticated Account and Exchange endpoints through the full ASP.NET Core pipeline. Key Vault, Bybit, and Blob Storage are replaced with in-memory test doubles so no external credentials or network calls are required.
+
+To run only the Exchange API integration flow:
+
+```bash
+dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~ExchangeControllerIntegrationTests
+```
+
+### Full-stack deployment database migrations
+
+The `full-stack-deployment.yml` workflow deploys the API and then calls the existing migration endpoint on that deployed API. The API applies EF Core migrations using its existing Azure SQL network access, so the GitHub-hosted runner does not need direct database access or Azure SQL firewall permissions.
+
+Configure these values in each GitHub Environment used by the workflow:
+
+- Secret `MIGRATION_TOKEN`: a long random token shared with the API App Service setting.
+- Variable `AZURE_API_BASE_URL`: the deployed API base URL, including `https://` and without a trailing slash.
+
+Configure these API App Service settings for the target environment:
+
+- `Migrations__RemoteTriggerEnabled=true`
+- `Migrations__RemoteTriggerToken=<same value as MIGRATION_TOKEN>`
+
+The endpoint also remains available to authenticated administrators. The remote trigger is disabled unless explicitly enabled and never logs the token. The API's normal database connection string remains an App Service setting and is not copied into GitHub Actions.
+
+### Blob logging
+
+Each environment uses its own Blob container. The API, Azure Functions, and Bybit sync records use the configured `AzureStorageSettings:LogContainer` container with UTC date-partitioned JSONL blobs:
+
+```text
+2026/09/15/api.jsonl
+2026/09/15/functions.jsonl
+2026/09/15/sync.jsonl
+```
+
+Configure `AzureStorageSettings__ConnectionString` and `AzureStorageSettings__LogContainer` in both the API App Service and Function App. User and account identifiers are stored in sync records, not in blob paths.
+
+---
 #### Running everything locally (standalone)
 #### 1. Installation steps
-Install SQL Server Express, Azure Functions Core Tools, Azurite (VS Code extension or npm), .NET 8, EF Core tools, Node.js V18+, NPM and Angular CLI V18
+Install SQL Server Express, Azure Functions Core Tools, Azurite (VS Code extension or npm), .NET 10, EF Core tools, Node.js V18+, NPM and Angular CLI V18
 #### 2. Set up the database
 1. Create a database named `dg-invest` in SQL Server
 2. Copy its connection string into `appsettings.json` under `ConnectionString:Default`
@@ -153,6 +182,18 @@ Orders, deposits, and withdrawals from your Bybit account are automatically sync
 | **REST polling** (every 30s) | Runs continuously in the background | Orders, deposits, and withdrawals |
 
 The webhook catches trades instantly. The REST poll catches anything the webhook missed, including deposits and withdrawals Bybit doesn't send webhooks for. Both paths pass through the same dedup logic, so nothing is ever double-counted.
+
+#### Account Context And Rollout
+
+The exchange integration is being delivered in phases. PR1 establishes the data model; the following is the target architecture completed through PR5:
+
+- **Manual account** — a user-owned portfolio such as Main or Savings. It never becomes an exchange account through discovery.
+- **Exchange integration** — the per-user connection to Bybit. It owns integration-level connection state and discovery credentials stored in Key Vault.
+- **Exchange account** — a separately selectable portfolio identified by `AccountType = Exchange`, its exchange name, and the external Bybit UID.
+
+PR2 will make Bybit discovery create or update only exchange accounts, matching them by user, exchange, and UID. Manual accounts will remain separate. A finished account selector will group Manual, Bybit, and future exchange contexts by origin.
+
+The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for architecture, promotion records, milestones, test policy, and the stage delivery flow.
 
 #### What gets synced
 
@@ -202,9 +243,48 @@ Bybit (order filled)
             ├─ Status tracked (Pending / Success / Failed)
             └─ Saved to database + balance updated
 
-     Sync logs are written to Azure Blob Storage (JSONL format)
-     and can be viewed in the Exchange Management UI.
+      Sync logs are written to Azure Blob Storage (JSONL format)
+      and can be viewed in the Exchange Management UI.
 ```
+
+#### Retrying a missed Bybit order
+
+If an order was skipped because the sync cursor advanced before the importer was corrected, rewind the cursor for only the affected user and account. This changes no balances and deletes no transactions; it only makes the next timer run request recent Bybit activity again.
+
+Inspect the current cursor first:
+
+```sql
+SELECT Id, UserId, AccountId, ExchangeName, LastSyncAt, LastOrderId, Status
+FROM SyncStatuses
+WHERE UserId = 6
+  AND AccountId = 33
+  AND ExchangeName = 'Bybit';
+```
+
+Reset it inside a transaction:
+
+```sql
+BEGIN TRANSACTION;
+
+UPDATE SyncStatuses
+SET LastSyncAt = DATEADD(minute, -15, SYSUTCDATETIME()),
+    LastOrderId = NULL
+WHERE UserId = 6
+  AND AccountId = 33
+  AND ExchangeName = 'Bybit';
+
+SELECT Id, UserId, AccountId, ExchangeName, LastSyncAt, LastOrderId, Status
+FROM SyncStatuses
+WHERE UserId = 6
+  AND AccountId = 33
+  AND ExchangeName = 'Bybit';
+
+COMMIT TRANSACTION;
+```
+
+Replace `UserId` and `AccountId` with the affected records. A 15-minute rewind may re-fetch other recent activity, but the sync deduplication prevents existing orders, deposits, withdrawals, and transfers from being recorded twice. Order deduplication is scoped to the current exchange account, so an order saved for another account can be imported correctly. After the next Function run, verify the log reports `saved order` rather than `already saved`.
+
+Run this only against the intended environment database. `LastOrderId` is informational; `LastSyncAt` controls the replay window.
 
 #### Setup
 
@@ -367,7 +447,7 @@ dg-invest/
 │   └── workflows/               # CI/CD pipelines
 │
 ├── api/
-│   ├── api/                     # .NET 8 Web API
+│   ├── api/                     # .NET 10 Web API
 │   ├── functions/               # Azure Functions (background workers)
 │   ├── unit-tests/              # Automated tests
 │   ├── dg-invest.api.sln        # Solution file

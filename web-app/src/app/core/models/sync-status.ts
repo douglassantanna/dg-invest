@@ -1,6 +1,6 @@
 export interface SyncStatusDto {
   accountId: number;
-  accountTag: string | null;
+  accountName: string | null;
   exchangeName: string;
   status: string;
   lastSyncAt: string | null;

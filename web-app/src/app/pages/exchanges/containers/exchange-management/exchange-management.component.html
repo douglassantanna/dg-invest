@@ -1,293 +1,141 @@
-<main class="max-w-7xl mx-auto gap-4 p-6 sm:z-10 sm:mb-10">
-  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Exchange Connections</h1>
-
-  <!-- Account selector -->
-  <div class="mb-6">
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account</label>
-    <select [ngModel]="selectedAccountId" (ngModelChange)="selectedAccountId = $event"
-      class="w-full sm:w-64 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm">
-      @for (a of accounts; track a.id) {
-        <option [value]="a.id">{{ a.tag }}</option>
-      }
-    </select>
+<main class="max-w-6xl mx-auto p-6 sm:mb-10">
+  <div class="mb-8">
+    <div class="text-xs font-semibold uppercase tracking-[0.18em] text-yellow-600 dark:text-yellow-400 mb-2">Exchanges / Bybit</div>
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Bybit integration</h1>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-2xl">
+      Connect Bybit once to discover exchange accounts. Exchange accounts are selectable portfolios; manual accounts stay outside this integration.
+    </p>
   </div>
 
-  <!-- Section 1: Credentials -->
-  <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Bybit API Credentials</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key</label>
-        <input type="text" [ngModel]="apiKey" (ngModelChange)="apiKey = $event"
-          class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-          placeholder="Bybit API Key">
+  <section class="relative bg-gray-900 dark:bg-gray-950 rounded-2xl overflow-hidden shadow-xl mb-8">
+    <div class="absolute inset-y-0 right-0 w-1/3 bg-yellow-400/10 blur-3xl"></div>
+    <div class="relative p-6 sm:p-8">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+        <div class="flex gap-4">
+          <div class="w-12 h-12 shrink-0 rounded-xl bg-yellow-400 text-gray-900 flex items-center justify-center font-black text-xl">B</div>
+          <div>
+            <div class="flex items-center flex-wrap gap-2">
+              <h2 class="text-xl font-bold text-white">Bybit</h2>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                [ngClass]="accounts.length ? 'bg-green-400/15 text-green-300' : 'bg-yellow-400/15 text-yellow-200'">
+                <span class="w-1.5 h-1.5 rounded-full" [ngClass]="accounts.length ? 'bg-green-400' : 'bg-yellow-300'"></span>
+                {{ accounts.length ? 'Connected' : 'Not configured' }}
+              </span>
+            </div>
+            <p class="text-sm text-gray-300 mt-1">Integration credentials are used only to discover Bybit accounts.</p>
+          </div>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+          <button type="button" (click)="syncAccounts()" [disabled]="syncingAccounts"
+            class="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-60 text-gray-900 rounded-lg text-sm font-semibold transition-colors">
+            {{ syncingAccounts ? 'Discovering...' : 'Sync accounts' }}
+          </button>
+        </div>
       </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Secret</label>
-        <input type="password" [ngModel]="apiSecret" (ngModelChange)="apiSecret = $event"
-          class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-          placeholder="Bybit API Secret">
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-7">
+        <div class="rounded-xl border border-gray-700 bg-white/5 p-4">
+          <div class="text-xs uppercase tracking-wider text-gray-400">Discovery credentials</div>
+          <div class="font-mono text-sm text-white mt-2">{{ configuredAccountCount }} configured</div>
+          <div class="text-xs text-gray-400 mt-1">Keys are stored in Key Vault</div>
+        </div>
+        <div class="rounded-xl border border-gray-700 bg-white/5 p-4">
+          <div class="text-xs uppercase tracking-wider text-gray-400">Last discovery</div>
+          <div class="text-sm font-semibold text-white mt-2">{{ accounts.length }} account{{ accounts.length === 1 ? '' : 's' }}</div>
+          <div class="text-xs text-gray-400 mt-1">Loaded from your Bybit connection</div>
+        </div>
+        <div class="rounded-xl border border-gray-700 bg-white/5 p-4 flex items-center justify-between gap-4">
+          <div>
+            <div class="text-xs uppercase tracking-wider text-gray-400">Active syncs</div>
+            <div class="text-sm font-semibold text-white mt-2">{{ enabledAccountCount }} enabled</div>
+          </div>
+        </div>
       </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Webhook Secret</label>
-        <input type="password" [ngModel]="webhookSecret" (ngModelChange)="webhookSecret = $event"
-          class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-          placeholder="Webhook signing secret">
-      </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <button (click)="saveCredentials()" [disabled]="savingCredentials"
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors">
-        {{ savingCredentials ? 'Saving...' : 'Save Credentials' }}
-      </button>
-      @if (credentialsMessage) {
-        <span class="text-sm text-green-600">{{ credentialsMessage }}</span>
-      }
     </div>
   </section>
 
-  <!-- Section 2: Saved Credentials -->
-  <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Saved Credentials</h2>
-    @if (loadingCredentialsStatus) {
-      <p class="text-sm text-gray-500">Loading...</p>
-    } @else if (credentialsStatuses.length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No accounts configured.</p>
-    } @else {
+  <section class="mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Bybit accounts</h2>
+          <span class="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">{{ accounts.length }} discovered</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">These are exchange-backed portfolio accounts. They appear in the account selector under Bybit.</p>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
-              <th class="pb-2 pr-4 font-medium">Account</th>
-              <th class="pb-2 pr-4 font-medium">API Key</th>
-              <th class="pb-2 pr-4 font-medium">Webhook Secret</th>
-              <th class="pb-2 pr-4 font-medium">Webhook URL</th>
-              <th class="pb-2 font-medium">Action</th>
+              <th class="py-3 px-5 font-medium text-xs uppercase tracking-wider">Account</th>
+              <th class="py-3 px-5 font-medium text-xs uppercase tracking-wider">Status</th>
+              <th class="py-3 px-5 font-medium text-xs uppercase tracking-wider">Account API</th>
+              <th class="py-3 px-5 font-medium text-xs uppercase tracking-wider">Last Sync</th>
+              <th class="py-3 px-5 text-right font-medium text-xs uppercase tracking-wider"> </th>
             </tr>
           </thead>
           <tbody>
-            @for (c of credentialsStatuses; track c.accountId) {
-              <tr class="border-b border-gray-100 dark:border-gray-700">
-                <td class="py-2 pr-4 text-gray-900 dark:text-gray-100">{{ c.accountTag }}</td>
-                <td class="py-2 pr-4">
-                  @if (c.hasApiKey) {
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Configured</span>
-                  } @else {
-                    <span class="text-gray-400">Not set</span>
-                  }
-                </td>
-                <td class="py-2 pr-4">
-                  @if (c.hasWebhookSecret) {
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Configured</span>
-                  } @else {
-                    <span class="text-gray-400">Not set</span>
-                  }
-                </td>
-                <td class="py-2 pr-4">
-                  @if (c.hasWebhookSecret) {
-                    <code class="text-xs text-gray-500 dark:text-gray-400 break-all font-mono">
-                      /api/tradewebhook/bybit/{{ '{' }}userId{{ '}' }}/{{ c.accountId }}
-                    </code>
-                  } @else {
-                    <span class="text-gray-400">-</span>
-                  }
-                </td>
-                <td class="py-2">
-                  @if (c.hasApiKey || c.hasWebhookSecret) {
-                    <button (click)="deleteCredentials(c.accountId)" [disabled]="deletingCredentialAccountId === c.accountId"
-                      class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors">
-                      {{ deletingCredentialAccountId === c.accountId ? 'Deleting...' : 'Delete' }}
-                    </button>
-                  } @else {
-                    <span class="text-gray-400">-</span>
-                  }
-                </td>
-              </tr>
+            @if (loading) {
+              <tr><td colspan="5" class="py-8 px-5 text-center text-gray-500 dark:text-gray-400">Loading Bybit accounts...</td></tr>
+            } @else if (accounts.length === 0) {
+              <tr><td colspan="5" class="py-8 px-5 text-center text-gray-500 dark:text-gray-400">No Bybit accounts found. Configure the main account credentials, then sync accounts.</td></tr>
             }
-          </tbody>
-        </table>
-      </div>
-    }
-  </section>
-
-  <!-- Section 3: Sync + Sub-members -->
-  <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Bybit Sub-Accounts</h2>
-      <div class="flex items-center gap-3">
-        <button (click)="syncAccounts()" [disabled]="syncing"
-          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg text-sm font-medium transition-colors">
-          {{ syncing ? 'Syncing...' : 'Sync from Bybit' }}
-        </button>
-        <button (click)="loadSubMembers()" [disabled]="loadingSubMembers"
-          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors">
-          Refresh List
-        </button>
-      </div>
-    </div>
-    @if (syncMessage) {
-      <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ syncMessage }}</p>
-    }
-    @if (loadingSubMembers) {
-      <p class="text-sm text-gray-500">Loading...</p>
-    } @else if (subMembers.length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No sub-accounts found. Sync from Bybit first.</p>
-    } @else {
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
-              <th class="pb-2 pr-4 font-medium">UID</th>
-              <th class="pb-2 pr-4 font-medium">Username</th>
-              <th class="pb-2 pr-4 font-medium">Remark</th>
-              <th class="pb-2 pr-4 font-medium">Account ID</th>
-              <th class="pb-2 pr-4 font-medium">Webhook URL</th>
-              <th class="pb-2 font-medium">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (m of subMembers; track m.uid) {
-              <tr class="border-b border-gray-100 dark:border-gray-700">
-                <td class="py-2 pr-4 text-gray-900 dark:text-gray-100 font-mono text-xs">{{ m.uid }}</td>
-                <td class="py-2 pr-4 text-gray-900 dark:text-gray-100">{{ m.username }}</td>
-                <td class="py-2 pr-4 text-gray-500 dark:text-gray-400">{{ m.remark || '-' }}</td>
-                <td class="py-2 pr-4">
-                  @if (m.accountId) {
-                    <code class="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded font-mono">{{ m.accountId }}</code>
-                  } @else {
-                    <span class="text-gray-400">-</span>
-                  }
+            @for (account of accounts; track account.accountId) {
+              <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50" [class.opacity-60]="!account.isEnabled">
+                <td class="py-3.5 px-5">
+                  <div class="font-semibold text-gray-900 dark:text-gray-100">{{ account.name }}</div>
+                  <div class="text-xs font-mono text-gray-400 dark:text-gray-500 mt-0.5">UID {{ account.externalId || 'Not mapped' }}</div>
                 </td>
-                <td class="py-2 pr-4">
-                  @if (m.accountId) {
-                    <code class="text-xs text-gray-500 dark:text-gray-400 break-all font-mono">
-                      /api/tradewebhook/bybit/{{ '{' }}userId{{ '}' }}/{{ m.accountId }}
-                    </code>
-                  } @else {
-                    <span class="text-gray-400">Map first</span>
-                  }
-                </td>
-                <td class="py-2 whitespace-nowrap">
-                  @if (m.mappedAccountTag) {
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ m.mappedAccountTag }}</span>
-                  } @else {
-                    <button (click)="mapAccount(m)"
-                      class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                      Map to {{ selectedAccountTag() }}
-                    </button>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </section>
-
-  <!-- Section 4: Sync Status -->
-  <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Sync Status</h2>
-    @if (loadingStatuses) {
-      <p class="text-sm text-gray-500">Loading...</p>
-    } @else if (syncStatuses.length === 0) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">No sync status available. Save credentials and receive a webhook first.</p>
-    } @else {
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
-              <th class="pb-2 pr-4 font-medium">Account</th>
-              <th class="pb-2 pr-4 font-medium">Exchange</th>
-              <th class="pb-2 pr-4 font-medium">Status</th>
-              <th class="pb-2 pr-4 font-medium">Last Sync</th>
-              <th class="pb-2 pr-4 font-medium">Last Order</th>
-              <th class="pb-2 pr-4 font-medium">Errors</th>
-              <th class="pb-2 font-medium">Logs</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (s of syncStatuses; track s.accountId) {
-              <tr class="border-b border-gray-100 dark:border-gray-700">
-                <td class="py-2 pr-4 text-gray-900 dark:text-gray-100">{{ s.accountTag || s.accountId }}</td>
-                <td class="py-2 pr-4 text-gray-900 dark:text-gray-100">{{ s.exchangeName }}</td>
-                <td class="py-2 pr-4">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ statusBadgeClass(s.status) }}">
-                    {{ s.status }}
+                <td class="py-3.5 px-5">
+                  <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="statusMeta(account.status).classes">
+                    <span class="w-1.5 h-1.5 rounded-full"
+                      [ngClass]="account.status === 'ok' ? 'bg-green-500' : account.status === 'err' ? 'bg-red-500' : account.status === 'paused' ? 'bg-gray-400' : 'bg-yellow-500'"></span>
+                    {{ statusMeta(account.status).label }}
                   </span>
                 </td>
-                <td class="py-2 pr-4 text-gray-500 dark:text-gray-400 text-xs">{{ s.lastSyncAt ? (s.lastSyncAt | date:'medium') : '-' }}</td>
-                <td class="py-2 pr-4 text-gray-500 dark:text-gray-400 font-mono text-xs">{{ s.lastOrderId || '-' }}</td>
-                <td class="py-2 pr-4">
-                  @if (s.errorCount > 0) {
-                    <span class="text-red-600 dark:text-red-400 text-xs">{{ s.errorCount }} error{{ s.errorCount > 1 ? 's' : '' }}</span>
-                  } @else {
-                    <span class="text-gray-400">0</span>
-                  }
+                <td class="py-3.5 px-5">
+                  <span class="text-xs font-medium" [ngClass]="account.hasApiKey && account.hasApiSecret ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'">
+                    {{ account.hasApiKey && account.hasApiSecret ? 'Configured' : 'Missing' }}
+                  </span>
                 </td>
-                <td class="py-2">
-                  <button (click)="toggleSyncLogs(s.accountId)"
-                    class="text-xs px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
-                    {{ selectedLogAccountId === s.accountId ? 'Hide' : 'View' }}
+                <td class="py-3.5 px-5 text-gray-500 dark:text-gray-400">{{ formatDate(account.lastSyncAt) }}</td>
+                <td class="py-3.5 px-5 text-right">
+                  <button type="button" (click)="testConnection(account)" [disabled]="testingAccountId === account.accountId || !account.hasApiKey || !account.hasApiSecret"
+                    class="px-3 py-1.5 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-yellow-500 hover:text-yellow-600 dark:hover:text-yellow-400 rounded-md text-xs font-medium transition-colors">
+                    {{ testingAccountId === account.accountId ? 'Testing...' : 'Test' }}
+                  </button>
+                  <button type="button" (click)="toggleAccount(account)" [disabled]="togglingAccountId === account.accountId"
+                    class="ml-2 px-3 py-1.5 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-yellow-500 hover:text-yellow-600 dark:hover:text-yellow-400 rounded-md text-xs font-medium transition-colors">
+                    {{ togglingAccountId === account.accountId ? 'Saving...' : account.isEnabled ? 'Pause' : 'Enable' }}
                   </button>
                 </td>
               </tr>
-              @if (selectedLogAccountId === s.accountId) {
-                <tr>
-                  <td colspan="7" class="py-3">
-                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                      <div class="flex items-center gap-3 mb-3">
-                        <input type="date" [ngModel]="logDate" (ngModelChange)="onLogDateChange(s.accountId, $event)"
-                          class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm">
-                      </div>
-                      @if (loadingLogs) {
-                        <p class="text-sm text-gray-500">Loading logs...</p>
-                      } @else if (syncLogs.length === 0) {
-                        <p class="text-sm text-gray-500 dark:text-gray-400">No sync logs for this date.</p>
-                      } @else {
-                        <div class="overflow-x-auto max-h-64 overflow-y-auto">
-                          <table class="w-full text-xs">
-                            <thead>
-                              <tr class="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                                <th class="pb-1 pr-3 font-medium">Time</th>
-                                <th class="pb-1 pr-3 font-medium">Order ID</th>
-                                <th class="pb-1 pr-3 font-medium">Symbol</th>
-                                <th class="pb-1 pr-3 font-medium">Side</th>
-                                <th class="pb-1 pr-3 font-medium">Qty</th>
-                                <th class="pb-1 pr-3 font-medium">Price</th>
-                                <th class="pb-1 pr-3 font-medium">Status</th>
-                                <th class="pb-1 font-medium">Error</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              @for (log of syncLogs; track log.id) {
-                                <tr class="border-b border-gray-100 dark:border-gray-700">
-                                  <td class="py-1.5 pr-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ log.timestamp | date:'short' }}</td>
-                                  <td class="py-1.5 pr-3 text-gray-900 dark:text-gray-100 font-mono">{{ log.orderId }}</td>
-                                  <td class="py-1.5 pr-3 text-gray-900 dark:text-gray-100">{{ log.symbol }}</td>
-                                  <td class="py-1.5 pr-3 text-gray-900 dark:text-gray-100">{{ log.side }}</td>
-                                  <td class="py-1.5 pr-3 text-gray-900 dark:text-gray-100">{{ log.qty }}</td>
-                                  <td class="py-1.5 pr-3 text-gray-900 dark:text-gray-100">{{ log.price | currency:'USD':'symbol':'1.2-2' }}</td>
-                                  <td class="py-1.5 pr-3">
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{ logStatusBadgeClass(log.status) }}">
-                                      {{ log.status }}
-                                    </span>
-                                  </td>
-                                  <td class="py-1.5 text-gray-500 dark:text-gray-400">{{ log.errorMessage || '-' }}</td>
-                                </tr>
-                              }
-                            </tbody>
-                          </table>
-                        </div>
-                      }
-                    </div>
-                  </td>
-                </tr>
-              }
             }
           </tbody>
         </table>
       </div>
-    }
+    </div>
   </section>
+
+  <section class="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4 p-5 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/70 dark:bg-gray-800/50">
+    <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center">
+      <i class="material-icons text-xl">account_balance_wallet</i>
+    </div>
+    <div>
+      <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Manual accounts stay separate</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <span class="font-medium text-gray-700 dark:text-gray-200">Main</span> and <span class="font-medium text-gray-700 dark:text-gray-200">Dad Account</span> are portfolio containers, not Bybit accounts. They remain selectable in the header, but never appear in this table or count against Bybit limits.
+      </p>
+    </div>
+  </section>
+
+  @if (showToast) {
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2.5 rounded-lg text-sm shadow-lg z-50">
+      {{ toastMessage }}
+    </div>
+  }
 </main>

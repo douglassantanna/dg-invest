@@ -11,11 +11,13 @@ public class AccountTests
         var account = new Account("main", 1);
 
         // Assert
-        account.SubaccountTag.Should().Be("main");
+        account.Name.Should().Be("main");
         account.UserId.Should().Be(1);
         account.IsSelected.Should().BeTrue(); // main account is selected by default
         account.CryptoAssets.Should().BeEmpty();
         account.Balance.Should().Be(0);
+        account.AccountType.Should().Be(EAccountType.Manual);
+        account.Enabled.Should().BeTrue();
     }
 
     [Fact]
@@ -25,8 +27,18 @@ public class AccountTests
         var account = new Account("sub1", 1);
 
         // Assert
-        account.SubaccountTag.Should().Be("sub1");
+        account.Name.Should().Be("sub1");
         account.IsSelected.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_WhenExternalIdIsEmpty_ShouldLeaveAccountUnmapped(string externalId)
+    {
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", externalId);
+
+        account.ExternalId.Should().BeNull();
     }
 
     [Fact]
@@ -97,5 +109,19 @@ public class AccountTests
 
         // Assert
         account.TotalDeposited().Should().Be(0);
+    }
+
+    [Fact]
+    public void TotalDeposited_WhenAccountHasMoneyInAndOut_ShouldReturnNetDeposited()
+    {
+        // Arrange
+        var account = new Account("main", 1);
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.DepositFiat, 1_000m, "Initial deposit"));
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.TransferIn, 250m, "Transfer in"));
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.WithdrawToBank, 100m, "Withdraw"));
+        account.AddTransaction(new AccountTransaction(DateTime.UtcNow, EAccountTransactionType.TransferOut, 50m, "Transfer out"));
+
+        // Assert
+        account.TotalDeposited().Should().Be(1_100m);
     }
 }

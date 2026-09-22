@@ -18,4 +18,7 @@ public class BybitOrderHistoryResult
 {
     [JsonPropertyName("list")]
     public List<BybitOrderData> List { get; set; } = new();
+
+    [JsonPropertyName("nextPageCursor")]
+    public string? NextPageCursor { get; set; }
 }

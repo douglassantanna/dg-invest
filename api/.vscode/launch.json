@@ -7,7 +7,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "dotnet: build",
-            "program": "${workspaceFolder}/api/bin/Debug/net8.0/api.dll",
+            "program": "${workspaceFolder}/api/bin/Debug/net10.0/api.dll",
             "cwd": "${workspaceFolder}/api",
             "args": [],
             "stopAtEntry": false,
@@ -27,7 +27,7 @@
             "name": ".NET Core Launch",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/api/bin/Debug/net8.0/api.dll",
+            "program": "${workspaceFolder}/api/bin/Debug/net10.0/api.dll",
             "cwd": "${workspaceFolder}/api"
         },
         {

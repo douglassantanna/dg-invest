@@ -38,8 +38,14 @@
     <i
       class="material-icons  bg-sky-50 border border-sky-300 text-sky-400 p-4 rounded-lg w-14 h-14 sm:w-10 sm:h-10 sm:p-2">wallet</i>
     <div class="flex flex-col">
-      <span class="text-xl sm:text-lg font-semibold mt-1 text-gray-900">{{ accountBalance() |
-        currency:'USD':'symbol':'1.2-2' }}</span>
+       <span class="flex items-center gap-1 text-xl sm:text-lg font-semibold mt-1 text-gray-900">
+         {{ accountBalance() | currency:'USD':'symbol':'1.2-2' }}
+         @if (isBybitCombinedWallet()) {
+         <span class="material-icons text-sm text-gray-400" role="img"
+           aria-label="This balance combines Bybit Funding and Unified wallets"
+           title="This balance combines Bybit Funding and Unified wallets. For wallet-level details, check the Exchange page.">info_outline</span>
+         }
+       </span>
       <span class="text-lg sm:text-md text-gray-900">Available Funds</span>
     </div>
   </div>

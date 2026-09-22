@@ -13,6 +13,9 @@ public class SyncStatus : Entity
     public int ErrorCount { get; private set; }
     public string? LastErrorMessage { get; private set; }
     public DateTime? BybitCredentialsSetAt { get; private set; }
+    public bool IsEnabled { get; private set; } = true;
+    public DateTime? LastVerifiedAt { get; private set; }
+    public string Region { get; private set; } = "Global";
 
     private SyncStatus() { }
 
@@ -48,5 +51,26 @@ public class SyncStatus : Entity
     public void MarkCredentialsSet()
     {
         BybitCredentialsSetAt ??= DateTime.UtcNow;
+    }
+    public void SetRegion(string? region) => Region = string.IsNullOrWhiteSpace(region) ? "Global" : region;
+    public void EnableForCredentials()
+    {
+        IsEnabled = true;
+        MarkCredentialsSet();
+    }
+
+    public void ToggleEnabled()
+    {
+        IsEnabled = !IsEnabled;
+    }
+    public void Disable()
+    {
+        IsEnabled = false;
+        MarkDisconnected();
+    }
+
+    public void MarkVerified()
+    {
+        LastVerifiedAt = DateTime.UtcNow;
     }
 }

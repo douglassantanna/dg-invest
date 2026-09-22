@@ -2,7 +2,8 @@ using api.Models.Cryptos;
 
 namespace api.Cryptos.Dtos;
 
-public record UserCryptoAssetDto(decimal AccountBalance, string AccountTag, IEnumerable<ViewMinimalCryptoAssetDto> CryptoAssetDto, decimal TotalDeposited);
+public record UserCryptoAssetDto(decimal AccountBalance, string AccountTag, IEnumerable<ViewMinimalCryptoAssetDto> CryptoAssetDto, decimal TotalDeposited,
+                                 bool IsBybitCombinedWallet = false);
 public record ViewMinimalCryptoAssetDto(int Id,
                                         string Symbol,
                                         decimal PricePerUnit,

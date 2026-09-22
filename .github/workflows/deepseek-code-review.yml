@@ -82,7 +82,7 @@ jobs:
           If there are no real issues, return []. Do not return warnings or suggestions. Only errors.
           Output ONLY the raw JSON array — no markdown, no code blocks, no extra text.`;
 
-          const userPrompt = `Review this pull request diff for a .NET 8 / Angular / Azure Functions project:\n\n${diff}`;
+          const userPrompt = `Review this pull request diff for a .NET 10 / Angular / Azure Functions project:\n\n${diff}`;
 
           (async () => {
             let data;

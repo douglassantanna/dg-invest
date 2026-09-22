@@ -12,23 +12,53 @@ public class Account : Entity
     private readonly List<AccountTransaction> _accountTransactions = new();
     private readonly List<CryptoAsset> _cryptoAssets = new();
     public IReadOnlyCollection<CryptoAsset> CryptoAssets => _cryptoAssets.AsReadOnly();
-    public string SubaccountTag { get; private set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
+    public EAccountType AccountType { get; private set; } = EAccountType.Manual;
+    public string? Exchange { get; private set; }
+    public string? ExternalId { get; private set; }
+    public bool Enabled { get; private set; } = true;
+    public bool IsDeleted { get; private set; }
     public DateTime CreatedAt { get; private set; }
-    // Bybit sub-account UID — set manually to link this account to a Bybit sub-account.
-    public string? BybitUid { get; private set; }
 
-    public Account(string subaccountTag, int userId)
+    public Account(
+        string name,
+        int userId,
+        EAccountType accountType = EAccountType.Manual,
+        string? exchange = null,
+        string? externalId = null)
     {
-        SubaccountTag = subaccountTag;
+        Name = name;
         UserId = userId;
-        IsSelected = subaccountTag == "main" ? true : false;
+        AccountType = accountType;
+        Exchange = exchange;
+        ExternalId = NormalizeExternalId(externalId);
+        IsSelected = name == "main" ? true : false;
         CreatedAt = DateTime.Now;
     }
 
-    public void SetBybitUid(string uid) => BybitUid = uid;
+    public void SetExternalId(string externalId) => ExternalId = NormalizeExternalId(externalId);
+    public void SetName(string name) => Name = name.Trim();
+    public void SetExchange(string exchange) => Exchange = exchange;
+    public void ConfigureExchange(string exchange, string externalId)
+    {
+        AccountType = EAccountType.Exchange;
+        Exchange = exchange;
+        ExternalId = NormalizeExternalId(externalId);
+    }
     public void Select() => IsSelected = true;
     public void Deselect() => IsSelected = false;
-    public decimal TotalDeposited() => _accountTransactions.Where(x => x.TransactionType == EAccountTransactionType.DepositFiat).Sum(x => x.Amount);
+    public void ToggleEnabled() => Enabled = !Enabled;
+    public void Enable() => Enabled = true;
+    public void Disable() => Enabled = false;
+    public void SoftDelete() => IsDeleted = true;
+    public decimal TotalDeposited() => _accountTransactions.Sum(x => x.TransactionType switch
+    {
+        EAccountTransactionType.DepositFiat => x.Amount,
+        EAccountTransactionType.TransferIn => x.Amount,
+        EAccountTransactionType.WithdrawToBank => -x.Amount,
+        EAccountTransactionType.TransferOut => -x.Amount,
+        _ => 0
+    });
     public IReadOnlyCollection<AccountTransaction> AccountTransactions => _accountTransactions.AsReadOnly();
     internal void AddTransaction(AccountTransaction accountTransaction)
     {
@@ -52,4 +82,6 @@ public class Account : Entity
         _cryptoAssets.Add(cryptoAsset);
         return new Response("", true);
     }
+
+    private static string? NormalizeExternalId(string? externalId) => string.IsNullOrWhiteSpace(externalId) ? null : externalId;
 }

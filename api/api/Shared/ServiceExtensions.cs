@@ -33,7 +33,7 @@ namespace api.Shared;
 public static class ServiceExtensions
 {
     public const string DefaultPolicy = "DefaultPolicy";
-    public static IServiceCollection ConfigureJwt(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection ConfigureJwt(this IServiceCollection services, IConfiguration config, IWebHostEnvironment env)
     {
         var jwtSettings = config.GetSection(nameof(JWTSettings)).Get<JWTSettings>();
         var key = Encoding.ASCII.GetBytes(jwtSettings.Secret);
@@ -44,15 +44,16 @@ public static class ServiceExtensions
             })
             .AddJwtBearer(x =>
             {
-                x.RequireHttpsMetadata = false;
+                x.RequireHttpsMetadata = !env.IsDevelopment();
                 x.SaveToken = true;
                 x.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    ValidateIssuer = false,
+                    ValidateIssuer = true,
                     ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero,
                     ValidIssuer = jwtSettings.Issuer,
-                    ValidAudience = null,
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 };
             });
@@ -71,6 +72,7 @@ public static class ServiceExtensions
         services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
         services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
         services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
+        services.Configure<MigrationsSettings>(config.GetSection("Migrations"));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
@@ -97,6 +99,8 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
         services.AddScoped<ITransactionStrategy, WithdrawCryptoTransaction>();
+        services.AddScoped<ITransactionStrategy, TransferInTransaction>();
+        services.AddScoped<ITransactionStrategy, TransferOutTransaction>();
 
         services.AddScoped<ICacheService, MemoryCacheService>();
 
@@ -104,6 +108,8 @@ public static class ServiceExtensions
         services.AddScoped<IBybitService, BybitService>();
         services.AddScoped<IBlobStorageService, BlobStorageService>();
         services.AddScoped<IBybitOrderSyncService, BybitOrderSyncService>();
+        services.AddScoped<IBybitAccountSyncService, BybitAccountSyncService>();
+        services.AddScoped<IBybitCredentialSetService, BybitCredentialSetService>();
 
         return services;
     }
@@ -116,6 +122,7 @@ public static class ServiceExtensions
         services.AddScoped<IBybitService, BybitService>();
         services.AddScoped<IBlobStorageService, BlobStorageService>();
         services.AddScoped<IBybitOrderSyncService, BybitOrderSyncService>();
+        services.AddScoped<IBybitAccountSyncService, BybitAccountSyncService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransactionStrategy, BuyTransaction>();
         services.AddScoped<ITransactionStrategy, SellTransaction>();
@@ -123,6 +130,8 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, WithdrawDepositTransaction>();
         services.AddScoped<ITransactionStrategy, CryptoDepositTransaction>();
         services.AddScoped<ITransactionStrategy, WithdrawCryptoTransaction>();
+        services.AddScoped<ITransactionStrategy, TransferInTransaction>();
+        services.AddScoped<ITransactionStrategy, TransferOutTransaction>();
         services.AddSingleton<IJWTService, JWTService>();
         services.AddScoped<ICacheService, MemoryCacheService>();
         services.AddScoped<IKeyVaultService, KeyVaultService>();
@@ -154,16 +163,18 @@ public static class ServiceExtensions
         });
         return services;
     }
-    public static IServiceCollection ConfigureCORS(this IServiceCollection services)
+    public static IServiceCollection ConfigureCORS(this IServiceCollection services, IConfiguration config)
     {
+        var allowedOrigins = config.GetSection("AllowedOrigins").Get<string[]>() ?? [];
         services.AddCors(options =>
         {
             options.AddPolicy("Policy",
                 policy =>
                 {
-                    policy.AllowAnyOrigin()
+                    policy.WithOrigins(allowedOrigins)
                           .AllowAnyHeader()
-                          .AllowAnyMethod();
+                          .AllowAnyMethod()
+                          .AllowCredentials();
                 });
         });
         return services;

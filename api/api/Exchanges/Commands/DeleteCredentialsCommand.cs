@@ -1,5 +1,7 @@
 using api.AzureKeyVault;
+using api.Cryptos.Models;
 using api.Data;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -36,8 +38,21 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
             return new Response("Account not found", false, 404);
         }
 
+        if (account.AccountType == EAccountType.Manual && account.Name.Equals("main", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("DeleteCredentials: main account {AccountId} cannot be deleted for user {UserId}", request.AccountId, request.UserId);
+            return new Response("The main account cannot be deleted", false, 400);
+        }
+
+        if (account.AccountType != EAccountType.Exchange || !string.Equals(account.Exchange, "Bybit", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("DeleteCredentials: account {AccountId} is not a Bybit exchange account", request.AccountId);
+            return new Response("Only Bybit exchange accounts can be deleted", false, 400);
+        }
+
         try
         {
+            // Keep legacy callers from reading old fixed-name credentials during the migration.
             await _keyVaultService.SetSecretAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"), string.Empty);
             await _keyVaultService.SetSecretAsync(
@@ -45,8 +60,37 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
             await _keyVaultService.SetSecretAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
 
-            _logger.LogInformation("Bybit credentials deleted for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
-            return new Response("Credentials deleted successfully", true);
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = _context.Database.IsRelational()
+                    ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                    : null;
+
+                _context.ChangeTracker.Clear();
+
+                var accountToDelete = await _context.Accounts
+                    .Where(a => a.Id == request.AccountId && a.UserId == request.UserId)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (accountToDelete == null)
+                    throw new InvalidOperationException($"Account {request.AccountId} was not found during delete retry unit.");
+
+                var status = await _context.SyncStatuses.SingleOrDefaultAsync(x =>
+                    x.UserId == request.UserId && x.AccountId == request.AccountId && x.ExchangeName == "Bybit", cancellationToken);
+                if (status != null)
+                {
+                    status.Disable();
+                    status.MarkDisconnected();
+                }
+
+                accountToDelete.SoftDelete();
+                await _context.SaveChangesAsync(cancellationToken);
+                if (transaction != null) await transaction.CommitAsync(cancellationToken);
+            });
+
+            _logger.LogInformation("Bybit account {AccountId} soft-deleted for user {UserId}", request.AccountId, request.UserId);
+            return new Response("Subaccount removed", true);
         }
         catch (Exception ex)
         {

@@ -3,13 +3,14 @@ import { Component, Input, input } from '@angular/core';
 import { AccountTransaction, AccountTransactionType } from '../../containers/account/account.component';
 import { AccountTransactionDto, GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
 import { CryptoSymbolPipe } from 'src/app/core/pipes/crypto-symbol.pipe';
-import { CurrencyPipe, DatePipe, NgClass, UpperCasePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe, NgClass, UpperCasePipe } from '@angular/common';
 
 @Component({
   selector: 'app-account-transaction-card',
   standalone: true,
   imports: [
     DatePipe,
+    DecimalPipe,
     NgClass,
     CurrencyPipe,
     UpperCasePipe,
@@ -39,6 +40,10 @@ export class AccountTransactionCardComponent {
         return 'Buy';
       case AccountTransactionType.WithdrawCrypto:
         return 'Withdraw Crypto';
+      case AccountTransactionType.TransferIn:
+        return 'Transfer In';
+      case AccountTransactionType.TransferOut:
+        return 'Transfer Out';
       default:
         return 'Unknown';
     }
@@ -55,6 +60,10 @@ export class AccountTransactionCardComponent {
       case AccountTransactionType.In:
         return 'money-in';
       case AccountTransactionType.Out:
+        return 'money-out';
+      case AccountTransactionType.TransferIn:
+        return 'money-in';
+      case AccountTransactionType.TransferOut:
         return 'money-out';
       default:
         return 'unknown';
@@ -75,6 +84,10 @@ export class AccountTransactionCardComponent {
       case AccountTransactionType.WithdrawCrypto:
       case AccountTransactionType.Out:
         return (accountTransaction.amount * accountTransaction.cryptoCurrentPrice) + accountTransaction.fee;
+      case AccountTransactionType.TransferIn:
+        return accountTransaction.amount * accountTransaction.cryptoCurrentPrice;
+      case AccountTransactionType.TransferOut:
+        return accountTransaction.amount * accountTransaction.cryptoCurrentPrice;
       default:
         return 0;
     }
@@ -89,13 +102,15 @@ export class AccountTransactionCardComponent {
   isIncoming(transactionType: AccountTransactionType): boolean {
     return transactionType === AccountTransactionType.DepositFiat ||
       transactionType === AccountTransactionType.DepositCrypto ||
-      transactionType === AccountTransactionType.In;
+      transactionType === AccountTransactionType.In ||
+      transactionType === AccountTransactionType.TransferIn;
   }
 
   isOutgoing(transactionType: AccountTransactionType): boolean {
     return transactionType === AccountTransactionType.WithdrawToBank ||
       transactionType === AccountTransactionType.WithdrawCrypto ||
-      transactionType === AccountTransactionType.Out;
+      transactionType === AccountTransactionType.Out ||
+      transactionType === AccountTransactionType.TransferOut;
   }
 
   getTransactionSign(transactionType: AccountTransactionType): string {
@@ -103,18 +118,22 @@ export class AccountTransactionCardComponent {
   }
 
   getStatusLabel(status: string): string {
-    switch (status) {
-      case '3': return 'Completed';
-      case '4': return 'Failed';
-      default: return 'Pending';
-    }
+    if (this.isCompletedStatus(status)) return 'Completed';
+    if (this.isFailedStatus(status)) return 'Failed';
+    return 'Pending';
   }
 
   getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case '3': return 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100';
-      case '4': return 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100';
-      default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100';
-    }
+    if (this.isCompletedStatus(status)) return 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100';
+    if (this.isFailedStatus(status)) return 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100';
+    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100';
+  }
+
+  private isCompletedStatus(status: string): boolean {
+    return ['3', 'success', 'filled', 'internaltransfer'].includes(status.toLowerCase());
+  }
+
+  private isFailedStatus(status: string): boolean {
+    return ['4', 'failed', 'fail'].includes(status.toLowerCase());
   }
 }

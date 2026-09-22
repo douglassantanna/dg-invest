@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Commands;
+using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +12,13 @@ public record GetCredentialsStatusQuery(int UserId) : IRequest<Response>;
 
 public record CredentialsStatusDto(
     int AccountId,
-    string AccountTag,
+    string AccountName,
     bool HasApiKey,
     bool HasApiSecret,
-    bool HasWebhookSecret);
+    bool HasWebhookSecret)
+{
+    public string AccountTag => AccountName;
+}
 
 public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsStatusQuery, Response>
 {
@@ -30,26 +34,27 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
     public async Task<Response> Handle(GetCredentialsStatusQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _context.Accounts
-            .Where(a => a.UserId == request.UserId)
-            .OrderBy(a => a.SubaccountTag)
+            .Where(a => a.UserId == request.UserId && !a.IsDeleted
+                     && a.AccountType == api.Cryptos.Models.EAccountType.Exchange && a.Exchange == "Bybit")
+            .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken);
 
         var results = new List<CredentialsStatusDto>();
         foreach (var account in accounts)
         {
-            var apiKey = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-key"));
-            var apiSecret = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "api-secret"));
-            var webhookSecret = await _keyVaultService.GetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, account.Id, "webhook-secret"));
+            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
+            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
+            var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
+
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
             results.Add(new CredentialsStatusDto(
                 AccountId: account.Id,
-                AccountTag: account.SubaccountTag,
-                HasApiKey: !string.IsNullOrEmpty(apiKey),
-                HasApiSecret: !string.IsNullOrEmpty(apiSecret),
-                HasWebhookSecret: !string.IsNullOrEmpty(webhookSecret)));
+                AccountName: account.Name,
+                HasApiKey: apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value),
+                HasApiSecret: apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value),
+                HasWebhookSecret: webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value)));
         }
 
         return new Response("ok", true, results);
