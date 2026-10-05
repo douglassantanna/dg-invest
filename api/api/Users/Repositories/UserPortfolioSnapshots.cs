@@ -44,9 +44,7 @@ public class UserPortfolioSnapshots : IUserPortfolioSnapshotsRepository
 
             if (snapshots == null || !snapshots.Any())
             {
-                return Result<List<UserPortfolioSnapshot>>.Failure(
-                    "No portfolio snapshots found for the specified criteria."
-                );
+                return Result<List<UserPortfolioSnapshot>>.Success([]);
             }
 
             return Result<List<UserPortfolioSnapshot>>.Success(snapshots);

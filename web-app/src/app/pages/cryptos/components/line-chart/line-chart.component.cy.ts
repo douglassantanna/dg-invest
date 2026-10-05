@@ -46,6 +46,20 @@ describe('LineChartComponent', () => {
     cy.get('@marketData.all').should('have.length', 1)
   })
 
+  it('should keep the chart stable when 24H snapshots do not exist', () => {
+    cy.intercept('GET', '**/get-marketData-by-timeframe*', {
+      statusCode: 200,
+      body: {
+        isSuccess: false,
+        error: 'No portfolio snapshots found for the specified criteria.',
+      },
+    }).as('emptyMarketData')
+
+    cy.mount(LineChartComponent)
+    cy.wait('@emptyMarketData')
+    cy.get('button').should('exist')
+  })
+
   timeframeLabels.forEach(({ label, value }) => {
     it(`should fetch market data with correct timeframe when ${label} is clicked`, () => {
       cy.mount(LineChartComponent)
