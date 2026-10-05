@@ -51,7 +51,9 @@ public class Account : Entity
     public void Enable() => Enabled = true;
     public void Disable() => Enabled = false;
     public void SoftDelete() => IsDeleted = true;
-    public decimal TotalDeposited() => _accountTransactions.Sum(x => x.TransactionType switch
+    public decimal TotalDeposited() => _accountTransactions
+        .Where(x => !string.Equals(x.ExchangeStatus, "OpeningBalance", StringComparison.OrdinalIgnoreCase))
+        .Sum(x => x.TransactionType switch
     {
         EAccountTransactionType.DepositFiat => x.Amount,
         EAccountTransactionType.TransferIn => x.Amount,

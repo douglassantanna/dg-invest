@@ -41,4 +41,4 @@ Discovery matches exchange accounts only by `(UserId, Exchange, ExternalId)`. Ma
 
 ## Current Focus
 
-Finish PR2 safely: legacy credential promotion, safe disconnect, and complete API integration coverage. Do not expose self-service Bybit onboarding until PR3.
+The repository is on the PR3 completion line. User-facing Bybit onboarding, account management, manual sync, historical backfill, and balance reconciliation are present in the current code. Treat `docs/README.md` as the navigation index and `docs/exchange-rollout-roadmap.md` as the phase-scope reference; verify the current branch before assuming a roadmap phase is unfinished.

@@ -6,17 +6,31 @@ namespace api.AzureKeyVault;
 public class KeyVaultService : IKeyVaultService
 {
     private readonly SecretClient _client;
+    private readonly SecretClient _bybitClient;
     private readonly ILogger<KeyVaultService> _logger;
 
-    public KeyVaultService(IOptions<KeyVaultSettings> settings, ILogger<KeyVaultService> logger)
+    public KeyVaultService(
+        IOptions<KeyVaultSettings> settings,
+        IOptions<BybitKeyVaultSettings> bybitSettings,
+        ILogger<KeyVaultService> logger)
+        : this(
+            CreateClient(settings.Value.VaultUri),
+            CreateClient(string.IsNullOrWhiteSpace(bybitSettings.Value.VaultUri)
+                ? settings.Value.VaultUri
+                : bybitSettings.Value.VaultUri),
+            logger)
     {
-        _logger = logger;
-        _client = new SecretClient(new Uri(settings.Value.VaultUri), new DefaultAzureCredential());
     }
 
     public KeyVaultService(SecretClient client, ILogger<KeyVaultService> logger)
+        : this(client, client, logger)
+    {
+    }
+
+    public KeyVaultService(SecretClient client, SecretClient bybitClient, ILogger<KeyVaultService> logger)
     {
         _client = client;
+        _bybitClient = bybitClient;
         _logger = logger;
     }
 
@@ -24,7 +38,7 @@ public class KeyVaultService : IKeyVaultService
     {
         try
         {
-            var response = await _client.GetSecretAsync(secretName);
+            var response = await ClientFor(secretName).GetSecretAsync(secretName);
             return new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, response.Value.Value);
         }
         catch (Azure.RequestFailedException ex) when (ex.Status == 404 && ex.ErrorCode == "SecretNotFound")
@@ -56,7 +70,7 @@ public class KeyVaultService : IKeyVaultService
     {
         try
         {
-            await _client.SetSecretAsync(secretName, value);
+            await ClientFor(secretName).SetSecretAsync(secretName, value);
         }
         catch (Exception ex)
         {
@@ -69,7 +83,7 @@ public class KeyVaultService : IKeyVaultService
     {
         try
         {
-            await _client.StartDeleteSecretAsync(secretName);
+            await ClientFor(secretName).StartDeleteSecretAsync(secretName);
         }
         catch (Exception ex)
         {
@@ -77,4 +91,12 @@ public class KeyVaultService : IKeyVaultService
             throw;
         }
     }
+
+    private SecretClient ClientFor(string secretName)
+        => secretName.StartsWith("bybit-", StringComparison.OrdinalIgnoreCase)
+            ? _bybitClient
+            : _client;
+
+    private static SecretClient CreateClient(string vaultUri)
+        => new(new Uri(vaultUri), new DefaultAzureCredential());
 }

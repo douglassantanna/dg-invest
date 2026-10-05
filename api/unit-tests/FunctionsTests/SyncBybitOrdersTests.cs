@@ -1,4 +1,6 @@
 using api.AzureKeyVault;
+using api.CoinMarketCap.Service;
+using api.Cache;
 using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Bybit;
@@ -519,7 +521,7 @@ public class SyncBybitOrdersTests
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<IReadOnlyList<BybitExecutionData>?>()))
-            .Returns((BybitOrderData _, Account _, int _, string _, CancellationToken token, IReadOnlyList<BybitExecutionData>? _) =>
+            .Returns((BybitOrderData _, Account _, int _, string _, CancellationToken token, IReadOnlyList<BybitExecutionData>? _, bool _) =>
             {
                 cancellation.Cancel();
                 return Task.FromCanceled<bool>(token);
@@ -539,19 +541,32 @@ public class SyncBybitOrdersTests
         IBybitService bybitService,
         IBybitOrderSyncService orderSyncService,
         IKeyVaultService keyVaultService,
-        DataContext context) => new(
+        DataContext context)
+    {
+        Mock.Get(bybitService).Setup(service => service.GetWalletBalanceAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<BybitRegion>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>()))
+            .ReturnsAsync(new BybitWalletBalanceResponse());
+
+        return new(
             bybitService,
             orderSyncService,
             new BybitAccountSyncService(
                 bybitService,
                 orderSyncService,
                 keyVaultService,
-                context,
-                NullLogger<BybitAccountSyncService>.Instance),
+                 context,
+                 Mock.Of<ICacheService>(),
+                 Mock.Of<ICoinMarketCapService>(),
+                 NullLogger<BybitAccountSyncService>.Instance),
             keyVaultService,
             context,
             Mock.Of<ILogger<SyncBybitOrders>>(),
             EnabledConfiguration());
+    }
 
     private static BybitAccountCoinBalanceResponse AccountCoinBalance(string accountType, string coin, string balance, string memberId = "") => new()
     {

@@ -69,6 +69,12 @@ public class CryptoAsset : Entity
         _transactions.Add(transaction);
     }
 
+    public void AddHistoricalTransaction(CryptoTransaction transaction)
+    {
+        _transactions.Add(transaction);
+        RecalculateFromTransactions();
+    }
+
     public void AddBalance(decimal amount)
     {
         if (amount > 0.0m)
@@ -82,6 +88,30 @@ public class CryptoAsset : Entity
 
         return ((currentPrice - AveragePrice) / AveragePrice) * 100;
     }
+
+    public bool HasMeaningfulInvestment(decimal minimumInvestedAmount)
+        => Balance > 0 && (TotalInvested == 0 || TotalInvested >= minimumInvestedAmount);
+
+    public void ReconcileBalance(decimal externalBalance)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(externalBalance);
+
+        if (externalBalance == Balance)
+            return;
+
+        if (externalBalance == 0)
+        {
+            Balance = 0;
+            TotalInvested = 0;
+            return;
+        }
+
+        if (Balance > 0 && externalBalance < Balance)
+            TotalInvested *= externalBalance / Balance;
+
+        Balance = externalBalance;
+    }
+
     public void RecalculateFromTransactions()
     {
         Balance = 0;
@@ -105,6 +135,16 @@ public class CryptoAsset : Entity
                     decimal costBasisRemoved = t.Amount * (Balance == 0 ? 0 : TotalInvested / Balance);
                     Balance -= t.Amount;
                     TotalInvested -= costBasisRemoved;
+                    if (Balance == 0) TotalInvested = 0;
+                    break;
+
+                case ETransactionType.TransferIn:
+                    Balance += t.Amount;
+                    break;
+
+                case ETransactionType.TransferOut:
+                    if (t.Amount > Balance) break; // skip transfers without a known opening balance
+                    Balance -= t.Amount;
                     if (Balance == 0) TotalInvested = 0;
                     break;
             }

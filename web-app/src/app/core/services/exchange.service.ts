@@ -50,6 +50,10 @@ export class ExchangeService {
     return this.http.post<Response<any>>(`${url}/bybit/sync/${accountId}`, {});
   }
 
+  backfillBybitAccount(accountId: number, fromDate: string): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/backfill/${accountId}`, { fromDate });
+  }
+
   getBybitSubMembers(): Observable<Response<BybitSubMemberDto[]>> {
     return this.http.get<Response<BybitSubMemberDto[]>>(`${url}/bybit/sub-members`);
   }
