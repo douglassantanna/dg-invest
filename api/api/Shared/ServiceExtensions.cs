@@ -71,6 +71,7 @@ public static class ServiceExtensions
         services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
         services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
         services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
+        services.Configure<BybitKeyVaultSettings>(config.GetSection(nameof(BybitKeyVaultSettings)));
         services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
         services.Configure<MigrationsSettings>(config.GetSection("Migrations"));
         return services;
@@ -118,6 +119,8 @@ public static class ServiceExtensions
     {
         services.AddTransient<IMarketDataService, MarketDataService>();
         services.AddSingleton<ICoinMarketCapService, CoinMarketCapService>();
+        services.AddSingleton<IEmailService, MailtrapEmailService>();
+        services.AddScoped<IHealthAlertService, HealthAlertService>();
         services.AddScoped<IHealthCheckService, HealthCheckService>();
         services.AddScoped<IBybitService, BybitService>();
         services.AddScoped<IBlobStorageService, BlobStorageService>();
@@ -136,11 +139,15 @@ public static class ServiceExtensions
         services.AddScoped<ICacheService, MemoryCacheService>();
         services.AddScoped<IKeyVaultService, KeyVaultService>();
         services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));
+        services.Configure<DatabaseHealthCheckOptions>(config.GetSection(nameof(DatabaseHealthCheckOptions)));
+        services.Configure<HealthAlertRecipientsOptions>(config.GetSection(nameof(HealthAlertRecipientsOptions)));
+        services.Configure<MailtrapSettings>(config.GetSection(nameof(MailtrapSettings)));
         services.Configure<CoinMarketCapSettings>(config.GetSection(nameof(CoinMarketCapSettings)));
         services.Configure<AzureStorageSettings>(config.GetSection(nameof(AzureStorageSettings)));
         services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
         services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
         services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
+        services.Configure<BybitKeyVaultSettings>(config.GetSection(nameof(BybitKeyVaultSettings)));
 
         var connectionString = config.GetValue<string>("DefaultConnection");
         if (string.IsNullOrEmpty(connectionString))

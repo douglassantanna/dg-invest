@@ -107,6 +107,38 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitOrderSync_WithWalletOnlyFundAsset_ShouldCreateAssetFromCurrentBalance()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["BTC"] = new Coin(
+            1,
+            "Bitcoin",
+            "BTC",
+            DateTime.UtcNow,
+            new Quote(new USD(60_000, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("BTC", "1"));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["UNIFIED"] = WalletBalance("UNIFIED");
+
+        try
+        {
+            await _fixture.RunBybitOrderSyncAsync();
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var asset = await context.CryptoAssets
+                .SingleAsync(candidate => EF.Property<int>(candidate, "AccountId") == accountId && candidate.Symbol == "BTC");
+
+            asset.Balance.Should().Be(1m);
+            asset.TotalInvested.Should().Be(0m);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
     public async Task BybitOrderSync_WhenHistoryReplays_ShouldRecoverMissingOrderWithoutDuplicates()
     {
         var (userId, accountId) = await CreateExchangeSyncAccountAsync();

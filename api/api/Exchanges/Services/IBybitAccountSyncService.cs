@@ -5,6 +5,8 @@ namespace api.Exchanges.Services;
 public interface IBybitAccountSyncService
 {
     Task<BybitAccountSyncResult> SyncAsync(Account account, CancellationToken cancellationToken);
+    Task<BybitAccountSyncResult> BackfillAsync(Account account, DateTime fromUtc, CancellationToken cancellationToken);
+    Task<BybitAccountSyncResult> RecalculateAsync(Account account, CancellationToken cancellationToken);
 }
 
 public sealed record BybitAccountSyncResult(bool IsSuccess, bool IsSkipped, string Message, int StatusCode)

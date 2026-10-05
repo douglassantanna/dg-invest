@@ -1,3 +1,7 @@
+# dg-invest
+
+See [`docs/README.md`](docs/README.md) for the code navigation map and current Bybit entry points.
+
 ### Overview
 This project is a full cryptocurrency investment manager and analytics suite that I’ve been sculpting over the last two years. It brings together real-time price tracking, detailed transaction logging, and rich statistical insight to help you keep a steady hand in the stormy seas of digital assets.
 
@@ -7,8 +11,8 @@ This project is a full cryptocurrency investment manager and analytics suite tha
 You can run the project either directly on your machine or inside Docker.
 #### Option 1: Local Environment
 - .NET 10
-- Node.js v18+
-- Angular v18
+- Node.js v20+
+- Angular 17
 - SQL Server
 - Azure Functions Core Tools
 - EF Core tools
@@ -185,15 +189,15 @@ The webhook catches trades instantly. The REST poll catches anything the webhook
 
 #### Account Context And Rollout
 
-The exchange integration is being delivered in phases. PR1 establishes the data model; the following is the target architecture completed through PR5:
+The exchange integration is being delivered in phases. The target architecture separates:
 
 - **Manual account** — a user-owned portfolio such as Main or Savings. It never becomes an exchange account through discovery.
 - **Exchange integration** — the per-user connection to Bybit. It owns integration-level connection state and discovery credentials stored in Key Vault.
 - **Exchange account** — a separately selectable portfolio identified by `AccountType = Exchange`, its exchange name, and the external Bybit UID.
 
-PR2 will make Bybit discovery create or update only exchange accounts, matching them by user, exchange, and UID. Manual accounts will remain separate. A finished account selector will group Manual, Bybit, and future exchange contexts by origin.
+Bybit discovery creates or updates only exchange accounts, matching them by user, exchange, and external UID. Manual accounts remain separate. The account selector can group Manual, Bybit, and future exchange contexts by origin as later phase work lands.
 
-The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for architecture, promotion records, milestones, test policy, and the stage delivery flow.
+The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for phase scope, and [Repository Map](docs/README.md) for current code entry points.
 
 #### What gets synced
 
@@ -288,22 +292,21 @@ Run this only against the intended environment database. `LastOrderId` is inform
 
 #### Setup
 
-**1. Save your Bybit API credentials**
+**1. Save integration-level Bybit credentials**
 
 ```http
-POST /api/exchange/bybit/credentials
+POST /api/exchange/bybit/integration-credentials
 Authorization: Bearer <jwt>
 
 {
-  "accountId": 1,
   "apiKey": "your-bybit-api-key",
   "apiSecret": "your-bybit-api-secret",
-  "webhookSecret": "your-bybit-webhook-signing-secret"
+  "region": "Global",
+  "masterUid": "optional-bybit-master-uid"
 }
 ```
 
-Credentials are stored in **Azure Key Vault** — never in the database.  
-Key naming: `bybit-{userId}-{accountId}-{api-key|api-secret|webhook-secret}`.
+Credentials are stored in **Azure Key Vault** — never in the database or browser state after save. The application owns the Key Vault naming convention.
 
 **2. Sync your sub-accounts**
 
@@ -312,7 +315,7 @@ POST /api/exchange/bybit/sync-accounts
 Authorization: Bearer <jwt>
 ```
 
-This reads all sub-accounts from Bybit, matches them to your internal portfolio accounts by their `SubaccountTag`, and links them via the Bybit UID. Any unmatched sub-accounts are created as new portfolio accounts automatically.
+This reads the Bybit account hierarchy, matches exchange accounts by user, exchange, and external UID, and creates or updates exchange portfolio contexts. Manual accounts are not converted by discovery.
 
 **3. Set up the webhook (optional — for instant order sync)**
 

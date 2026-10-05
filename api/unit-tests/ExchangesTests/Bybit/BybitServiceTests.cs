@@ -228,10 +228,17 @@ public class BybitServiceTests
                 }
             });
 
-        var result = await _sut.GetOrderHistoryAsync("api-key", "api-secret", limit: 50);
+        var result = await _sut.GetOrderHistoryAsync(
+            "api-key",
+            "api-secret",
+            limit: 50,
+            startTime: 1700000000000,
+            endTime: 1700000001000);
 
         result.Select(order => order.OrderId).Should().Equal("order-1", "order-2");
         httpTest.ShouldHaveCalled("https://api.bybit.com/v5/order/history")
+            .WithQueryParam("startTime", "1700000000000")
+            .WithQueryParam("endTime", "1700000001000")
             .WithQueryParam("cursor", "cursor-1")
             .Times(1);
     }
@@ -397,6 +404,49 @@ public class BybitServiceTests
             .WithQueryParam("accountType", "FUND")
             .WithQueryParam("coin", "USDC")
             .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetAccountCoinBalancesAsync_WhenBybitReturnsBalances_ShouldReturnAllCoins()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new
+        {
+            retCode = 0,
+            retMsg = "success",
+            result = new
+            {
+                accountType = "FUND",
+                memberId = "12345",
+                balance = new[]
+                {
+                    new { coin = "USDT", walletBalance = "100", transferBalance = "90" },
+                    new { coin = "BTC", walletBalance = "1", transferBalance = "1" }
+                }
+            }
+        });
+
+        var result = await _sut.GetAccountCoinBalancesAsync("api-key", "api-secret", BybitRegion.Global, "FUND", "12345");
+
+        result.Result.AccountType.Should().Be("FUND");
+        result.Result.Balance.Should().HaveCount(2);
+        result.Result.Balance.Should().ContainSingle(balance => balance.Coin == "BTC" && balance.WalletBalance == "1");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/asset/transfer/query-account-coins-balance")
+            .WithQueryParam("accountType", "FUND")
+            .WithQueryParam("memberId", "12345")
+            .WithVerb(HttpMethod.Get);
+    }
+
+    [Fact]
+    public async Task GetAccountCoinBalancesAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 10003, retMsg = "API key is invalid" });
+
+        var exception = await Assert.ThrowsAsync<BybitApiException>(() => _sut.GetAccountCoinBalancesAsync("api-key", "api-secret", BybitRegion.Global, "FUND"));
+
+        exception.RetCode.Should().Be(10003);
+        exception.RetMsg.Should().Be("API key is invalid");
     }
 
     [Fact]

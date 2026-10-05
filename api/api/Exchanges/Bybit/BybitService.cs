@@ -17,6 +17,7 @@ public class BybitService : IBybitService
     private const string UniversalTransferHistoryEndpoint = "/v5/asset/transfer/query-universal-transfer-list";
     private const string WalletBalanceEndpoint = "/v5/account/wallet-balance";
     private const string AccountCoinBalanceEndpoint = "/v5/asset/transfer/query-account-coin-balance";
+    private const string AccountCoinBalancesEndpoint = "/v5/asset/transfer/query-account-coins-balance";
     private const string AccountInfoEndpoint = "/v5/account/info";
     private const int RecvWindow = 60000;
 
@@ -107,7 +108,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -121,6 +122,8 @@ public class BybitService : IBybitService
                     };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -166,7 +169,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -176,6 +179,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -192,7 +197,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -202,6 +207,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -218,7 +225,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -228,6 +235,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -244,7 +253,7 @@ public class BybitService : IBybitService
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -254,6 +263,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -316,6 +327,31 @@ public class BybitService : IBybitService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching Bybit account coin balance");
+            throw;
+        }
+    }
+
+    public async Task<BybitAccountCoinBalancesResponse> GetAccountCoinBalancesAsync(string apiKey, string apiSecret, BybitRegion region, string accountType, string? memberId = null)
+    {
+        try
+        {
+            var queryDict = new Dictionary<string, object> { ["accountType"] = accountType };
+            if (!string.IsNullOrWhiteSpace(memberId))
+                queryDict["memberId"] = memberId;
+            var response = await SendPrivateGetAsync<BybitAccountCoinBalancesResponse>(
+                apiKey, apiSecret, region, AccountCoinBalancesEndpoint, queryDict);
+
+            if (response.RetCode != 0)
+            {
+                _logger.LogError("Bybit GetAccountCoinBalances returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
+                throw new BybitApiException(response.RetCode, response.RetMsg);
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Bybit account coin balances");
             throw;
         }
     }

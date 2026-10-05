@@ -24,7 +24,7 @@ public class BybitOrderSyncServiceTests
         first.Should().BeTrue();
         second.Should().BeTrue();
         account.Balance.Should().Be(1_000m);
-        account.TotalDeposited().Should().Be(1_000m);
+        account.TotalDeposited().Should().Be(0m);
         var transaction = await context.AccountTransactions.SingleAsync();
         transaction.TransactionType.Should().Be(EAccountTransactionType.DepositFiat);
         transaction.Amount.Should().Be(1_000m);
@@ -103,6 +103,81 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessOrderAsync_WhenHistoricalImportSkipsCashBalance_ShouldRebuildCryptoBalanceAndAveragePrice()
+    {
+        using var context = CreateContext();
+        var account = new Account("Current", 1, EAccountType.Exchange, "Bybit", "UID-CURRENT");
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        account.AddCryptoAsset(asset).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        await sut.ProcessOrderAsync(Order("buy-1", "Buy", "100", "1", "2026-07-01T00:00:00Z"), account, 1,
+            "BybitBackfill", CancellationToken.None, applyCashBalance: false);
+        await sut.ProcessOrderAsync(Order("sell-1", "Sell", "120", "0.1", "2026-07-10T00:00:00Z"), account, 1,
+            "BybitBackfill", CancellationToken.None, applyCashBalance: false);
+        await sut.ProcessOrderAsync(Order("sell-2", "Sell", "130", "0.1", "2026-07-20T00:00:00Z"), account, 1,
+            "BybitBackfill", CancellationToken.None, applyCashBalance: false);
+        await sut.ProcessOrderAsync(Order("buy-2", "Buy", "110", "0.1", "2026-07-30T00:00:00Z"), account, 1,
+            "BybitBackfill", CancellationToken.None, applyCashBalance: false);
+
+        account.Balance.Should().Be(0m);
+        asset.Balance.Should().Be(0.9m);
+        asset.TotalInvested.Should().Be(91m);
+        asset.AveragePrice.Should().Be(91m / 0.9m);
+        (await context.AccountTransactions.CountAsync()).Should().Be(4);
+        asset.Transactions.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task ProcessOrderAsync_WhenHistoricalImportFindsExistingOrder_ShouldNotApplyFeeDeltaToCashBalance()
+    {
+        using var context = CreateContext();
+        var account = new Account("Current", 1, EAccountType.Exchange, "Bybit", "UID-CURRENT");
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        account.AddCryptoAsset(asset).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        var order = Order("duplicate-historical-order", "Buy", "100", "1", "2026-07-01T00:00:00Z");
+
+        await sut.ProcessOrderAsync(order, account, 1, "REST", CancellationToken.None);
+        var cashAfterInitialImport = account.Balance;
+
+        await sut.ProcessOrderAsync(order, account, 1, "BybitBackfill", CancellationToken.None,
+            [new BybitExecutionData { OrderId = order.OrderId, ExecId = "historical-fee", ExecFee = "0.01", FeeCurrency = "USDT" }],
+            applyCashBalance: false);
+
+        account.Balance.Should().Be(cashAfterInitialImport);
+        (await context.AccountTransactions.CountAsync()).Should().Be(1);
+        asset.Transactions.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task ProcessOrderAsync_WhenHistoricalSellIsTemporarilyUnfunded_ShouldReplayAfterEarlierBuy()
+    {
+        using var context = CreateContext();
+        var account = new Account("Current", 1, EAccountType.Exchange, "Bybit", "UID-CURRENT");
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        account.AddCryptoAsset(asset).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        await sut.ProcessOrderAsync(Order("future-buy", "Buy", "100", "1", "2026-08-01T00:00:00Z"), account, 1,
+            "REST", CancellationToken.None, applyCashBalance: false);
+        await sut.ProcessOrderAsync(Order("historical-sell", "Sell", "120", "1", "2026-07-02T00:00:00Z"), account, 1,
+            "BybitBackfill", CancellationToken.None, applyCashBalance: false);
+        await sut.ProcessOrderAsync(Order("historical-buy", "Buy", "100", "1", "2026-07-01T00:00:00Z"), account, 1,
+            "BybitBackfill", CancellationToken.None, applyCashBalance: false);
+
+        account.Balance.Should().Be(0m);
+        asset.Balance.Should().Be(1m);
+        asset.Transactions.Should().HaveCount(3);
+    }
+
+    [Fact]
     public async Task ProcessOrderAsync_WhenDuplicateHasMoreAccurateExecutionFee_ShouldReconcileExistingTransaction()
     {
         using var context = CreateContext();
@@ -135,6 +210,35 @@ public class BybitOrderSyncServiceTests
         transaction.FeeQuoteValue.Should().Be(0.00125m);
         transaction.ExchangeExecutionId.Should().Be("execution-repair");
         account.Balance.Should().Be(99_997.99875m);
+    }
+
+    [Fact]
+    public async Task ProcessOrderAsync_WhenOrderHasManyExecutions_ShouldStoreOneExecutionId()
+    {
+        using var context = CreateContext();
+        var account = new Account("Current", 1, EAccountType.Exchange, "Bybit", "UID-CURRENT");
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        account.AddCryptoAsset(asset).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        var order = Order("many-executions", "Buy", "50000", "0.1", "2026-07-01T00:00:00Z");
+        var executions = Enumerable.Range(1, 20)
+            .Select(index => new BybitExecutionData
+            {
+                OrderId = order.OrderId,
+                ExecId = $"execution-{index}",
+                ExecFee = "0.0001",
+                FeeCurrency = "BTC"
+            })
+            .ToList();
+
+        var result = await sut.ProcessOrderAsync(order, account, 1, "BybitBackfill", CancellationToken.None, executions,
+            applyCashBalance: false);
+
+        result.Should().BeTrue();
+        (await context.AccountTransactions.SingleAsync()).ExchangeExecutionId.Should().Be("execution-1");
+        asset.Transactions.Single().ExchangeExecutionId.Should().Be("execution-1");
     }
 
     [Fact]
@@ -182,14 +286,15 @@ public class BybitOrderSyncServiceTests
             Status = "success",
             TxId = "withdrawal-1",
             WithdrawFee = "1",
-            SuccessAt = "2026-09-08T12:00:00Z"
+            SuccessAt = "2026-09-08T12:00:00Z",
+            CreateTime = "1790000000000"
         };
 
         var result = await sut.ProcessWithdrawalAsync(withdrawal, account, 1, CancellationToken.None);
 
         result.Should().BeTrue();
         account.Balance.Should().Be(874.50m);
-        account.TotalDeposited().Should().Be(874.50m);
+        account.TotalDeposited().Should().Be(-125.50m);
         account.CryptoAssets.Should().BeEmpty();
         var transaction = await context.AccountTransactions.SingleAsync(t => t.ExchangeTransactionId == "withdrawal-1");
         transaction.TransactionType.Should().Be(EAccountTransactionType.WithdrawToBank);
@@ -249,7 +354,7 @@ public class BybitOrderSyncServiceTests
 
         result.Should().BeTrue();
         account.Balance.Should().Be(874.50m);
-        account.TotalDeposited().Should().Be(874.50m);
+        account.TotalDeposited().Should().Be(-125.50m);
         var transaction = await context.AccountTransactions.SingleAsync(t => t.ExchangeTransactionId == $"bybit-internal-transfer-{transfer.TransferId}-out-{account.Id}");
         transaction.TransactionType.Should().Be(EAccountTransactionType.TransferOut);
         transaction.Amount.Should().Be(125.50m);
@@ -338,6 +443,13 @@ public class BybitOrderSyncServiceTests
         (await context.AccountTransactions.CountAsync()).Should().Be(1);
     }
 
+    [Fact]
+    public void ExtractBaseSymbol_WhenBrazilianRealIsQuoteCurrency_ShouldReturnUsdt()
+    {
+        BybitOrderSyncService.ExtractBaseSymbol("USDTBRL", ["USDT", "USDC", "BRL"])
+            .Should().Be("USDT");
+    }
+
     private static DataContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<DataContext>()
@@ -345,6 +457,19 @@ public class BybitOrderSyncServiceTests
             .Options;
         return new DataContext(options);
     }
+
+    private static BybitOrderData Order(string orderId, string side, string price, string quantity, string createdTime)
+        => new()
+        {
+            OrderId = orderId,
+            Symbol = "BTCUSDT",
+            Side = side,
+            OrderStatus = "Filled",
+            AvgPrice = price,
+            CumExecQty = quantity,
+            CumExecFee = "0",
+            CreatedTime = DateTimeOffset.Parse(createdTime).ToUnixTimeMilliseconds().ToString()
+        };
 
     private static BybitOrderSyncService CreateService(DataContext context)
     {
