@@ -214,6 +214,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("bybit/resume")]
+    public async Task<ActionResult<Response>> ResumeBybitIntegration()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new ResumeBybitIntegrationCommand(userId.Value));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
     [HttpGet("bybit/sync-status")]
     public async Task<ActionResult<Response>> GetSyncStatuses()
     {

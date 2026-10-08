@@ -27,6 +27,7 @@ export class BybitIntegrationComponent implements OnInit {
 
   accounts: BybitAccountRow[] = [];
   groups: BybitConnectionGroupDto[] = [];
+  integrationState: BybitConnectionGroupDto | null = null;
   subMembers: BybitSubMemberDto[] = [];
   apiKey = '';
   apiSecret = '';
@@ -36,6 +37,7 @@ export class BybitIntegrationComponent implements OnInit {
   saving = false;
   discovering = false;
   disconnecting = false;
+  resuming = false;
   loadError = '';
   toastMessage = '';
 
@@ -48,7 +50,11 @@ export class BybitIntegrationComponent implements OnInit {
   }
 
   get enabledCount(): number {
-    return this.accounts.filter(account => account.isEnabled).length;
+    return this.isAutoPaused ? 0 : this.accounts.filter(account => account.isEnabled).length;
+  }
+
+  get isAutoPaused(): boolean {
+    return this.integrationState?.integrationStatus === 'AutoPaused';
   }
 
   get hasAccounts(): boolean {
@@ -65,6 +71,7 @@ export class BybitIntegrationComponent implements OnInit {
     }).subscribe(({ groups, statuses, subMembers }) => {
       this.loading = false;
       this.groups = (groups.data ?? []) as BybitConnectionGroupDto[];
+      this.integrationState = this.groups[0] ?? null;
       this.subMembers = subMembers.data ?? [];
       if (!groups.isSuccess) {
         this.loadError = groups.message || 'Failed to load Bybit accounts';
@@ -95,7 +102,8 @@ export class BybitIntegrationComponent implements OnInit {
           this.loadError = response.message;
           return;
         }
-        this.discover(true);
+        if (this.isAutoPaused) this.resumeIntegration(true);
+        else this.discover(true);
       },
       error: error => {
         this.saving = false;
@@ -143,6 +151,33 @@ export class BybitIntegrationComponent implements OnInit {
     });
   }
 
+  resume(): void {
+    this.resumeIntegration(false);
+  }
+
+  private resumeIntegration(discoverAfterResume: boolean): void {
+    if (this.resuming) return;
+    this.resuming = true;
+    this.loadError = '';
+    this.exchangeService.resumeBybitIntegration().subscribe({
+      next: response => {
+        this.resuming = false;
+        if (!response.isSuccess) {
+          this.loadError = response.message || 'Bybit connection test failed';
+          return;
+        }
+
+        this.toast(response.message);
+        if (discoverAfterResume) this.discover(true);
+        else this.load();
+      },
+      error: error => {
+        this.resuming = false;
+        this.loadError = this.errorMessage(error, 'Could not resume Bybit synchronization');
+      },
+    });
+  }
+
   statusLabel(account: BybitAccountRow): string {
     if (account.status === 'ok') return 'Connected';
     if (account.status === 'err') return 'Needs attention';
@@ -158,6 +193,7 @@ export class BybitIntegrationComponent implements OnInit {
   }
 
   credentialLabel(account: BybitAccountRow): string {
+    if (this.isAutoPaused && account.hasApiKey) return 'Configured before pause';
     return account.hasApiKey && account.hasApiSecret ? 'Configured' : 'Missing';
   }
 

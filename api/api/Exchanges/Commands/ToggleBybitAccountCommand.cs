@@ -28,7 +28,7 @@ public class ToggleBybitAccountCommandHandler : IRequestHandler<ToggleBybitAccou
 
         if (account == null)
         {
-            _logger.LogError("ToggleBybitAccount: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
+            _logger.LogWarning("ToggleBybitAccount: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
             return new Response("Account not found", false, 404);
         }
 

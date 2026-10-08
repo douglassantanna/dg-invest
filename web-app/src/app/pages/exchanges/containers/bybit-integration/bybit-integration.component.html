@@ -27,6 +27,32 @@
     </div>
   }
 
+  @if (isAutoPaused) {
+    <section role="alert" class="mb-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-700 dark:bg-red-900/20 dark:text-red-200">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 class="font-semibold">Bybit synchronization is paused</h2>
+          <p class="mt-1">{{ integrationState?.lastErrorMessage || 'The connection was paused after repeated Bybit request failures.' }}</p>
+          <p class="mt-1 text-xs opacity-80">
+            @if (integrationState?.lastErrorCode === 'transport') {
+              {{ integrationState?.consecutiveTransportFailures }} consecutive transport failures
+            } @else {
+              Permanent credential/API error; paused immediately
+            }
+            @if (integrationState?.lastErrorCode && integrationState?.lastErrorCode !== 'transport') { · Code {{ integrationState?.lastErrorCode }} }
+            @if (integrationState?.lastErrorEndpoint) { · {{ integrationState?.lastErrorEndpoint }} }
+          </p>
+          <p class="mt-1 text-xs opacity-80">Paused at {{ formatDate(integrationState?.autoPausedAt ?? null) }}</p>
+          <p class="mt-1 text-xs opacity-80">Check the Bybit API key, permissions, IP restrictions, region, and network status before resuming.</p>
+        </div>
+        <button type="button" (click)="resume()" [disabled]="resuming"
+          class="shrink-0 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-600 dark:hover:bg-red-500">
+          {{ resuming ? 'Testing connection...' : 'Test and resume' }}
+        </button>
+      </div>
+    </section>
+  }
+
   <section class="grid gap-5 lg:grid-cols-[minmax(0,380px)_1fr]">
     <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div class="mb-5 flex gap-3">
@@ -86,7 +112,9 @@
       <section class="grid gap-3 sm:grid-cols-3">
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Integration</div>
-          <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ hasAccounts ? 'Connected' : 'Setup required' }}</div>
+          <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {{ isAutoPaused ? 'Paused - needs review' : hasAccounts ? 'Connected' : 'Setup required' }}
+          </div>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Exchange accounts</div>

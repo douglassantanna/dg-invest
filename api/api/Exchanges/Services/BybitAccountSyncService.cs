@@ -63,6 +63,9 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 return BybitAccountSyncResult.Skipped("Bybit sync is disabled for this account");
             }
 
+            if (!await IsIntegrationEnabledAsync(userId, cancellationToken))
+                return BybitAccountSyncResult.Skipped("Bybit integration is disconnected or auto-paused");
+
             var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, accountId, "api-key", cancellationToken);
             var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, userId, accountId, "api-secret", cancellationToken);
 
@@ -107,9 +110,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                         order.OrderId,
                         cancellationToken);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException
+                    && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
                 {
-                    _logger.LogWarning(ex, "Bybit sync: execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
+                    _logger.LogDebug(ex, "Bybit execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
                 }
 
                 if (!await _orderSyncService.ProcessOrderAsync(
@@ -182,13 +186,22 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         }
         catch (BybitApiException ex)
         {
+            var failure = BybitApiFailureClassifier.Classify(ex);
             var message = $"Bybit rejected sync request: {ex.RetCode} - {ex.RetMsg}";
             await MarkErrorAsync(account, message, cancellationToken);
-            return BybitAccountSyncResult.Failed(message);
+            if (failure.Kind == BybitApiFailureKind.PermanentCredential)
+                await PauseForPermanentCredentialFailureAsync(account, failure, message, cancellationToken);
+            return BybitAccountSyncResult.Failed(message, 400, failure.Kind, failure.Code, failure.Endpoint);
+        }
+        catch (BybitTransportException ex)
+        {
+            var message = $"Bybit request failed while connecting to {ex.Endpoint}";
+            await MarkErrorAsync(account, message, cancellationToken);
+            return BybitAccountSyncResult.Failed(message, 503, BybitApiFailureKind.Transport, "transport", ex.Endpoint);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Bybit sync failed for account {AccountId}", account.Id);
+            _logger.LogWarning(ex, "Bybit sync failed for account {AccountId}", account.Id);
             await MarkErrorAsync(account, ex.Message, cancellationToken);
             return BybitAccountSyncResult.Failed(ex.Message);
         }
@@ -215,6 +228,9 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
             if (!syncStatus.IsEnabled)
                 return BybitAccountSyncResult.Skipped("Bybit sync is disabled for this account");
+
+            if (!await IsIntegrationEnabledAsync(account.UserId, cancellationToken))
+                return BybitAccountSyncResult.Skipped("Bybit integration is disconnected or auto-paused");
 
             var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, account.UserId, account.Id, "api-key", cancellationToken);
             var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, account.UserId, account.Id, "api-secret", cancellationToken);
@@ -316,7 +332,25 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         }
         catch (BybitApiException ex)
         {
-            return BybitAccountSyncResult.Failed($"Bybit rejected the historical import: {ex.RetCode} - {ex.RetMsg}");
+            var failure = BybitApiFailureClassifier.Classify(ex);
+            var message = $"Bybit rejected the historical import: {ex.RetCode} - {ex.RetMsg}";
+            if (failure.Kind == BybitApiFailureKind.PermanentCredential)
+                await PauseForPermanentCredentialFailureAsync(account, failure, message, cancellationToken);
+            return BybitAccountSyncResult.Failed(
+                message,
+                400,
+                failure.Kind,
+                failure.Code,
+                failure.Endpoint);
+        }
+        catch (BybitTransportException ex)
+        {
+            return BybitAccountSyncResult.Failed(
+                $"Bybit request failed while connecting to {ex.Endpoint}",
+                503,
+                BybitApiFailureKind.Transport,
+                "transport",
+                ex.Endpoint);
         }
         catch (Exception ex)
         {
@@ -338,6 +372,9 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
             if (!syncStatus.IsEnabled)
                 return BybitAccountSyncResult.Skipped("Bybit sync is disabled for this account");
+
+            if (!await IsIntegrationEnabledAsync(account.UserId, cancellationToken))
+                return BybitAccountSyncResult.Skipped("Bybit integration is disconnected or auto-paused");
 
             var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, account.UserId, account.Id, "api-key", cancellationToken);
             var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, account.UserId, account.Id, "api-secret", cancellationToken);
@@ -363,7 +400,25 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         }
         catch (BybitApiException ex)
         {
-            return BybitAccountSyncResult.Failed($"Bybit rejected balance reconciliation: {ex.RetCode} - {ex.RetMsg}");
+            var failure = BybitApiFailureClassifier.Classify(ex);
+            var message = $"Bybit rejected balance reconciliation: {ex.RetCode} - {ex.RetMsg}";
+            if (failure.Kind == BybitApiFailureKind.PermanentCredential)
+                await PauseForPermanentCredentialFailureAsync(account, failure, message, cancellationToken);
+            return BybitAccountSyncResult.Failed(
+                message,
+                400,
+                failure.Kind,
+                failure.Code,
+                failure.Endpoint);
+        }
+        catch (BybitTransportException ex)
+        {
+            return BybitAccountSyncResult.Failed(
+                $"Bybit request failed while connecting to {ex.Endpoint}",
+                503,
+                BybitApiFailureKind.Transport,
+                "transport",
+                ex.Endpoint);
         }
         catch (Exception ex)
         {
@@ -420,9 +475,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                         + BybitCashBalance.ParseAccountCoinBalance(coin);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException
+            && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
         {
-            _logger.LogWarning(ex,
+            _logger.LogDebug(ex,
                 "Bybit balance reconciliation could not fetch FUND balances for account {AccountId}",
                 account.Id);
         }
@@ -504,9 +560,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         {
             executions = await _bybitService.GetExecutionHistoryAsync(apiKey, apiSecret, region, order.OrderId, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException
+            && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
         {
-            _logger.LogWarning(ex, "Bybit historical import: execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
+            _logger.LogDebug(ex, "Bybit historical execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
         }
 
         return await _orderSyncService.ProcessOrderAsync(
@@ -583,9 +640,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                             account.ExternalId);
                         balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OperationCanceledException
+                        && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
                     {
-                        _logger.LogWarning(ex, "Bybit sync: failed to fetch {AccountType} {Coin} balance for account {AccountId}",
+                        _logger.LogDebug(ex, "Bybit sync: failed to fetch {AccountType} {Coin} balance for account {AccountId}",
                             accountType, coin, account.Id);
                     }
                 }
@@ -593,9 +651,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
             await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException
+            && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
         {
-            _logger.LogWarning(ex, "Bybit sync: failed to fetch initial cash balance for account {AccountId}", account.Id);
+            _logger.LogDebug(ex, "Bybit sync: failed to fetch initial cash balance for account {AccountId}", account.Id);
         }
     }
 
@@ -609,5 +668,53 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         {
             _logger.LogError(error, "Bybit sync: failed to persist error status for account {AccountId}", account.Id);
         }
+    }
+
+    private async Task PauseForPermanentCredentialFailureAsync(
+        Account account,
+        BybitApiFailure failure,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        var integration = await _context.ExchangeIntegrations
+            .SingleOrDefaultAsync(item => item.UserId == account.UserId && item.Exchange == "Bybit", cancellationToken);
+        if (integration is null || !integration.Enabled)
+            return;
+
+        if (!integration.RecordPermanentCredentialFailure(
+                failure.Code ?? "credential-rejected",
+                message,
+                failure.Endpoint ?? "Bybit API request",
+                account.Id,
+                DateTime.UtcNow))
+            return;
+
+        await _context.SaveChangesAsync(cancellationToken);
+        BybitCredentialReader.Invalidate(_keyVaultService, account.UserId, null);
+        var accountIds = await _context.Accounts
+            .Where(candidate => candidate.UserId == account.UserId
+                && !candidate.IsDeleted
+                && candidate.AccountType == EAccountType.Exchange
+                && candidate.Exchange == "Bybit")
+            .Select(candidate => candidate.Id)
+            .ToListAsync(cancellationToken);
+        foreach (var accountId in accountIds)
+            BybitCredentialReader.Invalidate(_keyVaultService, account.UserId, accountId);
+
+        _logger.LogError(
+            "Bybit integration automatically paused after permanent credential error for user {UserId}, account {AccountId}, error code {ErrorCode}, endpoint {Endpoint}",
+            account.UserId,
+            account.Id,
+            integration.LastErrorCode,
+            integration.LastErrorEndpoint);
+    }
+
+    private async Task<bool> IsIntegrationEnabledAsync(int userId, CancellationToken cancellationToken)
+    {
+        var enabled = await _context.ExchangeIntegrations
+            .Where(integration => integration.UserId == userId && integration.Exchange == "Bybit")
+            .Select(integration => (bool?)integration.Enabled)
+            .SingleOrDefaultAsync(cancellationToken);
+        return enabled ?? true;
     }
 }

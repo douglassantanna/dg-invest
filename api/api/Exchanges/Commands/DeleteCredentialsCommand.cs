@@ -34,7 +34,7 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
 
         if (account == null)
         {
-            _logger.LogError("DeleteCredentials: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
+            _logger.LogWarning("DeleteCredentials: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
             return new Response("Account not found", false, 404);
         }
 

@@ -31,7 +31,7 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account is null)
         {
-            _logger.LogError("GetAccountDetailsQueryHandler: Account not found for user {UserId}", request.UserId);
+            _logger.LogWarning("GetAccountDetailsQueryHandler: Account not found for user {UserId}", request.UserId);
             return new Response("Account not found", false, 404);
         }
 

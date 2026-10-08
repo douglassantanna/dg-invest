@@ -6,6 +6,8 @@ using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Models;
 using api.Exchanges.Services;
+using api.Services.Contracts;
+using api.Users.Models;
 using functions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +18,97 @@ namespace unit_tests.FunctionsTests;
 
 public class SyncBybitOrdersTests
 {
+    [Fact]
+    public async Task Run_AfterTenConsecutiveTransportFailures_PausesOnlyAffectedUserAndNotifiesOnce()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        using var context = new DataContext(options);
+        var failingUser = new User("Failing User", "failing@example.com", "hash", Role.User);
+        var healthyUser = new User("Healthy User", "healthy@example.com", "hash", Role.User);
+        context.Users.AddRange(failingUser, healthyUser);
+        await context.SaveChangesAsync();
+
+        var failingAccount = new Account("Failing Bybit", failingUser.Id, EAccountType.Exchange, "Bybit", "UID-FAIL");
+        var healthyAccount = new Account("Healthy Bybit", healthyUser.Id, EAccountType.Exchange, "Bybit", "UID-OK");
+        var failingIntegration = new ExchangeIntegration(failingUser.Id, "Bybit");
+        var healthyIntegration = new ExchangeIntegration(healthyUser.Id, "Bybit");
+        context.AddRange(failingAccount, healthyAccount, failingIntegration, healthyIntegration);
+        await context.SaveChangesAsync();
+
+        var failingStatus = new SyncStatus(failingUser.Id, failingAccount.Id, "Bybit");
+        var healthyStatus = new SyncStatus(healthyUser.Id, healthyAccount.Id, "Bybit");
+        failingStatus.EnableForCredentials();
+        healthyStatus.EnableForCredentials();
+        context.AddRange(failingStatus, healthyStatus);
+        await context.SaveChangesAsync();
+
+        var secrets = new Dictionary<string, string>
+        {
+            [BybitCredentialKeys.LegacyAccountKey(failingUser.Id, failingAccount.Id, "api-key")] = "failing-key",
+            [BybitCredentialKeys.LegacyAccountKey(failingUser.Id, failingAccount.Id, "api-secret")] = "failing-secret",
+            [BybitCredentialKeys.LegacyAccountKey(healthyUser.Id, healthyAccount.Id, "api-key")] = "healthy-key",
+            [BybitCredentialKeys.LegacyAccountKey(healthyUser.Id, healthyAccount.Id, "api-secret")] = "healthy-secret"
+        };
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(service => service.GetSecretReadResultAsync(It.IsAny<string>()))
+            .Returns((string key) => Task.FromResult(secrets.TryGetValue(key, out var secret)
+                ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, secret)
+                : new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound)));
+
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(service => service.GetOrderHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        bybitService.Setup(service => service.GetDepositHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .Returns((string key, string _, BybitRegion _, int? _, long? _, CancellationToken _, long? _) =>
+                key == "failing-key"
+                    ? Task.FromException<List<BybitDepositWithdrawalRow>>(
+                        new BybitTransportException("/v5/asset/deposit/query-record", new HttpRequestException("connection reset")))
+                    : Task.FromResult(new List<BybitDepositWithdrawalRow>()));
+        bybitService.Setup(service => service.GetWithdrawalHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        bybitService.Setup(service => service.GetInternalTransferHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var emailService = new Mock<IEmailService>();
+        emailService.Setup(service => service.SendBybitIntegrationPausedAlertAsync(It.IsAny<BybitIntegrationPausedAlert>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var function = CreateFunction(
+            bybitService.Object,
+            Mock.Of<IBybitOrderSyncService>(),
+            keyVault.Object,
+            context,
+            emailService.Object);
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(item => item.CancellationToken).Returns(CancellationToken.None);
+
+        for (var attempt = 0; attempt < ExchangeIntegration.TransportFailurePauseThreshold; attempt++)
+            await function.Run(null!, functionContext.Object);
+
+        var paused = await context.ExchangeIntegrations.SingleAsync(item => item.UserId == failingUser.Id);
+        paused.Enabled.Should().BeFalse();
+        paused.Status.Should().Be(ExchangeIntegration.AutoPausedStatus);
+        paused.ConsecutiveTransportFailures.Should().Be(ExchangeIntegration.TransportFailurePauseThreshold);
+        (await context.ExchangeIntegrations.SingleAsync(item => item.UserId == healthyUser.Id)).Enabled.Should().BeTrue();
+        bybitService.Verify(service => service.GetDepositHistoryAsync(
+            "failing-key", "failing-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Exactly(10));
+        emailService.Verify(service => service.SendBybitIntegrationPausedAlertAsync(
+            It.Is<BybitIntegrationPausedAlert>(alert => alert.UserId == failingUser.Id && alert.UserEmail == failingUser.Email),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        await function.Run(null!, functionContext.Object);
+
+        bybitService.Verify(service => service.GetDepositHistoryAsync(
+            "failing-key", "failing-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Exactly(10));
+        keyVault.Verify(service => service.GetSecretReadResultAsync(
+            BybitCredentialKeys.LegacyAccountKey(failingUser.Id, failingAccount.Id, "api-key")), Times.Exactly(10));
+        emailService.Verify(service => service.SendBybitIntegrationPausedAlertAsync(It.IsAny<BybitIntegrationPausedAlert>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task Run_WithAccountCredentials_UsesCanonicalAccountKeysOverIntegrationKeys()
     {
@@ -442,12 +535,14 @@ public class SyncBybitOrdersTests
 
         orderSyncService.Verify(x => x.MarkSyncStatusErrorAsync(1, account.Id,
             "Bybit rejected sync request: 10003 - API key is invalid", It.IsAny<CancellationToken>()), Times.Once);
+        integration.Status.Should().Be(ExchangeIntegration.AutoPausedStatus);
+        integration.Enabled.Should().BeFalse();
          bybitService.Verify(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
          bybitService.Verify(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Run_WhenUniversalTransferCredentialsAreRejected_ShouldMarkIntegrationErrorAndContinue()
+    public async Task Run_WhenUniversalTransferCredentialsAreRejected_ShouldAutoPauseIntegrationImmediately()
     {
         var options = new DbContextOptionsBuilder<DataContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -479,8 +574,8 @@ public class SyncBybitOrdersTests
 
         await function.Run(null!, functionContext.Object);
 
-        integration.Status.Should().Be("Error");
-        integration.Enabled.Should().BeTrue();
+        integration.Status.Should().Be(ExchangeIntegration.AutoPausedStatus);
+        integration.Enabled.Should().BeFalse();
     }
 
     [Fact]
@@ -541,7 +636,8 @@ public class SyncBybitOrdersTests
         IBybitService bybitService,
         IBybitOrderSyncService orderSyncService,
         IKeyVaultService keyVaultService,
-        DataContext context)
+        DataContext context,
+        IEmailService? emailService = null)
     {
         Mock.Get(bybitService).Setup(service => service.GetWalletBalanceAsync(
                 It.IsAny<string>(),
@@ -565,7 +661,8 @@ public class SyncBybitOrdersTests
             keyVaultService,
             context,
             Mock.Of<ILogger<SyncBybitOrders>>(),
-            EnabledConfiguration());
+            EnabledConfiguration(),
+            emailService ?? Mock.Of<IEmailService>());
     }
 
     private static BybitAccountCoinBalanceResponse AccountCoinBalance(string accountType, string coin, string balance, string memberId = "") => new()

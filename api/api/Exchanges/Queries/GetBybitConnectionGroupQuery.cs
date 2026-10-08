@@ -1,6 +1,7 @@
 using api.AzureKeyVault;
 using api.Data;
 using api.Exchanges.Commands;
+using api.Exchanges.Models;
 using api.Exchanges.Services;
 using api.Shared;
 using MediatR;
@@ -15,7 +16,15 @@ public record BybitConnectionGroupDto(
     string Name,
     int SubaccountCount,
     int MaxSubaccounts,
-    List<BybitSubaccountRowDto> Subaccounts);
+    List<BybitSubaccountRowDto> Subaccounts,
+    string IntegrationStatus = "NotSetup",
+    bool IntegrationEnabled = false,
+    int ConsecutiveTransportFailures = 0,
+    string? LastErrorCode = null,
+    string? LastErrorMessage = null,
+    string? LastErrorEndpoint = null,
+    int? LastErrorAccountId = null,
+    DateTime? AutoPausedAt = null);
 
 public record BybitSubaccountRowDto(
     int AccountId,
@@ -49,8 +58,8 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
     {
         var integration = await _context.ExchangeIntegrations
             .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Exchange == "Bybit", cancellationToken);
-        if (integration != null && !integration.Enabled)
-            return new Response("ok", true, EmptyGroup());
+        if (integration != null && !integration.Enabled && integration.Status != ExchangeIntegration.AutoPausedStatus)
+            return new Response("ok", true, EmptyGroup(integration));
 
         var accounts = await _context.Accounts
             .Where(a => a.UserId == request.UserId && !a.IsDeleted && a.Enabled
@@ -67,19 +76,35 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
         foreach (var account in accounts)
         {
-            var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
-            var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
-            var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
-
-            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
-                return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
-
-            var hasApiKey = apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value);
-            var hasApiSecret = apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value);
-            var hasWebhookSecret = webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value);
-
             var syncStatus = syncStatuses
                 .FirstOrDefault(s => s.AccountId == account.Id);
+
+            var hasApiKey = false;
+            var hasApiSecret = false;
+            var hasWebhookSecret = false;
+            string? apiKeyValue = null;
+            if (integration?.Status == ExchangeIntegration.AutoPausedStatus)
+            {
+                // A paused connection must remain inspectable without causing more Key Vault reads.
+                var credentialsWereConfigured = syncStatus?.BybitCredentialsSetAt is not null
+                    || integration?.MasterAccountId == account.Id;
+                hasApiKey = credentialsWereConfigured;
+                hasApiSecret = credentialsWereConfigured;
+            }
+            else
+            {
+                var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
+                var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
+                var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
+
+                if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                    return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
+
+                hasApiKey = apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value);
+                hasApiSecret = apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value);
+                hasWebhookSecret = webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value);
+                apiKeyValue = apiKey.Value;
+            }
 
             var hasAnyCredentials = hasApiKey || hasApiSecret || hasWebhookSecret;
 
@@ -97,8 +122,8 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
             else
                 status = "pending";
 
-            var maskedApiKey = hasApiKey && apiKey.Value!.Length > 4
-                ? "...." + apiKey.Value[^4..]
+            var maskedApiKey = hasApiKey && apiKeyValue is { Length: > 4 }
+                ? "...." + apiKeyValue[^4..]
                 : null;
 
             var webhookUrl = hasWebhookSecret
@@ -129,19 +154,35 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
             Name: "Main account (Bybit login)",
             SubaccountCount: rows.Count(row => !row.IsMaster),
             MaxSubaccounts: maxSubaccounts,
-            Subaccounts: rows);
+            Subaccounts: rows,
+            IntegrationStatus: integration?.Status ?? "NotSetup",
+            IntegrationEnabled: integration?.Enabled ?? false,
+            ConsecutiveTransportFailures: integration?.ConsecutiveTransportFailures ?? 0,
+            LastErrorCode: integration?.LastErrorCode,
+            LastErrorMessage: integration?.LastErrorMessage,
+            LastErrorEndpoint: integration?.LastErrorEndpoint,
+            LastErrorAccountId: integration?.LastErrorAccountId,
+            AutoPausedAt: integration?.AutoPausedAt);
 
         return new Response("ok", true, new List<BybitConnectionGroupDto> { group });
     }
 
-    private static List<BybitConnectionGroupDto> EmptyGroup() =>
+    private static List<BybitConnectionGroupDto> EmptyGroup(ExchangeIntegration? integration = null) =>
     [
         new(
             Id: "bybit-main",
             Name: "Main account (Bybit login)",
             SubaccountCount: 0,
             MaxSubaccounts: 10,
-            Subaccounts: [])
+            Subaccounts: [],
+            IntegrationStatus: integration?.Status ?? "NotSetup",
+            IntegrationEnabled: integration?.Enabled ?? false,
+            ConsecutiveTransportFailures: integration?.ConsecutiveTransportFailures ?? 0,
+            LastErrorCode: integration?.LastErrorCode,
+            LastErrorMessage: integration?.LastErrorMessage,
+            LastErrorEndpoint: integration?.LastErrorEndpoint,
+            LastErrorAccountId: integration?.LastErrorAccountId,
+            AutoPausedAt: integration?.AutoPausedAt)
     ];
 
     private static string FormatRelativeTime(DateTime utc)

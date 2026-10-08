@@ -37,7 +37,7 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogError("SelectAccountCommandHandler. Validation failed: {0}", errors);
+            _logger.LogWarning("SelectAccountCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
@@ -46,7 +46,7 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
                                  .FirstOrDefaultAsync(a => a.Id == request.UserId, cancellationToken);
         if (user == null)
         {
-            _logger.LogError("SelectAccountCommandHandler. User not found: {0}", request.UserId);
+            _logger.LogWarning("SelectAccountCommandHandler. User not found: {0}", request.UserId);
             return new Response("User not found", false, 404);
         }
 

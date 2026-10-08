@@ -37,7 +37,7 @@ public class ProcessBybitOrdersCommandHandler : IRequestHandler<ProcessBybitOrde
 
         if (account == null)
         {
-            _logger.LogError("ProcessBybitOrders: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
+            _logger.LogWarning("ProcessBybitOrders: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
             await _orderSyncService.MarkSyncStatusErrorAsync(request.UserId, request.AccountId, "Account not found", cancellationToken);
             return new Response("Account not found", false, 404);
         }

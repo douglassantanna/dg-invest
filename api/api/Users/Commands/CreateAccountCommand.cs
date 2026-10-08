@@ -29,7 +29,7 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
             var userResult = await _userRepository.GetByIdAsync(request.UserId, x => x.Include(x => x.Accounts));
             if (!userResult.IsSuccess)
             {
-                _logger.LogError("CreateAccountCommandHandler. User not found for UserId: {0}", request.UserId);
+                _logger.LogWarning("CreateAccountCommandHandler. User not found for UserId: {0}", request.UserId);
                 return new Response("User not found", false, 404);
             }
             var createAccountResult = userResult.Value.AddAccount(request.Name);

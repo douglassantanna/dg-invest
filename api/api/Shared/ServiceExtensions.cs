@@ -136,6 +136,7 @@ public static class ServiceExtensions
         services.AddScoped<ITransactionStrategy, TransferInTransaction>();
         services.AddScoped<ITransactionStrategy, TransferOutTransaction>();
         services.AddSingleton<IJWTService, JWTService>();
+        services.AddMemoryCache();
         services.AddScoped<ICacheService, MemoryCacheService>();
         services.AddScoped<IKeyVaultService, KeyVaultService>();
         services.Configure<HealthPingOptions>(config.GetSection(nameof(HealthPingOptions)));

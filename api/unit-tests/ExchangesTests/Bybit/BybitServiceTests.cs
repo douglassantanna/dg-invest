@@ -295,6 +295,18 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetDepositHistoryAsync_WhenRequestFailsDuringSend_ShouldThrowClassifiedTransportException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.SimulateTimeout();
+
+        var exception = await Assert.ThrowsAsync<BybitTransportException>(() =>
+            _sut.GetDepositHistoryAsync("api-key", "api-secret"));
+
+        exception.Endpoint.Should().Be("/v5/asset/deposit/query-record");
+    }
+
+    [Fact]
     public async Task GetWithdrawalHistoryAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
     {
         using var httpTest = new HttpTest();

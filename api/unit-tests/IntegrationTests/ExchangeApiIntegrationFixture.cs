@@ -9,6 +9,7 @@ using api.CoinMarketCap.Service;
 using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Services;
+using api.Services.Contracts;
 using api.Users.Models;
 using functions;
 using Microsoft.Azure.Functions.Worker;
@@ -80,7 +81,8 @@ public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
             scope.ServiceProvider.GetRequiredService<ILogger<SyncBybitOrders>>(),
             new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { ["BybitSync:Enabled"] = "true" })
-                .Build());
+                .Build(),
+            scope.ServiceProvider.GetRequiredService<IEmailService>());
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(context => context.CancellationToken).Returns(CancellationToken.None);
 
@@ -220,6 +222,10 @@ public sealed class InMemoryKeyVault : IKeyVaultService
     {
         _secrets.Remove(secretName);
         return Task.CompletedTask;
+    }
+
+    public void InvalidateCachedSecret(string secretName)
+    {
     }
 }
 

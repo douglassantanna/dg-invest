@@ -72,7 +72,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogError("DepositFundCommandHandler. Validation failed: {0}", errors);
+            _logger.LogWarning("DepositFundCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
@@ -82,7 +82,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                                             .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {
-            _logger.LogError("DepositFundCommandHandler. Account from UserId {0} not found.", request.UserId);
+            _logger.LogWarning("DepositFundCommandHandler. Account from UserId {0} not found.", request.UserId);
             return new Response("Account not found", false, 404);
         }
 
@@ -94,14 +94,14 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
             var newAccountTransaction = CreateAccountTransaction(request, date, accountTransactionType, account.CryptoAssets);
             if (newAccountTransaction == null)
             {
-                _logger.LogError("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
+                _logger.LogWarning("DepositFundCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
                 return new Response("Crypto asset not found", false, 404);
             }
 
             var response = _transactionService.ExecuteTransaction(account, newAccountTransaction);
             if (!response.IsSuccess)
             {
-                _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);
+                _logger.LogWarning("DepositFundCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
 
@@ -115,7 +115,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         }
         catch (Exception ex)
         {
-            _logger.LogError("DepositFundCommandHandler. Error adding transaction: {0}", ex.Message);
+            _logger.LogError(ex, "DepositFundCommandHandler. Unexpected error adding transaction");
             return new Response(ex.Message, false);
         }
     }

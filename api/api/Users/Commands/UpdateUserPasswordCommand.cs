@@ -40,20 +40,20 @@ public class UpdateUserPasswordCommandHandler : IRequestHandler<UpdateUserPasswo
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogError("UpdateUserPasswordCommandHandler. Validation failed: {0}", errors);
+            _logger.LogWarning("UpdateUserPasswordCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed!", false, new { validationErrors = validationResult.Errors.Select(x => x.ErrorMessage).ToList(), HttpStatusCode = HttpStatusCode.BadRequest });
         }
 
         var userResult = await _userRepository.GetByIdAsync(request.UserId);
         if (!userResult.IsSuccess)
         {
-            _logger.LogError("UpdateUserPasswordCommandHandler. User not found: {0}", request.UserId);
+            _logger.LogWarning("UpdateUserPasswordCommandHandler. User not found: {0}", request.UserId);
             return new Response("User not found!", false, new { HttpStatusCode = HttpStatusCode.NotFound });
         }
 
         if (!_passwordHelper.VerifyPassword(request.CurrentPassword, userResult.Value.Password ?? string.Empty))
         {
-            _logger.LogError("UpdateUserPasswordCommandHandler. Password for user {0} is incorrect", request.UserId);
+            _logger.LogWarning("UpdateUserPasswordCommandHandler. Password for user {0} is incorrect", request.UserId);
             return new Response("Current password is incorrect", false);
         }
 

@@ -15,6 +15,8 @@ public static class BybitCredentialKeys
 
 public static class BybitCredentialReader
 {
+    private static readonly string[] CacheableCredentialSuffixes = ["api-key", "api-secret", "webhook-secret"];
+
     public static async Task<KeyVaultSecretReadResult> ReadAsync(IKeyVaultService vault, int userId, int? accountId, string suffix, CancellationToken cancellationToken = default, ILogger? logger = null)
     {
         var name = accountId is { } id
@@ -22,6 +24,17 @@ public static class BybitCredentialReader
             : BybitCredentialKeys.LegacyIntegrationKey(userId, suffix);
         logger?.LogInformation("BybitCredentialReader resolved secret name {SecretName} for suffix {Suffix}", name, suffix);
         return await vault.GetSecretReadResultAsync(name);
+    }
+
+    public static void Invalidate(IKeyVaultService vault, int userId, int? accountId)
+    {
+        foreach (var suffix in CacheableCredentialSuffixes)
+        {
+            var name = accountId is { } id
+                ? BybitCredentialKeys.LegacyAccountKey(userId, id, suffix)
+                : BybitCredentialKeys.LegacyIntegrationKey(userId, suffix);
+            vault.InvalidateCachedSecret(name);
+        }
     }
 }
 

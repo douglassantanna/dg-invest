@@ -2,6 +2,7 @@ using api.AzureStorage;
 using api.AzureStorage.Blob;
 using api.CoinMarketCap.Service;
 using api.Exchanges.Bybit;
+using api.Exchanges.Models;
 using api.Exchanges.Services;
 using Microsoft.Extensions.Options;
 
@@ -100,6 +101,33 @@ public class BybitOrderSyncServiceTests
         transaction.FeeCurrency.Should().Be("BTC");
         transaction.FeeQuoteValue.Should().Be(0.00125m);
         currentAccount.Balance.Should().Be(99_997.99875m);
+    }
+
+    [Fact]
+    public async Task ProcessOrderAsync_WritesOnlyFailedSyncEventsToBlob()
+    {
+        using var context = CreateContext();
+        var account = new Account("Current", 1, EAccountType.Exchange, "Bybit", "UID-CURRENT");
+        account.AddCryptoAsset(new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1)).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var blob = new Mock<IBlobStorageService>();
+        blob.Setup(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SyncLogEntry>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(context, blob.Object);
+        await service.ProcessOpeningBalanceAsync(account, 1, 1_000m, CancellationToken.None);
+
+        var success = await service.ProcessOrderAsync(Order("success-order", "Buy", "100", "1", "2026-07-01T00:00:00Z"), account, 1,
+            "RestPoll", CancellationToken.None);
+        var failure = await service.ProcessOrderAsync(Order("bad-order", "Buy", "not-a-price", "1", "2026-07-02T00:00:00Z"), account, 1,
+            "RestPoll", CancellationToken.None);
+
+        success.Should().BeTrue();
+        failure.Should().BeFalse();
+        blob.Verify(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(),
+            It.Is<SyncLogEntry>(entry => entry.Status == "Failed"), It.IsAny<CancellationToken>()), Times.Once);
+        blob.Verify(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(),
+            It.Is<SyncLogEntry>(entry => entry.Status == "Success" || entry.Status == "Duplicate" || entry.Status == "Skipped"), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -471,7 +499,7 @@ public class BybitOrderSyncServiceTests
             CreatedTime = DateTimeOffset.Parse(createdTime).ToUnixTimeMilliseconds().ToString()
         };
 
-    private static BybitOrderSyncService CreateService(DataContext context)
+    private static BybitOrderSyncService CreateService(DataContext context, IBlobStorageService? blobStorageOverride = null)
     {
         var transactionService = new TransactionService([
             new FiatDepositTransaction(Mock.Of<ILogger<FiatDepositTransaction>>()),
@@ -481,14 +509,19 @@ public class BybitOrderSyncServiceTests
             new BuyTransaction(Mock.Of<ILogger<BuyTransaction>>()),
             new SellTransaction(Mock.Of<ILogger<SellTransaction>>())
         ]);
-        var blobStorage = new Mock<IBlobStorageService>();
-        blobStorage.Setup(x => x.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        var blobStorage = blobStorageOverride;
+        if (blobStorage is null)
+        {
+            var blobStorageMock = new Mock<IBlobStorageService>();
+            blobStorageMock.Setup(x => x.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            blobStorage = blobStorageMock.Object;
+        }
 
         return new BybitOrderSyncService(
             Mock.Of<ICoinMarketCapService>(),
             transactionService,
-            blobStorage.Object,
+            blobStorage,
             Options.Create(new AzureStorageSettings()),
             context,
             Mock.Of<ILogger<BybitOrderSyncService>>(),
