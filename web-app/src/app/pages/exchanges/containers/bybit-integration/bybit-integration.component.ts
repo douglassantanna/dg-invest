@@ -37,7 +37,6 @@ export class BybitIntegrationComponent implements OnInit {
   saving = false;
   discovering = false;
   disconnecting = false;
-  resuming = false;
   loadError = '';
   toastMessage = '';
 
@@ -91,6 +90,11 @@ export class BybitIntegrationComponent implements OnInit {
 
   connect(): void {
     if (this.saving || this.discovering) return;
+    if (this.isAutoPaused) {
+      this.loadError = 'Bybit synchronization is paused. Review the error, disconnect Bybit, then reconnect after correcting the issue.';
+      return;
+    }
+
     this.saving = true;
     this.loadError = '';
     this.exchangeService.saveBybitIntegrationCredentials(this.apiKey, this.apiSecret, this.masterUid, this.region)
@@ -102,8 +106,7 @@ export class BybitIntegrationComponent implements OnInit {
           this.loadError = response.message;
           return;
         }
-        if (this.isAutoPaused) this.resumeIntegration(true);
-        else this.discover(true);
+        this.discover(true);
       },
       error: error => {
         this.saving = false;
@@ -147,33 +150,6 @@ export class BybitIntegrationComponent implements OnInit {
       error: error => {
         this.disconnecting = false;
         this.toast(this.errorMessage(error, 'Could not disconnect Bybit'));
-      },
-    });
-  }
-
-  resume(): void {
-    this.resumeIntegration(false);
-  }
-
-  private resumeIntegration(discoverAfterResume: boolean): void {
-    if (this.resuming) return;
-    this.resuming = true;
-    this.loadError = '';
-    this.exchangeService.resumeBybitIntegration().subscribe({
-      next: response => {
-        this.resuming = false;
-        if (!response.isSuccess) {
-          this.loadError = response.message || 'Bybit connection test failed';
-          return;
-        }
-
-        this.toast(response.message);
-        if (discoverAfterResume) this.discover(true);
-        else this.load();
-      },
-      error: error => {
-        this.resuming = false;
-        this.loadError = this.errorMessage(error, 'Could not resume Bybit synchronization');
       },
     });
   }
