@@ -42,10 +42,6 @@ export class ExchangeService {
     return this.http.post<Response<any>>(`${url}/bybit/disconnect`, {});
   }
 
-  resumeBybitIntegration(): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/resume`, {});
-  }
-
   syncBybitAccounts(): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/sync-accounts`, {});
   }

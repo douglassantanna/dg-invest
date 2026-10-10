@@ -78,21 +78,6 @@ public class ExchangeIntegrationAutoPauseTests
     }
 
     [Fact]
-    public void ResumeAfterReview_ClearsPauseAndFailureState()
-    {
-        var integration = new ExchangeIntegration(1, "Bybit");
-        integration.RecordPermanentCredentialFailure("10003", "Invalid API key", "/v5/order/history", 27, DateTime.UtcNow);
-
-        integration.ResumeAfterReview();
-
-        integration.Enabled.Should().BeTrue();
-        integration.Status.Should().Be("Configured");
-        integration.ConsecutiveTransportFailures.Should().Be(0);
-        integration.AutoPausedAt.Should().BeNull();
-        integration.LastErrorCode.Should().BeNull();
-    }
-
-    [Fact]
     public void PauseNotification_WhenRepeatedlyUnsent_AllowsOnlyThreeAttemptsOneMinuteApart()
     {
         var integration = new ExchangeIntegration(1, "Bybit");
