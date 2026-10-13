@@ -129,13 +129,6 @@ public class ExchangeIntegration : Entity
         LastErrorAt = occurredAt;
     }
 
-    public void ResumeAfterReview()
-    {
-        Enabled = true;
-        Status = "Configured";
-        ClearPauseState();
-    }
-
     public bool CanAttemptPauseNotification(DateTime now)
         => Status == AutoPausedStatus
             && PauseNotificationSentAt is null
