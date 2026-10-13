@@ -244,6 +244,8 @@ public sealed class FakeBybitService : IBybitService
 
     public string? LastApiKey { get; set; }
     public BybitRegion? LastRegion { get; set; }
+    public string? LastTestConnectionApiKey { get; private set; }
+    public BybitRegion? LastTestConnectionRegion { get; private set; }
     public BybitApiException? SubAccountsError { get; set; }
     public List<BybitOrderData> OrderHistory { get; } = [];
     public Dictionary<string, List<BybitExecutionData>> ExecutionsByOrderId { get; } = new(StringComparer.Ordinal);
@@ -338,5 +340,10 @@ public sealed class FakeBybitService : IBybitService
             }
         });
     }
-    public Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global) => Task.FromResult(true);
+    public Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)
+    {
+        LastTestConnectionApiKey = apiKey;
+        LastTestConnectionRegion = region;
+        return Task.FromResult(true);
+    }
 }

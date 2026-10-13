@@ -20,6 +20,10 @@ export class ExchangeService {
     return this.http.post<Response<any>>(`${url}/bybit/integration-credentials`, { apiKey, apiSecret, masterUid, region });
   }
 
+  testBybitIntegrationConnection(): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/test-integration-connection`, {});
+  }
+
   saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
     return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId, region });
   }

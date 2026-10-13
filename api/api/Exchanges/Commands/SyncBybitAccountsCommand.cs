@@ -100,8 +100,16 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 ? await _context.Accounts.SingleOrDefaultAsync(a => a.Id == masterAccountId && !a.IsDeleted, cancellationToken)
                 : null;
             if (masterAccount is not null)
+            {
+                if (!masterAccount.Enabled)
+                {
+                    masterAccount.Enable();
+                    _logger.LogInformation("SyncBybitAccounts: re-enabled linked master account {AccountId} after successful discovery", masterAccount.Id);
+                }
+
                 await PopulateInitialCashBalanceAsync(masterAccount, apiKey.Value!, apiSecret.Value!, region,
                     [("FUND", null), ("UNIFIED", null)], cancellationToken);
+            }
             else
             {
                 var legacyMainAccount = await _context.Accounts
