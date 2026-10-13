@@ -44,7 +44,27 @@ public class TestBybitIntegrationConnectionCommandHandler(
         try
         {
             if (await bybitService.TestConnectionAsync(apiKey.Value, apiSecret.Value, region))
-                return new Response("Bybit integration connection successful", true, new { verifiedAt = DateTime.UtcNow });
+            {
+                var verifiedAt = DateTime.UtcNow;
+                if (integration.MasterAccountId is { } masterAccountId)
+                {
+                    var syncStatus = await context.SyncStatuses
+                        .SingleOrDefaultAsync(status => status.UserId == request.UserId
+                            && status.AccountId == masterAccountId
+                            && status.ExchangeName == "Bybit", cancellationToken);
+                    if (syncStatus is not null)
+                    {
+                        syncStatus.MarkVerified(verifiedAt);
+                        await context.SaveChangesAsync(cancellationToken);
+                    }
+                }
+
+                return new Response("Bybit integration connection successful", true, new { verifiedAt });
+            }
+        }
+        catch (BybitTransportException ex)
+        {
+            return new Response($"Bybit is temporarily unavailable while testing the integration connection ({ex.Endpoint}). Please try again.", false, 503);
         }
         catch (BybitApiException ex)
         {

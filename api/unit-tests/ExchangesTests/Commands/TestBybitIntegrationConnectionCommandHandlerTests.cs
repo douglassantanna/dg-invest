@@ -13,11 +13,18 @@ public class TestBybitIntegrationConnectionCommandHandlerTests
     public async Task Handle_WhenIntegrationCredentialsAreValid_TestsIntegrationKeyAndRegion()
     {
         using var context = CreateContext();
+        var masterAccount = new Account("Bybit master", 7, api.Cryptos.Models.EAccountType.Exchange, "Bybit", "900001");
+        context.Accounts.Add(masterAccount);
+        await context.SaveChangesAsync();
         var integration = new ExchangeIntegration(7, "Bybit");
+        integration.LinkMasterAccount(masterAccount.Id);
         integration.SetRegion("Eu");
         integration.MarkConfigured();
         integration.MarkEnabled();
         context.ExchangeIntegrations.Add(integration);
+        var syncStatus = new SyncStatus(7, masterAccount.Id, "Bybit");
+        syncStatus.EnableForCredentials();
+        context.SyncStatuses.Add(syncStatus);
         await context.SaveChangesAsync();
         var keyVault = IntegrationCredentialVault(7);
         var bybit = new Mock<IBybitService>();
@@ -29,6 +36,7 @@ public class TestBybitIntegrationConnectionCommandHandlerTests
 
         response.IsSuccess.Should().BeTrue();
         bybit.Verify(service => service.TestConnectionAsync("integration-key", "integration-secret", BybitRegion.Eu), Times.Once);
+        (await context.SyncStatuses.AsNoTracking().SingleAsync()).LastVerifiedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -67,6 +75,25 @@ public class TestBybitIntegrationConnectionCommandHandlerTests
         response.IsSuccess.Should().BeFalse();
         response.Data.Should().Be(400);
         response.Message.Should().Contain("10003 - API key is invalid");
+    }
+
+    [Fact]
+    public async Task Handle_WhenBybitTransportFails_Returns503ForRetry()
+    {
+        using var context = CreateContext();
+        context.ExchangeIntegrations.Add(new ExchangeIntegration(7, "Bybit"));
+        await context.SaveChangesAsync();
+        var keyVault = IntegrationCredentialVault(7);
+        var bybit = new Mock<IBybitService>();
+        bybit.Setup(service => service.TestConnectionAsync("integration-key", "integration-secret", It.IsAny<BybitRegion>()))
+            .ThrowsAsync(new BybitTransportException("/v5/account/info", new HttpRequestException("Connection timed out")));
+        var handler = new TestBybitIntegrationConnectionCommandHandler(context, keyVault.Object, bybit.Object);
+
+        var response = await handler.Handle(new TestBybitIntegrationConnectionCommand(7), CancellationToken.None);
+
+        response.IsSuccess.Should().BeFalse();
+        response.Data.Should().Be(503);
+        response.Message.Should().Contain("temporarily unavailable");
     }
 
     private static Mock<IKeyVaultService> IntegrationCredentialVault(int userId)

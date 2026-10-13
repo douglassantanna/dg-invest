@@ -1010,6 +1010,7 @@ public class ExchangeControllerIntegrationTests
             apiKey = "integration-api-key",
             apiSecret = "integration-api-secret",
             region = "Eu",
+            masterUid = "900003",
         });
         save.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -1019,6 +1020,9 @@ public class ExchangeControllerIntegrationTests
         (await response.Content.ReadAsStringAsync()).Should().Contain("Bybit integration connection successful");
         _fixture.Factory.Bybit.LastTestConnectionApiKey.Should().Be("integration-api-key");
         _fixture.Factory.Bybit.LastTestConnectionRegion.Should().Be(BybitRegion.Eu);
+        var groups = await client.GetAsync("/api/Exchange/bybit/connection-groups");
+        groups.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await groups.Content.ReadAsStringAsync()).Should().Contain("\"lastVerifiedAt\":\"");
     }
 
     [Fact]

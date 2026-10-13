@@ -93,6 +93,10 @@ public class BybitService : IBybitService
         {
             throw;
         }
+        catch (BybitTransportException)
+        {
+            throw;
+        }
         catch (FlurlHttpException ex)
         {
             var errorBody = await ex.GetResponseStringAsync();
