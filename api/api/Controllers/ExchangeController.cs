@@ -92,6 +92,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("bybit/test-integration-connection")]
+    public async Task<ActionResult<Response>> TestBybitIntegrationConnection()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new TestBybitIntegrationConnectionCommand(userId.Value));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
     [HttpPost("bybit/sync-accounts")]
     public async Task<ActionResult<Response>> SyncBybitAccounts()
     {

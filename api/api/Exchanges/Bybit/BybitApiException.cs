@@ -1,3 +1,5 @@
+using Flurl.Http;
+
 namespace api.Exchanges.Bybit;
 
 public class BybitApiException : Exception
@@ -67,6 +69,10 @@ public static class BybitApiFailureClassifier
 
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
+            if (current is FlurlHttpException { StatusCode: int statusCode }
+                && (statusCode == 408 || statusCode == 429 || statusCode >= 500))
+                return true;
+
             if (current is System.Net.Http.HttpRequestException
                 or System.Net.Sockets.SocketException
                 or TimeoutException)

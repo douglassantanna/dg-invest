@@ -150,6 +150,30 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task TestConnectionAsync_WhenRequestTimesOut_ShouldThrowClassifiedTransportException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.SimulateTimeout();
+
+        var exception = await Assert.ThrowsAsync<BybitTransportException>(() =>
+            _sut.TestConnectionAsync("api-key", "api-secret"));
+
+        exception.Endpoint.Should().Be("/v5/account/info");
+    }
+
+    [Fact]
+    public async Task TestConnectionAsync_WhenBybitReturnsServiceUnavailable_ShouldThrowClassifiedTransportException()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { message = "service unavailable" }, 503);
+
+        var exception = await Assert.ThrowsAsync<BybitTransportException>(() =>
+            _sut.TestConnectionAsync("api-key", "api-secret"));
+
+        exception.Endpoint.Should().Be("/v5/account/info");
+    }
+
+    [Fact]
     public async Task GetSubAccountsAsync_WhenBybitReturnsNonzeroRetCode_ShouldThrowBybitApiException()
     {
         using var httpTest = new HttpTest();

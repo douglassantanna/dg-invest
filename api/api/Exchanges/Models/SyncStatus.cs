@@ -69,8 +69,8 @@ public class SyncStatus : Entity
         MarkDisconnected();
     }
 
-    public void MarkVerified()
+    public void MarkVerified(DateTime? verifiedAt = null)
     {
-        LastVerifiedAt = DateTime.UtcNow;
+        LastVerifiedAt = verifiedAt ?? DateTime.UtcNow;
     }
 }

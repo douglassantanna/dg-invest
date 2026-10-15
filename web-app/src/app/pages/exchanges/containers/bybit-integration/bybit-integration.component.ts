@@ -106,7 +106,7 @@ export class BybitIntegrationComponent implements OnInit {
           this.loadError = response.message;
           return;
         }
-        this.discover(true);
+        this.testIntegrationConnection();
       },
       error: error => {
         this.saving = false;
@@ -133,6 +133,23 @@ export class BybitIntegrationComponent implements OnInit {
       },
       complete: () => {
         this.saving = false;
+      },
+    });
+  }
+
+  private testIntegrationConnection(): void {
+    this.exchangeService.testBybitIntegrationConnection().subscribe({
+      next: response => {
+        if (!response.isSuccess) {
+          this.saving = false;
+          this.loadError = response.message || 'Bybit rejected the integration credentials';
+          return;
+        }
+        this.discover(true);
+      },
+      error: error => {
+        this.saving = false;
+        this.loadError = this.errorMessage(error, 'Could not verify Bybit credentials');
       },
     });
   }
