@@ -14,6 +14,8 @@ import { ModalComponent } from 'src/app/layout/modal/modal.component';
 import { LineChartComponent } from '../../components/line-chart/line-chart.component';
 import { PortfolioCardComponent } from '../../components/portfolio-card/portfolio-card.component';
 import { LayoutService } from 'src/app/core/services/layout.service';
+import { AccountSelectorStateService } from 'src/app/core/services/account-selector-state.service';
+import { UserCryptoAssetDto } from 'src/app/core/models/view-crypto-information';
 
 @Component({
   selector: 'app-view-cryptos',
@@ -33,6 +35,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   private layoutService = inject(LayoutService);
   private cryptoService = inject(CryptoService);
   private localStorageService = inject(LocalStorageService);
+  private accountState = inject(AccountSelectorStateService);
   private unsubscribe$: Subject<void> = new Subject<void>();
   cryptoAssetList = signal<ViewCryptoInformation[]>([]);
   hideZeroBalance: boolean = false;
@@ -45,6 +48,9 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalDeposited = signal(0);
   isModalOpen = signal(false);
   loading = signal(false);
+  accountSelectorReady = signal(false);
+  hasSelectedAccount = signal(false);
+  accountLoadError = this.accountState.errorMessage;
   isMobileMode = computed(() => this.layoutService.isMobile());
 
   ngOnDestroy() {
@@ -53,8 +59,25 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const params = this.getCryptoAssetParams();
-    this.loadCryptoAssets(params);
+    this.loading.set(true);
+    this.accountState.load().pipe(takeUntil(this.unsubscribe$)).subscribe({
+      next: () => {
+        const selectedAccount = this.accountState.selectedAccount();
+        this.accountSelectorReady.set(true);
+        if (!selectedAccount) {
+          this.loading.set(false);
+          return;
+        }
+
+        this.hasSelectedAccount.set(true);
+        this.cryptoService.accountTag.set(selectedAccount.accountName);
+        this.loadCryptoAssets(this.getCryptoAssetParams());
+      },
+      error: () => {
+        this.accountSelectorReady.set(true);
+        this.loading.set(false);
+      },
+    });
   }
 
   toggleCreateCryptoModal(cryptoCreated: any = null) {
@@ -79,16 +102,8 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.unsubscribe$))
       .subscribe({
         next: (response) => {
-          const portfolioArray = response.items[0].cryptoAssetDto;
-          this.accountBalance.set(response.items[0].accountBalance);
-          this.isBybitCombinedWallet.set(response.items[0].isBybitCombinedWallet);
-          this.isCryptoAssetListEmpty.set(portfolioArray.length > 0);
-          this.totalInvested.set(this.sumTotalInvested(portfolioArray));
-          this.totalMarketValue.set(this.sumTotalMarketValue(portfolioArray));
-          this.investmentChangePercent.set(this.calculatePercentDifference(portfolioArray));
-          this.cryptoAssetList.set(portfolioArray);
+          this.applyPortfolio(response.items[0]);
           this.loading.set(false);
-          this.totalDeposited.set(response.items[0].totalDeposited);
         },
         error: (err) => {
           console.log('HTTP call failed:', err);
@@ -107,14 +122,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (response) => {
           this.loading.set(false);
-          const portfolioArray = response.items[0].cryptoAssetDto;
-          this.accountBalance.set(response.items[0].accountBalance);
-          this.isBybitCombinedWallet.set(response.items[0].isBybitCombinedWallet);
-          this.isCryptoAssetListEmpty.set(portfolioArray.length > 0);
-          this.totalInvested.set(this.sumTotalInvested(portfolioArray));
-          this.totalMarketValue.set(this.sumTotalMarketValue(portfolioArray));
-          this.investmentChangePercent.set(this.calculatePercentDifference(portfolioArray));
-          this.cryptoAssetList.set(portfolioArray);
+          this.applyPortfolio(response.items[0]);
         },
         error: (err) => {
           this.loading.set(false);
@@ -125,6 +133,18 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   setBalanceStatus(value: boolean): void {
     this.hideZeroBalance = value;
+  }
+
+  private applyPortfolio(portfolio: UserCryptoAssetDto | undefined): void {
+    const cryptoAssets = portfolio?.cryptoAssetDto ?? [];
+    this.accountBalance.set(portfolio?.accountBalance ?? 0);
+    this.isBybitCombinedWallet.set(portfolio?.isBybitCombinedWallet ?? false);
+    this.isCryptoAssetListEmpty.set(cryptoAssets.length > 0);
+    this.totalInvested.set(this.sumTotalInvested(cryptoAssets));
+    this.totalMarketValue.set(this.sumTotalMarketValue(cryptoAssets));
+    this.investmentChangePercent.set(this.calculatePercentDifference(cryptoAssets));
+    this.cryptoAssetList.set(cryptoAssets);
+    this.totalDeposited.set(portfolio?.totalDeposited ?? 0);
   }
 
   outputHeaderEvent(event: string) {

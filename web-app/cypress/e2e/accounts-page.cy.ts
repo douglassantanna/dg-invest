@@ -141,6 +141,53 @@ describe('Accounts page', () => {
 
   beforeEach(() => cy.clearLocalStorage());
 
+  it('loads the persisted account portfolio on the home page after account options resolve', () => {
+    selectedAccountId = 101;
+    createdManualAccountName = null;
+    cy.intercept('GET', `${api}/selector-options`, { delay: 500, body: accountOptions() }).as('selectorOptions');
+    cy.intercept('GET', '**/api/Crypto/list-assets*', {
+      body: {
+        hasNextPage: false,
+        hasPreviousPage: false,
+        items: [{
+          accountTag: 'Bybit Main',
+          accountBalance: 8430.5,
+          cryptoAssetDto: [{ id: 1, symbol: 'btc', pricePerUnit: 60000, balance: 0.1, investedAmount: 5000, currentWorth: 6000, investmentGainLossValue: 1000, investmentGainLossPercentage: 20, coinMarketCapId: 1, image: 'btc' }],
+          totalDeposited: 5000,
+          isBybitCombinedWallet: true,
+        }],
+        page: 1,
+        pageSize: 50,
+        totalCount: 1,
+      },
+    }).as('homePortfolio');
+
+    authenticate();
+
+    cy.get('@selectorOptions.all').should('have.length', 1);
+    cy.get('@homePortfolio.all').should('have.length', 0);
+    cy.wait('@selectorOptions');
+    cy.wait('@homePortfolio');
+
+    cy.get('[aria-label="Current account"]').should('contain.text', 'Bybit Main');
+    cy.get('app-portfolio-card').should('contain.text', '$8,430.50');
+    cy.get('app-crypto-table').should('contain.text', 'BTC');
+  });
+
+  it('does not request a home portfolio when the server has no selected account', () => {
+    selectedAccountId = 0;
+    createdManualAccountName = null;
+    cy.intercept('GET', `${api}/selector-options`, request => request.reply(accountOptions())).as('selectorOptions');
+    cy.intercept('GET', '**/api/Crypto/list-assets*').as('homePortfolio');
+
+    authenticate();
+
+    cy.wait('@selectorOptions');
+    cy.get('[aria-label="Current account"]').should('contain.text', 'No account selected');
+    cy.contains('h1', 'No account selected').should('be.visible');
+    cy.get('@homePortfolio.all').should('have.length', 0);
+  });
+
   it('groups by source and shows the active account passively in the header', () => {
     visitAccounts(101);
 

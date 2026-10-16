@@ -1,4 +1,25 @@
 <div class="flex justify-center items-center flex-col gap-4 py-6 px-4 max-w-6xl mx-auto w-full mb-12">
+  @if (!accountSelectorReady()) {
+  <div class="w-full rounded-xl border border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" role="status">
+    Loading your accounts…
+  </div>
+  } @else if (accountLoadError()) {
+  <div class="w-full rounded-xl border border-red-200 bg-red-50 px-6 py-8 text-center text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200" role="alert">
+    {{ accountLoadError() }}
+  </div>
+  } @else if (!hasSelectedAccount()) {
+  <div class="w-full rounded-xl border border-dashed border-gray-300 px-6 py-8 text-center dark:border-gray-600" role="status">
+    <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">No account selected</h1>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Select an account to view its portfolio and assets.</p>
+    <a routerLink="/account" class="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+      Choose account
+    </a>
+  </div>
+  } @else if (loading()) {
+  <div class="w-full rounded-xl border border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" role="status">
+    Loading your portfolio…
+  </div>
+  } @else {
   <app-portfolio-card [accountBalance]="accountBalance()" [investmentChangePercent]="investmentChangePercent()"
     [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" [totalDeposited]="totalDeposited()"
     [isBybitCombinedWallet]="isBybitCombinedWallet()" />
@@ -49,6 +70,7 @@
   <p class="text-xs text-gray-400 dark:text-gray-500 mt-4">
     Data provided by <a href="https://coinmarketcap.com" target="_blank" rel="noopener" class="underline hover:text-gray-600 dark:hover:text-gray-300">CoinMarketCap</a>
   </p>
+  }
 </div>
 
 @if (isModalOpen()) {
