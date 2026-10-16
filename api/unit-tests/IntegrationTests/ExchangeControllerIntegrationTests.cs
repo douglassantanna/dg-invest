@@ -450,32 +450,40 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
-    public async Task AccountSelectorOptions_GroupsManualAndExchangeAccountsWithHealthAndOmitsDisconnectedAccounts()
+    public async Task AccountSelectorOptions_IncludesAllNonDeletedAccountsWithHealthAndPersistedSelection()
     {
         var (userId, manualAccountId) = await _fixture.CreateUserAsync();
         int connectedAccountId;
         int pausedAccountId;
         int errorAccountId;
         int unconfiguredAccountId;
+        int disconnectedAccountId;
+        int disabledIntegrationAccountId;
         using (var scope = _fixture.Factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             var bybitIntegration = new ExchangeIntegration(userId, "Bybit");
             bybitIntegration.MarkConfigured();
             bybitIntegration.MarkEnabled();
+            var disabledGeminiIntegration = new ExchangeIntegration(userId, "Gemini");
+            disabledGeminiIntegration.MarkConfigured();
+            disabledGeminiIntegration.MarkDisabled();
 
             var connected = new Account("Bybit active", userId, EAccountType.Exchange, "Bybit", "active-uid");
             var paused = new Account("Bybit paused", userId, EAccountType.Exchange, "Bybit", "paused-uid");
             var needsAttention = new Account("Bybit needs attention", userId, EAccountType.Exchange, "Bybit", "error-uid");
             var unconfigured = new Account("Kraken setup", userId, EAccountType.Exchange, "Kraken", "kraken-uid");
             var disconnected = new Account("Bybit disconnected", userId, EAccountType.Exchange, "Bybit", "disconnected-uid");
+            var disabledIntegrationAccount = new Account("Gemini disabled", userId, EAccountType.Exchange, "Gemini", "disabled-uid");
             disconnected.Disable();
-            context.AddRange(bybitIntegration, connected, paused, needsAttention, unconfigured, disconnected);
+            context.AddRange(bybitIntegration, disabledGeminiIntegration, connected, paused, needsAttention, unconfigured, disconnected, disabledIntegrationAccount);
             await context.SaveChangesAsync();
             connectedAccountId = connected.Id;
             pausedAccountId = paused.Id;
             errorAccountId = needsAttention.Id;
             unconfiguredAccountId = unconfigured.Id;
+            disconnectedAccountId = disconnected.Id;
+            disabledIntegrationAccountId = disabledIntegrationAccount.Id;
 
             var connectedStatus = new SyncStatus(userId, connected.Id, "Bybit");
             connectedStatus.EnableForCredentials();
@@ -506,11 +514,17 @@ public class ExchangeControllerIntegrationTests
         accounts[errorAccountId].GetProperty("lastErrorMessage").GetString().Should().Be("Temporary connection error");
         accounts[unconfiguredAccountId].GetProperty("exchangeName").GetString().Should().Be("Kraken");
         accounts[unconfiguredAccountId].GetProperty("healthStatus").GetString().Should().Be("NotConfigured");
-        accounts.Values.Select(account => account.GetProperty("accountName").GetString())
-            .Should().NotContain("Bybit disconnected");
+        accounts.Should().ContainKey(disconnectedAccountId);
+        accounts[disconnectedAccountId].GetProperty("accountName").GetString().Should().Be("Bybit disconnected");
+        accounts[disabledIntegrationAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
 
         var selectExchangeAccount = await client.PostAsJsonAsync("/api/Account/select-account", new { accountId = connectedAccountId });
         selectExchangeAccount.StatusCode.Should().Be(HttpStatusCode.OK);
+        var selectedOptionsResponse = await client.GetAsync("/api/Account/selector-options");
+        using var selectedOptionsDocument = JsonDocument.Parse(await selectedOptionsResponse.Content.ReadAsStringAsync());
+        var selectedOption = selectedOptionsDocument.RootElement.EnumerateArray()
+            .Single(account => account.GetProperty("accountId").GetInt32() == connectedAccountId);
+        selectedOption.GetProperty("isSelected").GetBoolean().Should().BeTrue();
         using var selectedScope = _fixture.Factory.Services.CreateScope();
         (await selectedScope.ServiceProvider.GetRequiredService<DataContext>().Accounts
             .SingleAsync(account => account.Id == connectedAccountId)).IsSelected.Should().BeTrue();

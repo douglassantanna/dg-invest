@@ -18,8 +18,7 @@ public class GetAccountSelectorOptionsQueryHandler(DataContext context)
         var accounts = await context.Accounts
             .AsNoTracking()
             .Where(account => account.UserId == request.UserId
-                && !account.IsDeleted
-                && (account.AccountType == EAccountType.Manual || account.Enabled))
+                && !account.IsDeleted)
             .OrderByDescending(account => account.IsSelected)
             .ThenBy(account => account.AccountType)
             .ThenBy(account => account.Name)
@@ -30,7 +29,8 @@ public class GetAccountSelectorOptionsQueryHandler(DataContext context)
                 account.Balance,
                 account.IsSelected,
                 account.AccountType,
-                account.Exchange
+                account.Exchange,
+                account.Enabled
             })
             .ToListAsync(cancellationToken);
 
@@ -95,8 +95,6 @@ public class GetAccountSelectorOptionsQueryHandler(DataContext context)
             }
 
             integrationByExchange.TryGetValue(account.Exchange ?? string.Empty, out var integration);
-            if (integration is { Enabled: false, Status: not ExchangeIntegration.AutoPausedStatus })
-                continue;
 
             syncStatusByAccountId.TryGetValue(account.Id, out var syncStatus);
             options.Add(new AccountSelectorOptionDto(
@@ -107,7 +105,7 @@ public class GetAccountSelectorOptionsQueryHandler(DataContext context)
                 account.AccountType.ToString(),
                 account.Exchange,
                 string.Equals(account.Exchange, "Bybit", StringComparison.OrdinalIgnoreCase),
-                GetHealthStatus(syncStatus?.Status, syncStatus?.IsEnabled, integration?.Status),
+                GetHealthStatus(account.Enabled, syncStatus?.Status, syncStatus?.IsEnabled, integration?.Enabled, integration?.Status),
                 syncStatus?.LastSyncAt ?? integration?.LastSyncAt,
                 syncStatus?.ErrorCount ?? integration?.ConsecutiveTransportFailures ?? 0,
                 syncStatus?.LastErrorMessage ?? integration?.LastErrorMessage));
@@ -116,13 +114,18 @@ public class GetAccountSelectorOptionsQueryHandler(DataContext context)
         return new Response("ok", true, options);
     }
 
-    private static string GetHealthStatus(string? syncStatus, bool? isSyncEnabled, string? integrationStatus)
+    private static string GetHealthStatus(
+        bool accountEnabled,
+        string? syncStatus,
+        bool? isSyncEnabled,
+        bool? integrationEnabled,
+        string? integrationStatus)
     {
         if (integrationStatus is ExchangeIntegration.AutoPausedStatus or "Error"
             || string.Equals(syncStatus, "Error", StringComparison.OrdinalIgnoreCase))
             return "NeedsAttention";
 
-        if (isSyncEnabled is false)
+        if (!accountEnabled || isSyncEnabled is false || integrationEnabled is false)
             return "Paused";
 
         return syncStatus is null ? "NotConfigured" : "Connected";
