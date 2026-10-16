@@ -33,6 +33,20 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Ok(result.Data);
     }
 
+    [HttpGet("selector-options")]
+    public async Task<ActionResult<Response>> GetAccountSelectorOptions()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetAccountSelectorOptionsQuery(userId));
+        if (!result.IsSuccess)
+            return BadRequest(result.Message);
+
+        return Ok(result.Data);
+    }
+
     [HttpPost("create")]
     public async Task<ActionResult<Response>> CreateAccount([FromBody] CreateAccountRequest request)
     {

@@ -450,6 +450,73 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task AccountSelectorOptions_GroupsManualAndExchangeAccountsWithHealthAndOmitsDisconnectedAccounts()
+    {
+        var (userId, manualAccountId) = await _fixture.CreateUserAsync();
+        int connectedAccountId;
+        int pausedAccountId;
+        int errorAccountId;
+        int unconfiguredAccountId;
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var bybitIntegration = new ExchangeIntegration(userId, "Bybit");
+            bybitIntegration.MarkConfigured();
+            bybitIntegration.MarkEnabled();
+
+            var connected = new Account("Bybit active", userId, EAccountType.Exchange, "Bybit", "active-uid");
+            var paused = new Account("Bybit paused", userId, EAccountType.Exchange, "Bybit", "paused-uid");
+            var needsAttention = new Account("Bybit needs attention", userId, EAccountType.Exchange, "Bybit", "error-uid");
+            var unconfigured = new Account("Kraken setup", userId, EAccountType.Exchange, "Kraken", "kraken-uid");
+            var disconnected = new Account("Bybit disconnected", userId, EAccountType.Exchange, "Bybit", "disconnected-uid");
+            disconnected.Disable();
+            context.AddRange(bybitIntegration, connected, paused, needsAttention, unconfigured, disconnected);
+            await context.SaveChangesAsync();
+            connectedAccountId = connected.Id;
+            pausedAccountId = paused.Id;
+            errorAccountId = needsAttention.Id;
+            unconfiguredAccountId = unconfigured.Id;
+
+            var connectedStatus = new SyncStatus(userId, connected.Id, "Bybit");
+            connectedStatus.EnableForCredentials();
+            connectedStatus.MarkConnected("latest-order");
+            var pausedStatus = new SyncStatus(userId, paused.Id, "Bybit");
+            pausedStatus.EnableForCredentials();
+            pausedStatus.Disable();
+            var errorStatus = new SyncStatus(userId, needsAttention.Id, "Bybit");
+            errorStatus.EnableForCredentials();
+            errorStatus.MarkError("Temporary connection error");
+            context.SyncStatuses.AddRange(connectedStatus, pausedStatus, errorStatus);
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.GetAsync("/api/Account/selector-options");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var accounts = document.RootElement.EnumerateArray()
+            .ToDictionary(account => account.GetProperty("accountId").GetInt32());
+        accounts[manualAccountId].GetProperty("accountType").GetString().Should().Be("Manual");
+        accounts[connectedAccountId].GetProperty("accountType").GetString().Should().Be("Exchange");
+        accounts[connectedAccountId].GetProperty("exchangeName").GetString().Should().Be("Bybit");
+        accounts[connectedAccountId].GetProperty("healthStatus").GetString().Should().Be("Connected");
+        accounts[pausedAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
+        accounts[errorAccountId].GetProperty("healthStatus").GetString().Should().Be("NeedsAttention");
+        accounts[errorAccountId].GetProperty("lastErrorMessage").GetString().Should().Be("Temporary connection error");
+        accounts[unconfiguredAccountId].GetProperty("exchangeName").GetString().Should().Be("Kraken");
+        accounts[unconfiguredAccountId].GetProperty("healthStatus").GetString().Should().Be("NotConfigured");
+        accounts.Values.Select(account => account.GetProperty("accountName").GetString())
+            .Should().NotContain("Bybit disconnected");
+
+        var selectExchangeAccount = await client.PostAsJsonAsync("/api/Account/select-account", new { accountId = connectedAccountId });
+        selectExchangeAccount.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var selectedScope = _fixture.Factory.Services.CreateScope();
+        (await selectedScope.ServiceProvider.GetRequiredService<DataContext>().Accounts
+            .SingleAsync(account => account.Id == connectedAccountId)).IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
