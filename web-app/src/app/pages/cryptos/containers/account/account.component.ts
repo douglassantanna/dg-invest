@@ -57,7 +57,7 @@ export class AccountComponent implements OnInit {
   isWithdrawModalOpen = signal(false);
 
   ngOnInit(): void {
-    this.accountState.load().subscribe({
+    this.accountState.reload().subscribe({
       next: () => {
         const selected = this.selectedAccountOption();
         if (!selected) {

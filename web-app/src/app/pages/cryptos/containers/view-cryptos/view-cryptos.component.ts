@@ -60,7 +60,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loading.set(true);
-    this.accountState.load().pipe(takeUntil(this.unsubscribe$)).subscribe({
+    this.accountState.reload().pipe(takeUntil(this.unsubscribe$)).subscribe({
       next: () => {
         const selectedAccount = this.accountState.selectedAccount();
         this.accountSelectorReady.set(true);

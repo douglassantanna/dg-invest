@@ -6,6 +6,7 @@ describe('Accounts page', () => {
   let manualPortfolioBalance = 18265.43;
   let delayNextManualAccountDetails = false;
   let delayBybitAccountDetails = false;
+  let isNewExchangeAccountDiscovered = false;
 
   const encodeJwtSegment = (value: object) => btoa(JSON.stringify(value))
     .replace(/\+/g, '-')
@@ -85,6 +86,19 @@ describe('Accounts page', () => {
       errorCount: 0,
       lastErrorMessage: null,
     },
+    ...(isNewExchangeAccountDiscovered ? [{
+      accountId: 301,
+      accountName: 'Bybit discovered after refresh',
+      balance: 0,
+      isSelected: false,
+      accountType: 'Exchange',
+      exchangeName: 'Bybit',
+      isBybitCombinedWallet: false,
+      healthStatus: 'Connected',
+      lastSyncAt: null,
+      errorCount: 0,
+      lastErrorMessage: null,
+    }] : []),
     ...(createdManualAccountName ? [{
       accountId: 3,
       accountName: createdManualAccountName,
@@ -142,6 +156,7 @@ describe('Accounts page', () => {
     manualPortfolioBalance = 18265.43;
     delayNextManualAccountDetails = false;
     delayBybitAccountDetails = false;
+    isNewExchangeAccountDiscovered = false;
     cy.intercept('GET', '**/api/Crypto/list-assets*', {
       body: { hasNextPage: false, hasPreviousPage: false, items: [{ accountTag: 'Test portfolio' }], page: 1, pageSize: 50, totalCount: 1 },
     });
@@ -243,6 +258,22 @@ describe('Accounts page', () => {
     cy.get('[aria-label="Current account"]').should('not.have.attr', 'href');
     cy.get('a[aria-label^="Change account"]').should('not.exist');
     cy.contains('a', 'Exchange Hub').should('be.visible');
+  });
+
+  it('reloads account options when returning from Exchange Hub', () => {
+    visitAccounts();
+    cy.intercept('GET', '**/api/Exchange/accounts', { body: { isSuccess: true, data: [] } }).as('exchangeAccounts');
+
+    cy.contains('a', 'Exchange Hub').click();
+    cy.wait('@exchangeAccounts');
+    cy.url().should('include', '/exchanges');
+
+    isNewExchangeAccountDiscovered = true;
+    cy.contains('a', 'Accounts').click();
+    cy.wait('@selectorOptions');
+
+    cy.contains('button', 'Bybit discovered after refresh').should('be.visible');
+    cy.get('[aria-label="Current account"]').should('contain.text', 'Personal portfolio');
   });
 
   it('does not choose a fallback or load details until the user selects an account', () => {
