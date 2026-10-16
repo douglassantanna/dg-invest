@@ -117,9 +117,12 @@ describe('Accounts page', () => {
     cy.reload();
   };
 
-  const visitAccounts = () => {
-    selectedAccountId = 1;
+  const visitAccounts = (initialSelectedAccountId = 1) => {
+    selectedAccountId = initialSelectedAccountId;
     createdManualAccountName = null;
+    cy.intercept('GET', '**/api/Crypto/list-assets*', {
+      body: { hasNextPage: false, hasPreviousPage: false, items: [{ accountTag: 'Test portfolio' }], page: 1, pageSize: 50, totalCount: 1 },
+    });
     cy.intercept('GET', `${api}/selector-options`, request => request.reply(accountOptions())).as('selectorOptions');
     cy.intercept('GET', `${api}/account-details*`, request => {
       const page = Number(new URL(request.url).searchParams.get('page') ?? 1);
@@ -133,13 +136,13 @@ describe('Accounts page', () => {
     authenticate();
     cy.visit('/#/account');
     cy.wait('@selectorOptions');
-    cy.wait('@accountDetails');
+    if (initialSelectedAccountId !== 0) cy.wait('@accountDetails');
   };
 
   beforeEach(() => cy.clearLocalStorage());
 
   it('groups by source and shows the active account passively in the header', () => {
-    visitAccounts();
+    visitAccounts(101);
 
     cy.contains('h1', 'Accounts').should('be.visible');
     cy.contains('h2', 'Manual portfolios').should('be.visible');
@@ -148,11 +151,26 @@ describe('Accounts page', () => {
     cy.contains('h3', 'Kraken').should('exist');
     cy.contains('button', 'Needs attention').should('exist');
     cy.contains('button', 'Paused').should('exist');
-    cy.get('#selected-account-name').should('have.text', 'Personal portfolio');
-    cy.get('[aria-label="Current account"]').should('contain.text', 'Personal portfolio');
+    cy.get('#selected-account-name').should('have.text', 'Bybit Main');
+    cy.get('[aria-label="Current account"]').should('contain.text', 'Bybit Main');
     cy.get('[aria-label="Current account"]').should('not.have.attr', 'href');
     cy.get('a[aria-label^="Change account"]').should('not.exist');
     cy.contains('a', 'Exchange Hub').should('be.visible');
+  });
+
+  it('does not choose a fallback or load details until the user selects an account', () => {
+    visitAccounts(0);
+
+    cy.get('[aria-label="Current account"]').should('contain.text', 'No account selected');
+    cy.get('@accountDetails.all').should('have.length', 0);
+    cy.contains('p', 'Select an account above to view its balance and transactions').scrollIntoView().should('be.visible');
+
+    cy.contains('button', 'Bybit Trading').click();
+    cy.wait('@selectAccount');
+    cy.wait('@accountDetails');
+
+    cy.get('[aria-label="Current account"]').should('contain.text', 'Bybit Trading');
+    cy.get('#selected-account-name').should('have.text', 'Bybit Trading');
   });
 
   it('keeps filters and pagination when switching accounts, resetting to page one', () => {

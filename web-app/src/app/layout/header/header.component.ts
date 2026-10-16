@@ -26,11 +26,16 @@ export class HeaderComponent implements OnInit {
     return filteredNavItems;
   }
   );
-  accountTag = computed(() => this.accountState.selectedAccount()?.accountName ?? 'Loading account…');
+  accountTag = computed(() => {
+    const selected = this.accountState.selectedAccount();
+    if (selected) return selected.accountName;
+    if (this.accountState.isLoading()) return 'Loading account…';
+    return this.accountState.errorMessage() ? 'Account unavailable' : 'No account selected';
+  });
   username = computed(() => this.authService.user?.unique_name);
 
   ngOnInit(): void {
-    this.accountState.load();
+    this.accountState.load().subscribe({ error: () => undefined });
   }
 
   logout(item: NavItems) {

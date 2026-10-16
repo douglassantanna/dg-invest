@@ -49,11 +49,24 @@ export class AccountComponent implements OnInit {
   createAccountError = signal('');
 
   ngOnInit(): void {
-    this.accountState.load();
-    this.loadAccountDetails();
+    this.accountState.load().subscribe({
+      next: () => {
+        const selected = this.selectedAccountOption();
+        if (!selected) {
+          this.accountActivityError.set('');
+          return;
+        }
+
+        this.cryptoService.accountTag.set(selected.accountName);
+        this.loadAccountDetails();
+      },
+      error: () => this.accountActivityError.set('Could not load accounts. Please try again.'),
+    });
   }
 
   loadAccountDetails(): void {
+    if (!this.selectedAccountOption()) return;
+
     this.accountService.getSelectedAccount(
       this.currentPage(),
       this.pageSize,

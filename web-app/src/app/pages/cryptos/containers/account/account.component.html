@@ -176,7 +176,6 @@
       @if (selectedOption.lastErrorMessage) {
       <p class="mb-3 text-sm text-amber-800 dark:text-amber-200">{{ selectedOption.lastErrorMessage }}</p>
       }
-      }
       <h2 class="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
         Available Balance
         @if (account().isBybitCombinedWallet) {
@@ -188,6 +187,20 @@
       <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100">
         {{ account().balance | currency:'USD':'symbol':'1.2-2' }}
       </h1>
+      } @else if (selectorLoading()) {
+      <div class="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="status">
+        <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-hidden="true"></span>
+        Loading selected account…
+      </div>
+      } @else {
+      <div class="flex items-start gap-3" role="status">
+        <span class="material-icons mt-0.5 text-blue-700 dark:text-blue-300" aria-hidden="true">account_balance_wallet</span>
+        <div>
+          <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">No account selected</h2>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Select an account above to view its balance and transactions.</p>
+        </div>
+      </div>
+      }
     </div>
 
     @if (selectedAccountOption(); as currentOption) {
@@ -227,6 +240,7 @@
     }
   </header>
 
+  @if (selectedAccountOption()) {
   <section class="mt-10">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
       <h3 class="text-xl font-bold sm:mb-4 text-gray-900 dark:text-gray-100">Recent Transactions</h3>
@@ -292,4 +306,10 @@
       }
     </div>
   </section>
+  } @else if (!selectorLoading()) {
+  <section class="mt-10 rounded-xl border border-dashed border-gray-300 px-6 py-8 text-center dark:border-gray-600" role="status">
+    <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Transactions are waiting for an account</h2>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Choose an account above to load its transaction history.</p>
+  </section>
+  }
 </main>
