@@ -1,34 +1,24 @@
 import { Role } from '../../core/models/user.model';
 import { SlicePipe } from '@angular/common';
-import { AfterViewChecked, Component, computed, inject, output, signal } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Component, computed, inject, output } from '@angular/core';
 
 import { LayoutService } from '../../core/services/layout.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NavItems } from '../../core/models/nav-items';
 import { environment } from 'src/environments/environment.development';
-import { ModalComponent } from '../modal/modal.component';
-import { AccountSelectionComponent, SimpleAccountDto } from 'src/app/pages/cryptos/components/account-selection/account-selection.component';
-import { CryptoService } from 'src/app/core/services/crypto.service';
+import { AccountSelectorDemoStateService } from 'src/app/core/services/account-selector-demo-state.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [
-    RouterModule,
-    SlicePipe,
-    ModalComponent,
-    AccountSelectionComponent],
+  imports: [SlicePipe],
   templateUrl: './header.component.html',
 })
-export class HeaderComponent implements AfterViewChecked {
+export class HeaderComponent {
   toggleSidenavEvent = output();
   private layoutService = inject(LayoutService);
   private authService = inject(AuthService);
-  private cryptoService = inject(CryptoService);
-  isCollapsed = computed(() => this.layoutService.isCollapsed());
-  showAccountModal = signal(false);
-  navItems = signal<NavItems[]>([]);
+  private accountState = inject(AccountSelectorDemoStateService);
   navbarColor = environment.navbarColor;
   navItemsEnabled = computed(() => {
     const userRole = this.authService.role as Role;
@@ -36,21 +26,8 @@ export class HeaderComponent implements AfterViewChecked {
     return filteredNavItems;
   }
   );
-  accountTag = signal('');
+  accountTag = computed(() => this.accountState.selectedAccount().accountName);
   username = computed(() => this.authService.user?.unique_name);
-
-  ngAfterViewChecked(): void {
-    this.accountTag.set(this.cryptoService.accountTag());
-  }
-
-  toggleAccountModal(accounts: SimpleAccountDto[]) {
-    const selectedAccount = accounts.find(account => account.isSelected);
-    if (selectedAccount) {
-      this.accountTag.set(selectedAccount.name);
-      location.reload();
-    }
-    this.showAccountModal.set(!this.showAccountModal());
-  }
 
   logout(item: NavItems) {
     if (item.path === 'signout')

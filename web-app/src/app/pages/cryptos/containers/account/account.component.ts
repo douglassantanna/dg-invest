@@ -1,90 +1,60 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CryptoFilterComponent } from '../../components/crypto-filter/crypto-filter.component';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
 import { RouterModule } from '@angular/router';
-import { AccountDto, AccountTransactionDto, GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
-import { ModalComponent } from 'src/app/layout/modal/modal.component';
-import { DepositComponent } from '../deposit/deposit.component';
-import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
-import { WithdrawComponent } from '../withdraw/withdraw.component';
-import { AccountService } from 'src/app/core/services/account.service';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
-export type AccountTransaction = {
-  imageUrl: string;
-  transactionType: AccountTransactionType;
-  transactionValue: number;
-  date: Date;
-  notes: string;
-  cryptoAmount?: number;
-  cryptoCurrentPrice?: number;
-  cryptoSymbol?: string;
-  fee?: number;
-}
-
-export enum AccountTransactionType {
-  DepositFiat = 1,
-  DepositCrypto = 2,
-  WithdrawToBank = 3,
-  In = 4,
-  Out = 5,
-  WithdrawCrypto = 6,
-  TransferIn = 7,
-  TransferOut = 8
-}
+import { AccountDto } from 'src/app/core/services/user.service';
+import { AccountSelectorOption, AccountHealthStatus } from 'src/app/core/models/account-selector-option';
+import { AccountSelectorDemoStateService } from 'src/app/core/services/account-selector-demo-state.service';
 @Component({
   selector: 'app-account',
   standalone: true,
-  imports: [
-    CryptoFilterComponent,
-    CommonModule,
-    AccountTransactionCardComponent,
-    RouterModule,
-    ModalComponent,
-    DepositComponent,
-    WithdrawComponent
-  ],
+  imports: [CryptoFilterComponent, CommonModule, FormsModule, AccountTransactionCardComponent, RouterModule],
   templateUrl: './account.component.html',
 })
-export class AccountComponent implements OnInit, OnDestroy {
-  private accountService = inject(AccountService);
-  private unsubscribe$ = new Subject<void>();
+export class AccountComponent implements OnInit {
+  private readonly demoState = inject(AccountSelectorDemoStateService);
 
-  isDepositModalOpen = signal<boolean>(false);
-  isWithdrawModalOpen = signal<boolean>(false);
   account = signal<AccountDto>({} as AccountDto);
+  accountSelectorOptions = this.demoState.accountOptions;
+  selectorLoading = signal(false);
+  selectedAccountOption = this.demoState.selectedAccount;
+  manualAccounts = computed(() => this.accountSelectorOptions().filter(option => option.accountType === 'Manual'));
+  exchangeGroups = computed(() => {
+    const exchanges = new Map<string, AccountSelectorOption[]>();
+    for (const account of this.accountSelectorOptions().filter(option => option.accountType === 'Exchange')) {
+      const exchangeName = account.exchangeName ?? 'Other exchange';
+      exchanges.set(exchangeName, [...(exchanges.get(exchangeName) ?? []), account]);
+    }
+    return [...exchanges.entries()].map(([exchangeName, accounts]) => ({ exchangeName, accounts }));
+  });
   currentPage = signal(1);
   pageSize = 20;
   currentFilter = signal('');
   startDate = signal<string>('');
   endDate = signal<string>('');
   currentStatus = signal<string>('');
+  selectingAccountId = signal<number | null>(null);
+  selectorError = signal('');
+  isAddingManualAccount = signal(false);
+  newAccountName = '';
+  savingManualAccount = signal(false);
+  createAccountError = signal('');
 
   ngOnInit(): void {
     this.loadAccountDetails();
   }
 
-  ngOnDestroy(): void {
-    this.unsubscribe$.next();
-    this.unsubscribe$.complete();
-  }
-
   loadAccountDetails(): void {
-    this.accountService.getSelectedAccount(
+    this.account.set(this.demoState.getSelectedAccountDetails(
       this.currentPage(),
       this.pageSize,
       this.currentFilter(),
       this.startDate() || undefined,
       this.endDate() || undefined,
       this.currentStatus() || undefined
-    ).subscribe({
-      next: (result) => {
-        if (result) {
-          this.account.set(result);
-        }
-      },
-      error: (err) => { console.log(err); }
-    });
+    ));
   }
 
   searchTransactions(input: string): void {
@@ -137,60 +107,80 @@ export class AccountComponent implements OnInit, OnDestroy {
     return Math.ceil(this.account().totalCount / this.pageSize);
   }
 
-  toggleDepositModal() {
-    this.isDepositModalOpen.set(!this.isDepositModalOpen());
+  isSelected(account: AccountSelectorOption): boolean {
+    return account.isSelected;
   }
 
-  toggleWithdrawModal() {
-    this.isWithdrawModalOpen.set(!this.isWithdrawModalOpen());
+  toggleAddManualAccount(): void {
+    this.isAddingManualAccount.update(isAdding => !isAdding);
+    this.newAccountName = '';
+    this.createAccountError.set('');
   }
 
-  depositEvent(deposit: DepositFundCommand | null) {
-    if (deposit) {
-      const accountBalance = this.account().balance + deposit.amount;
-      this.account().balance = accountBalance;
+  createManualAccount(): void {
+    const name = this.newAccountName.trim();
+    if (!name || this.savingManualAccount()) return;
 
-      const depositDate = new Date(deposit.date);
-      depositDate.setHours(0, 0, 0, 0);
-
-      const existingTransactions = this.account().groupedAccountTransactions.filter((t) => {
-        const transactionDate = new Date(t.date);
-        transactionDate.setHours(0, 0, 0, 0);
-        return transactionDate.getTime() === depositDate.getTime();
-      });
-
-      const transactionDto: AccountTransactionDto = {
-        date: deposit.date,
-        transactionType: deposit.accountTransactionType,
-        amount: deposit.amount,
-        exchangeName: deposit.exchangeName,
-        currency: '',
-        destination: '',
-        notes: deposit.notes,
-        cryptoCurrentPrice: deposit.currentPrice,
-        cryptoSymbol: deposit.cryptoAssetId,
-        fee: 0
-      }
-
-      if (existingTransactions.length > 0) {
-        existingTransactions[0].transactions.push(transactionDto);
-      } else {
-        const groupedTransaction: GroupedAccountTransactionsDto = {
-          date: deposit.date,
-          transactions: [transactionDto]
-        };
-        const allTransactions = this.account().groupedAccountTransactions;
-        allTransactions.unshift(groupedTransaction);
-        const sortedTransactions = allTransactions.sort((a, b) => {
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        })
-        this.account().groupedAccountTransactions = sortedTransactions;
-      }
+    if (this.manualAccounts().some(account => account.accountName.toLowerCase() === name.toLowerCase())) {
+      this.createAccountError.set('An account with this name already exists.');
+      return;
     }
-    this.toggleDepositModal();
+
+    this.savingManualAccount.set(true);
+    this.createAccountError.set('');
+    const result = this.demoState.addManualPortfolio(name);
+    this.savingManualAccount.set(false);
+    if (!result.success) {
+      this.createAccountError.set(result.error ?? 'Could not create the portfolio.');
+      return;
+    }
+
+    this.isAddingManualAccount.set(false);
+    this.newAccountName = '';
   }
 
-  withdrawEvent(withdraw: WithdrawFundCommand | null) {
-    if (!withdraw) this.toggleWithdrawModal();
+  selectAccount(account: AccountSelectorOption): void {
+    if (account.isSelected || this.selectingAccountId() !== null) return;
+
+    this.selectingAccountId.set(account.accountId);
+    this.selectorError.set('');
+    this.demoState.selectAccount(account.accountId);
+    this.currentPage.set(1);
+    this.selectingAccountId.set(null);
+    this.loadAccountDetails();
+  }
+
+  healthIcon(health: AccountHealthStatus | null): string {
+    switch (health) {
+      case 'Connected': return 'check_circle';
+      case 'NeedsAttention': return 'error';
+      case 'Paused': return 'pause_circle';
+      case 'NotConfigured': return 'key_off';
+      default: return '';
+    }
+  }
+
+  healthLabel(health: AccountHealthStatus | null): string {
+    switch (health) {
+      case 'NeedsAttention': return 'Needs attention';
+      case 'NotConfigured': return 'Setup needed';
+      default: return health ?? '';
+    }
+  }
+
+  healthClasses(health: AccountHealthStatus | null): string {
+    switch (health) {
+      case 'Connected': return 'bg-emerald-50 text-emerald-800 ring-emerald-200';
+      case 'NeedsAttention': return 'bg-amber-50 text-amber-900 ring-amber-200';
+      case 'Paused': return 'bg-slate-100 text-slate-700 ring-slate-200';
+      case 'NotConfigured': return 'bg-blue-50 text-blue-800 ring-blue-200';
+      default: return '';
+    }
+  }
+
+  exchangeManagementLink(account: AccountSelectorOption): string[] {
+    return account.exchangeName?.toLowerCase() === 'bybit'
+      ? ['/exchanges', 'bybit', account.accountId.toString()]
+      : ['/exchanges'];
   }
 }
