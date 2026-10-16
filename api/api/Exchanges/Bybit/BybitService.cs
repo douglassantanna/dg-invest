@@ -17,6 +17,7 @@ public class BybitService : IBybitService
     private const string UniversalTransferHistoryEndpoint = "/v5/asset/transfer/query-universal-transfer-list";
     private const string WalletBalanceEndpoint = "/v5/account/wallet-balance";
     private const string AccountCoinBalanceEndpoint = "/v5/asset/transfer/query-account-coin-balance";
+    private const string AccountCoinBalancesEndpoint = "/v5/asset/transfer/query-account-coins-balance";
     private const string AccountInfoEndpoint = "/v5/account/info";
     private const int RecvWindow = 60000;
 
@@ -62,15 +63,14 @@ public class BybitService : IBybitService
 
             if (response.RetCode != 0)
             {
-                _logger.LogError("Bybit GetSubAccounts returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
+                throw new BybitApiException(response.RetCode, response.RetMsg, SubMembersEndpoint);
             }
 
             return response.Result.SubMembers;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit sub-accounts");
+            _logger.LogDebug(ex, "Bybit sub-account request failed");
             throw;
         }
     }
@@ -84,13 +84,16 @@ public class BybitService : IBybitService
 
             if (response.RetCode != 0)
             {
-                _logger.LogWarning("Bybit test connection returned error {Code}: {Message}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
+                throw new BybitApiException(response.RetCode, response.RetMsg, AccountInfoEndpoint);
             }
 
             return true;
         }
         catch (BybitApiException)
+        {
+            throw;
+        }
+        catch (BybitTransportException)
         {
             throw;
         }
@@ -102,12 +105,12 @@ public class BybitService : IBybitService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error testing Bybit connection");
+            _logger.LogDebug(ex, "Bybit connection test request failed");
             return false;
         }
     }
 
-    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitOrderData>> GetOrderHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -121,6 +124,8 @@ public class BybitService : IBybitService
                     };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -132,7 +137,7 @@ public class BybitService : IBybitService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit order history");
+            _logger.LogDebug(ex, "Bybit order history request failed");
             throw;
         }
     }
@@ -161,12 +166,12 @@ public class BybitService : IBybitService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit execution history for order {OrderId}", orderId);
+            _logger.LogDebug(ex, "Bybit execution history request failed for order {OrderId}", orderId);
             throw;
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitDepositWithdrawalRow>> GetDepositHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -176,6 +181,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -187,12 +194,12 @@ public class BybitService : IBybitService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit deposit history");
+            _logger.LogDebug(ex, "Bybit deposit history request failed");
             throw;
         }
     }
 
-    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitDepositWithdrawalRow>> GetWithdrawalHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -202,6 +209,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -213,12 +222,12 @@ public class BybitService : IBybitService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit withdrawal history");
+            _logger.LogDebug(ex, "Bybit withdrawal history request failed");
             throw;
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitInternalTransferRow>> GetInternalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -228,6 +237,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -239,12 +250,12 @@ public class BybitService : IBybitService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit internal transfer history");
+            _logger.LogDebug(ex, "Bybit internal transfer history request failed");
             throw;
         }
     }
 
-    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default)
+    public async Task<List<BybitInternalTransferRow>> GetUniversalTransferHistoryAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global, int? limit = 50, long? startTime = null, CancellationToken cancellationToken = default, long? endTime = null)
     {
         try
         {
@@ -254,6 +265,8 @@ public class BybitService : IBybitService
                     var query = new Dictionary<string, object> { ["limit"] = limit ?? 50 };
                     if (startTime.HasValue)
                         query["startTime"] = startTime.Value;
+                    if (endTime.HasValue)
+                        query["endTime"] = endTime.Value;
                     if (!string.IsNullOrWhiteSpace(cursor))
                         query["cursor"] = cursor;
 
@@ -265,7 +278,7 @@ public class BybitService : IBybitService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit universal transfer history");
+            _logger.LogDebug(ex, "Bybit universal transfer history request failed");
             throw;
         }
     }
@@ -282,15 +295,14 @@ public class BybitService : IBybitService
 
             if (response.RetCode != 0)
             {
-                _logger.LogError("Bybit GetWalletBalance returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
+                throw new BybitApiException(response.RetCode, response.RetMsg, WalletBalanceEndpoint);
             }
 
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit wallet balance");
+            _logger.LogDebug(ex, "Bybit wallet balance request failed");
             throw;
         }
     }
@@ -307,15 +319,38 @@ public class BybitService : IBybitService
 
             if (response.RetCode != 0)
             {
-                _logger.LogError("Bybit GetAccountCoinBalance returned error {Code}: {Msg}", response.RetCode, response.RetMsg);
-                throw new BybitApiException(response.RetCode, response.RetMsg);
+                throw new BybitApiException(response.RetCode, response.RetMsg, AccountCoinBalanceEndpoint);
             }
 
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Bybit account coin balance");
+            _logger.LogDebug(ex, "Bybit account coin balance request failed");
+            throw;
+        }
+    }
+
+    public async Task<BybitAccountCoinBalancesResponse> GetAccountCoinBalancesAsync(string apiKey, string apiSecret, BybitRegion region, string accountType, string? memberId = null)
+    {
+        try
+        {
+            var queryDict = new Dictionary<string, object> { ["accountType"] = accountType };
+            if (!string.IsNullOrWhiteSpace(memberId))
+                queryDict["memberId"] = memberId;
+            var response = await SendPrivateGetAsync<BybitAccountCoinBalancesResponse>(
+                apiKey, apiSecret, region, AccountCoinBalancesEndpoint, queryDict);
+
+            if (response.RetCode != 0)
+            {
+                throw new BybitApiException(response.RetCode, response.RetMsg, AccountCoinBalancesEndpoint);
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Bybit account coin balances request failed");
             throw;
         }
     }
@@ -338,12 +373,19 @@ public class BybitService : IBybitService
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(apiSecret));
         var signature = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
 
-        return await url
-            .WithHeader("X-BAPI-API-KEY", apiKey)
-            .WithHeader("X-BAPI-TIMESTAMP", timestamp)
-            .WithHeader("X-BAPI-SIGN", signature)
-            .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
-            .GetJsonAsync<TResponse>(cancellationToken);
+        try
+        {
+            return await url
+                .WithHeader("X-BAPI-API-KEY", apiKey)
+                .WithHeader("X-BAPI-TIMESTAMP", timestamp)
+                .WithHeader("X-BAPI-SIGN", signature)
+                .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
+                .GetJsonAsync<TResponse>(cancellationToken);
+        }
+        catch (Exception ex) when (BybitApiFailureClassifier.HasTransportFailure(ex, cancellationToken))
+        {
+            throw new BybitTransportException(new Uri(url.ToString()).AbsolutePath, ex);
+        }
     }
 
     private static async Task<List<TItem>> GetPagedAsync<TResponse, TItem>(
@@ -362,7 +404,7 @@ public class BybitService : IBybitService
             var response = await fetchPage(cursor);
             var pageResult = readPage(response);
             if (pageResult.RetCode != 0)
-                throw new BybitApiException(pageResult.RetCode, pageResult.RetMsg);
+                throw new BybitApiException(pageResult.RetCode, pageResult.RetMsg, operation);
 
             items.AddRange(pageResult.Items);
             if (string.IsNullOrWhiteSpace(pageResult.NextCursor))

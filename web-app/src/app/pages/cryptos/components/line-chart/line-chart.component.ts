@@ -66,7 +66,9 @@ export class LineChartComponent implements AfterViewInit {
     this.cryptoService.getMarketDataByTimeframe(this.selectedTimeFilter())
       .subscribe({
         next: (result) => {
-          this.marketDataNew[this.selectedTimeFilter()] = result.value;
+          this.marketDataNew[this.selectedTimeFilter()] = result.isSuccess && Array.isArray(result.value)
+            ? result.value
+            : [];
           this.initLineChart(this.selectedTimeFilter());
         },
         error: (err) => { console.log(err); }
@@ -85,7 +87,7 @@ export class LineChartComponent implements AfterViewInit {
     if (!this.lineChartInstance) {
       this.lineChartInstance = echarts.init(chartElement);
     }
-    const selectedData = this.marketDataNew[selectedTime];
+    const selectedData = this.marketDataNew[selectedTime] ?? [];
     const axisLabelFormatter = (value: string) => this.axisLabelFormatter(value, selectedTime);
     this.lineChartInstance.clear();
     const selectedTimeTitle = this.timeArray().find(t => t.time === this.selectedTimeFilter());

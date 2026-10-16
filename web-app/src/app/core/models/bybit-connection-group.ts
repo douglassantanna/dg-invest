@@ -4,6 +4,14 @@ export interface BybitConnectionGroupDto {
   subaccountCount: number;
   maxSubaccounts: number;
   subaccounts: BybitSubaccountRowDto[];
+  integrationStatus?: string;
+  integrationEnabled?: boolean;
+  consecutiveTransportFailures?: number;
+  lastErrorCode?: string | null;
+  lastErrorMessage?: string | null;
+  lastErrorEndpoint?: string | null;
+  lastErrorAccountId?: number | null;
+  autoPausedAt?: string | null;
 }
 
 export interface BybitSubaccountRowDto {

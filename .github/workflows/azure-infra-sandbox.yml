@@ -1,0 +1,32 @@
+name: Validate Azure Infrastructure Access
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate-azure-access:
+    runs-on: ubuntu-latest
+    environment: azure-infra-sandbox
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure Access
+        run: |
+          az account show \
+            --query "{subscription:name,id:id}" \
+            --output table
+
+          az group show \
+            --name TestDouglas \
+            --query "{name:name,location:location}" \
+            --output table

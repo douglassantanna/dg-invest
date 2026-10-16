@@ -107,6 +107,38 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitOrderSync_WithWalletOnlyFundAsset_ShouldCreateAssetFromCurrentBalance()
+    {
+        var (userId, accountId) = await CreateExchangeSyncAccountAsync();
+        _fixture.Factory.CoinMarketCap.CoinsBySymbol["BTC"] = new Coin(
+            1,
+            "Bitcoin",
+            "BTC",
+            DateTime.UtcNow,
+            new Quote(new USD(60_000, DateTime.UtcNow, 0)));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["FUND"] = WalletBalance("FUND", ("BTC", "1"));
+        _fixture.Factory.Bybit.WalletBalancesByAccountType["UNIFIED"] = WalletBalance("UNIFIED");
+
+        try
+        {
+            await _fixture.RunBybitOrderSyncAsync();
+
+            using var scope = _fixture.Factory.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var asset = await context.CryptoAssets
+                .SingleAsync(candidate => EF.Property<int>(candidate, "AccountId") == accountId && candidate.Symbol == "BTC");
+
+            asset.Balance.Should().Be(1m);
+            asset.TotalInvested.Should().Be(0m);
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.WalletBalancesByAccountType.Clear();
+            _fixture.Factory.CoinMarketCap.CoinsBySymbol.Clear();
+        }
+    }
+
+    [Fact]
     public async Task BybitOrderSync_WhenHistoryReplays_ShouldRecoverMissingOrderWithoutDuplicates()
     {
         var (userId, accountId) = await CreateExchangeSyncAccountAsync();
@@ -418,6 +450,93 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task AccountSelectorOptions_IncludesAllNonDeletedAccountsWithHealthAndPersistedSelection()
+    {
+        var (userId, manualAccountId) = await _fixture.CreateUserAsync();
+        int connectedAccountId;
+        int pausedAccountId;
+        int errorAccountId;
+        int unconfiguredAccountId;
+        int disconnectedAccountId;
+        int disabledIntegrationAccountId;
+        int awaitingFirstSyncAccountId;
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var bybitIntegration = new ExchangeIntegration(userId, "Bybit");
+            bybitIntegration.MarkConfigured();
+            bybitIntegration.MarkEnabled();
+            var disabledGeminiIntegration = new ExchangeIntegration(userId, "Gemini");
+            disabledGeminiIntegration.MarkConfigured();
+            disabledGeminiIntegration.MarkDisabled();
+
+            var connected = new Account("Bybit active", userId, EAccountType.Exchange, "Bybit", "active-uid");
+            var paused = new Account("Bybit paused", userId, EAccountType.Exchange, "Bybit", "paused-uid");
+            var needsAttention = new Account("Bybit needs attention", userId, EAccountType.Exchange, "Bybit", "error-uid");
+            var unconfigured = new Account("Kraken setup", userId, EAccountType.Exchange, "Kraken", "kraken-uid");
+            var disconnected = new Account("Bybit disconnected", userId, EAccountType.Exchange, "Bybit", "disconnected-uid");
+            var disabledIntegrationAccount = new Account("Gemini disabled", userId, EAccountType.Exchange, "Gemini", "disabled-uid");
+            var awaitingFirstSync = new Account("Bybit awaiting first sync", userId, EAccountType.Exchange, "Bybit", "first-sync-uid");
+            disconnected.Disable();
+            context.AddRange(bybitIntegration, disabledGeminiIntegration, connected, paused, needsAttention, unconfigured, disconnected, disabledIntegrationAccount, awaitingFirstSync);
+            await context.SaveChangesAsync();
+            connectedAccountId = connected.Id;
+            pausedAccountId = paused.Id;
+            errorAccountId = needsAttention.Id;
+            unconfiguredAccountId = unconfigured.Id;
+            disconnectedAccountId = disconnected.Id;
+            disabledIntegrationAccountId = disabledIntegrationAccount.Id;
+            awaitingFirstSyncAccountId = awaitingFirstSync.Id;
+
+            var connectedStatus = new SyncStatus(userId, connected.Id, "Bybit");
+            connectedStatus.EnableForCredentials();
+            connectedStatus.MarkConnected("latest-order");
+            var pausedStatus = new SyncStatus(userId, paused.Id, "Bybit");
+            pausedStatus.EnableForCredentials();
+            pausedStatus.Disable();
+            var errorStatus = new SyncStatus(userId, needsAttention.Id, "Bybit");
+            errorStatus.EnableForCredentials();
+            errorStatus.MarkError("Temporary connection error");
+            var firstSyncStatus = new SyncStatus(userId, awaitingFirstSync.Id, "Bybit");
+            firstSyncStatus.EnableForCredentials();
+            context.SyncStatuses.AddRange(connectedStatus, pausedStatus, errorStatus, firstSyncStatus);
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.GetAsync("/api/Account/selector-options");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var accounts = document.RootElement.EnumerateArray()
+            .ToDictionary(account => account.GetProperty("accountId").GetInt32());
+        accounts[manualAccountId].GetProperty("accountType").GetString().Should().Be("Manual");
+        accounts[connectedAccountId].GetProperty("accountType").GetString().Should().Be("Exchange");
+        accounts[connectedAccountId].GetProperty("exchangeName").GetString().Should().Be("Bybit");
+        accounts[connectedAccountId].GetProperty("healthStatus").GetString().Should().Be("Connected");
+        accounts[pausedAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
+        accounts[errorAccountId].GetProperty("healthStatus").GetString().Should().Be("NeedsAttention");
+        accounts[errorAccountId].GetProperty("lastErrorMessage").GetString().Should().Be("Temporary connection error");
+        accounts[unconfiguredAccountId].GetProperty("exchangeName").GetString().Should().Be("Kraken");
+        accounts[unconfiguredAccountId].GetProperty("healthStatus").GetString().Should().Be("NotConfigured");
+        accounts.Should().ContainKey(disconnectedAccountId);
+        accounts[disconnectedAccountId].GetProperty("accountName").GetString().Should().Be("Bybit disconnected");
+        accounts[disabledIntegrationAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
+        accounts[awaitingFirstSyncAccountId].GetProperty("healthStatus").GetString().Should().Be("Disconnected");
+
+        var selectExchangeAccount = await client.PostAsJsonAsync("/api/Account/select-account", new { accountId = connectedAccountId });
+        selectExchangeAccount.StatusCode.Should().Be(HttpStatusCode.OK);
+        var selectedOptionsResponse = await client.GetAsync("/api/Account/selector-options");
+        using var selectedOptionsDocument = JsonDocument.Parse(await selectedOptionsResponse.Content.ReadAsStringAsync());
+        var selectedOption = selectedOptionsDocument.RootElement.EnumerateArray()
+            .Single(account => account.GetProperty("accountId").GetInt32() == connectedAccountId);
+        selectedOption.GetProperty("isSelected").GetBoolean().Should().BeTrue();
+        using var selectedScope = _fixture.Factory.Services.CreateScope();
+        (await selectedScope.ServiceProvider.GetRequiredService<DataContext>().Accounts
+            .SingleAsync(account => account.Id == connectedAccountId)).IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
@@ -432,6 +551,26 @@ public class ExchangeControllerIntegrationTests
         account.AccountType.Should().Be(EAccountType.Manual);
         account.Exchange.Should().BeNull();
         account.ExternalId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAccount_WhenNameMatchesAnExchangeAccount_ShouldReturnConflictDetails()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            context.Accounts.Add(new Account("Shared account", userId, EAccountType.Exchange, "Bybit", "shared-uid"));
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.PostAsJsonAsync("/api/Account/create", new { name = "shared account" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        document.RootElement.GetProperty("isSuccess").GetBoolean().Should().BeFalse();
+        document.RootElement.GetProperty("message").GetString().Should().Contain("already exists");
     }
 
     [Fact]
@@ -593,6 +732,91 @@ public class ExchangeControllerIntegrationTests
         connectionGroupsPayload.Should().NotContain("Integration subaccount");
         (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be(string.Empty);
         (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyAccountKey(userId, accountId, "webhook-secret"))).Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public async Task BybitReconnect_WithSameMasterUid_ReEnablesMasterOnlyAfterSuccessfulDiscovery()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var firstSave = await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new
+        {
+            apiKey = "first-master-key",
+            apiSecret = "first-master-secret",
+            masterUid = "900001",
+        });
+        firstSave.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync("/api/Exchange/bybit/sync-accounts", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        var masterAccountId = await GetAccountIdAsync(userId, "Bybit master account", EAccountType.Exchange);
+
+        (await client.PostAsync("/api/Exchange/bybit/disconnect", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            (await context.Accounts.SingleAsync(account => account.Id == masterAccountId)).Enabled.Should().BeFalse();
+        }
+
+        var reconnect = await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new
+        {
+            apiKey = "reconnected-master-key",
+            apiSecret = "reconnected-master-secret",
+            masterUid = "900001",
+        });
+        reconnect.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        _fixture.Factory.Bybit.SubAccountsError = new BybitApiException(10003, "API key is invalid");
+        try
+        {
+            var rejectedDiscovery = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+            rejectedDiscovery.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            using (var scope = _fixture.Factory.Services.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+                (await context.Accounts.SingleAsync(account => account.Id == masterAccountId)).Enabled.Should().BeFalse();
+            }
+        }
+        finally
+        {
+            _fixture.Factory.Bybit.SubAccountsError = null;
+        }
+
+        var successfulDiscovery = await client.PostAsync("/api/Exchange/bybit/sync-accounts", null);
+        successfulDiscovery.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync("/api/Exchange/bybit/sync-accounts", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var masterAccount = await context.Accounts.SingleAsync(account => account.Id == masterAccountId);
+            masterAccount.Enabled.Should().BeTrue();
+            masterAccount.IsDeleted.Should().BeFalse();
+            (await context.Accounts.CountAsync(account => account.UserId == userId
+                && account.Exchange == "Bybit"
+                && account.ExternalId == "900001")).Should().Be(1);
+        }
+
+        (await client.GetAsync("/api/Exchange/accounts")).StatusCode.Should().Be(HttpStatusCode.OK);
+        var groups = await client.GetAsync("/api/Exchange/bybit/connection-groups");
+        (await groups.Content.ReadAsStringAsync()).Should().Contain("Bybit master account");
+
+        (await client.PostAsync("/api/Exchange/bybit/disconnect", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        var differentMasterReconnect = await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new
+        {
+            apiKey = "different-master-key",
+            apiSecret = "different-master-secret",
+            masterUid = "900002",
+        });
+        differentMasterReconnect.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync("/api/Exchange/bybit/sync-accounts", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var oldMaster = await context.Accounts.SingleAsync(account => account.Id == masterAccountId);
+            oldMaster.Enabled.Should().BeFalse();
+            var newMaster = await context.Accounts.SingleAsync(account => account.UserId == userId
+                && account.Exchange == "Bybit"
+                && account.ExternalId == "900002");
+            newMaster.Enabled.Should().BeTrue();
+        }
     }
 
     [Fact]
@@ -884,6 +1108,31 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task BybitIntegrationConnectionTest_UsesSavedIntegrationCredentialsAndRegion()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var save = await client.PostAsJsonAsync("/api/Exchange/bybit/integration-credentials", new
+        {
+            apiKey = "integration-api-key",
+            apiSecret = "integration-api-secret",
+            region = "Eu",
+            masterUid = "900003",
+        });
+        save.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await client.PostAsync("/api/Exchange/bybit/test-integration-connection", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Bybit integration connection successful");
+        _fixture.Factory.Bybit.LastTestConnectionApiKey.Should().Be("integration-api-key");
+        _fixture.Factory.Bybit.LastTestConnectionRegion.Should().Be(BybitRegion.Eu);
+        var groups = await client.GetAsync("/api/Exchange/bybit/connection-groups");
+        groups.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await groups.Content.ReadAsStringAsync()).Should().Contain("\"lastVerifiedAt\":\"");
+    }
+
+    [Fact]
     public async Task BybitDiscovery_RequiresIntegrationCredentials()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
@@ -1157,6 +1406,36 @@ public class ExchangeControllerIntegrationTests
         (await client.PostAsync($"/api/Exchange/bybit/toggle/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await client.PostAsJsonAsync("/api/Exchange/bybit/map-account", new { accountId = mainAccountId, externalId = "manual-uid" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task BybitMapAccount_PersistsTheExchangeUidForTheOwnedAccount()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        int accountId;
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var account = new Account("Unmapped Bybit account", userId, EAccountType.Exchange, "Bybit");
+            context.Accounts.Add(account);
+            await context.SaveChangesAsync();
+            accountId = account.Id;
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.PostAsJsonAsync("/api/Exchange/bybit/map-account", new
+        {
+            accountId,
+            externalId = "mapped-bybit-uid",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("mapped-bybit-uid");
+        using var verificationScope = _fixture.Factory.Services.CreateScope();
+        var persistedAccount = await verificationScope.ServiceProvider.GetRequiredService<DataContext>().Accounts
+            .AsNoTracking()
+            .SingleAsync(candidate => candidate.Id == accountId && candidate.UserId == userId);
+        persistedAccount.ExternalId.Should().Be("mapped-bybit-uid");
     }
 
     [Fact]

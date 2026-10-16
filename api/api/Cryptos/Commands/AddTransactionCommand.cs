@@ -66,7 +66,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogError("AddTransactionCommandHandler. Validation failed: {0}", errors);
+            _logger.LogWarning("AddTransactionCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
@@ -77,14 +77,14 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                     .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {
-            _logger.LogError("AddTransactionCommandHandler. Account for UserId {0} not found.", request.UserId);
+            _logger.LogWarning("AddTransactionCommandHandler. Account for UserId {0} not found.", request.UserId);
             return new Response("Account not found", false, 404);
         }
 
         var cryptoAsset = account.CryptoAssets.Where(x => x.Id == request.CryptoAssetId).FirstOrDefault();
         if (cryptoAsset == null)
         {
-            _logger.LogError("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
+            _logger.LogWarning("AddTransactionCommandHandler. Crypto asset {0} not found.", request.CryptoAssetId);
             return new Response("Crypto asset not found", false, 404);
         }
 
@@ -112,7 +112,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
 
             if (!response.IsSuccess)
             {
-                _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", response.Message);
+                _logger.LogWarning("AddTransactionCommandHandler. Error adding transaction: {0}", response.Message);
                 return response;
             }
 
@@ -125,7 +125,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
         catch (CryptoAssetException ex)
         {
-            _logger.LogError("AddTransactionCommandHandler. Error adding transaction: {0}", ex.Message);
+            _logger.LogWarning(ex, "AddTransactionCommandHandler. Transaction rejected by domain rules");
             return new Response(ex.Message, false, 500);
         }
     }

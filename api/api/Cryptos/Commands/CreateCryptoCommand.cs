@@ -55,7 +55,7 @@ public class CreateCryptoCommandHandler : IRequestHandler<CreateCryptoCommand, R
         var validationResult = await validation.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            _logger.LogError("Validation errors occurred while creating a crypto");
+            _logger.LogWarning("Validation errors occurred while creating a crypto");
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
             return new Response("Validation errors", false, errors);
         }
@@ -63,7 +63,7 @@ public class CreateCryptoCommandHandler : IRequestHandler<CreateCryptoCommand, R
         var existingCrypto = await _context.Cryptos.FirstOrDefaultAsync(x => x.CoinMarketCapId == request.CoinMarketCapId, cancellationToken);
         if (existingCrypto != null)
         {
-            _logger.LogError("A crypto with the same CoinMarketCap ID already exists");
+            _logger.LogWarning("A crypto with the same CoinMarketCap ID already exists");
             return new Response("A crypto with the same CoinMarketCap ID already exists", false);
         }
 

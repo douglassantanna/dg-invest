@@ -17,7 +17,7 @@ namespace api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.7")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -247,6 +247,14 @@ namespace api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("AutoPausedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ConsecutiveTransportFailures")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -258,11 +266,40 @@ namespace api.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar");
 
+                    b.Property<int?>("LastErrorAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastErrorAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("LastErrorEndpoint")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar");
+
+                    b.Property<string>("LastErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar");
+
+                    b.Property<DateTime?>("LastPauseNotificationAttemptAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("LastSyncAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int?>("MasterAccountId")
                         .HasColumnType("int");
+
+                    b.Property<int>("PauseNotificationAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("PauseNotificationSentAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Region")
                         .IsRequired()

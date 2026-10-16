@@ -1,27 +1,30 @@
 # WebApp
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 16.1.6.
+This is the Angular 17 frontend. See the repository [navigation map](../docs/README.md) for the exchange page and API client entry points.
 
 ## Development server
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
-
-## Code scaffolding
-
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+Run `npm start` for a development server at `http://localhost:4200/`. The application automatically reloads when source files change.
 
 ## Build
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+Run `npm run build` to build the project. The build artifacts are written to `dist/`.
 
-## Running unit tests
+## Unit tests
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+Run `npm test` to execute unit tests via [Karma](https://karma-runner.github.io).
 
-## Running end-to-end tests
+## End-to-end tests
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Run `npm run cypress:run` to execute the Cypress end-to-end tests. To run only exchange management tests:
 
-## Further help
+```bash
+npm run cypress:run -- --spec cypress/e2e/exchanges/exchange-management.cy.ts
+```
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+## Source layout
+
+- `src/app/pages/` contains route-level pages and containers.
+- `src/app/core/services/exchange.service.ts` contains the exchange API client.
+- `src/app/core/models/` contains API-facing DTOs.
+- `cypress/e2e/` contains browser contract tests.

@@ -30,17 +30,17 @@ describe('Auth Guard', () => {
     cy.intercept(
       {
         method: 'GET',
-        url: '**/api/Crypto/list-assets*'
+        url: '**/api/Account/selector-options'
       },
       {
         statusCode: 401,
         body: { message: 'Unauthorized' }
       })
-      .as('list-assets');
+      .as('selector-options');
 
     cy.visit('/#/cryptos');
 
-    cy.wait('@list-assets');
+    cy.wait('@selector-options');
 
     cy.url().should('include', '/login');
 
@@ -50,6 +50,21 @@ describe('Auth Guard', () => {
   it('should allow authenticated users to access the cryptos page', () => {
     setAuthToken(fakeValidJwt);
 
+    cy.intercept('GET', '**/api/Account/selector-options', {
+      body: [{
+        accountId: 1,
+        accountName: 'Main portfolio',
+        balance: 0,
+        isSelected: true,
+        accountType: 'Manual',
+        exchangeName: null,
+        isBybitCombinedWallet: false,
+        healthStatus: null,
+        lastSyncAt: null,
+        errorCount: 0,
+        lastErrorMessage: null,
+      }],
+    }).as('selector-options');
     cy.intercept(
       {
         method: 'GET',
@@ -57,12 +72,20 @@ describe('Auth Guard', () => {
       },
       {
         statusCode: 200,
-        body: []
+        body: {
+          hasNextPage: false,
+          hasPreviousPage: false,
+          items: [{ accountTag: 'Main portfolio', accountBalance: 0, cryptoAssetDto: [], totalDeposited: 0, isBybitCombinedWallet: false }],
+          page: 1,
+          pageSize: 50,
+          totalCount: 1,
+        }
       })
       .as('list-assets');
 
     cy.visit('/#/cryptos');
 
+    cy.wait('@selector-options');
     cy.wait('@list-assets');
     cy.url().should('include', '/cryptos');
     cy.get('app-view-cryptos').should('exist');

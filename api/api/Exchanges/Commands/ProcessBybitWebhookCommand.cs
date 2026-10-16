@@ -81,7 +81,7 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
 
         if (webhookSecret.IsUnavailable)
         {
-            _logger.LogError("ProcessBybitWebhook: Key Vault unavailable for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
+            _logger.LogWarning("ProcessBybitWebhook: Key Vault unavailable for user {UserId}, account {AccountId}", request.UserId, request.AccountId);
             return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
         }
 
@@ -107,7 +107,7 @@ public class ProcessBybitWebhookCommandHandler : IRequestHandler<ProcessBybitWeb
 
         if (account == null)
         {
-            _logger.LogError("ProcessBybitWebhook: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
+            _logger.LogWarning("ProcessBybitWebhook: account {AccountId} not found for user {UserId}", request.AccountId, request.UserId);
             await _orderSyncService.MarkSyncStatusErrorAsync(request.UserId, request.AccountId, "Account not found", cancellationToken);
             return new Response("Account not found", false, 404);
         }

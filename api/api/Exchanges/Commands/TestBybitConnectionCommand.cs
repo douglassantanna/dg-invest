@@ -65,6 +65,11 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             var region = BybitEndpoints.Parse(syncStatus?.Region);
             success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!, region);
         }
+        catch (BybitTransportException ex)
+        {
+            _logger.LogWarning(ex, "TestBybitConnection: Bybit service unavailable for account {AccountId}", request.AccountId);
+            return new Response("Bybit is temporarily unavailable while testing the account connection. Please try again.", false, 503);
+        }
         catch (BybitApiException ex)
         {
             _logger.LogWarning(ex, "TestBybitConnection: Bybit rejected connection test for account {AccountId}", request.AccountId);

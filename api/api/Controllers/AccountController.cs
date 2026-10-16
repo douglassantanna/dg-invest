@@ -33,6 +33,20 @@ public class AccountController(IMediator mediator) : ControllerBase
         return Ok(result.Data);
     }
 
+    [HttpGet("selector-options")]
+    public async Task<ActionResult<Response>> GetAccountSelectorOptions()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new GetAccountSelectorOptionsQuery(userId));
+        if (!result.IsSuccess)
+            return BadRequest(result.Message);
+
+        return Ok(result.Data);
+    }
+
     [HttpPost("create")]
     public async Task<ActionResult<Response>> CreateAccount([FromBody] CreateAccountRequest request)
     {
@@ -50,16 +64,20 @@ public class AccountController(IMediator mediator) : ControllerBase
         var result = await _mediator.Send(command);
         if (!result.IsSuccess)
         {
-            if (result.Data is { } data && data.GetType().GetProperty("HttpStatusCode")?.GetValue(data) is HttpStatusCode httpStatusCode)
+            var failure = new Response(result.Message, false, result.Data);
+            if (result.Data is int statusCode)
             {
-                return httpStatusCode switch
+                return statusCode switch
                 {
-                    HttpStatusCode.NotFound => NotFound(result.Message),
-                    HttpStatusCode.Conflict => Conflict(result.Message),
-                    HttpStatusCode.BadRequest => BadRequest(result.Message),
-                    _ => BadRequest(result.Message),
+                    (int)HttpStatusCode.NotFound => NotFound(failure),
+                    (int)HttpStatusCode.Conflict => Conflict(failure),
+                    (int)HttpStatusCode.BadRequest => BadRequest(failure),
+                    (int)HttpStatusCode.InternalServerError => StatusCode(statusCode, failure),
+                    _ => BadRequest(failure),
                 };
             }
+
+            return BadRequest(failure);
         }
         return Ok(result.Message);
     }

@@ -23,6 +23,8 @@ public record GetCryptoAssetsQuery : IRequest<PageList<UserCryptoAssetDto>>
 }
 public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery, PageList<UserCryptoAssetDto>>
 {
+    private const decimal MinimumVisibleInvestedAmount = 0.10m;
+
     private readonly DataContext _context;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ILogger<GetCryptoAssetsQueryHandler> _logger;
@@ -46,6 +48,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
         {
             var account = await _context.Accounts
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.CryptoAssets)
                 .Include(x => x.AccountTransactions)
                 .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted, ct);
@@ -59,7 +62,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
 
             if (request.HideZeroBalance)
             {
-                cryptoAssets = cryptoAssets.Where(x => x.Balance > 0);
+                cryptoAssets = cryptoAssets.Where(x => x.HasMeaningfulInvestment(MinimumVisibleInvestedAmount));
             }
 
             if (!string.IsNullOrEmpty(request.AssetName))

@@ -40,7 +40,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
             var userExists = await _context.Users.AnyAsync(u => u.Id == request.UserId, cancellationToken);
             if (!userExists)
             {
-                _logger.LogError("SyncBybitAccounts: user {UserId} not found", request.UserId);
+                _logger.LogWarning("SyncBybitAccounts: user {UserId} not found", request.UserId);
                 return new Response("User not found", false, 404);
             }
 
@@ -62,7 +62,7 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
 
             if (string.IsNullOrEmpty(apiKey.Value) || string.IsNullOrEmpty(apiSecret.Value))
             {
-                _logger.LogError("SyncBybitAccounts: Bybit credentials not configured for user {UserId}", request.UserId);
+                _logger.LogWarning("SyncBybitAccounts: Bybit credentials not configured for user {UserId}", request.UserId);
                 return new Response("Bybit credentials not found. Please save your API key and secret first.", false, 400);
             }
 
@@ -100,8 +100,16 @@ public class SyncBybitAccountsCommandHandler : IRequestHandler<SyncBybitAccounts
                 ? await _context.Accounts.SingleOrDefaultAsync(a => a.Id == masterAccountId && !a.IsDeleted, cancellationToken)
                 : null;
             if (masterAccount is not null)
+            {
+                if (!masterAccount.Enabled)
+                {
+                    masterAccount.Enable();
+                    _logger.LogInformation("SyncBybitAccounts: re-enabled linked master account {AccountId} after successful discovery", masterAccount.Id);
+                }
+
                 await PopulateInitialCashBalanceAsync(masterAccount, apiKey.Value!, apiSecret.Value!, region,
                     [("FUND", null), ("UNIFIED", null)], cancellationToken);
+            }
             else
             {
                 var legacyMainAccount = await _context.Accounts

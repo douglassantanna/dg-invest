@@ -24,7 +24,7 @@ public static class BlobLoggingExtensions
         return loggerConfiguration.WriteTo.AzureBlobStorage(
             new RenderedCompactJsonFormatter(),
             connectionString,
-            LogEventLevel.Information,
+            LogEventLevel.Error,
             storageContainerName: containerName,
             storageFileName: $"{{yyyy}}/{{MM}}/{{dd}}/{stream}.jsonl",
             contentType: "application/jsonl",

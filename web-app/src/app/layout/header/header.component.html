@@ -1,5 +1,5 @@
 <header
-  class="flex items-center h-16 gap-2 justify-between border-b-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  class="flex h-16 items-center justify-between gap-2 border-b-2 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
 
   <div class="flex g-2">
     <button class="text-gray-900 cursor-pointer ml-6 font-bold dark:text-gray-100 sm:hidden"
@@ -11,16 +11,18 @@
       class="w-24 h-15 ml-5 mb-3 md:hidden lg:hidden xl:hidden">
   </div>
 
-  <div>
-    <h1 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ accountTag() }} account</h1>
+  <div role="status" aria-live="polite" aria-label="Current account"
+    class="flex min-w-0 items-center gap-2 px-3 py-2 text-left">
+    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+      <span class="material-icons text-xl" aria-hidden="true">account_balance_wallet</span>
+    </span>
+    <span class="min-w-0">
+      <span class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Current account</span>
+      <span class="block max-w-[11rem] truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ accountTag() }}</span>
+    </span>
   </div>
 
   <div class="flex items-center mr-6 sm:mr-4">
-    <button (click)="toggleAccountModal([])"
-      class="flex items-center text-blue-600 cursor-pointer transition-colors duration-200 justify-center h-10 w-10 mr-2 rounded-full bg-blue-100 dark:bg-blue-900">
-      <span class="material-icons">apps</span>
-    </button>
-
     <div id="username-initial-letter"
       class="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
       <span class="text-base font-bold text-blue-600 dark:text-blue-300">
@@ -30,9 +32,3 @@
   </div>
 
 </header>
-
-@if (showAccountModal()) {
-<app-modal (close)="toggleAccountModal([])">
-  <app-account-selection (accountCreatedEvent)="toggleAccountModal($event)"></app-account-selection>
-</app-modal>
-}

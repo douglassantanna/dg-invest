@@ -202,6 +202,7 @@ describe('Exchange management', () => {
       expect(request.body).to.deep.equal({ apiKey: 'api-key', apiSecret: 'api-secret', masterUid: '10001', region: 'Global' });
       request.reply(response(null, 'Integration credentials saved successfully'));
     }).as('saveIntegrationCredentials');
+    cy.intercept('POST', `${api}/bybit/test-integration-connection`, response(null, 'Bybit integration connection successful')).as('testIntegrationConnection');
     cy.intercept('POST', `${api}/bybit/sync-accounts`, response(null, 'Account discovery complete. 1 found, 1 created.')).as('discoverAccounts');
     authenticate();
     cy.visit('/#/exchanges/bybit');
@@ -219,6 +220,7 @@ describe('Exchange management', () => {
     cy.get('#bybit-api-key').should('have.value', '');
     cy.get('#bybit-api-secret').should('have.value', '');
     cy.get('#bybit-master-uid').should('have.value', '');
+    cy.wait('@testIntegrationConnection');
     cy.wait('@discoverAccounts');
     cy.wait('@updatedGroups');
     cy.wait('@updatedStatuses');
@@ -258,6 +260,7 @@ describe('Exchange management', () => {
     cy.intercept('GET', `${api}/bybit/sync-status`, response([])).as('syncStatus');
     cy.intercept('GET', `${api}/bybit/sub-members`, response([])).as('subMembers');
     cy.intercept('POST', `${api}/bybit/integration-credentials`, response(null, 'Integration credentials saved successfully')).as('saveIntegrationCredentials');
+    cy.intercept('POST', `${api}/bybit/test-integration-connection`, response(null, 'Bybit integration connection successful')).as('testIntegrationConnection');
     cy.intercept('POST', `${api}/bybit/sync-accounts`, {
       statusCode: 400,
       body: { message: 'Bybit rejected the integration credentials: 10003 - API key is invalid', isSuccess: false, data: 400 },
@@ -273,12 +276,40 @@ describe('Exchange management', () => {
     cy.get('#bybit-master-uid').type('10001');
     cy.contains('button', 'Connect Bybit').click();
     cy.wait('@saveIntegrationCredentials');
+    cy.wait('@testIntegrationConnection');
     cy.wait('@discoverAccounts');
 
     cy.get('#bybit-api-key').should('have.value', '');
     cy.get('#bybit-api-secret').should('have.value', '');
     cy.contains('Bybit rejected the integration credentials: 10003 - API key is invalid').should('be.visible');
     cy.contains('Trading account').should('not.exist');
+  });
+
+  it('does not discover accounts when integration credential validation fails', () => {
+    cy.intercept('GET', `${api}/bybit/connection-groups`, response([])).as('connectionGroups');
+    cy.intercept('GET', `${api}/bybit/sync-status`, response([])).as('syncStatus');
+    cy.intercept('GET', `${api}/bybit/sub-members`, response([])).as('subMembers');
+    cy.intercept('POST', `${api}/bybit/integration-credentials`, response(null, 'Integration credentials saved successfully')).as('saveIntegrationCredentials');
+    cy.intercept('POST', `${api}/bybit/test-integration-connection`, {
+      statusCode: 400,
+      body: { message: 'Bybit rejected the integration credentials: 10003 - API key is invalid', isSuccess: false, data: 400 },
+    }).as('testIntegrationConnection');
+    cy.intercept('POST', `${api}/bybit/sync-accounts`).as('discoverAccounts');
+    authenticate();
+    cy.visit('/#/exchanges/bybit');
+    cy.wait('@connectionGroups');
+    cy.wait('@syncStatus');
+    cy.wait('@subMembers');
+
+    cy.get('#bybit-api-key').type('bad-key');
+    cy.get('#bybit-api-secret').type('bad-secret');
+    cy.get('#bybit-master-uid').type('10001');
+    cy.contains('button', 'Connect Bybit').click();
+    cy.wait('@saveIntegrationCredentials');
+    cy.wait('@testIntegrationConnection');
+
+    cy.get('@discoverAccounts.all').should('have.length', 0);
+    cy.contains('Bybit rejected the integration credentials: 10003 - API key is invalid').should('be.visible');
   });
 
   it('disconnects Bybit through the API with confirmation and reloads the setup state', () => {
@@ -342,6 +373,7 @@ describe('Exchange management', () => {
       expect(request.body).to.deep.equal({ apiKey: 'new-key', apiSecret: 'new-secret', masterUid: '10001', region: 'Global' });
       request.reply(response(null, 'Integration credentials saved successfully'));
     }).as('saveIntegrationCredentials');
+    cy.intercept('POST', `${api}/bybit/test-integration-connection`, response(null, 'Bybit integration connection successful')).as('testIntegrationConnection');
     cy.intercept('POST', `${api}/bybit/sync-accounts`, response(null, 'Account discovery complete. 1 found, 1 created.')).as('discoverAccounts');
     cy.intercept('GET', `${api}/bybit/connection-groups`, newGroups()).as('reconnectedGroups');
     cy.intercept('GET', `${api}/bybit/sync-status`, statuses([newAccount()])).as('reconnectedStatuses');
@@ -358,6 +390,7 @@ describe('Exchange management', () => {
     cy.get('#bybit-master-uid').type('10001');
     cy.contains('button', 'Connect Bybit').click();
     cy.wait('@saveIntegrationCredentials');
+    cy.wait('@testIntegrationConnection');
     cy.wait('@discoverAccounts');
     cy.wait('@reconnectedGroups');
     cy.wait('@reconnectedStatuses');
