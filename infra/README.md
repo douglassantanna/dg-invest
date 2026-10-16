@@ -9,7 +9,9 @@ Infrastructure is deployed to the existing `TestDouglas` resource group in the M
 3. Run **Deploy Azure Infrastructure** with `stage` or `prod` and leave `apply` disabled first. Review validation and `what-if` output.
 4. Run it again with `apply` enabled only after reviewing the changes.
 
-The two parameter files intentionally leave `sqlFirewallIpAddresses` empty for the first deployment. That deployment creates the apps and reports their possible outbound IPs. Add the required API and Function App IPs to that environment parameter file, then run validation/what-if/apply again to add the narrow Azure SQL firewall rules. The database remains inaccessible to the apps until those rules are applied.
+The two parameter files intentionally leave `sqlFirewallIpAddresses` empty for the first deployment. That deployment creates the apps and reports their possible outbound IPs. Add the reported API and Function App IPs to that environment parameter file, then run validation/what-if/apply again to add the SQL firewall rules. The database remains inaccessible to the apps until those rules are applied.
+
+The owner accepts this as a best-effort, test-only allowlist: Flex Consumption egress addresses can change as Azure scales the app, so a Functions-to-SQL connection can stop working until the updated address list is applied. This is not a stable-egress guarantee or a production network boundary. Refresh the list after egress-related connection failures and remove obsolete rules when addresses change.
 
 The workflow serializes PROD and STAGE deployments because both update shared resources: the Windows F1 App Service plan, SQL logical server, and Log Analytics workspace.
 
