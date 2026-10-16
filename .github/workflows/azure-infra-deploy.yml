@@ -1,0 +1,101 @@
+name: Deploy Azure Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Environment configuration to validate/deploy
+        required: true
+        type: choice
+        options:
+          - stage
+          - prod
+      apply:
+        description: Apply the Bicep deployment after validation and what-if
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: azure-infra-TestDouglas
+  cancel-in-progress: false
+
+jobs:
+  deploy-infrastructure:
+    name: Validate and deploy ${{ inputs.target_environment }} infrastructure
+    runs-on: ubuntu-latest
+    environment: azure-infra-sandbox
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Bicep CLI
+        run: az bicep install
+
+      - name: Confirm deployment credentials and target scope
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          test -n "$SQL_ADMIN_PASSWORD" || { echo "SQL_ADMIN_PASSWORD is required in the azure-infra-sandbox environment."; exit 1; }
+          actual_subscription=$(az account show --query id --output tsv)
+          test "$actual_subscription" = "$AZURE_SUBSCRIPTION_ID" || { echo "Authenticated subscription does not match AZURE_SUBSCRIPTION_ID."; exit 1; }
+          az group show --name TestDouglas --output none
+
+      - name: Build Bicep
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep build-params --file infra/environments/${{ inputs.target_environment }}.bicepparam --stdout > /dev/null
+
+      - name: Validate deployment
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          az deployment group validate \
+            --resource-group TestDouglas \
+            --name dginvest-${{ inputs.target_environment }}-infra \
+            --parameters infra/environments/${{ inputs.target_environment }}.bicepparam
+
+      - name: Show what-if changes
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          az deployment group what-if \
+            --resource-group TestDouglas \
+            --name dginvest-${{ inputs.target_environment }}-infra \
+            --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
+            --result-format ResourceIdOnly
+
+      - name: Apply infrastructure
+        if: ${{ inputs.apply }}
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          az deployment group create \
+            --resource-group TestDouglas \
+            --name dginvest-${{ inputs.target_environment }}-infra \
+            --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
+            --output none
+
+      - name: Show deployment outputs
+        if: ${{ inputs.apply }}
+        run: |
+          az deployment group show \
+            --resource-group TestDouglas \
+            --name dginvest-${{ inputs.target_environment }}-infra \
+            --query properties.outputs \
+            --output json
