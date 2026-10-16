@@ -15,11 +15,16 @@
       Choose account
     </a>
   </div>
-  } @else if (loading()) {
+  } @else if (loading() && !hasLoadedPortfolio()) {
   <div class="w-full rounded-xl border border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" role="status">
     Loading your portfolio…
   </div>
   } @else {
+  @if (loading()) {
+  <div class="w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200" role="status">
+    Refreshing portfolio…
+  </div>
+  }
   <app-portfolio-card [accountBalance]="accountBalance()" [investmentChangePercent]="investmentChangePercent()"
     [totalInvested]="totalInvested()" [totalMarketValue]="totalMarketValue()" [totalDeposited]="totalDeposited()"
     [isBybitCombinedWallet]="isBybitCombinedWallet()" />
@@ -35,7 +40,6 @@
   <!-- table component -->
   <div class="flex justify-center w-full">
     <div class="flex flex-col p-4 rounded-md bg-white max-w-6xl w-full border shadow-md border-gray-300 overflow-auto">
-      @if (isCryptoAssetListEmpty()) {
       <div class="flex justify-between items-center sm:flex-col sm:justify-start sm:items-start">
         <span class="text-left font-bold text-xl sm:mb-4">Cryptos</span>
         <div class="flex items-center justify-end sm:flex-row mb-2">
@@ -53,14 +57,8 @@
           </div>
         </div>
       </div>
-      }@else {
-      <div class="text-right mb-1">
-        <h2 class="text-center">No assets found</h2>
-        <button type="button" (click)="toggleCreateCryptoModal()"
-          class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200">
-          Add <span class="ml-1">asset</span>
-        </button>
-      </div>
+      @if (!isCryptoAssetListEmpty()) {
+      <h2 class="mb-2 text-center text-gray-700 dark:text-gray-300">No assets found</h2>
       }
       <app-crypto-table [cryptos]="cryptoAssetList()" [hideZeroBalance]="hideZeroBalance"
         [sortOrder]="sortOrderOutput()" [sortBy]="sortByOutput()" (outputHeader)="outputHeaderEvent($event)" />

@@ -48,6 +48,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
   totalDeposited = signal(0);
   isModalOpen = signal(false);
   loading = signal(false);
+  hasLoadedPortfolio = signal(false);
   accountSelectorReady = signal(false);
   hasSelectedAccount = signal(false);
   accountLoadError = this.accountState.errorMessage;
@@ -145,6 +146,7 @@ export class ViewCryptosComponent implements OnInit, OnDestroy {
     this.investmentChangePercent.set(this.calculatePercentDifference(cryptoAssets));
     this.cryptoAssetList.set(cryptoAssets);
     this.totalDeposited.set(portfolio?.totalDeposited ?? 0);
+    this.hasLoadedPortfolio.set(true);
   }
 
   outputHeaderEvent(event: string) {

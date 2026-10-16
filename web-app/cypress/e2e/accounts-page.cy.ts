@@ -228,6 +228,44 @@ describe('Accounts page', () => {
     cy.get('app-crypto-table').should('contain.text', 'BTC');
   });
 
+  it('preserves portfolio search while refreshing and when no assets match', () => {
+    selectedAccountId = 101;
+    createdManualAccountName = null;
+    cy.intercept('GET', `${api}/selector-options`, request => request.reply(accountOptions())).as('selectorOptions');
+    cy.intercept('GET', '**/api/Crypto/list-assets*', request => {
+      const assetName = new URL(request.url).searchParams.get('assetName') ?? '';
+      request.reply({
+        hasNextPage: false,
+        hasPreviousPage: false,
+        items: [{
+          accountTag: 'Bybit Main',
+          accountBalance: 8430.5,
+          cryptoAssetDto: assetName === 'NOPE'
+            ? []
+            : [{ id: 1, symbol: 'btc', pricePerUnit: 60000, balance: 0.1, investedAmount: 5000, currentWorth: 6000, investmentGainLossValue: 1000, investmentGainLossPercentage: 20, coinMarketCapId: 1, image: 'btc' }],
+          totalDeposited: 5000,
+          isBybitCombinedWallet: true,
+        }],
+        page: 1,
+        pageSize: 50,
+        totalCount: assetName === 'NOPE' ? 0 : 1,
+      });
+    }).as('homePortfolio');
+
+    authenticate();
+    cy.wait('@selectorOptions');
+    cy.wait('@homePortfolio');
+    cy.get('app-crypto-filter input[type="text"]').type('NOPE');
+    cy.wait('@homePortfolio');
+
+    cy.contains('h2', 'No assets found').should('be.visible');
+    cy.get('app-crypto-filter input[type="text"]').should('have.value', 'NOPE');
+    cy.get('app-crypto-filter input[type="text"]').clear();
+    cy.wait('@homePortfolio');
+    cy.get('app-crypto-filter input[type="text"]').should('have.value', '');
+    cy.get('app-crypto-table').should('contain.text', 'BTC');
+  });
+
   it('does not request a home portfolio when the server has no selected account', () => {
     selectedAccountId = 0;
     createdManualAccountName = null;
@@ -353,6 +391,7 @@ describe('Accounts page', () => {
 
     cy.get('app-crypto-filter input').type('BTC');
     cy.wait('@accountDetails').its('request.url').should('contain', 'filter=BTC');
+    cy.get('app-crypto-filter input').should('have.value', 'BTC');
     cy.get('input[type="date"]').eq(0).type('2026-10-01').blur();
     cy.wait('@accountDetails').its('request.url').should('contain', 'startDate=2026-10-01');
     cy.get('input[type="date"]').eq(1).type('2026-10-15').blur();
