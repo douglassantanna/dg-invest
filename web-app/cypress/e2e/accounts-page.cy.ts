@@ -372,6 +372,37 @@ describe('Accounts page', () => {
     cy.get('[aria-label="Current account"]').should('contain.text', 'Personal portfolio');
   });
 
+  it('keeps the portfolio form open when its name matches an exchange account', () => {
+    visitAccounts();
+    cy.intercept('POST', `${api}/create`).as('createManualAccount');
+
+    cy.contains('button', 'Add portfolio').click();
+    cy.get('#new-manual-account-name').type('Bybit Main');
+    cy.contains('button', 'Create').click();
+
+    cy.get('[role="alert"]').should('contain.text', 'An account with this name already exists.');
+    cy.get('#new-manual-account-name').should('have.value', 'Bybit Main');
+    cy.get('@createManualAccount.all').should('have.length', 0);
+  });
+
+  it('keeps the portfolio form open when the API reports a concurrent name conflict', () => {
+    visitAccounts();
+    cy.intercept('POST', `${api}/create`, request => {
+      request.reply({
+        statusCode: 409,
+        body: { message: 'Account name already exists for this user.', isSuccess: false, data: 409 },
+      });
+    }).as('createManualAccount');
+
+    cy.contains('button', 'Add portfolio').click();
+    cy.get('#new-manual-account-name').type('Created by another session');
+    cy.contains('button', 'Create').click();
+    cy.wait('@createManualAccount');
+
+    cy.get('[role="alert"]').should('contain.text', 'already exists');
+    cy.get('#new-manual-account-name').should('have.value', 'Created by another session');
+  });
+
   it('keeps the grouped selector and activity usable on a narrow screen', () => {
     cy.viewport(390, 844);
     visitAccounts();

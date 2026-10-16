@@ -554,6 +554,26 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task CreateAccount_WhenNameMatchesAnExchangeAccount_ShouldReturnConflictDetails()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            context.Accounts.Add(new Account("Shared account", userId, EAccountType.Exchange, "Bybit", "shared-uid"));
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.PostAsJsonAsync("/api/Account/create", new { name = "shared account" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        document.RootElement.GetProperty("isSuccess").GetBoolean().Should().BeFalse();
+        document.RootElement.GetProperty("message").GetString().Should().Contain("already exists");
+    }
+
+    [Fact]
     public async Task CreateAccount_WithoutNameOrLegacyAlias_ShouldRejectRequest()
     {
         var (userId, _) = await _fixture.CreateUserAsync();

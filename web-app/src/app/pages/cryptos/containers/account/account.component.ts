@@ -172,7 +172,7 @@ export class AccountComponent implements OnInit {
     const name = this.newAccountName.trim();
     if (!name || this.savingManualAccount()) return;
 
-    if (this.manualAccounts().some(account => account.accountName.toLowerCase() === name.toLowerCase())) {
+    if (this.accountSelectorOptions().some(account => account.accountName.toLowerCase() === name.toLowerCase())) {
       this.createAccountError.set('An account with this name already exists.');
       return;
     }
@@ -187,7 +187,10 @@ export class AccountComponent implements OnInit {
       },
       error: error => {
         this.savingManualAccount.set(false);
-        this.createAccountError.set(typeof error.error === 'string' ? error.error : 'Could not create the portfolio. Try another name.');
+        const errorMessage = typeof error.error === 'string' ? error.error : error.error?.message;
+        this.createAccountError.set(typeof errorMessage === 'string' && errorMessage.trim()
+          ? errorMessage
+          : 'Could not create the portfolio. Try another name.');
       },
     });
   }

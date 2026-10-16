@@ -38,8 +38,8 @@ For a route list, use `ExchangeController.cs` as the source of truth. For sync s
 
 ## Accounts Page and Selector
 
-- `GET /api/Account/selector-options` returns Manual and currently active Exchange contexts with selected state, balance, source, and sync health.
-- The selector groups by `AccountType` and `Exchange`, excludes disconnected/stale Exchange accounts, and keeps paused or unhealthy active Exchange accounts visible with their status.
+- `GET /api/Account/selector-options` returns every non-deleted Manual and Exchange context belonging to the authenticated user, including disabled or disconnected Exchange accounts, with selected state, balance, source, and sync health.
+- The selector groups by `AccountType` and `Exchange`; health states distinguish connected, disconnected, paused, setup-needed, and attention-required contexts.
 - `POST /api/Account/select-account` persists the active account. `POST /api/Account/create` adds a Manual portfolio.
 - The Accounts page preserves transaction search, date/status filters, and 20-row server pagination; account switches retain filters and restart at page 1.
 - The header is a passive display of the selected account. `Exchange Hub` is the onboarding and integration-management entry point.

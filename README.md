@@ -197,7 +197,7 @@ The exchange integration is being delivered in phases. The target architecture s
 
 Bybit discovery creates or updates only exchange accounts, matching them by user, exchange, and external UID. Manual accounts remain separate. The Accounts page classifies Manual and Exchange contexts by `AccountType`, groups exchange contexts by `Exchange`, and shows source and sync health. The header passively displays the selected account; switching happens on the Accounts page.
 
-**Account selector data:** `GET /api/Account/selector-options` returns manual portfolios and currently enabled exchange accounts with balance, selected state, and sync-health details. Disconnected/stale exchange accounts are excluded; account-level pauses remain visible. Exchange names are data-driven, so the same selector can group future exchanges.
+**Account selector data:** `GET /api/Account/selector-options` returns every non-deleted Manual and Exchange account belonging to the authenticated user, including disabled or disconnected exchange accounts, with balance, selected state, and sync-health details. Health distinguishes connected, disconnected, paused, setup-needed, and attention-required states. Exchange names are data-driven, so the same selector can group future exchanges.
 
 **Selection and creation:** Selecting a context uses `POST /api/Account/select-account` and persists the selected account. **Add portfolio** creates a Manual account through the existing `/api/Account/create` endpoint. Deposits and withdrawals are available only for Manual portfolios; exchange account management links to the relevant Exchange Hub page. No schema migration is required.
 
