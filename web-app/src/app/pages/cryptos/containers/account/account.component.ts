@@ -4,6 +4,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AccountTransactionCardComponent } from '../../components/account-transaction-card/account-transaction-card.component';
 import { RouterModule } from '@angular/router';
+import { ModalComponent } from 'src/app/layout/modal/modal.component';
+import { DepositComponent } from '../deposit/deposit.component';
+import { WithdrawComponent } from '../withdraw/withdraw.component';
+import { DepositFundCommand, WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { AccountDto } from 'src/app/core/services/user.service';
 import { AccountSelectorOption, AccountHealthStatus } from 'src/app/core/models/account-selector-option';
 import { AccountSelectorStateService } from 'src/app/core/services/account-selector-state.service';
@@ -12,7 +16,7 @@ import { CryptoService } from 'src/app/core/services/crypto.service';
 @Component({
   selector: 'app-account',
   standalone: true,
-  imports: [CryptoFilterComponent, CommonModule, FormsModule, AccountTransactionCardComponent, RouterModule],
+  imports: [CryptoFilterComponent, CommonModule, FormsModule, AccountTransactionCardComponent, RouterModule, ModalComponent, DepositComponent, WithdrawComponent],
   templateUrl: './account.component.html',
 })
 export class AccountComponent implements OnInit {
@@ -47,6 +51,8 @@ export class AccountComponent implements OnInit {
   newAccountName = '';
   savingManualAccount = signal(false);
   createAccountError = signal('');
+  isDepositModalOpen = signal(false);
+  isWithdrawModalOpen = signal(false);
 
   ngOnInit(): void {
     this.accountState.load().subscribe({
@@ -165,6 +171,24 @@ export class AccountComponent implements OnInit {
         this.createAccountError.set(typeof error.error === 'string' ? error.error : 'Could not create the portfolio. Try another name.');
       },
     });
+  }
+
+  toggleDepositModal(): void {
+    this.isDepositModalOpen.update(isOpen => !isOpen);
+  }
+
+  toggleWithdrawModal(): void {
+    this.isWithdrawModalOpen.update(isOpen => !isOpen);
+  }
+
+  depositEvent(deposit: DepositFundCommand | null): void {
+    this.isDepositModalOpen.set(false);
+    if (deposit) this.loadAccountDetails();
+  }
+
+  withdrawEvent(withdraw: WithdrawFundCommand | null): void {
+    this.isWithdrawModalOpen.set(false);
+    if (withdraw) this.loadAccountDetails();
   }
 
   selectAccount(account: AccountSelectorOption): void {

@@ -4,6 +4,11 @@ describe('Accounts page', () => {
   let selectedAccountId: number;
   let createdManualAccountName: string | null;
 
+  const encodeJwtSegment = (value: object) => btoa(JSON.stringify(value))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
   const accountOptions = () => [
     {
       accountId: 1,
@@ -108,11 +113,9 @@ describe('Accounts page', () => {
   const authenticate = () => {
     cy.visit('/');
     cy.window().then(win => {
-      const payload = btoa(JSON.stringify({ role: 'User', unique_name: 'Demo user', nameid: '1', exp: 4102444800 }))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-      win.localStorage.setItem(tokenKey, JSON.stringify({ jwtToken: `eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.${payload}.demo` }));
+      const header = encodeJwtSegment({ alg: 'none', typ: 'JWT' });
+      const payload = encodeJwtSegment({ role: 'User', unique_name: 'Demo user', nameid: '1', exp: 4102444800 });
+      win.localStorage.setItem(tokenKey, JSON.stringify({ jwtToken: `${header}.${payload}.demo` }));
     });
     cy.reload();
   };
@@ -218,6 +221,20 @@ describe('Accounts page', () => {
 
     cy.get('[aria-label="Current account"]').should('contain.text', 'Bybit Trading');
     cy.get('#selected-account-name').should('have.text', 'Bybit Trading');
+  });
+
+  it('keeps deposit and withdrawal workflows available for manual portfolios', () => {
+    visitAccounts();
+
+    cy.contains('button', 'Deposit').should('be.enabled').click();
+    cy.get('app-deposit').should('be.visible');
+    cy.get('app-deposit').contains('button', 'Cancel').click();
+    cy.get('app-deposit').should('not.exist');
+
+    cy.contains('button', 'Withdraw').should('be.enabled').click();
+    cy.get('app-withdraw').should('be.visible');
+    cy.get('app-withdraw').contains('button', 'Cancel').click();
+    cy.get('app-withdraw').should('not.exist');
   });
 
   it('keeps filters and pagination when switching accounts, resetting to page one', () => {

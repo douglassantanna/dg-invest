@@ -3,11 +3,15 @@ import { Observable, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs
 import { AccountSelectorOption } from '../models/account-selector-option';
 import { Response } from '../models/response';
 import { AccountService, CreateAccountCommand, SelectAccountRequest } from './account.service';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class AccountSelectorStateService {
   private readonly accountService = inject(AccountService);
+  private readonly authService = inject(AuthService);
   private hasLoaded = false;
+  private currentUserId: string | null = null;
+  private loadingRequestUserId: string | null = null;
   private loadingRequest: Observable<AccountSelectorOption[]> | null = null;
 
   readonly options = signal<AccountSelectorOption[]>([]);
@@ -16,23 +20,43 @@ export class AccountSelectorStateService {
   readonly selectedAccount = computed(() => this.options().find(option => option.isSelected) ?? null);
 
   load(): Observable<AccountSelectorOption[]> {
+    const userId = this.authService.userId;
+    if (this.currentUserId !== userId) {
+      this.currentUserId = userId;
+      this.hasLoaded = false;
+      this.loadingRequest = null;
+      this.loadingRequestUserId = null;
+      this.options.set([]);
+      this.errorMessage.set('');
+      this.isLoading.set(false);
+    }
+
     if (this.hasLoaded)
       return of(this.options());
 
-    if (this.loadingRequest)
+    if (this.loadingRequest && this.loadingRequestUserId === userId)
       return this.loadingRequest;
 
     this.isLoading.set(true);
     this.errorMessage.set('');
+    this.loadingRequestUserId = userId;
     this.loadingRequest = this.accountService.getAccountSelectorOptions().pipe(
       tap(options => {
-        this.options.set(options);
-        this.hasLoaded = true;
+        if (this.currentUserId === userId) {
+          this.options.set(options);
+          this.hasLoaded = true;
+        }
       }),
-      tap({ error: () => this.errorMessage.set('Could not load accounts. Please try again.') }),
+      tap({ error: () => {
+        if (this.currentUserId === userId)
+          this.errorMessage.set('Could not load accounts. Please try again.');
+      } }),
       finalize(() => {
-        this.isLoading.set(false);
-        this.loadingRequest = null;
+        if (this.loadingRequestUserId === userId) {
+          this.isLoading.set(false);
+          this.loadingRequest = null;
+          this.loadingRequestUserId = null;
+        }
       }),
       shareReplay(1),
     );
@@ -46,9 +70,10 @@ export class AccountSelectorStateService {
   }
 
   selectAccount(accountId: number): Observable<Response<null>> {
+    const userId = this.authService.userId;
     const request: SelectAccountRequest = { accountId };
     return this.accountService.selectAccount(request).pipe(tap(response => {
-      if (response?.isSuccess === false) return;
+      if (this.currentUserId !== userId || response?.isSuccess === false) return;
       this.options.update(options => options.map(option => ({
         ...option,
         isSelected: option.accountId === accountId,
@@ -57,8 +82,9 @@ export class AccountSelectorStateService {
   }
 
   createManualPortfolio(command: CreateAccountCommand): Observable<void> {
+    const userId = this.authService.userId;
     return this.accountService.createAccount(command).pipe(
-      switchMap(() => this.reload()),
+      switchMap(() => this.currentUserId === userId ? this.reload() : of([])),
       map(() => undefined),
     );
   }

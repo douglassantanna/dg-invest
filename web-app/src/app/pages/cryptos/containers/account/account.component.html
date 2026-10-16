@@ -206,8 +206,8 @@
     @if (selectedAccountOption(); as currentOption) {
     @if (currentOption.accountType === 'Manual') {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <button type="button" disabled title="Disabled in the in-memory preview"
-        class="group relative flex cursor-not-allowed items-center justify-center rounded-xl bg-blue-600 p-6 text-white opacity-60 shadow-lg">
+      <button type="button" (click)="toggleDepositModal()"
+        class="group relative flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
         <div class="flex items-center space-x-3">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -216,8 +216,8 @@
         </div>
       </button>
 
-      <button type="button" disabled title="Disabled in the in-memory preview"
-        class="group relative flex cursor-not-allowed items-center justify-center rounded-xl bg-purple-600 p-6 text-white opacity-60 shadow-lg">
+      <button type="button" (click)="toggleWithdrawModal()"
+        class="group relative flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:from-purple-600 hover:to-purple-700 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2">
         <div class="flex items-center space-x-3">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
@@ -313,3 +313,15 @@
   </section>
   }
 </main>
+
+@if (isDepositModalOpen()) {
+<app-modal (close)="toggleDepositModal()">
+  <app-deposit (depositEvent)="depositEvent($event)"></app-deposit>
+</app-modal>
+}
+
+@if (isWithdrawModalOpen()) {
+<app-modal (close)="toggleWithdrawModal()">
+  <app-withdraw (withdrawEvent)="withdrawEvent($event)"></app-withdraw>
+</app-modal>
+}
