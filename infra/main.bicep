@@ -11,7 +11,7 @@ param sqlAdministratorLogin string = 'dginvestSqlAdmin'
 @secure()
 param sqlAdministratorPassword string
 
-@description('App Service and Functions outbound IP addresses allowed to connect to Azure SQL. Populate from the outputs after the first deployment, then redeploy.')
+@description('Current App Service and Functions egress IPs collected by the deployment workflow for Azure SQL firewall rules. Flex addresses can change.')
 param sqlFirewallIpAddresses array = []
 
 @description('Set true only after the Cloudflare DNS records are verified and the existing Static Web App domain binding is ready to move.')
@@ -370,6 +370,7 @@ resource appOutboundSqlFirewallRules 'Microsoft.Sql/servers/firewallRules@2023-0
 
 output environment string = environmentName
 output apiUrl string = 'https://${apiName}.azurewebsites.net'
+output apiAppName string = apiApp.name
 output functionAppName string = functionApp.name
 output functionPrincipalId string = functionApp.identity.principalId
 output apiPrincipalId string = apiApp.identity.principalId
