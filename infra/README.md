@@ -5,7 +5,7 @@ Infrastructure is deployed to the existing `TestDouglas` resource group in the M
 ## Deploy with GitHub Actions
 
 1. Configure the GitHub Environment `azure-infra-sandbox` with the existing OIDC variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`.
-2. Add the SQL logical server administrator password as the Environment secret `SQL_ADMIN_PASSWORD`. Do not put it in a Bicep parameter file or repository file.
+2. Add the SQL logical server administrator password as the Environment secret `SQL_ADMIN_PASSWORD`. The `.bicepparam` file reads it from the workflow process environment; never put the password value in a repository file.
 3. Run **Deploy Azure Infrastructure** with `stage` or `prod` and leave `apply` disabled first. Review validation and `what-if` output.
 4. Run it again with `apply` enabled only after reviewing the changes.
 
@@ -29,8 +29,9 @@ Application Insights resources and connection strings are provisioned, but the A
 
 The deployment identity has Contributor, which cannot create Azure RBAC role assignments. After each environment deployment, the subscription Owner must manually assign:
 
-- `Key Vault Secrets User` to the API and Function App system identities, scoped to that environment Key Vault.
 - `Key Vault Secrets Officer` to the operator identity that will create/update secrets in that environment vault. Subscription Owner alone does not grant Key Vault data-plane access when the vault uses RBAC authorization.
+- `Key Vault Secrets Officer` to the API system identity, scoped to that environment Key Vault. The API saves, updates, and clears Bybit credentials there.
+- `Key Vault Secrets User` to the Function App system identity, scoped to that environment Key Vault, for read-only secret access.
 - `Storage Blob Data Owner`, `Storage Queue Data Contributor`, and `Storage Table Data Contributor` to the Function App system identity, scoped to that environment storage account. These roles are used by the Flex Functions host and its managed-identity deployment storage.
 
 Use the `apiPrincipalId`, `functionPrincipalId`, `keyVaultResourceId`, and `functionStorageRoleScope` deployment outputs as the assignment inputs. The functions will not resolve their Key Vault references or access host storage until the required role assignments exist.
@@ -49,6 +50,6 @@ The API CORS allowlist includes the environment Static Web App default hostname 
 
 ```powershell
 az bicep build --file infra/main.bicep
-az bicep build-params --file infra/environments/stage.bicepparam
-az bicep build-params --file infra/environments/prod.bicepparam
 ```
+
+The parameter files require `SQL_ADMIN_PASSWORD` in the process environment. The GitHub workflow supplies the Environment secret and invokes deployment through the `.bicepparam` file, which also identifies the Bicep template.

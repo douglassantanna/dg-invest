@@ -55,6 +55,8 @@ jobs:
           az group show --name TestDouglas --output none
 
       - name: Build Bicep
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
         run: |
           az bicep build --file infra/main.bicep --stdout > /dev/null
           az bicep build-params --file infra/environments/${{ inputs.target_environment }}.bicepparam --stdout > /dev/null
@@ -66,9 +68,7 @@ jobs:
           az deployment group validate \
             --resource-group TestDouglas \
             --name dginvest-${{ inputs.target_environment }}-infra \
-            --template-file infra/main.bicep \
-            --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
-            --parameters sqlAdministratorPassword="$SQL_ADMIN_PASSWORD"
+            --parameters infra/environments/${{ inputs.target_environment }}.bicepparam
 
       - name: Show what-if changes
         env:
@@ -77,9 +77,7 @@ jobs:
           az deployment group what-if \
             --resource-group TestDouglas \
             --name dginvest-${{ inputs.target_environment }}-infra \
-            --template-file infra/main.bicep \
             --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
-            --parameters sqlAdministratorPassword="$SQL_ADMIN_PASSWORD" \
             --result-format ResourceIdOnly
 
       - name: Apply infrastructure
@@ -90,9 +88,7 @@ jobs:
           az deployment group create \
             --resource-group TestDouglas \
             --name dginvest-${{ inputs.target_environment }}-infra \
-            --template-file infra/main.bicep \
             --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
-            --parameters sqlAdministratorPassword="$SQL_ADMIN_PASSWORD" \
             --output none
 
       - name: Show deployment outputs
