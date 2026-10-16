@@ -528,7 +528,12 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         return true;
     }
 
-    public async Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken)
+    public async Task UpsertSyncStatusAsync(
+        int userId,
+        int accountId,
+        string? lastOrderId,
+        CancellationToken cancellationToken,
+        DateTime? checkpointAt = null)
     {
         var status = await _context.SyncStatuses
             .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
@@ -539,7 +544,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             _context.SyncStatuses.Add(status);
         }
 
-        status.MarkConnected(lastOrderId ?? string.Empty);
+        status.MarkConnected(lastOrderId ?? string.Empty, checkpointAt);
         await _context.SaveChangesAsync(cancellationToken);
     }
 

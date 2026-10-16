@@ -323,7 +323,12 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
             await ReconcileCurrentCryptoBalancesAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
-            await _orderSyncService.UpsertSyncStatusAsync(account.UserId, account.Id, lastOrderId, cancellationToken);
+            await _orderSyncService.UpsertSyncStatusAsync(
+                account.UserId,
+                account.Id,
+                lastOrderId,
+                cancellationToken,
+                end.UtcDateTime);
             return BybitAccountSyncResult.Succeeded($"Imported {processed} Bybit historical items without changing the cash balance.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
