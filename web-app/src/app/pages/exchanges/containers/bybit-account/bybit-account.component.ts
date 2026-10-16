@@ -37,12 +37,15 @@ export class BybitAccountComponent implements OnInit {
   saving = false;
   testing = false;
   syncing = false;
+  backfilling = false;
   toggling = false;
   savingNickname = false;
   mapping = false;
   removing = false;
   loadError = '';
   toastMessage = '';
+  today = new Date().toISOString().slice(0, 10);
+  backfillDate = '';
 
   ngOnInit(): void {
     this.load();
@@ -136,6 +139,22 @@ export class BybitAccountComponent implements OnInit {
       error: error => {
         this.syncing = false;
         this.toast(this.errorMessage(error, 'Could not synchronize account'));
+      },
+    });
+  }
+
+  backfill(): void {
+    if (this.backfilling || !this.backfillDate) return;
+    this.backfilling = true;
+    this.exchangeService.backfillBybitAccount(this.accountId, this.backfillDate).subscribe({
+      next: response => {
+        this.backfilling = false;
+        this.toast(response.message);
+        if (response.isSuccess) this.load();
+      },
+      error: error => {
+        this.backfilling = false;
+        this.toast(this.errorMessage(error, 'Could not import historical trades'));
       },
     });
   }

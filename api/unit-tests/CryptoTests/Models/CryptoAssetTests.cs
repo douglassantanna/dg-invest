@@ -187,6 +187,45 @@ public class CryptoAssetTests
         cryptoAsset.TotalInvested.Should().BeGreaterThanOrEqualTo(0);
     }
 
+    [Fact]
+    public void ReconcileBalance_WhenBybitReportsZero_ShouldClearCurrentPositionWithoutDeletingHistory()
+    {
+        var cryptoAsset = _validCryptoAsset;
+        var transaction = new CryptoTransaction(
+            amount: 2,
+            price: 1_000,
+            purchaseDate: DateTimeOffset.Parse("2023-10-10"),
+            exchangeName: "Bybit",
+            transactionType: ETransactionType.Buy,
+            fee: 0);
+        cryptoAsset.AddTransaction(transaction);
+
+        cryptoAsset.ReconcileBalance(0);
+
+        cryptoAsset.Balance.Should().Be(0);
+        cryptoAsset.TotalInvested.Should().Be(0);
+        cryptoAsset.Transactions.Should().ContainSingle().Which.Should().BeSameAs(transaction);
+    }
+
+    [Theory]
+    [InlineData(0.0056, false)]
+    [InlineData(0.0999, false)]
+    [InlineData(0.10, true)]
+    [InlineData(0, true)]
+    public void HasMeaningfulInvestment_ShouldHideDustPositions(decimal investedAmount, bool expected)
+    {
+        var cryptoAsset = new CryptoAsset("Test", "USD", "TEST", 1);
+        cryptoAsset.AddTransaction(new CryptoTransaction(
+            amount: 1,
+            price: investedAmount,
+            purchaseDate: DateTimeOffset.Parse("2023-10-10"),
+            exchangeName: "Bybit",
+            transactionType: ETransactionType.Buy,
+            fee: 0));
+
+        cryptoAsset.HasMeaningfulInvestment(0.10m).Should().Be(expected);
+    }
+
     // AveragePrice = TotalInvested / Balance
     // Two buys of amount=1 at price1 and price2 (no fees) → AveragePrice = (price1 + price2) / 2
     [Theory]

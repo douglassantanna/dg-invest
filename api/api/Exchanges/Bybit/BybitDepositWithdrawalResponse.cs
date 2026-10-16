@@ -67,6 +67,9 @@ public class BybitDepositWithdrawalRow
     [JsonPropertyName("successAt")]
     public string? SuccessAt { get; set; }
 
+    [JsonPropertyName("createTime")]
+    public string? CreateTime { get; set; }
+
     [JsonPropertyName("confirmations")]
     public string Confirmations { get; set; } = string.Empty;
 

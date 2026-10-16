@@ -81,6 +81,39 @@ public class TestBybitConnectionCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenBybitTransportFails_Returns503ForRetry()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        using var context = new DataContext(options);
+        var account = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var syncStatus = new SyncStatus(1, account.Id, "Bybit");
+        syncStatus.EnableForCredentials();
+        context.SyncStatuses.Add(syncStatus);
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(service => service.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-key")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "configured-key"));
+        keyVault.Setup(service => service.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-secret")))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "configured-secret"));
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(service => service.TestConnectionAsync("configured-key", "configured-secret", It.IsAny<BybitRegion>()))
+            .ThrowsAsync(new BybitTransportException("/v5/account/info", new HttpRequestException("Connection timed out")));
+        var handler = new TestBybitConnectionCommandHandler(keyVault.Object, bybitService.Object, context,
+            Mock.Of<ILogger<TestBybitConnectionCommandHandler>>());
+
+        var result = await handler.Handle(new TestBybitConnectionCommand(1, account.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Data.Should().Be(503);
+        syncStatus.LastVerifiedAt.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Handle_WhenKeyVaultIsUnavailable_ReturnsRetriableFailure()
     {
         var options = new DbContextOptionsBuilder<DataContext>()

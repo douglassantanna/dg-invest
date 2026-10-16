@@ -92,6 +92,20 @@ public class ExchangeController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("bybit/test-integration-connection")]
+    public async Task<ActionResult<Response>> TestBybitIntegrationConnection()
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new TestBybitIntegrationConnectionCommand(userId.Value));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
     [HttpPost("bybit/sync-accounts")]
     public async Task<ActionResult<Response>> SyncBybitAccounts()
     {
@@ -114,6 +128,20 @@ public class ExchangeController : ControllerBase
             return Unauthorized(new Response("Invalid user ID", false));
 
         var result = await _mediator.Send(new SyncBybitAccountCommand(userId.Value, accountId));
+        if (!result.IsSuccess)
+            return Failure(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("bybit/backfill/{accountId:int}")]
+    public async Task<ActionResult<Response>> BackfillBybitAccount(int accountId, [FromBody] BackfillBybitAccountRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(new Response("Invalid user ID", false));
+
+        var result = await _mediator.Send(new BackfillBybitAccountCommand(userId.Value, accountId, request.FromDate));
         if (!result.IsSuccess)
             return Failure(result);
 
@@ -319,6 +347,8 @@ public record SaveBybitCredentialsRequest(
 
 public record SaveBybitIntegrationCredentialsRequest(string ApiKey, string ApiSecret, string? MasterUid = null, BybitRegion Region = BybitRegion.Global);
 public record RenameBybitAccountRequest(string Name);
+
+public record BackfillBybitAccountRequest(DateOnly FromDate);
 
 public record MapBybitAccountRequest(int AccountId, string? ExternalId = null, string? BybitUid = null)
 {

@@ -7,6 +7,8 @@ public static class BybitCashBalance
     public static readonly string[] CashCoins = ["USDT", "USDC"];
     private static readonly HashSet<string> CashCoinSet = new(CashCoins, StringComparer.OrdinalIgnoreCase);
 
+    public static bool IsCashCoin(string symbol) => CashCoinSet.Contains(symbol);
+
     public static decimal SumStablecoinCash(BybitWalletBalanceResponse wallet)
     {
         var account = wallet.Result.List.FirstOrDefault();
@@ -20,8 +22,26 @@ public static class BybitCashBalance
 
     public static decimal FromAccountCoinBalance(BybitAccountCoinBalanceResponse response)
     {
-        var balance = response.Result.Balance;
-        return ParseAmount(string.IsNullOrWhiteSpace(balance.TransferBalance) ? balance.WalletBalance : balance.TransferBalance);
+        return ParseAccountCoinBalance(response.Result.Balance);
+    }
+
+    public static decimal ParseAccountCoinBalance(BybitAccountCoinBalance balance)
+        => ParseAmount(string.IsNullOrWhiteSpace(balance.TransferBalance) ? balance.WalletBalance : balance.TransferBalance);
+
+    public static IReadOnlyDictionary<string, decimal> SumWalletBalances(
+        IEnumerable<BybitWalletBalanceResponse> responses)
+    {
+        var balances = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var coin in responses.SelectMany(response => response.Result.List).SelectMany(account => account.Coin))
+        {
+            if (string.IsNullOrWhiteSpace(coin.Coin))
+                continue;
+
+            balances[coin.Coin] = balances.GetValueOrDefault(coin.Coin) + ParseAmount(coin.WalletBalance);
+        }
+
+        return balances;
     }
 
     private static decimal ParseAmount(string value) => decimal.TryParse(

@@ -1,11 +1,13 @@
-# TimerTrigger - C<span>#</span>
+# Azure Functions
 
-The `TimerTrigger` makes it incredibly easy to have your functions executed on a schedule. This sample demonstrates a simple use case of calling your function every 5 minutes.
+The Functions project contains scheduled background work. The timer expressions below are the source of truth for the current schedules:
 
-## How it works
+| Function | Schedule | Purpose |
+| --- | --- | --- |
+| `SyncBybitOrders` | Every 30 seconds | Sync enabled Bybit exchange accounts and universal transfers |
+| `MarketData` | Hourly | Refresh market data |
+| `HealthCheck` | Every 7 minutes | Check application health and send configured alerts |
 
-For a `TimerTrigger` to work, you provide a schedule in the form of a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression)(See the link for full details). A cron expression is a string with 6 separate expressions which represent a given schedule via patterns. The pattern we use to represent every 5 minutes is `0 */5 * * * *`. This, in plain text, means: "When seconds is equal to 0, minutes is divisible by 5, for any hour, day of the month, month, day of the week, or year".
+`SyncBybitOrders` is feature-gated by `BybitSync:Enabled`. Its account-level work is delegated to `IBybitAccountSyncService` in the API project, so changes to sync behavior usually require inspecting both projects.
 
-## Learn more
-
-<TODO> Documentation
+Related tests are in [`api/unit-tests/FunctionsTests/`](../unit-tests/FunctionsTests/) and [`api/unit-tests/ExchangesTests/Services/`](../unit-tests/ExchangesTests/Services/). Local Functions setup is documented in the [root README](../../README.md).

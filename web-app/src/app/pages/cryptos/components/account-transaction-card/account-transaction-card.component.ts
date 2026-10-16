@@ -1,6 +1,7 @@
 import { TransactionTypeLabelPipe } from './../../../../core/pipes/transaction-type-label.pipe';
 import { Component, Input, input } from '@angular/core';
-import { AccountTransaction, AccountTransactionType } from '../../containers/account/account.component';
+import { AccountTransaction } from 'src/app/core/models/account-transaction';
+import { AccountTransactionType } from 'src/app/core/models/deposit-fund-command';
 import { AccountTransactionDto, GroupedAccountTransactionsDto } from 'src/app/core/services/user.service';
 import { CryptoSymbolPipe } from 'src/app/core/pipes/crypto-symbol.pipe';
 import { CurrencyPipe, DatePipe, DecimalPipe, NgClass, UpperCasePipe } from '@angular/common';

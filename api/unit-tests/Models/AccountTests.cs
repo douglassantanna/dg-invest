@@ -124,4 +124,34 @@ public class AccountTests
         // Assert
         account.TotalDeposited().Should().Be(1_100m);
     }
+
+    [Fact]
+    public void TotalDeposited_ShouldExcludeBybitOpeningBalanceSnapshot()
+    {
+        var account = new Account("main", 1);
+        account.AddTransaction(new AccountTransaction(
+            date: DateTime.UtcNow,
+            transactionType: EAccountTransactionType.DepositFiat,
+            amount: 3_583.02m,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: "Opening balance from Bybit",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: 0,
+            exchangeStatus: "OpeningBalance"));
+        account.AddTransaction(new AccountTransaction(
+            date: DateTime.UtcNow,
+            transactionType: EAccountTransactionType.DepositFiat,
+            amount: 1_000m,
+            cryptoCurrentPrice: 1,
+            exchangeName: "Bybit",
+            notes: "Historical Bybit deposit",
+            cryptoAssetId: null,
+            cryptoAsset: null,
+            fee: 0,
+            exchangeStatus: "3"));
+
+        account.TotalDeposited().Should().Be(1_000m);
+    }
 }

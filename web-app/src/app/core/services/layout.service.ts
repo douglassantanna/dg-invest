@@ -14,13 +14,13 @@ export class LayoutService {
       roles: [Role.Admin, Role.User],
     },
     {
-      label: 'Account',
+      label: 'Accounts',
       path: 'account',
       icon: 'account_balance_wallet',
       roles: [Role.Admin, Role.User],
     },
     {
-      label: 'Exchanges',
+      label: 'Exchange Hub',
       path: 'exchanges',
       icon: 'sync_alt',
       roles: [Role.Admin, Role.User],

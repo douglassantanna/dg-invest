@@ -13,7 +13,26 @@ describe('Header Component', () => {
     }).as('listAssets');
   };
 
+  const interceptAccountSelectorOptions = () => {
+    cy.intercept('GET', '**/api/Account/selector-options', {
+      body: [{
+        accountId: 1,
+        accountName: 'Main portfolio',
+        balance: 0,
+        isSelected: true,
+        accountType: 'Manual',
+        exchangeName: null,
+        isBybitCombinedWallet: false,
+        healthStatus: null,
+        lastSyncAt: null,
+        errorCount: 0,
+        lastErrorMessage: null,
+      }],
+    }).as('selectorOptions');
+  };
+
   const visitCryptosAsAuthenticatedUser = () => {
+    interceptAccountSelectorOptions();
     interceptListAssets();
     cy.visit('/#/cryptos', {
       onBeforeLoad: win => {
@@ -24,6 +43,7 @@ describe('Header Component', () => {
       },
     });
 
+    cy.wait('@selectorOptions');
     cy.wait('@listAssets');
     cy.get('app-view-cryptos').should('exist');
   };

@@ -1,6 +1,187 @@
 <main class="max-w-7xl mx-auto gap-4 p-6 sm:z-10 sm:mb-10">
+  <section class="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800" aria-labelledby="account-selector-heading">
+    <div class="flex flex-col gap-2 border-b border-gray-200 px-5 py-4 dark:border-gray-700 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">Account contexts</p>
+        <h1 id="account-selector-heading" class="mt-1 text-xl font-semibold text-gray-900 dark:text-gray-100">Accounts</h1>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Choose a portfolio to see its balance and activity.</p>
+      </div>
+      <span class="text-xs text-gray-500 dark:text-gray-400">{{ accountSelectorOptions().length }} accounts</span>
+    </div>
+
+    @if (selectorError()) {
+    <p role="alert" class="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{{ selectorError() }}</p>
+    }
+
+    @if (selectorLoading()) {
+    <div class="flex items-center gap-3 px-6 py-8 text-sm text-gray-500 dark:text-gray-400" role="status">
+      <span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-hidden="true"></span>
+      Loading accounts…
+    </div>
+    } @else {
+    <div class="grid gap-0 md:grid-cols-2">
+        <section class="border-b border-gray-100 px-4 py-4 dark:border-gray-700 md:border-b-0 md:border-r" aria-labelledby="manual-accounts-heading">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <h2 id="manual-accounts-heading" class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <span class="material-icons text-lg text-blue-700 dark:text-blue-300" aria-hidden="true">account_balance_wallet</span>
+              Manual portfolios
+            </h2>
+            <button type="button" (click)="toggleAddManualAccount()"
+              class="inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40">
+              <span class="material-icons text-base" aria-hidden="true">add</span>Add portfolio
+            </button>
+          </div>
+          @if (isAddingManualAccount()) {
+          <div class="mb-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+            <label for="new-manual-account-name" class="mb-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">Portfolio name</label>
+            <div class="flex flex-col gap-2 sm:flex-row">
+              <input id="new-manual-account-name" name="manualAccountName" type="text" [(ngModel)]="newAccountName"
+                [ngModelOptions]="{ standalone: true }" maxlength="100" (keydown.enter)="createManualAccount()"
+                class="min-h-10 min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                placeholder="e.g. Long-term savings" />
+              <div class="flex gap-2">
+                <button type="button" (click)="toggleAddManualAccount()" class="min-h-10 rounded-md px-3 text-sm font-medium text-gray-700 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
+                <button type="button" (click)="createManualAccount()" [disabled]="!newAccountName.trim() || savingManualAccount()"
+                  class="min-h-10 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                  {{ savingManualAccount() ? 'Creating…' : 'Create' }}
+                </button>
+              </div>
+            </div>
+            @if (createAccountError()) {
+            <p role="alert" class="mt-2 text-xs text-red-700 dark:text-red-300">{{ createAccountError() }}</p>
+            }
+          </div>
+          }
+          @if (manualAccounts().length === 0) {
+        <p class="rounded-lg bg-gray-50 px-3 py-4 text-sm text-gray-500 dark:bg-gray-900 dark:text-gray-400">No manual portfolios.</p>
+        } @else {
+        <div class="space-y-2">
+          @for (option of manualAccounts(); track option.accountId) {
+          <button type="button" [attr.aria-pressed]="option.isSelected" (click)="selectAccount(option)"
+            [disabled]="selectingAccountId() !== null"
+            class="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-wait"
+            [ngClass]="option.isSelected ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600 dark:border-blue-400 dark:bg-blue-950/30' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900'">
+            <span class="flex min-w-0 items-center gap-3">
+              <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                <span class="material-icons text-xl" aria-hidden="true">account_balance_wallet</span>
+              </span>
+              <span class="min-w-0">
+                <span class="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ option.accountName }}</span>
+                <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Manual portfolio</span>
+              </span>
+            </span>
+            <span class="shrink-0 text-right">
+              <span class="block font-mono text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ option.balance | currency:'USD':'symbol':'1.2-2' }}</span>
+              @if (option.isSelected) {
+              <span class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-blue-800 dark:text-blue-300">
+                <span class="material-icons text-sm" aria-hidden="true">check</span>Selected
+              </span>
+              }
+            </span>
+          </button>
+          }
+        </div>
+        }
+      </section>
+
+      <section class="px-4 py-4" aria-labelledby="exchange-accounts-heading">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <h2 id="exchange-accounts-heading" class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <span class="material-icons text-lg text-gray-700 dark:text-gray-300" aria-hidden="true">sync_alt</span>
+            Exchange accounts
+          </h2>
+          <a routerLink="/exchanges" class="inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-yellow-800 hover:bg-yellow-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-600 dark:text-yellow-300 dark:hover:bg-yellow-950/30">
+            <span class="material-icons text-base" aria-hidden="true">add_link</span>Connect an exchange
+          </a>
+        </div>
+        @if (exchangeGroups().length === 0) {
+        <p class="rounded-lg bg-gray-50 px-3 py-4 text-sm text-gray-500 dark:bg-gray-900 dark:text-gray-400">No active exchange accounts.</p>
+        } @else {
+        @for (group of exchangeGroups(); track group.exchangeName) {
+        <section class="mt-4 first:mt-0" [attr.aria-labelledby]="'selector-exchange-' + group.exchangeName">
+          <div class="mb-2 flex items-center gap-2 px-1">
+            <span class="grid h-6 w-6 place-items-center rounded-md bg-gray-900 text-[9px] font-bold uppercase text-white" aria-hidden="true">{{ group.exchangeName.slice(0, 2) }}</span>
+            <h3 [id]="'selector-exchange-' + group.exchangeName" class="text-xs font-bold uppercase tracking-[0.12em] text-gray-700 dark:text-gray-300">{{ group.exchangeName }}</h3>
+            <span class="text-xs text-gray-400">{{ group.accounts.length }}</span>
+          </div>
+          <div class="space-y-2">
+            @for (option of group.accounts; track option.accountId) {
+            <button type="button" [attr.aria-pressed]="option.isSelected" (click)="selectAccount(option)"
+              [disabled]="selectingAccountId() !== null"
+              class="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 disabled:cursor-wait"
+              [ngClass]="option.isSelected ? 'border-sky-700 bg-sky-50 ring-1 ring-sky-700 dark:border-sky-400 dark:bg-sky-950/30' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900'">
+              <span class="flex min-w-0 items-center gap-3">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                  <span class="material-icons text-xl" aria-hidden="true">sync_alt</span>
+                </span>
+                <span class="min-w-0">
+                  <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ option.accountName }}</span>
+                    @if (option.isBybitCombinedWallet) {
+                    <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">Combined wallet</span>
+                    }
+                  </span>
+                  @if (option.healthStatus) {
+                  <span class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset" [ngClass]="healthClasses(option.healthStatus)">
+                    <span class="material-icons text-[12px]" aria-hidden="true">{{ healthIcon(option.healthStatus) }}</span>
+                    {{ healthLabel(option.healthStatus) }}
+                  </span>
+                  }
+                  @if (option.lastSyncAt) {
+                  <span class="ml-1 text-[10px] text-gray-500 dark:text-gray-400">Synced {{ option.lastSyncAt | date:'dd MMM, HH:mm':'UTC' }}</span>
+                  }
+                </span>
+              </span>
+              <span class="shrink-0 text-right">
+                <span class="block font-mono text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ option.balance | currency:'USD':'symbol':'1.2-2' }}</span>
+                @if (option.isSelected) {
+                <span class="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sky-800 dark:text-sky-300">
+                  <span class="material-icons text-sm" aria-hidden="true">check</span>Selected
+                </span>
+                } @else if (selectingAccountId() === option.accountId) {
+                <span class="mt-1 block text-[10px] text-gray-500">Switching…</span>
+                }
+              </span>
+            </button>
+            }
+          </div>
+        </section>
+        }
+        }
+      </section>
+    </div>
+    }
+  </section>
+
   <header class="space-y-6">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
+      @if (selectedAccountOption(); as selectedOption) {
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Active account</p>
+          <p id="selected-account-name" class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ selectedOption.accountName }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            @if (selectedOption.accountType === 'Manual') { Manual portfolio }
+            @else { {{ selectedOption.exchangeName }} exchange account }
+          </p>
+        </div>
+        @if (selectedOption.healthStatus) {
+        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset"
+          [ngClass]="healthClasses(selectedOption.healthStatus)">
+          <span class="material-icons text-sm" aria-hidden="true">{{ healthIcon(selectedOption.healthStatus) }}</span>
+          {{ healthLabel(selectedOption.healthStatus) }}
+        </span>
+        }
+      </div>
+      @if (selectedOption.lastErrorMessage) {
+      <p class="mb-3 text-sm text-amber-800 dark:text-amber-200">{{ selectedOption.lastErrorMessage }}</p>
+      }
+      @if (accountDetailsLoading()) {
+      <div class="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="status">
+        <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-hidden="true"></span>
+        Loading account balance…
+      </div>
+      } @else {
       <h2 class="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
         Available Balance
         @if (account().isBybitCombinedWallet) {
@@ -12,11 +193,28 @@
       <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100">
         {{ account().balance | currency:'USD':'symbol':'1.2-2' }}
       </h1>
+      }
+      } @else if (selectorLoading()) {
+      <div class="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-gray-400" role="status">
+        <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-hidden="true"></span>
+        Loading selected account…
+      </div>
+      } @else {
+      <div class="flex items-start gap-3" role="status">
+        <span class="material-icons mt-0.5 text-blue-700 dark:text-blue-300" aria-hidden="true">account_balance_wallet</span>
+        <div>
+          <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">No account selected</h2>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Select an account above to view its balance and transactions.</p>
+        </div>
+      </div>
+      }
     </div>
 
+    @if (selectedAccountOption(); as currentOption) {
+    @if (currentOption.accountType === 'Manual') {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <button (click)="toggleDepositModal()" type="button"
-        class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+      <button type="button" (click)="toggleDepositModal()"
+        class="group relative flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
         <div class="flex items-center space-x-3">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -26,7 +224,7 @@
       </button>
 
       <button type="button" (click)="toggleWithdrawModal()"
-        class="group relative flex items-center justify-center p-6 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+        class="group relative flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:from-purple-600 hover:to-purple-700 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2">
         <div class="flex items-center space-x-3">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
@@ -35,8 +233,21 @@
         </div>
       </button>
     </div>
+    } @else {
+    <div class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Exchange account</p>
+        <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Transfers and sync settings are managed by {{ currentOption.exchangeName }}.</p>
+      </div>
+      <a [routerLink]="exchangeManagementLink(currentOption)" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700">
+        Manage this account <span class="material-icons text-base" aria-hidden="true">arrow_forward</span>
+      </a>
+    </div>
+    }
+    }
   </header>
 
+  @if (selectedAccountOption()) {
   <section class="mt-10">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
       <h3 class="text-xl font-bold sm:mb-4 text-gray-900 dark:text-gray-100">Recent Transactions</h3>
@@ -45,6 +256,15 @@
       </app-crypto-filter>
     </div>
 
+    @if (accountActivityError()) {
+    <p role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{{ accountActivityError() }}</p>
+    }
+
+    @if (accountDetailsLoading()) {
+    <div class="rounded-xl border border-gray-200 bg-white px-6 py-8 text-center text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" role="status">
+      Loading selected account activity…
+    </div>
+    } @else {
     <div class="flex flex-wrap items-center gap-3 mb-4">
       <div class="flex items-center gap-2">
         <label class="text-sm text-gray-600 dark:text-gray-400">From</label>
@@ -97,7 +317,14 @@
       </div>
       }
     </div>
+    }
   </section>
+  } @else if (!selectorLoading()) {
+  <section class="mt-10 rounded-xl border border-dashed border-gray-300 px-6 py-8 text-center dark:border-gray-600" role="status">
+    <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Transactions are waiting for an account</h2>
+    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Choose an account above to load its transaction history.</p>
+  </section>
+  }
 </main>
 
 @if (isDepositModalOpen()) {
@@ -106,7 +333,7 @@
 </app-modal>
 }
 
-@if(isWithdrawModalOpen()){
+@if (isWithdrawModalOpen()) {
 <app-modal (close)="toggleWithdrawModal()">
   <app-withdraw (withdrawEvent)="withdrawEvent($event)"></app-withdraw>
 </app-modal>

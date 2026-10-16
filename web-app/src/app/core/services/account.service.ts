@@ -3,9 +3,11 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment.development';
 import { CustomRespose } from '../models/custom-response';
+import { Response } from '../models/response';
 import { AccountDto } from './user.service';
 import { DepositFundCommand, WithdrawFundCommand } from '../models/deposit-fund-command';
 import { AddTransactionCommand } from '../models/add-transaction-command';
+import { AccountSelectorOption } from '../models/account-selector-option';
 import { SimpleAccountDto } from 'src/app/pages/cryptos/components/account-selection/account-selection.component';
 
 export interface CreateAccountCommand {
@@ -30,6 +32,10 @@ export class AccountService {
 
   getAccounts(): Observable<SimpleAccountDto[]> {
     return this.http.get<SimpleAccountDto[]>(`${this.apiUrl}`);
+  }
+
+  getAccountSelectorOptions(): Observable<AccountSelectorOption[]> {
+    return this.http.get<AccountSelectorOption[]>(`${this.apiUrl}/selector-options`);
   }
 
   createAccount(command: CreateAccountCommand): Observable<CustomRespose> {
@@ -77,7 +83,7 @@ export class AccountService {
     return this.http.post<any>(`${this.apiUrl}/withdraw-fund`, withdraw)
   }
 
-  selectAccount(command: SelectAccountRequest): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/select-account`, command)
+  selectAccount(command: SelectAccountRequest): Observable<Response<null>> {
+    return this.http.post<Response<null>>(`${this.apiUrl}/select-account`, command)
   }
 }

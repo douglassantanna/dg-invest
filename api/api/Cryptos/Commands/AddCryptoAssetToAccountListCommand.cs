@@ -49,7 +49,7 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
             if (!validationResult.IsValid)
             {
                 var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-                _logger.LogError("AddCryptoAssetToAccountListCommandHandler. Validation failed: {0}", errors);
+                _logger.LogWarning("AddCryptoAssetToAccountListCommandHandler. Validation failed: {0}", errors);
                 return new Response("Validation failed!", false, errors);
             }
 
@@ -59,7 +59,7 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
                                                 .FirstOrDefaultAsync(cancellationToken);
             if (account == null)
             {
-                _logger.LogError("AddCryptoAssetToAccountListCommandHandler. Account not found: {0}", request.UserId);
+                _logger.LogWarning("AddCryptoAssetToAccountListCommandHandler. Account not found: {0}", request.UserId);
                 return new Response("Account not found!", false, 404);
             }
 

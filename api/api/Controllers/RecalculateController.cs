@@ -1,5 +1,6 @@
 using api.Cache;
 using api.Data;
+using api.Exchanges.Services;
 using api.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,17 +14,23 @@ public class RecalculateController : ControllerBase
 {
     private readonly DataContext _context;
     private readonly ICacheService _cacheService;
+    private readonly IBybitAccountSyncService _bybitAccountSyncService;
     private readonly RecalculationSettings _settings;
 
-    public RecalculateController(DataContext context, ICacheService cacheService, IOptions<RecalculationSettings> settings)
+    public RecalculateController(
+        DataContext context,
+        ICacheService cacheService,
+        IBybitAccountSyncService bybitAccountSyncService,
+        IOptions<RecalculationSettings> settings)
     {
         _context = context;
         _cacheService = cacheService;
+        _bybitAccountSyncService = bybitAccountSyncService;
         _settings = settings.Value;
     }
 
     [HttpPost("recalculate")]
-    public async Task<IActionResult> Recalculate()
+    public async Task<IActionResult> Recalculate(CancellationToken cancellationToken)
     {
         var isRecalculationEnabled = _settings.EnableRecalculation;
         if (!isRecalculationEnabled)
@@ -39,6 +46,16 @@ public class RecalculateController : ControllerBase
 
         foreach (var account in accounts)
         {
+            if (account.Exchange == "Bybit")
+            {
+                var result = await _bybitAccountSyncService.RecalculateAsync(account, cancellationToken);
+                if (!result.IsSuccess && !result.IsSkipped)
+                    return BadRequest(result.Message);
+
+                if (result.IsSuccess)
+                    continue;
+            }
+
             foreach (var asset in account.CryptoAssets)
             {
                 asset.RecalculateFromTransactions();

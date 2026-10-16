@@ -73,7 +73,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
-            _logger.LogError("WithdrawFundCommandHandler. Validation failed: {0}", errors);
+            _logger.LogWarning("WithdrawFundCommandHandler. Validation failed: {0}", errors);
             return new Response("Validation failed", false, errors);
         }
 
@@ -83,7 +83,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                                             .FirstOrDefaultAsync(cancellationToken);
         if (account == null)
         {
-            _logger.LogError("AddCryptoAssetToAccountListCommandHandler. Account not found: {0}", request.UserId);
+            _logger.LogWarning("WithdrawFundCommandHandler. Account not found for user {UserId}", request.UserId);
             return new Response("Account not found!", false, 404);
         }
 
@@ -98,7 +98,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                 var cryptoAsset = account.CryptoAssets.FirstOrDefault(c => c.Id == cryptoId);
                 if (cryptoAsset == null)
                 {
-                    _logger.LogError("WithdrawFundCommandHandler. Crypto asset {CryptoAssetId} not found.", request.CryptoAssetId);
+                    _logger.LogWarning("WithdrawFundCommandHandler. Crypto asset {CryptoAssetId} not found.", request.CryptoAssetId);
                     return new Response("Crypto asset not found", false, 404);
                 }
 
@@ -128,7 +128,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                 var response = _transactionService.ExecuteTransaction(account, accountTransaction);
                 if (!response.IsSuccess)
                 {
-                    _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
+                    _logger.LogWarning("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
                     return response;
                 }
             }
@@ -142,7 +142,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                 var response = _transactionService.ExecuteTransaction(account, accountTransaction);
                 if (!response.IsSuccess)
                 {
-                    _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
+                    _logger.LogWarning("WithdrawFundCommandHandler. Error adding transaction: {0}", response.Message);
                     return response;
                 }
             }
@@ -157,7 +157,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
         }
         catch (Exception ex)
         {
-            _logger.LogError("WithdrawFundCommandHandler. Error adding transaction: {0}", ex.Message);
+            _logger.LogError(ex, "WithdrawFundCommandHandler. Unexpected error adding transaction");
             return new Response(ex.Message, false, 500);
         }
     }
