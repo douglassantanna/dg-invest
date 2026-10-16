@@ -44,13 +44,28 @@ public partial class RepairMissingExchangeOrderId : Migration
             """);
 
         migrationBuilder.Sql("""
-            IF NOT EXISTS (
+            IF EXISTS (
+                SELECT 1
+                FROM dbo.CryptoTransactions
+                WHERE ExchangeOrderId IS NOT NULL
+                GROUP BY CryptoAssetId, ExchangeOrderId
+                HAVING COUNT(*) > 1)
+                THROW 51001, 'CryptoTransactions contains duplicate ExchangeOrderId values for the same CryptoAssetId; resolve these duplicates before creating the unique index.', 1;
+
+            IF EXISTS (
                 SELECT 1
                 FROM sys.indexes
                 WHERE name = 'IX_CryptoTransactions_ExchangeOrderId'
                   AND object_id = OBJECT_ID('dbo.CryptoTransactions'))
-                CREATE UNIQUE INDEX IX_CryptoTransactions_ExchangeOrderId
-                    ON dbo.CryptoTransactions (ExchangeOrderId)
+                DROP INDEX IX_CryptoTransactions_ExchangeOrderId ON dbo.CryptoTransactions;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM sys.indexes
+                WHERE name = 'IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId'
+                  AND object_id = OBJECT_ID('dbo.CryptoTransactions'))
+                CREATE UNIQUE INDEX IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId
+                    ON dbo.CryptoTransactions (CryptoAssetId, ExchangeOrderId)
                     WHERE ExchangeOrderId IS NOT NULL;
             """);
     }
