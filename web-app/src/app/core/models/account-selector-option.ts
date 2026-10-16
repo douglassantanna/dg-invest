@@ -1,4 +1,4 @@
-export type AccountHealthStatus = 'Connected' | 'NeedsAttention' | 'Paused' | 'NotConfigured';
+export type AccountHealthStatus = 'Connected' | 'NeedsAttention' | 'Paused' | 'NotConfigured' | 'Disconnected';
 
 export interface AccountSelectorOption {
   accountId: number;

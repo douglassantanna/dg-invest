@@ -3,6 +3,9 @@ describe('Accounts page', () => {
   const api = '**/api/Account';
   let selectedAccountId: number;
   let createdManualAccountName: string | null;
+  let manualPortfolioBalance = 18265.43;
+  let delayNextManualAccountDetails = false;
+  let delayBybitAccountDetails = false;
 
   const encodeJwtSegment = (value: object) => btoa(JSON.stringify(value))
     .replace(/\+/g, '-')
@@ -13,7 +16,7 @@ describe('Accounts page', () => {
     {
       accountId: 1,
       accountName: 'Personal portfolio',
-      balance: 18265.43,
+      balance: manualPortfolioBalance,
       isSelected: selectedAccountId === 1,
       accountType: 'Manual',
       exchangeName: null,
@@ -69,6 +72,19 @@ describe('Accounts page', () => {
       errorCount: 0,
       lastErrorMessage: null,
     },
+    {
+      accountId: 202,
+      accountName: 'Bybit awaiting first sync',
+      balance: 0,
+      isSelected: selectedAccountId === 202,
+      accountType: 'Exchange',
+      exchangeName: 'Bybit',
+      isBybitCombinedWallet: false,
+      healthStatus: 'Disconnected',
+      lastSyncAt: null,
+      errorCount: 0,
+      lastErrorMessage: null,
+    },
     ...(createdManualAccountName ? [{
       accountId: 3,
       accountName: createdManualAccountName,
@@ -83,7 +99,7 @@ describe('Accounts page', () => {
 
   const accountDetails = (accountId: number, page: number) => ({
     id: accountId,
-    balance: accountId === 102 ? 8430.5 : 18265.43,
+    balance: accountId === 102 ? 8430.5 : accountId === 1 ? manualPortfolioBalance : 7200,
     groupedAccountTransactions: [{
       date: '2026-10-15T13:25:00Z',
       transactions: [{
@@ -123,13 +139,26 @@ describe('Accounts page', () => {
   const visitAccounts = (initialSelectedAccountId = 1) => {
     selectedAccountId = initialSelectedAccountId;
     createdManualAccountName = null;
+    manualPortfolioBalance = 18265.43;
+    delayNextManualAccountDetails = false;
+    delayBybitAccountDetails = false;
     cy.intercept('GET', '**/api/Crypto/list-assets*', {
       body: { hasNextPage: false, hasPreviousPage: false, items: [{ accountTag: 'Test portfolio' }], page: 1, pageSize: 50, totalCount: 1 },
     });
     cy.intercept('GET', `${api}/selector-options`, request => request.reply(accountOptions())).as('selectorOptions');
     cy.intercept('GET', `${api}/account-details*`, request => {
       const page = Number(new URL(request.url).searchParams.get('page') ?? 1);
-      request.reply(accountDetails(selectedAccountId, page));
+      const accountId = selectedAccountId;
+      const response = accountDetails(accountId, page);
+      if (delayNextManualAccountDetails && accountId === 1) {
+        delayNextManualAccountDetails = false;
+        request.alias = 'staleAccountDetails';
+        request.reply({ delay: 1200, body: response });
+      } else if (delayBybitAccountDetails && accountId === 102) {
+        request.reply({ delay: 2500, body: response });
+      } else {
+        request.reply(response);
+      }
     }).as('accountDetails');
     cy.intercept('POST', `${api}/select-account`, request => {
       selectedAccountId = request.body.accountId;
@@ -208,6 +237,7 @@ describe('Accounts page', () => {
     cy.contains('h3', 'Kraken').should('exist');
     cy.contains('button', 'Needs attention').should('exist');
     cy.contains('button', 'Paused').should('exist');
+    cy.contains('button', 'Disconnected').should('exist');
     cy.get('#selected-account-name').should('have.text', 'Bybit Main');
     cy.get('[aria-label="Current account"]').should('contain.text', 'Bybit Main');
     cy.get('[aria-label="Current account"]').should('not.have.attr', 'href');
@@ -230,18 +260,61 @@ describe('Accounts page', () => {
     cy.get('#selected-account-name').should('have.text', 'Bybit Trading');
   });
 
-  it('keeps deposit and withdrawal workflows available for manual portfolios', () => {
+  it('keeps manual deposit and withdrawal workflows and refreshes selector balances', () => {
     visitAccounts();
+    cy.intercept('POST', `${api}/deposit-fund`, request => {
+      manualPortfolioBalance += Number(request.body.amount);
+      request.reply({ statusCode: 201, body: { isSuccess: true } });
+    }).as('depositFund');
+    cy.intercept('POST', `${api}/withdraw-fund`, request => {
+      manualPortfolioBalance -= Number(request.body.amount);
+      request.reply({ statusCode: 201, body: { isSuccess: true } });
+    }).as('withdrawFund');
 
     cy.contains('button', 'Deposit').should('be.enabled').click();
     cy.get('app-deposit').should('be.visible');
-    cy.get('app-deposit').contains('button', 'Cancel').click();
+    cy.get('#transactionType').select('1');
+    cy.get('app-deposit #amount').type('100');
+    cy.get('app-deposit #purchaseDate').type('2026-10-16');
+    cy.get('app-deposit').contains('button', 'Save').click();
+    cy.wait('@depositFund');
+    cy.wait('@selectorOptions');
+    cy.wait('@accountDetails');
     cy.get('app-deposit').should('not.exist');
+    cy.contains('button', 'Personal portfolio').should('contain.text', '$18,365.43');
+    cy.get('app-account header h1').should('contain.text', '18,365.43');
 
     cy.contains('button', 'Withdraw').should('be.enabled').click();
     cy.get('app-withdraw').should('be.visible');
-    cy.get('app-withdraw').contains('button', 'Cancel').click();
+    cy.get('app-withdraw #amount').type('25');
+    cy.get('app-withdraw #purchaseDate').type('2026-10-16');
+    cy.get('app-withdraw').contains('button', 'Save').click();
+    cy.wait('@withdrawFund');
+    cy.wait('@selectorOptions');
+    cy.wait('@accountDetails');
     cy.get('app-withdraw').should('not.exist');
+    cy.contains('button', 'Personal portfolio').should('contain.text', '$18,340.43');
+    cy.get('app-account header h1').should('contain.text', '18,340.43');
+  });
+
+  it('hides previous account details while switching and ignores a late response', () => {
+    visitAccounts();
+    delayNextManualAccountDetails = true;
+
+    cy.get('app-crypto-filter input').type('stale');
+    cy.get('@accountDetails.all').should('have.length', 2);
+    delayBybitAccountDetails = true;
+    cy.contains('button', 'Bybit Trading').click();
+    cy.wait('@selectAccount');
+    cy.get('@accountDetails.all').should('have.length', 3);
+
+    cy.get('#selected-account-name').should('have.text', 'Bybit Trading');
+    cy.contains('app-account header [role="status"]', 'Loading account balance…').should('be.visible');
+    cy.wait('@accountDetails');
+    cy.contains('app-account header [role="status"]', 'Loading account balance…').should('be.visible');
+
+    cy.wait('@accountDetails');
+    cy.get('app-account header h1').should('contain.text', '8,430.50');
   });
 
   it('keeps filters and pagination when switching accounts, resetting to page one', () => {

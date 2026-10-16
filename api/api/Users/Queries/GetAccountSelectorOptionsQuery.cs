@@ -125,9 +125,19 @@ public class GetAccountSelectorOptionsQueryHandler(DataContext context)
             || string.Equals(syncStatus, "Error", StringComparison.OrdinalIgnoreCase))
             return "NeedsAttention";
 
+        if (string.Equals(integrationStatus, "Disconnected", StringComparison.OrdinalIgnoreCase))
+            return "Disconnected";
+
         if (!accountEnabled || isSyncEnabled is false || integrationEnabled is false)
             return "Paused";
 
-        return syncStatus is null ? "NotConfigured" : "Connected";
+        if (string.Equals(syncStatus, "Disconnected", StringComparison.OrdinalIgnoreCase))
+            return "Disconnected";
+
+        return string.Equals(syncStatus, "Connected", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(syncStatus, "Healthy", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(integrationStatus, "Healthy", StringComparison.OrdinalIgnoreCase)
+            ? "Connected"
+            : "NotConfigured";
     }
 }

@@ -459,6 +459,7 @@ public class ExchangeControllerIntegrationTests
         int unconfiguredAccountId;
         int disconnectedAccountId;
         int disabledIntegrationAccountId;
+        int awaitingFirstSyncAccountId;
         using (var scope = _fixture.Factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
@@ -475,8 +476,9 @@ public class ExchangeControllerIntegrationTests
             var unconfigured = new Account("Kraken setup", userId, EAccountType.Exchange, "Kraken", "kraken-uid");
             var disconnected = new Account("Bybit disconnected", userId, EAccountType.Exchange, "Bybit", "disconnected-uid");
             var disabledIntegrationAccount = new Account("Gemini disabled", userId, EAccountType.Exchange, "Gemini", "disabled-uid");
+            var awaitingFirstSync = new Account("Bybit awaiting first sync", userId, EAccountType.Exchange, "Bybit", "first-sync-uid");
             disconnected.Disable();
-            context.AddRange(bybitIntegration, disabledGeminiIntegration, connected, paused, needsAttention, unconfigured, disconnected, disabledIntegrationAccount);
+            context.AddRange(bybitIntegration, disabledGeminiIntegration, connected, paused, needsAttention, unconfigured, disconnected, disabledIntegrationAccount, awaitingFirstSync);
             await context.SaveChangesAsync();
             connectedAccountId = connected.Id;
             pausedAccountId = paused.Id;
@@ -484,6 +486,7 @@ public class ExchangeControllerIntegrationTests
             unconfiguredAccountId = unconfigured.Id;
             disconnectedAccountId = disconnected.Id;
             disabledIntegrationAccountId = disabledIntegrationAccount.Id;
+            awaitingFirstSyncAccountId = awaitingFirstSync.Id;
 
             var connectedStatus = new SyncStatus(userId, connected.Id, "Bybit");
             connectedStatus.EnableForCredentials();
@@ -494,7 +497,9 @@ public class ExchangeControllerIntegrationTests
             var errorStatus = new SyncStatus(userId, needsAttention.Id, "Bybit");
             errorStatus.EnableForCredentials();
             errorStatus.MarkError("Temporary connection error");
-            context.SyncStatuses.AddRange(connectedStatus, pausedStatus, errorStatus);
+            var firstSyncStatus = new SyncStatus(userId, awaitingFirstSync.Id, "Bybit");
+            firstSyncStatus.EnableForCredentials();
+            context.SyncStatuses.AddRange(connectedStatus, pausedStatus, errorStatus, firstSyncStatus);
             await context.SaveChangesAsync();
         }
 
@@ -517,6 +522,7 @@ public class ExchangeControllerIntegrationTests
         accounts.Should().ContainKey(disconnectedAccountId);
         accounts[disconnectedAccountId].GetProperty("accountName").GetString().Should().Be("Bybit disconnected");
         accounts[disabledIntegrationAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
+        accounts[awaitingFirstSyncAccountId].GetProperty("healthStatus").GetString().Should().Be("Disconnected");
 
         var selectExchangeAccount = await client.PostAsJsonAsync("/api/Account/select-account", new { accountId = connectedAccountId });
         selectExchangeAccount.StatusCode.Should().Be(HttpStatusCode.OK);

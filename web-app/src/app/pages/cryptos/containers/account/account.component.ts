@@ -23,8 +23,10 @@ export class AccountComponent implements OnInit {
   private readonly accountState = inject(AccountSelectorStateService);
   private readonly accountService = inject(AccountService);
   private readonly cryptoService = inject(CryptoService);
+  private accountDetailsRequestId = 0;
 
   account = signal<AccountDto>({} as AccountDto);
+  accountDetailsLoading = signal(false);
   accountSelectorOptions = this.accountState.options;
   selectorLoading = this.accountState.isLoading;
   selectedAccountOption = this.accountState.selectedAccount;
@@ -71,7 +73,18 @@ export class AccountComponent implements OnInit {
   }
 
   loadAccountDetails(): void {
-    if (!this.selectedAccountOption()) return;
+    const selectedAccount = this.selectedAccountOption();
+    if (!selectedAccount) {
+      this.accountDetailsRequestId++;
+      this.accountDetailsLoading.set(false);
+      this.account.set({} as AccountDto);
+      return;
+    }
+
+    const requestId = ++this.accountDetailsRequestId;
+    this.accountDetailsLoading.set(true);
+    this.accountActivityError.set('');
+    this.account.set({} as AccountDto);
 
     this.accountService.getSelectedAccount(
       this.currentPage(),
@@ -82,10 +95,16 @@ export class AccountComponent implements OnInit {
       this.currentStatus() || undefined
     ).subscribe({
       next: result => {
+        if (requestId !== this.accountDetailsRequestId || this.selectedAccountOption()?.accountId !== selectedAccount.accountId) return;
         this.accountActivityError.set('');
         if (result) this.account.set(result);
+        this.accountDetailsLoading.set(false);
       },
-      error: () => this.accountActivityError.set('Could not load the selected account activity. Try again.'),
+      error: () => {
+        if (requestId !== this.accountDetailsRequestId || this.selectedAccountOption()?.accountId !== selectedAccount.accountId) return;
+        this.accountActivityError.set('Could not load the selected account activity. Try again.');
+        this.accountDetailsLoading.set(false);
+      },
     });
   }
 
@@ -183,12 +202,29 @@ export class AccountComponent implements OnInit {
 
   depositEvent(deposit: DepositFundCommand | null): void {
     this.isDepositModalOpen.set(false);
-    if (deposit) this.loadAccountDetails();
+    if (deposit) this.refreshAccountAfterManualTransaction();
   }
 
   withdrawEvent(withdraw: WithdrawFundCommand | null): void {
     this.isWithdrawModalOpen.set(false);
-    if (withdraw) this.loadAccountDetails();
+    if (withdraw) this.refreshAccountAfterManualTransaction();
+  }
+
+  private refreshAccountAfterManualTransaction(): void {
+    this.accountState.reload().subscribe({
+      next: () => {
+        const selected = this.selectedAccountOption();
+        if (!selected) return;
+
+        this.cryptoService.accountTag.set(selected.accountName);
+        this.currentPage.set(1);
+        this.loadAccountDetails();
+      },
+      error: () => {
+        this.accountActivityError.set('Could not refresh the selected account after the transaction.');
+        this.loadAccountDetails();
+      },
+    });
   }
 
   selectAccount(account: AccountSelectorOption): void {
@@ -221,6 +257,7 @@ export class AccountComponent implements OnInit {
       case 'NeedsAttention': return 'error';
       case 'Paused': return 'pause_circle';
       case 'NotConfigured': return 'key_off';
+      case 'Disconnected': return 'link_off';
       default: return '';
     }
   }
@@ -229,6 +266,7 @@ export class AccountComponent implements OnInit {
     switch (health) {
       case 'NeedsAttention': return 'Needs attention';
       case 'NotConfigured': return 'Setup needed';
+      case 'Disconnected': return 'Disconnected';
       default: return health ?? '';
     }
   }
@@ -239,6 +277,7 @@ export class AccountComponent implements OnInit {
       case 'NeedsAttention': return 'bg-amber-50 text-amber-900 ring-amber-200';
       case 'Paused': return 'bg-slate-100 text-slate-700 ring-slate-200';
       case 'NotConfigured': return 'bg-blue-50 text-blue-800 ring-blue-200';
+      case 'Disconnected': return 'bg-red-50 text-red-800 ring-red-200';
       default: return '';
     }
   }
