@@ -15,6 +15,56 @@ public class AccountEvolutionMigrationTests
     private const string CurrentMigration = "20260805134607_AddIsDeletedToAccount";
     private const string AccountExternalIdIndexMigration = "20260822220000_AlignAccountExternalIdIndex";
     private const string ExchangeOnlyExternalIdIndexMigration = "20260824210000_FilterAccountExternalIdIndexToExchangeAccounts";
+    private const string BeforeExchangeOrderIdRepairMigration = "20260913160700_AddExchangeExecutionId";
+    private const string ExchangeOrderIdRepairMigration = "20260919000000_RepairMissingExchangeOrderId";
+
+    [Fact]
+    public async Task ExchangeOrderIdRepair_ShouldNormalizeLegacyMaxColumnBeforeCreatingIndex()
+    {
+        await using var container = new MsSqlBuilder()
+            .WithPassword($"T{Guid.NewGuid():N}aA1!")
+            .Build();
+        await container.StartAsync();
+
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlServer(container.GetConnectionString())
+            .Options;
+        await using var context = new DataContext(options);
+        var migrator = context.Database.GetService<IMigrator>();
+
+        await migrator.MigrateAsync(BeforeExchangeOrderIdRepairMigration);
+        await context.Database.ExecuteSqlRawAsync("""
+            IF COL_LENGTH('dbo.CryptoTransactions', 'ExchangeOrderId') IS NULL
+                ALTER TABLE dbo.CryptoTransactions ADD ExchangeOrderId nvarchar(max) NULL;
+            ELSE
+                ALTER TABLE dbo.CryptoTransactions ALTER COLUMN ExchangeOrderId nvarchar(max) NULL;
+
+            IF EXISTS (
+                SELECT 1
+                FROM sys.indexes
+                WHERE name = 'IX_CryptoTransactions_ExchangeOrderId'
+                  AND object_id = OBJECT_ID('dbo.CryptoTransactions'))
+                DROP INDEX IX_CryptoTransactions_ExchangeOrderId ON dbo.CryptoTransactions;
+            """);
+
+        await migrator.MigrateAsync(ExchangeOrderIdRepairMigration);
+
+        var columnLength = await ScalarAsync(context, """
+            SELECT CONVERT(int, max_length) AS Value
+            FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'dbo.CryptoTransactions')
+              AND name = 'ExchangeOrderId'
+            """);
+        columnLength.Should().Be(200);
+
+        var indexIsUnique = await ScalarAsync(context, """
+            SELECT CONVERT(int, is_unique) AS Value
+            FROM sys.indexes
+            WHERE object_id = OBJECT_ID(N'dbo.CryptoTransactions')
+              AND name = 'IX_CryptoTransactions_ExchangeOrderId'
+            """);
+        indexIsUnique.Should().Be(1);
+    }
 
     [Fact]
     public async Task EvolveAccountMigration_ShouldPreserveBybitMappingsAndScopeExternalIds()

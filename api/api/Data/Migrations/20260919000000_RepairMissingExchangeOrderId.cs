@@ -18,6 +18,32 @@ public partial class RepairMissingExchangeOrderId : Migration
             """);
 
         migrationBuilder.Sql("""
+            IF EXISTS (
+                SELECT 1
+                FROM sys.columns
+                WHERE object_id = OBJECT_ID('dbo.CryptoTransactions')
+                  AND name = 'ExchangeOrderId'
+                  AND (system_type_id <> 231 OR max_length <> 200))
+            BEGIN
+                IF EXISTS (
+                    SELECT 1
+                    FROM dbo.CryptoTransactions
+                    WHERE ExchangeOrderId IS NOT NULL
+                      AND DATALENGTH(CONVERT(nvarchar(max), ExchangeOrderId)) > 200)
+                    THROW 51000, 'CryptoTransactions.ExchangeOrderId contains values longer than nvarchar(100); resolve these rows before applying the repair.', 1;
+
+                IF EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = 'IX_CryptoTransactions_ExchangeOrderId'
+                      AND object_id = OBJECT_ID('dbo.CryptoTransactions'))
+                    DROP INDEX IX_CryptoTransactions_ExchangeOrderId ON dbo.CryptoTransactions;
+
+                ALTER TABLE dbo.CryptoTransactions ALTER COLUMN ExchangeOrderId nvarchar(100) NULL;
+            END;
+            """);
+
+        migrationBuilder.Sql("""
             IF NOT EXISTS (
                 SELECT 1
                 FROM sys.indexes
