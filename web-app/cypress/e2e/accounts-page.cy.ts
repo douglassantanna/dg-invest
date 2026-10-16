@@ -147,7 +147,13 @@ describe('Accounts page', () => {
   it('loads the persisted account portfolio on the home page after account options resolve', () => {
     selectedAccountId = 101;
     createdManualAccountName = null;
-    cy.intercept('GET', `${api}/selector-options`, { delay: 500, body: accountOptions() }).as('selectorOptions');
+    let releaseSelectorOptions!: () => void;
+    const selectorOptionsGate = new Cypress.Promise<void>(resolve => {
+      releaseSelectorOptions = resolve;
+    });
+    cy.intercept('GET', `${api}/selector-options`, request =>
+      selectorOptionsGate.then(() => request.reply(accountOptions()))
+    ).as('selectorOptions');
     cy.intercept('GET', '**/api/Crypto/list-assets*', {
       body: {
         hasNextPage: false,
@@ -169,6 +175,7 @@ describe('Accounts page', () => {
 
     cy.get('@selectorOptions.all').should('have.length', 1);
     cy.get('@homePortfolio.all').should('have.length', 0);
+    cy.then(() => releaseSelectorOptions());
     cy.wait('@selectorOptions');
     cy.wait('@homePortfolio');
 
