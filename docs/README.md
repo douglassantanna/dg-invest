@@ -21,6 +21,7 @@ Use this page as the starting point for code navigation. The root README is for 
 | Bybit commands, queries, services, and models | [`api/api/Exchanges/`](../api/api/Exchanges/) | [`api/unit-tests/ExchangesTests/`](../api/unit-tests/ExchangesTests/) |
 | Scheduled Bybit sync | [`api/functions/SyncBybitOrders.cs`](../api/functions/SyncBybitOrders.cs) and [`api/api/Exchanges/Services/BybitAccountSyncService.cs`](../api/api/Exchanges/Services/BybitAccountSyncService.cs) | [`api/unit-tests/FunctionsTests/SyncBybitOrdersTests.cs`](../api/unit-tests/FunctionsTests/SyncBybitOrdersTests.cs), [`api/unit-tests/ExchangesTests/Services/`](../api/unit-tests/ExchangesTests/Services/) |
 | Other Functions | [`api/functions/`](../api/functions/) | [`api/unit-tests/FunctionsTests/`](../api/unit-tests/FunctionsTests/) |
+| Accounts page and persisted account selector | [`web-app/src/app/pages/cryptos/containers/account/`](../web-app/src/app/pages/cryptos/containers/account/), [`web-app/src/app/core/services/account-selector-state.service.ts`](../web-app/src/app/core/services/account-selector-state.service.ts) | [`web-app/cypress/e2e/accounts-page.cy.ts`](../web-app/cypress/e2e/accounts-page.cy.ts), selector API test in `ExchangeControllerIntegrationTests` |
 | Angular exchange pages | [`web-app/src/app/pages/exchanges/`](../web-app/src/app/pages/exchanges/) | [`web-app/cypress/e2e/exchanges/exchange-management.cy.ts`](../web-app/cypress/e2e/exchanges/exchange-management.cy.ts) |
 | Angular API client and DTOs | [`web-app/src/app/core/services/exchange.service.ts`](../web-app/src/app/core/services/exchange.service.ts), [`web-app/src/app/core/models/`](../web-app/src/app/core/models/) | Cypress exchange spec |
 
@@ -35,6 +36,15 @@ Use this page as the starting point for code navigation. The root README is for 
 
 For a route list, use `ExchangeController.cs` as the source of truth. For sync semantics, use `BybitAccountSyncService.cs` and `BybitOrderSyncService.cs`, not older README examples.
 
+## Accounts Page and Selector
+
+- `GET /api/Account/selector-options` returns every non-deleted Manual and Exchange context belonging to the authenticated user, including disabled or disconnected Exchange accounts, with selected state, balance, source, and sync health.
+- The selector groups by `AccountType` and `Exchange`; health states distinguish connected, disconnected, paused, setup-needed, and attention-required contexts.
+- `POST /api/Account/select-account` persists the active account. `POST /api/Account/create` adds a Manual portfolio.
+- The Accounts page preserves transaction search, date/status filters, and 20-row server pagination; account switches retain filters and restart at page 1.
+- The header is a passive display of the selected account. `Exchange Hub` is the onboarding and integration-management entry point.
+- Use `GetAccountSelectorOptionsQuery` and `accounts-page.cy.ts` for the selector API and browser flow.
+
 ## Test Entry Points
 
 Run backend commands from `api/`:
@@ -42,6 +52,7 @@ Run backend commands from `api/`:
 ```bash
 dotnet test unit-tests/unit-tests.csproj
 dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~ExchangeControllerIntegrationTests
+dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~AccountSelectorOptions
 dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~SyncBybitOrdersTests
 ```
 
@@ -49,6 +60,7 @@ Run frontend commands from `web-app/`:
 
 ```bash
 npm run build
+npm run cypress:run -- --spec cypress/e2e/accounts-page.cy.ts
 npm run cypress:run -- --spec cypress/e2e/exchanges/exchange-management.cy.ts
 ```
 

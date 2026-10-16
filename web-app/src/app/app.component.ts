@@ -12,7 +12,7 @@ import { LayoutService } from './core/services/layout.service';
   template: `
     @if (authService.isLoggedIn | async){
       <app-sidenav>
-        <header>
+        <header class="sticky top-0 z-30">
           <app-header (toggleSidenavEvent)="toggleSidenavEvent()" />
         </header>
         <div>

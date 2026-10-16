@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, output, signal } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepositFundCommand } from 'src/app/core/models/deposit-fund-command';
-import { AccountTransactionType } from '../account/account.component';
+import { AccountTransactionType } from 'src/app/core/models/deposit-fund-command';
 import { ToastService } from 'src/app/core/services/toast.service';
 import { UpperCasePipe } from '@angular/common';
 import { tap } from 'rxjs';

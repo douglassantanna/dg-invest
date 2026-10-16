@@ -17,6 +17,18 @@ public record SimpleAccountDto(int Id, string Name, decimal Balance, bool IsSele
 {
     public string SubaccountTag => Name;
 }
+public record AccountSelectorOptionDto(
+    int AccountId,
+    string AccountName,
+    decimal Balance,
+    bool IsSelected,
+    string AccountType,
+    string? ExchangeName,
+    bool IsBybitCombinedWallet,
+    string? HealthStatus,
+    DateTime? LastSyncAt,
+    int ErrorCount,
+    string? LastErrorMessage);
 public record AccountTransactionDto(DateTime Date,
                                     EAccountTransactionType TransactionType,
                                     decimal Amount,

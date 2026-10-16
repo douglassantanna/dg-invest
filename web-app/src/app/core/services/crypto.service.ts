@@ -50,7 +50,8 @@ export class CryptoService {
       params: params
     }).pipe(
       tap((response) => {
-        this.accountTag.set(response.items[0].accountTag);
+        const selectedAccountName = response.items?.[0]?.accountTag;
+        if (selectedAccountName) this.accountTag.set(selectedAccountName);
       })
     );
   }

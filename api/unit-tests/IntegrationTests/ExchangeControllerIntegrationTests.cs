@@ -450,6 +450,93 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
+    public async Task AccountSelectorOptions_IncludesAllNonDeletedAccountsWithHealthAndPersistedSelection()
+    {
+        var (userId, manualAccountId) = await _fixture.CreateUserAsync();
+        int connectedAccountId;
+        int pausedAccountId;
+        int errorAccountId;
+        int unconfiguredAccountId;
+        int disconnectedAccountId;
+        int disabledIntegrationAccountId;
+        int awaitingFirstSyncAccountId;
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            var bybitIntegration = new ExchangeIntegration(userId, "Bybit");
+            bybitIntegration.MarkConfigured();
+            bybitIntegration.MarkEnabled();
+            var disabledGeminiIntegration = new ExchangeIntegration(userId, "Gemini");
+            disabledGeminiIntegration.MarkConfigured();
+            disabledGeminiIntegration.MarkDisabled();
+
+            var connected = new Account("Bybit active", userId, EAccountType.Exchange, "Bybit", "active-uid");
+            var paused = new Account("Bybit paused", userId, EAccountType.Exchange, "Bybit", "paused-uid");
+            var needsAttention = new Account("Bybit needs attention", userId, EAccountType.Exchange, "Bybit", "error-uid");
+            var unconfigured = new Account("Kraken setup", userId, EAccountType.Exchange, "Kraken", "kraken-uid");
+            var disconnected = new Account("Bybit disconnected", userId, EAccountType.Exchange, "Bybit", "disconnected-uid");
+            var disabledIntegrationAccount = new Account("Gemini disabled", userId, EAccountType.Exchange, "Gemini", "disabled-uid");
+            var awaitingFirstSync = new Account("Bybit awaiting first sync", userId, EAccountType.Exchange, "Bybit", "first-sync-uid");
+            disconnected.Disable();
+            context.AddRange(bybitIntegration, disabledGeminiIntegration, connected, paused, needsAttention, unconfigured, disconnected, disabledIntegrationAccount, awaitingFirstSync);
+            await context.SaveChangesAsync();
+            connectedAccountId = connected.Id;
+            pausedAccountId = paused.Id;
+            errorAccountId = needsAttention.Id;
+            unconfiguredAccountId = unconfigured.Id;
+            disconnectedAccountId = disconnected.Id;
+            disabledIntegrationAccountId = disabledIntegrationAccount.Id;
+            awaitingFirstSyncAccountId = awaitingFirstSync.Id;
+
+            var connectedStatus = new SyncStatus(userId, connected.Id, "Bybit");
+            connectedStatus.EnableForCredentials();
+            connectedStatus.MarkConnected("latest-order");
+            var pausedStatus = new SyncStatus(userId, paused.Id, "Bybit");
+            pausedStatus.EnableForCredentials();
+            pausedStatus.Disable();
+            var errorStatus = new SyncStatus(userId, needsAttention.Id, "Bybit");
+            errorStatus.EnableForCredentials();
+            errorStatus.MarkError("Temporary connection error");
+            var firstSyncStatus = new SyncStatus(userId, awaitingFirstSync.Id, "Bybit");
+            firstSyncStatus.EnableForCredentials();
+            context.SyncStatuses.AddRange(connectedStatus, pausedStatus, errorStatus, firstSyncStatus);
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.GetAsync("/api/Account/selector-options");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var accounts = document.RootElement.EnumerateArray()
+            .ToDictionary(account => account.GetProperty("accountId").GetInt32());
+        accounts[manualAccountId].GetProperty("accountType").GetString().Should().Be("Manual");
+        accounts[connectedAccountId].GetProperty("accountType").GetString().Should().Be("Exchange");
+        accounts[connectedAccountId].GetProperty("exchangeName").GetString().Should().Be("Bybit");
+        accounts[connectedAccountId].GetProperty("healthStatus").GetString().Should().Be("Connected");
+        accounts[pausedAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
+        accounts[errorAccountId].GetProperty("healthStatus").GetString().Should().Be("NeedsAttention");
+        accounts[errorAccountId].GetProperty("lastErrorMessage").GetString().Should().Be("Temporary connection error");
+        accounts[unconfiguredAccountId].GetProperty("exchangeName").GetString().Should().Be("Kraken");
+        accounts[unconfiguredAccountId].GetProperty("healthStatus").GetString().Should().Be("NotConfigured");
+        accounts.Should().ContainKey(disconnectedAccountId);
+        accounts[disconnectedAccountId].GetProperty("accountName").GetString().Should().Be("Bybit disconnected");
+        accounts[disabledIntegrationAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
+        accounts[awaitingFirstSyncAccountId].GetProperty("healthStatus").GetString().Should().Be("Disconnected");
+
+        var selectExchangeAccount = await client.PostAsJsonAsync("/api/Account/select-account", new { accountId = connectedAccountId });
+        selectExchangeAccount.StatusCode.Should().Be(HttpStatusCode.OK);
+        var selectedOptionsResponse = await client.GetAsync("/api/Account/selector-options");
+        using var selectedOptionsDocument = JsonDocument.Parse(await selectedOptionsResponse.Content.ReadAsStringAsync());
+        var selectedOption = selectedOptionsDocument.RootElement.EnumerateArray()
+            .Single(account => account.GetProperty("accountId").GetInt32() == connectedAccountId);
+        selectedOption.GetProperty("isSelected").GetBoolean().Should().BeTrue();
+        using var selectedScope = _fixture.Factory.Services.CreateScope();
+        (await selectedScope.ServiceProvider.GetRequiredService<DataContext>().Accounts
+            .SingleAsync(account => account.Id == connectedAccountId)).IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task CreateAccount_WithNameProperty_ShouldPersistManualAccount()
     {
         var (userId, _) = await _fixture.CreateUserAsync();
@@ -464,6 +551,26 @@ public class ExchangeControllerIntegrationTests
         account.AccountType.Should().Be(EAccountType.Manual);
         account.Exchange.Should().BeNull();
         account.ExternalId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAccount_WhenNameMatchesAnExchangeAccount_ShouldReturnConflictDetails()
+    {
+        var (userId, _) = await _fixture.CreateUserAsync();
+        using (var scope = _fixture.Factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            context.Accounts.Add(new Account("Shared account", userId, EAccountType.Exchange, "Bybit", "shared-uid"));
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
+        var response = await client.PostAsJsonAsync("/api/Account/create", new { name = "shared account" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        document.RootElement.GetProperty("isSuccess").GetBoolean().Should().BeFalse();
+        document.RootElement.GetProperty("message").GetString().Should().Contain("already exists");
     }
 
     [Fact]

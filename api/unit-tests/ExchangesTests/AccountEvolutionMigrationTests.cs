@@ -2,6 +2,8 @@ using api.AzureKeyVault;
 using api.Cryptos.Models;
 using api.Exchanges.Models;
 using api.Exchanges.Services;
+using api.Models.Cryptos;
+using api.Users.Models;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Moq;
@@ -15,6 +17,136 @@ public class AccountEvolutionMigrationTests
     private const string CurrentMigration = "20260805134607_AddIsDeletedToAccount";
     private const string AccountExternalIdIndexMigration = "20260822220000_AlignAccountExternalIdIndex";
     private const string ExchangeOnlyExternalIdIndexMigration = "20260824210000_FilterAccountExternalIdIndexToExchangeAccounts";
+    private const string BeforeExchangeOrderIdRepairMigration = "20260913160700_AddExchangeExecutionId";
+
+    [Fact]
+    public async Task ExchangeOrderIdRepair_ShouldNormalizeLegacyMaxColumnAndAllowOrderIdsAcrossAccounts()
+    {
+        await using var container = new MsSqlBuilder()
+            .WithPassword($"T{Guid.NewGuid():N}aA1!")
+            .Build();
+        await container.StartAsync();
+
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlServer(container.GetConnectionString())
+            .Options;
+        await using var context = new DataContext(options);
+        var migrator = context.Database.GetService<IMigrator>();
+
+        await migrator.MigrateAsync(BeforeExchangeOrderIdRepairMigration);
+        await context.Database.ExecuteSqlRawAsync("""
+            IF COL_LENGTH('dbo.CryptoTransactions', 'ExchangeOrderId') IS NULL
+                ALTER TABLE dbo.CryptoTransactions ADD ExchangeOrderId nvarchar(max) NULL;
+            ELSE
+                ALTER TABLE dbo.CryptoTransactions ALTER COLUMN ExchangeOrderId nvarchar(max) NULL;
+
+            IF EXISTS (
+                SELECT 1
+                FROM sys.indexes
+                WHERE name = 'IX_CryptoTransactions_ExchangeOrderId'
+                  AND object_id = OBJECT_ID('dbo.CryptoTransactions'))
+                DROP INDEX IX_CryptoTransactions_ExchangeOrderId ON dbo.CryptoTransactions;
+            """);
+
+        var owner = new User("Order ID owner", "order-id-owner@example.com", "hash", Role.User);
+        context.Users.Add(owner);
+        await context.SaveChangesAsync();
+        var firstAccount = new Account("Bybit account 1", owner.Id, EAccountType.Exchange, "Bybit", "uid-1");
+        var secondAccount = new Account("Bybit account 2", owner.Id, EAccountType.Exchange, "Bybit", "uid-2");
+        context.Accounts.AddRange(firstAccount, secondAccount);
+        await context.SaveChangesAsync();
+
+        var firstAsset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        var secondAsset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        firstAccount.AddCryptoAsset(firstAsset).IsSuccess.Should().BeTrue();
+        secondAccount.AddCryptoAsset(secondAsset).IsSuccess.Should().BeTrue();
+        await context.SaveChangesAsync();
+        const string repeatedOrderId = "2303311859593518848";
+        firstAsset.AddHistoricalTransaction(new CryptoTransaction(
+            0.000064m, 77142.8m, DateTimeOffset.UtcNow, "Bybit", ETransactionType.Buy, 0, repeatedOrderId));
+        secondAsset.AddHistoricalTransaction(new CryptoTransaction(
+            0.000064m, 77142.8m, DateTimeOffset.UtcNow, "Bybit", ETransactionType.Buy, 0, repeatedOrderId));
+        await context.SaveChangesAsync();
+
+        await context.Database.MigrateAsync();
+        context.ChangeTracker.Clear();
+
+        var columnLength = await ScalarAsync(context, """
+            SELECT CONVERT(int, max_length) AS Value
+            FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'dbo.CryptoTransactions')
+              AND name = 'ExchangeOrderId'
+            """);
+        columnLength.Should().Be(200);
+
+        var indexIsUnique = await ScalarAsync(context, """
+            SELECT CONVERT(int, is_unique) AS Value
+            FROM sys.indexes
+            WHERE object_id = OBJECT_ID(N'dbo.CryptoTransactions')
+              AND name = 'IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId'
+            """);
+        indexIsUnique.Should().Be(1);
+        (await context.CryptoTransactions.CountAsync(transaction => transaction.ExchangeOrderId == repeatedOrderId)).Should().Be(2);
+        var indexKeyColumns = await context.Database.SqlQueryRaw<string>("""
+            SELECT columns.name AS Value
+            FROM sys.indexes AS indexes
+            INNER JOIN sys.index_columns AS indexColumns
+                ON indexColumns.object_id = indexes.object_id AND indexColumns.index_id = indexes.index_id
+            INNER JOIN sys.columns AS columns
+                ON columns.object_id = indexColumns.object_id AND columns.column_id = indexColumns.column_id
+            WHERE indexes.object_id = OBJECT_ID(N'dbo.CryptoTransactions')
+              AND indexes.name = 'IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId'
+              AND indexColumns.key_ordinal > 0
+            ORDER BY indexColumns.key_ordinal
+            """).ToListAsync();
+        indexKeyColumns.Should().Equal("CryptoAssetId", "ExchangeOrderId");
+    }
+
+    [Fact]
+    public async Task ExchangeOrderIdScopeMigration_ShouldReplaceLegacyGlobalUniqueIndex()
+    {
+        await using var container = new MsSqlBuilder()
+            .WithPassword($"T{Guid.NewGuid():N}aA1!")
+            .Build();
+        await container.StartAsync();
+
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlServer(container.GetConnectionString())
+            .Options;
+        await using var context = new DataContext(options);
+        var migrator = context.Database.GetService<IMigrator>();
+        await migrator.MigrateAsync("20260919000000_RepairMissingExchangeOrderId");
+
+        await context.Database.ExecuteSqlRawAsync("""
+            DROP INDEX IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId ON dbo.CryptoTransactions;
+            CREATE UNIQUE INDEX IX_CryptoTransactions_ExchangeOrderId
+                ON dbo.CryptoTransactions (ExchangeOrderId)
+                WHERE ExchangeOrderId IS NOT NULL;
+            """);
+
+        await context.Database.MigrateAsync();
+
+        var indexes = await context.Database.SqlQueryRaw<string>("""
+            SELECT name AS Value
+            FROM sys.indexes
+            WHERE object_id = OBJECT_ID(N'dbo.CryptoTransactions')
+              AND name IN ('IX_CryptoTransactions_ExchangeOrderId', 'IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId')
+            """).ToListAsync();
+        indexes.Should().ContainSingle().Which.Should().Be("IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId");
+        var indexKeyColumns = await context.Database.SqlQueryRaw<string>("""
+            SELECT columns.name AS Value
+            FROM sys.indexes AS indexes
+            INNER JOIN sys.index_columns AS indexColumns
+                ON indexColumns.object_id = indexes.object_id AND indexColumns.index_id = indexes.index_id
+            INNER JOIN sys.columns AS columns
+                ON columns.object_id = indexColumns.object_id AND columns.column_id = indexColumns.column_id
+            WHERE indexes.object_id = OBJECT_ID(N'dbo.CryptoTransactions')
+              AND indexes.name = 'IX_CryptoTransactions_CryptoAssetId_ExchangeOrderId'
+              AND indexColumns.key_ordinal > 0
+            ORDER BY indexColumns.key_ordinal
+            """).ToListAsync();
+        indexKeyColumns.Should().Equal("CryptoAssetId", "ExchangeOrderId");
+    }
 
     [Fact]
     public async Task EvolveAccountMigration_ShouldPreserveBybitMappingsAndScopeExternalIds()

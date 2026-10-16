@@ -195,7 +195,11 @@ The exchange integration is being delivered in phases. The target architecture s
 - **Exchange integration** — the per-user connection to Bybit. It owns integration-level connection state and discovery credentials stored in Key Vault.
 - **Exchange account** — a separately selectable portfolio identified by `AccountType = Exchange`, its exchange name, and the external Bybit UID.
 
-Bybit discovery creates or updates only exchange accounts, matching them by user, exchange, and external UID. Manual accounts remain separate. The account selector can group Manual, Bybit, and future exchange contexts by origin as later phase work lands.
+Bybit discovery creates or updates only exchange accounts, matching them by user, exchange, and external UID. Manual accounts remain separate. The Accounts page classifies Manual and Exchange contexts by `AccountType`, groups exchange contexts by `Exchange`, and shows source and sync health. The header passively displays the selected account; switching happens on the Accounts page.
+
+**Account selector data:** `GET /api/Account/selector-options` returns every non-deleted Manual and Exchange account belonging to the authenticated user, including disabled or disconnected exchange accounts, with balance, selected state, and sync-health details. Health distinguishes connected, disconnected, paused, setup-needed, and attention-required states. Exchange names are data-driven, so the same selector can group future exchanges.
+
+**Selection and creation:** Selecting a context uses `POST /api/Account/select-account` and persists the selected account. **Add portfolio** creates a Manual account through the existing `/api/Account/create` endpoint. Deposits and withdrawals are available only for Manual portfolios; exchange account management links to the relevant Exchange Hub page. No schema migration is required.
 
 The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for phase scope, and [Repository Map](docs/README.md) for current code entry points.
 
@@ -375,9 +379,11 @@ The API uses `DefaultAzureCredential` to authenticate, which works with:
 - `ExchangeOrderId` and `ExchangeTransactionId` provide idempotency — if Bybit delivers the same event more than once, it's silently skipped.
 - API credentials are stored in Azure Key Vault, never in the database or browser.
 
-#### Exchange Management UI
+#### Exchange Hub
 
-The frontend provides a dedicated **Exchange Connections** page (`/exchanges`) for managing your Bybit integration without touching the API. The page is organized into four sections:
+The frontend provides a dedicated **Exchange Hub** (`/exchanges`) for managing exchange integrations without touching the API. The page lists connected exchange accounts and provides a route to manage the Bybit integration. The Accounts page's **Connect an exchange** link opens this hub; a selected exchange account's **Manage this account** action opens its account details.
+
+The Bybit integration area contains:
 
 1. **Credentials form** — enter API key, secret, and webhook signing secret per internal account.
 2. **Sub-account sync** — pull sub-accounts from Bybit, see them listed with their UID, username, and remark. Unmapped sub-accounts can be linked to an internal portfolio account with one click.
@@ -416,11 +422,11 @@ The sync is idempotent — running it multiple times will never create duplicate
 
 ### Account transactions
 
-The **Account** page displays your transaction history with filtering, pagination, and real-time balance updates.
+The **Accounts** page groups Manual portfolios and Exchange accounts, then shows the selected account's balance and transaction history.
 
 **Landing page:** Shows the 20 most recent transactions across all categories (deposits, withdrawals, buys, sells), grouped by date with the latest date group first. Each transaction displays its time.
 
-**Filters** (server-side, combine with AND logic):
+**Filters** (server-side, combined with AND logic):
 
 | Filter | Description |
 |--------|-------------|
@@ -434,11 +440,11 @@ The **Account** page displays your transaction history with filtering, paginatio
 - See only failed syncs: set Status to `Failed`
 - Find all Bybit deposits from June: text `bybit` + From `2026-06-01` + To `2026-06-30`
 
-All filters reset to page 1 when changed. The date inputs and status dropdown can be used independently or together. A "Clear dates" button appears when dates are set.
+All filters reset to page 1 when changed. When switching accounts, the current filters are retained and results restart on page 1. The date inputs and status dropdown can be used independently or together. A "Clear dates" button appears when dates are set.
 
-**Pagination:** 20 transactions per page. Previous/Next buttons appear when there are more than 20 results, showing the current page and total transaction count.
+**Pagination:** 20 transactions per page. Previous/Next buttons appear when there are more than 20 results, showing the current page and total transaction count. Changing accounts retains the current filters and returns to page 1.
 
-**Persistence:** Non-Success exchange entries are **not created** in the database — they only appear in sync logs. Once status reaches Success, the transaction is recorded and appears here.
+**Persistence:** Account selection and Manual portfolio creation use the Account API. Account activity and filters are loaded from the selected portfolio; exchange sync events continue to use the existing persisted transaction and sync-status records.
 
 ---
 
