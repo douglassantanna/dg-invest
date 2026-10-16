@@ -195,9 +195,11 @@ The exchange integration is being delivered in phases. The target architecture s
 - **Exchange integration** — the per-user connection to Bybit. It owns integration-level connection state and discovery credentials stored in Key Vault.
 - **Exchange account** — a separately selectable portfolio identified by `AccountType = Exchange`, its exchange name, and the external Bybit UID.
 
-Bybit discovery creates or updates only exchange accounts, matching them by user, exchange, and external UID. Manual accounts remain separate. The Accounts page groups manual portfolios separately from exchange accounts, grouped by their `Exchange` value; the header passively shows the currently selected account, while account switching happens on the Accounts page.
+Bybit discovery creates or updates only exchange accounts, matching them by user, exchange, and external UID. Manual accounts remain separate. The Accounts page classifies Manual and Exchange contexts by `AccountType`, groups exchange contexts by `Exchange`, and shows source and sync health. The header passively displays the selected account; switching happens on the Accounts page.
 
-**PR4 preview data:** The current account-selector experience uses fictional Manual, Bybit, and Kraken examples held in application memory. Adding a portfolio updates only that in-memory list; it is lost on a full reload and does not write to the API or database. Filters and 20-row pagination run locally over sample activity. Deposit and withdrawal actions are disabled in preview mode. The Exchange Hub remains the destination for real exchange onboarding and management.
+**Account selector data:** `GET /api/Account/selector-options` returns manual portfolios and currently enabled exchange accounts with balance, selected state, and sync-health details. Disconnected/stale exchange accounts are excluded; account-level pauses remain visible. Exchange names are data-driven, so the same selector can group future exchanges.
+
+**Selection and creation:** Selecting a context uses `POST /api/Account/select-account` and persists the selected account. **Add portfolio** creates a Manual account through the existing `/api/Account/create` endpoint. Deposits and withdrawals are available only for Manual portfolios; exchange account management links to the relevant Exchange Hub page. No schema migration is required.
 
 The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for phase scope, and [Repository Map](docs/README.md) for current code entry points.
 
@@ -424,7 +426,7 @@ The **Accounts** page groups Manual portfolios and Exchange accounts, then shows
 
 **Landing page:** Shows the 20 most recent transactions across all categories (deposits, withdrawals, buys, sells), grouped by date with the latest date group first. Each transaction displays its time.
 
-**Filters** (in the current PR4 preview, applied to sample data in memory; combined with AND logic):
+**Filters** (server-side, combined with AND logic):
 
 | Filter | Description |
 |--------|-------------|
@@ -438,11 +440,11 @@ The **Accounts** page groups Manual portfolios and Exchange accounts, then shows
 - See only failed syncs: set Status to `Failed`
 - Find all Bybit deposits from June: text `bybit` + From `2026-06-01` + To `2026-06-30`
 
-All filters reset to page 1 when changed. The date inputs and status dropdown can be used independently or together. A "Clear dates" button appears when dates are set.
+All filters reset to page 1 when changed. When switching accounts, the current filters are retained and results restart on page 1. The date inputs and status dropdown can be used independently or together. A "Clear dates" button appears when dates are set.
 
 **Pagination:** 20 transactions per page. Previous/Next buttons appear when there are more than 20 results, showing the current page and total transaction count. Changing accounts retains the current filters and returns to page 1.
 
-**Preview persistence:** Selecting accounts and adding a Manual portfolio only update in-memory demo state. A full reload restores the seeded examples. No Account API calls or database writes are made from this preview page.
+**Persistence:** Account selection and Manual portfolio creation use the Account API. Account activity and filters are loaded from the selected portfolio; exchange sync events continue to use the existing persisted transaction and sync-status records.
 
 ---
 

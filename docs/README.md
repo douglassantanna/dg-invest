@@ -21,7 +21,7 @@ Use this page as the starting point for code navigation. The root README is for 
 | Bybit commands, queries, services, and models | [`api/api/Exchanges/`](../api/api/Exchanges/) | [`api/unit-tests/ExchangesTests/`](../api/unit-tests/ExchangesTests/) |
 | Scheduled Bybit sync | [`api/functions/SyncBybitOrders.cs`](../api/functions/SyncBybitOrders.cs) and [`api/api/Exchanges/Services/BybitAccountSyncService.cs`](../api/api/Exchanges/Services/BybitAccountSyncService.cs) | [`api/unit-tests/FunctionsTests/SyncBybitOrdersTests.cs`](../api/unit-tests/FunctionsTests/SyncBybitOrdersTests.cs), [`api/unit-tests/ExchangesTests/Services/`](../api/unit-tests/ExchangesTests/Services/) |
 | Other Functions | [`api/functions/`](../api/functions/) | [`api/unit-tests/FunctionsTests/`](../api/unit-tests/FunctionsTests/) |
-| Accounts page and in-memory PR4 selector preview | [`web-app/src/app/pages/cryptos/containers/account/`](../web-app/src/app/pages/cryptos/containers/account/), [`web-app/src/app/core/services/account-selector-demo-state.service.ts`](../web-app/src/app/core/services/account-selector-demo-state.service.ts) | [`web-app/cypress/e2e/accounts-page.cy.ts`](../web-app/cypress/e2e/accounts-page.cy.ts) |
+| Accounts page and persisted account selector | [`web-app/src/app/pages/cryptos/containers/account/`](../web-app/src/app/pages/cryptos/containers/account/), [`web-app/src/app/core/services/account-selector-state.service.ts`](../web-app/src/app/core/services/account-selector-state.service.ts) | [`web-app/cypress/e2e/accounts-page.cy.ts`](../web-app/cypress/e2e/accounts-page.cy.ts), selector API test in `ExchangeControllerIntegrationTests` |
 | Angular exchange pages | [`web-app/src/app/pages/exchanges/`](../web-app/src/app/pages/exchanges/) | [`web-app/cypress/e2e/exchanges/exchange-management.cy.ts`](../web-app/cypress/e2e/exchanges/exchange-management.cy.ts) |
 | Angular API client and DTOs | [`web-app/src/app/core/services/exchange.service.ts`](../web-app/src/app/core/services/exchange.service.ts), [`web-app/src/app/core/models/`](../web-app/src/app/core/models/) | Cypress exchange spec |
 
@@ -36,12 +36,14 @@ Use this page as the starting point for code navigation. The root README is for 
 
 For a route list, use `ExchangeController.cs` as the source of truth. For sync semantics, use `BybitAccountSyncService.cs` and `BybitOrderSyncService.cs`, not older README examples.
 
-## Accounts Page Preview
+## Accounts Page and Selector
 
-- `/account` groups sample Manual portfolios separately from Exchange accounts and displays the selected account's sample transaction history.
-- Account selection, manual portfolio creation, filters, and pagination are local to the in-memory preview. A full reload restores the fixture data; no Account API writes or database updates occur from the page.
-- The header is a passive display of the active account. The sidebar's `Exchange Hub` and the `Connect an exchange` link lead to the real exchange onboarding area.
-- Use `AccountSelectorDemoStateService` as the fixture source and `accounts-page.cy.ts` for the browser flow.
+- `GET /api/Account/selector-options` returns Manual and currently active Exchange contexts with selected state, balance, source, and sync health.
+- The selector groups by `AccountType` and `Exchange`, excludes disconnected/stale Exchange accounts, and keeps paused or unhealthy active Exchange accounts visible with their status.
+- `POST /api/Account/select-account` persists the active account. `POST /api/Account/create` adds a Manual portfolio.
+- The Accounts page preserves transaction search, date/status filters, and 20-row server pagination; account switches retain filters and restart at page 1.
+- The header is a passive display of the selected account. `Exchange Hub` is the onboarding and integration-management entry point.
+- Use `GetAccountSelectorOptionsQuery` and `accounts-page.cy.ts` for the selector API and browser flow.
 
 ## Test Entry Points
 
@@ -50,6 +52,7 @@ Run backend commands from `api/`:
 ```bash
 dotnet test unit-tests/unit-tests.csproj
 dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~ExchangeControllerIntegrationTests
+dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~AccountSelectorOptions
 dotnet test unit-tests/unit-tests.csproj --filter FullyQualifiedName~SyncBybitOrdersTests
 ```
 
