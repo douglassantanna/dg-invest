@@ -6,7 +6,9 @@ import { AccountTransactionCardComponent } from '../../components/account-transa
 import { RouterModule } from '@angular/router';
 import { AccountDto } from 'src/app/core/services/user.service';
 import { AccountSelectorOption, AccountHealthStatus } from 'src/app/core/models/account-selector-option';
-import { AccountSelectorDemoStateService } from 'src/app/core/services/account-selector-demo-state.service';
+import { AccountSelectorStateService } from 'src/app/core/services/account-selector-state.service';
+import { AccountService } from 'src/app/core/services/account.service';
+import { CryptoService } from 'src/app/core/services/crypto.service';
 @Component({
   selector: 'app-account',
   standalone: true,
@@ -14,12 +16,16 @@ import { AccountSelectorDemoStateService } from 'src/app/core/services/account-s
   templateUrl: './account.component.html',
 })
 export class AccountComponent implements OnInit {
-  private readonly demoState = inject(AccountSelectorDemoStateService);
+  private readonly accountState = inject(AccountSelectorStateService);
+  private readonly accountService = inject(AccountService);
+  private readonly cryptoService = inject(CryptoService);
 
   account = signal<AccountDto>({} as AccountDto);
-  accountSelectorOptions = this.demoState.accountOptions;
-  selectorLoading = signal(false);
-  selectedAccountOption = this.demoState.selectedAccount;
+  accountSelectorOptions = this.accountState.options;
+  selectorLoading = this.accountState.isLoading;
+  selectedAccountOption = this.accountState.selectedAccount;
+  private selectionError = signal('');
+  selectorError = computed(() => this.selectionError() || this.accountState.errorMessage());
   manualAccounts = computed(() => this.accountSelectorOptions().filter(option => option.accountType === 'Manual'));
   exchangeGroups = computed(() => {
     const exchanges = new Map<string, AccountSelectorOption[]>();
@@ -36,25 +42,32 @@ export class AccountComponent implements OnInit {
   endDate = signal<string>('');
   currentStatus = signal<string>('');
   selectingAccountId = signal<number | null>(null);
-  selectorError = signal('');
+  accountActivityError = signal('');
   isAddingManualAccount = signal(false);
   newAccountName = '';
   savingManualAccount = signal(false);
   createAccountError = signal('');
 
   ngOnInit(): void {
+    this.accountState.load();
     this.loadAccountDetails();
   }
 
   loadAccountDetails(): void {
-    this.account.set(this.demoState.getSelectedAccountDetails(
+    this.accountService.getSelectedAccount(
       this.currentPage(),
       this.pageSize,
       this.currentFilter(),
       this.startDate() || undefined,
       this.endDate() || undefined,
       this.currentStatus() || undefined
-    ));
+    ).subscribe({
+      next: result => {
+        this.accountActivityError.set('');
+        if (result) this.account.set(result);
+      },
+      error: () => this.accountActivityError.set('Could not load the selected account activity. Try again.'),
+    });
   }
 
   searchTransactions(input: string): void {
@@ -128,26 +141,41 @@ export class AccountComponent implements OnInit {
 
     this.savingManualAccount.set(true);
     this.createAccountError.set('');
-    const result = this.demoState.addManualPortfolio(name);
-    this.savingManualAccount.set(false);
-    if (!result.success) {
-      this.createAccountError.set(result.error ?? 'Could not create the portfolio.');
-      return;
-    }
-
-    this.isAddingManualAccount.set(false);
-    this.newAccountName = '';
+    this.accountState.createManualPortfolio({ name }).subscribe({
+      next: () => {
+        this.savingManualAccount.set(false);
+        this.isAddingManualAccount.set(false);
+        this.newAccountName = '';
+      },
+      error: error => {
+        this.savingManualAccount.set(false);
+        this.createAccountError.set(typeof error.error === 'string' ? error.error : 'Could not create the portfolio. Try another name.');
+      },
+    });
   }
 
   selectAccount(account: AccountSelectorOption): void {
     if (account.isSelected || this.selectingAccountId() !== null) return;
 
     this.selectingAccountId.set(account.accountId);
-    this.selectorError.set('');
-    this.demoState.selectAccount(account.accountId);
-    this.currentPage.set(1);
-    this.selectingAccountId.set(null);
-    this.loadAccountDetails();
+    this.selectionError.set('');
+    this.accountState.selectAccount(account.accountId).subscribe({
+      next: response => {
+        this.selectingAccountId.set(null);
+        if (response?.isSuccess === false) {
+          this.selectionError.set(response.message || 'Could not change the active account.');
+          return;
+        }
+
+        this.cryptoService.accountTag.set(account.accountName);
+        this.currentPage.set(1);
+        this.loadAccountDetails();
+      },
+      error: () => {
+        this.selectingAccountId.set(null);
+        this.selectionError.set('Could not change the active account. Try again.');
+      },
+    });
   }
 
   healthIcon(health: AccountHealthStatus | null): string {

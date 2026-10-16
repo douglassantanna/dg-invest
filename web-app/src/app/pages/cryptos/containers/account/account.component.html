@@ -155,26 +155,26 @@
 
   <header class="space-y-6">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-      @if (selectedAccountOption()) {
+      @if (selectedAccountOption(); as selectedOption) {
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Active account</p>
-          <p id="selected-account-name" class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ selectedAccountOption().accountName }}</p>
+          <p id="selected-account-name" class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ selectedOption.accountName }}</p>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            @if (selectedAccountOption().accountType === 'Manual') { Manual portfolio }
-            @else { {{ selectedAccountOption().exchangeName }} exchange account }
+            @if (selectedOption.accountType === 'Manual') { Manual portfolio }
+            @else { {{ selectedOption.exchangeName }} exchange account }
           </p>
         </div>
-        @if (selectedAccountOption().healthStatus) {
+        @if (selectedOption.healthStatus) {
         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset"
-          [ngClass]="healthClasses(selectedAccountOption().healthStatus)">
-          <span class="material-icons text-sm" aria-hidden="true">{{ healthIcon(selectedAccountOption().healthStatus) }}</span>
-          {{ healthLabel(selectedAccountOption().healthStatus) }}
+          [ngClass]="healthClasses(selectedOption.healthStatus)">
+          <span class="material-icons text-sm" aria-hidden="true">{{ healthIcon(selectedOption.healthStatus) }}</span>
+          {{ healthLabel(selectedOption.healthStatus) }}
         </span>
         }
       </div>
-      @if (selectedAccountOption().lastErrorMessage) {
-      <p class="mb-3 text-sm text-amber-800 dark:text-amber-200">{{ selectedAccountOption().lastErrorMessage }}</p>
+      @if (selectedOption.lastErrorMessage) {
+      <p class="mb-3 text-sm text-amber-800 dark:text-amber-200">{{ selectedOption.lastErrorMessage }}</p>
       }
       }
       <h2 class="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
@@ -190,7 +190,8 @@
       </h1>
     </div>
 
-    @if (selectedAccountOption().accountType === 'Manual') {
+    @if (selectedAccountOption(); as currentOption) {
+    @if (currentOption.accountType === 'Manual') {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <button type="button" disabled title="Disabled in the in-memory preview"
         class="group relative flex cursor-not-allowed items-center justify-center rounded-xl bg-blue-600 p-6 text-white opacity-60 shadow-lg">
@@ -212,16 +213,17 @@
         </div>
       </button>
     </div>
-    } @else if (selectedAccountOption()) {
+    } @else {
     <div class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Exchange account</p>
-        <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Transfers and sync settings are managed by {{ selectedAccountOption().exchangeName }}.</p>
+        <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Transfers and sync settings are managed by {{ currentOption.exchangeName }}.</p>
       </div>
-      <a [routerLink]="exchangeManagementLink(selectedAccountOption()!)" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700">
+      <a [routerLink]="exchangeManagementLink(currentOption)" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700">
         Manage this account <span class="material-icons text-base" aria-hidden="true">arrow_forward</span>
       </a>
     </div>
+    }
     }
   </header>
 
@@ -232,6 +234,10 @@
         class="w-full sm:w-auto">
       </app-crypto-filter>
     </div>
+
+    @if (accountActivityError()) {
+    <p role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{{ accountActivityError() }}</p>
+    }
 
     <div class="flex flex-wrap items-center gap-3 mb-4">
       <div class="flex items-center gap-2">

@@ -1,12 +1,12 @@
 import { Role } from '../../core/models/user.model';
 import { SlicePipe } from '@angular/common';
-import { Component, computed, inject, output } from '@angular/core';
+import { Component, computed, inject, OnInit, output } from '@angular/core';
 
 import { LayoutService } from '../../core/services/layout.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NavItems } from '../../core/models/nav-items';
 import { environment } from 'src/environments/environment.development';
-import { AccountSelectorDemoStateService } from 'src/app/core/services/account-selector-demo-state.service';
+import { AccountSelectorStateService } from 'src/app/core/services/account-selector-state.service';
 
 @Component({
   selector: 'app-header',
@@ -14,11 +14,11 @@ import { AccountSelectorDemoStateService } from 'src/app/core/services/account-s
   imports: [SlicePipe],
   templateUrl: './header.component.html',
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   toggleSidenavEvent = output();
   private layoutService = inject(LayoutService);
   private authService = inject(AuthService);
-  private accountState = inject(AccountSelectorDemoStateService);
+  private accountState = inject(AccountSelectorStateService);
   navbarColor = environment.navbarColor;
   navItemsEnabled = computed(() => {
     const userRole = this.authService.role as Role;
@@ -26,8 +26,12 @@ export class HeaderComponent {
     return filteredNavItems;
   }
   );
-  accountTag = computed(() => this.accountState.selectedAccount().accountName);
+  accountTag = computed(() => this.accountState.selectedAccount()?.accountName ?? 'Loading account…');
   username = computed(() => this.authService.user?.unique_name);
+
+  ngOnInit(): void {
+    this.accountState.load();
+  }
 
   logout(item: NavItems) {
     if (item.path === 'signout')
