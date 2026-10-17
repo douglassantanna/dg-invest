@@ -47,6 +47,19 @@ public class SyncStatusTests
     }
 
     [Fact]
+    public void MarkConnected_WithOlderBackfillCheckpoint_DoesNotMoveCheckpointBackward()
+    {
+        var sut = new SyncStatus(1, 2, "Bybit");
+        var latestCheckpoint = new DateTime(2026, 10, 16, 12, 0, 0, DateTimeKind.Utc);
+
+        sut.MarkConnected("latest-order", latestCheckpoint);
+        sut.MarkConnected("historical-order", latestCheckpoint.AddMinutes(-1));
+
+        sut.LastSyncAt.Should().Be(latestCheckpoint);
+        sut.LastOrderId.Should().Be("historical-order");
+    }
+
+    [Fact]
     public void MarkError_ShouldIncrementErrorCount()
     {
         var sut = new SyncStatus(1, 2, "Bybit");

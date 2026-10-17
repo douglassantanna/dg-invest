@@ -538,7 +538,89 @@ public class SyncBybitOrdersTests
         integration.Status.Should().Be(ExchangeIntegration.AutoPausedStatus);
         integration.Enabled.Should().BeFalse();
          bybitService.Verify(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
-         bybitService.Verify(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
+        bybitService.Verify(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Run_WhenAccountKeyLacksWithdrawalHistoryPermission_DoesNotPauseIntegration()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        using var context = new DataContext(options);
+        var user = new User("Bybit User", "bybit@example.com", "hash", Role.User);
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        var subaccount = new Account("Bybit subaccount", user.Id, EAccountType.Exchange, "Bybit", "UID-001");
+        var healthyAccount = new Account("Healthy Bybit account", user.Id, EAccountType.Exchange, "Bybit", "UID-002");
+        var integration = new ExchangeIntegration(user.Id, "Bybit");
+        integration.MarkEnabled();
+        context.AddRange(subaccount, healthyAccount, integration);
+        await context.SaveChangesAsync();
+
+        var subaccountStatus = new SyncStatus(user.Id, subaccount.Id, "Bybit");
+        var healthyStatus = new SyncStatus(user.Id, healthyAccount.Id, "Bybit");
+        subaccountStatus.EnableForCredentials();
+        healthyStatus.EnableForCredentials();
+        context.SyncStatuses.AddRange(subaccountStatus, healthyStatus);
+        await context.SaveChangesAsync();
+
+        var secrets = new Dictionary<string, string>
+        {
+            [BybitCredentialKeys.LegacyAccountKey(user.Id, subaccount.Id, "api-key")] = "subaccount-key",
+            [BybitCredentialKeys.LegacyAccountKey(user.Id, subaccount.Id, "api-secret")] = "subaccount-secret",
+            [BybitCredentialKeys.LegacyAccountKey(user.Id, healthyAccount.Id, "api-key")] = "healthy-key",
+            [BybitCredentialKeys.LegacyAccountKey(user.Id, healthyAccount.Id, "api-secret")] = "healthy-secret"
+        };
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(service => service.GetSecretReadResultAsync(It.IsAny<string>()))
+            .Returns((string name) => Task.FromResult(secrets.TryGetValue(name, out var secret)
+                ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, secret)
+                : new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound)));
+
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(service => service.GetOrderHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        bybitService.Setup(service => service.GetDepositHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        bybitService.Setup(service => service.GetWithdrawalHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .Returns((string apiKey, string _, BybitRegion _, int? _, long? _, CancellationToken _, long? _) =>
+                apiKey == "subaccount-key"
+                    ? Task.FromException<List<BybitDepositWithdrawalRow>>(
+                        new BybitApiException(10005, "Permission denied for this endpoint", "withdrawal history"))
+                    : Task.FromResult(new List<BybitDepositWithdrawalRow>()));
+        bybitService.Setup(service => service.GetInternalTransferHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        bybitService.Setup(service => service.GetUniversalTransferHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var function = CreateFunction(
+            bybitService.Object,
+            Mock.Of<IBybitOrderSyncService>(),
+            keyVault.Object,
+            context);
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(item => item.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+
+        integration.Enabled.Should().BeTrue();
+        integration.Status.Should().NotBe(ExchangeIntegration.AutoPausedStatus);
+        bybitService.Verify(service => service.GetOrderHistoryAsync(
+            "subaccount-key", "subaccount-secret", It.IsAny<BybitRegion>(), 50,
+            It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+        bybitService.Verify(service => service.GetOrderHistoryAsync(
+            "healthy-key", "healthy-secret", It.IsAny<BybitRegion>(), 50,
+            It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+        bybitService.Verify(service => service.GetWithdrawalHistoryAsync(
+            "healthy-key", "healthy-secret", It.IsAny<BybitRegion>(), 50,
+            It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

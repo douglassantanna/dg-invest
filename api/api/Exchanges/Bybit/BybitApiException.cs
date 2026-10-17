@@ -43,7 +43,6 @@ public static class BybitApiFailureClassifier
     [
         10003, // Invalid API key or environment mismatch
         10004, // Invalid signature
-        10005, // Missing permission
         10007, // Authentication failed
         10010, // IP whitelist mismatch
         -2015, // Spot API key expired
@@ -53,6 +52,10 @@ public static class BybitApiFailureClassifier
     public static BybitApiFailure Classify(Exception exception) => exception switch
     {
         BybitTransportException transport => new(BybitApiFailureKind.Transport, Endpoint: transport.Endpoint),
+        BybitApiException apiException when apiException.RetCode == 10005
+            => new(BybitApiFailureKind.Other,
+                apiException.RetCode.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                apiException.Endpoint),
         BybitApiException apiException when PermanentCredentialCodes.Contains(apiException.RetCode)
             => new(BybitApiFailureKind.PermanentCredential,
                 apiException.RetCode.ToString(System.Globalization.CultureInfo.InvariantCulture),

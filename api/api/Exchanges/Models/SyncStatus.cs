@@ -26,10 +26,13 @@ public class SyncStatus : Entity
         ExchangeName = exchangeName;
     }
 
-    public void MarkConnected(string orderId)
+    public void MarkConnected(string orderId, DateTime? checkpointAt = null)
     {
         Status = "Connected";
-        LastSyncAt = DateTime.UtcNow;
+        var checkpoint = checkpointAt ?? DateTime.UtcNow;
+        LastSyncAt = LastSyncAt is { } previousCheckpoint && previousCheckpoint > checkpoint
+            ? previousCheckpoint
+            : checkpoint;
         LastOrderId = orderId;
         ErrorCount = 0;
         LastErrorMessage = null;
