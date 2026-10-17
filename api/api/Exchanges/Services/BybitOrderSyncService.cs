@@ -543,6 +543,13 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             status = new SyncStatus(userId, accountId, "Bybit");
             _context.SyncStatuses.Add(status);
         }
+        else if (checkpointAt.HasValue)
+        {
+            // Backfills can run long enough for a timer or webhook sync in another
+            // DbContext to advance this checkpoint. Refresh the tracked entity before
+            // applying the captured backfill end so that MarkConnected keeps the newer value.
+            await _context.Entry(status).ReloadAsync(cancellationToken);
+        }
 
         status.MarkConnected(lastOrderId ?? string.Empty, checkpointAt);
         await _context.SaveChangesAsync(cancellationToken);
