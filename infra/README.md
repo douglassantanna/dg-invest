@@ -27,6 +27,8 @@ Bicep creates Key Vaults and app settings containing versionless Key Vault refer
 
 The API reads `ConnectionStrings__DefaultConnection`; the Functions project currently reads `DefaultConnection`. Both read `AzureStorageSettings__ConnectionString`.
 
+Each Function App is explicitly provisioned with `BybitSync__Enabled=true`; it begins scheduled synchronization after its code, Key Vault permissions/secrets, and database connection are configured. Set the app setting to `false` if an environment must remain paused.
+
 Application Insights resources and connection strings are provisioned, but the API project does not currently include the Application Insights SDK and the Functions SDK references are commented out. Confirm telemetry collection during application validation; code instrumentation changes remain separate from infrastructure deployment.
 
 The deployment identity has Contributor, which cannot create Azure RBAC role assignments. After each environment deployment, the subscription Owner must manually assign:
