@@ -335,6 +335,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     AzureWebJobsStorage__blobServiceUri: storageAccount.properties.primaryEndpoints.blob
     AzureWebJobsStorage__queueServiceUri: storageAccount.properties.primaryEndpoints.queue
     AzureWebJobsStorage__tableServiceUri: storageAccount.properties.primaryEndpoints.table
+    BybitSync__Enabled: 'true'
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsights.properties.ConnectionString
     AzureStorageSettings__ConnectionString: storageConnectionStringSecretReference
     AzureStorageSettings__ContainerName: 'assets'

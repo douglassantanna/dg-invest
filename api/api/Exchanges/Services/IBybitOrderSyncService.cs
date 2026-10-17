@@ -11,6 +11,11 @@ public interface IBybitOrderSyncService
     Task<bool> ProcessWithdrawalAsync(BybitDepositWithdrawalRow withdrawal, Account account, int userId, CancellationToken cancellationToken, bool applyCashBalance = true);
     Task<bool> ProcessInternalTransferAsync(BybitInternalTransferRow transfer, Account account, int userId, CancellationToken cancellationToken, bool applyCashBalance = true);
     Task<bool> ProcessOpeningBalanceAsync(Account account, int userId, decimal balance, CancellationToken cancellationToken);
-    Task UpsertSyncStatusAsync(int userId, int accountId, string? lastOrderId, CancellationToken cancellationToken);
+    Task UpsertSyncStatusAsync(
+        int userId,
+        int accountId,
+        string? lastOrderId,
+        CancellationToken cancellationToken,
+        DateTime? checkpointAt = null);
     Task MarkSyncStatusErrorAsync(int userId, int accountId, string errorMessage, CancellationToken cancellationToken);
 }

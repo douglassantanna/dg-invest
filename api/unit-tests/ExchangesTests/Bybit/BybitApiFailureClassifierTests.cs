@@ -8,7 +8,6 @@ public class BybitApiFailureClassifierTests
     [Theory]
     [InlineData(10003)]
     [InlineData(10004)]
-    [InlineData(10005)]
     [InlineData(10007)]
     [InlineData(10010)]
     [InlineData(-2015)]
@@ -19,6 +18,17 @@ public class BybitApiFailureClassifierTests
 
         result.Kind.Should().Be(BybitApiFailureKind.PermanentCredential);
         result.Code.Should().Be(retCode.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void Classify_MissingEndpointPermission_ReturnsNonPermanentFailureWithDetails()
+    {
+        var result = BybitApiFailureClassifier.Classify(
+            new BybitApiException(10005, "Permission denied for this endpoint", "withdrawal history"));
+
+        result.Kind.Should().Be(BybitApiFailureKind.Other);
+        result.Code.Should().Be("10005");
+        result.Endpoint.Should().Be("withdrawal history");
     }
 
     [Fact]
