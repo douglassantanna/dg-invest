@@ -6,8 +6,9 @@ Infrastructure is deployed to the existing `TestDouglas` resource group in the M
 
 1. Configure the GitHub Environment `azure-infra-sandbox` with the existing OIDC variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`.
 2. Add the SQL logical server administrator password as the Environment secret `SQL_ADMIN_PASSWORD`. The `.bicepparam` file reads it from the workflow process environment; never put the password value in a repository file.
-3. Run **Deploy Azure Infrastructure** with `stage` or `prod` and leave `apply` disabled first. Review validation and `what-if` output.
-4. Run it again with `apply` enabled only after reviewing the changes.
+3. Before deploying, verify the resource providers required by the template are registered in the subscription identified by `AZURE_SUBSCRIPTION_ID`. This includes `Microsoft.Insights`, `Microsoft.OperationalInsights`, `Microsoft.KeyVault`, `Microsoft.Web`, `Microsoft.Sql`, and `Microsoft.Storage`. `Microsoft.Insights` and `Microsoft.OperationalInsights` are separate providers. Register any missing provider at subscription scope.
+4. Run **Deploy Azure Infrastructure** with `stage` or `prod` and leave `apply` disabled first. Review validation and `what-if` output.
+5. Run it again with `apply` enabled only after reviewing the changes.
 
 The two parameter files intentionally leave `sqlFirewallIpAddresses` empty for the first deployment. That deployment creates the apps and reports their possible outbound IPs. Add the reported API and Function App IPs to that environment parameter file, then run validation/what-if/apply again to add the SQL firewall rules. The database remains inaccessible to the apps until those rules are applied.
 
