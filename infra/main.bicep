@@ -31,7 +31,7 @@ var storageAccountName = environmentName == 'prod' ? 'dginvestproddataweu1' : 'd
 var databaseName = 'dginvest-${environmentName}'
 var appInsightsName = 'dginvest-${environmentName}-observe-weu-01'
 var deploymentContainerName = 'function-app-packages'
-var keyVaultUri = 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}/'
+var keyVaultUri = 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/'
 var sqlConnectionStringSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/SqlConnectionString)'
 var storageConnectionStringSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/StorageConnectionString)'
 var jwtSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/JwtSigningSecret)'
