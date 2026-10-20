@@ -2,6 +2,7 @@ using '../main.bicep'
 
 param environmentName = 'prod'
 param location = 'westeurope'
+param sqlLocation = 'francecentral'
 param frontendCustomDomain = 'app.sanfi.xyz'
 param bindCustomDomain = false
 param sqlFirewallIpAddresses = []

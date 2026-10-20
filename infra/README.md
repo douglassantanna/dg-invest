@@ -1,6 +1,6 @@
 # Azure infrastructure deployment
 
-Infrastructure is deployed to the existing `TestDouglas` resource group in the MPN subscription. PROD and STAGE are test environments in `westeurope`; application code deployments remain separate.
+Infrastructure is deployed to the existing `TestDouglas` resource group in the MPN subscription. PROD and STAGE are test environments; application resources are in `westeurope`, while the shared SQL server and databases are in `francecentral`. Application code deployments remain separate.
 
 ## Deploy with GitHub Actions
 
@@ -14,7 +14,7 @@ The two parameter files intentionally leave `sqlFirewallIpAddresses` empty for t
 
 The owner accepts this as a best-effort, test-only allowlist: Flex Consumption egress addresses can change as Azure scales the app, so a Functions-to-SQL connection can stop working until the updated address list is applied. This is not a stable-egress guarantee or a production network boundary. Refresh the list after egress-related connection failures and remove obsolete rules when addresses change.
 
-The workflow serializes PROD and STAGE deployments because both update shared resources: the Windows F1 App Service plan, SQL logical server, and Log Analytics workspace.
+The workflow serializes PROD and STAGE deployments because both update shared resources: the Windows F1 App Service plan and Log Analytics workspace in `westeurope`, plus the SQL logical server in `francecentral`. Keep `sqlLocation` consistent in both parameter files.
 
 ## Runtime secrets and permissions
 

@@ -2,6 +2,7 @@ using '../main.bicep'
 
 param environmentName = 'stage'
 param location = 'westeurope'
+param sqlLocation = 'francecentral'
 param frontendCustomDomain = 'stage.sanfi.xyz'
 param bindCustomDomain = false
 param sqlFirewallIpAddresses = []
