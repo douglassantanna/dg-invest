@@ -7,6 +7,8 @@ targetScope = 'resourceGroup'
 param environmentName string
 
 param location string = 'westeurope'
+@description('Region for the shared Azure SQL logical server and its databases. Keep consistent across PROD and STAGE.')
+param sqlLocation string = 'francecentral'
 param sqlAdministratorLogin string = 'dginvestSqlAdmin'
 @secure()
 param sqlAdministratorPassword string
@@ -19,7 +21,7 @@ param bindCustomDomain bool = false
 param frontendCustomDomain string
 
 var appServicePlanName = 'dginvest-apps-weu-f1'
-var sqlServerName = 'dginvest-data-weu-01'
+var sqlServerName = 'dginvest-data-frc-01'
 var logAnalyticsWorkspaceName = 'dginvest-observe-weu-01'
 
 var apiName = 'dginvest-${environmentName}-api-weu-01'
@@ -71,7 +73,7 @@ resource sharedAppServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
   name: sqlServerName
-  location: location
+  location: sqlLocation
   properties: {
     administratorLogin: sqlAdministratorLogin
     administratorLoginPassword: sqlAdministratorPassword
@@ -84,7 +86,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = {
   parent: sqlServer
   name: databaseName
-  location: location
+  location: sqlLocation
   sku: {
     name: 'Basic'
     tier: 'Basic'
