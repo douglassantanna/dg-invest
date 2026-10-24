@@ -143,7 +143,7 @@ jobs:
             --resource-group TestDouglas \
             --name dginvest-${{ inputs.target_environment }}-infra \
             --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
-            --result-format ResourceIdOnly
+            --result-format FullResourcePayloads
 
       - name: Apply SQL firewall rules
         if: ${{ inputs.apply }}
