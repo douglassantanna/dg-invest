@@ -10,7 +10,7 @@ Infrastructure is deployed to the existing `TestDouglas` resource group in the M
 4. Run **Deploy Azure Infrastructure** with `stage` or `prod` and leave `apply` disabled first. Review validation and `what-if` output.
 5. Run it again with `apply` enabled only after reviewing the changes.
 
-When `apply` is enabled, the workflow first deploys the resource graph, reads the API and Function App possible outbound IPs, then runs a second `what-if` and Bicep deployment to add the SQL firewall rules. No manual IP copy into the parameter files is needed. If Azure has not populated the Function IP list yet, the workflow fails after the base deployment; rerun it after the app properties are available.
+When `apply` is enabled, the workflow first deploys the resource graph, reads the API and Function App possible outbound IPs from the deployment outputs, then runs a second `what-if` and Bicep deployment to add the SQL firewall rules. No manual IP copy into the parameter files is needed. If either deployment output is empty, the workflow fails after the base deployment so the output can be investigated before the firewall rules are applied.
 
 The owner accepts this as a best-effort, test-only allowlist: Flex Consumption egress addresses can change as Azure scales the app, so a Functions-to-SQL connection can stop working until the updated address list is applied. This is not a stable-egress guarantee or a production network boundary. Rerun the workflow after egress-related connection failures. If the IP list shrinks, review and remove obsolete SQL firewall rules manually.
 

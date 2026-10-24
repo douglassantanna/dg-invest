@@ -97,37 +97,19 @@ jobs:
           TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
         run: |
           deployment_name="dginvest-${TARGET_ENVIRONMENT}-infra"
-          api_name=$(az deployment group show \
+          api_ips=$(az deployment group show \
             --resource-group TestDouglas \
             --name "$deployment_name" \
-            --query "properties.outputs.apiAppName.value" \
+            --query "properties.outputs.apiPossibleOutboundIpAddresses.value" \
             --output tsv)
-          function_name=$(az deployment group show \
+          function_ips=$(az deployment group show \
             --resource-group TestDouglas \
             --name "$deployment_name" \
-            --query "properties.outputs.functionAppName.value" \
+            --query "properties.outputs.functionPossibleOutboundIpAddresses.value" \
             --output tsv)
 
-          for attempt in {1..12}; do
-            api_ips=$(az webapp show \
-              --resource-group TestDouglas \
-              --name "$api_name" \
-              --query possibleOutboundIpAddresses \
-              --output tsv 2>/dev/null || true)
-            function_ips=$(az functionapp show \
-              --resource-group TestDouglas \
-              --name "$function_name" \
-              --query possibleOutboundIpAddresses \
-              --output tsv 2>/dev/null || true)
-
-            if [[ -n "$api_ips" && -n "$function_ips" ]]; then
-              break
-            fi
-            sleep 10
-          done
-
-          test -n "$api_ips" || { echo "Could not retrieve API outbound IP addresses."; exit 1; }
-          test -n "$function_ips" || { echo "Could not retrieve Functions outbound IP addresses."; exit 1; }
+          test -n "$api_ips" || { echo "Bicep deployment output apiPossibleOutboundIpAddresses is empty."; exit 1; }
+          test -n "$function_ips" || { echo "Bicep deployment output functionPossibleOutboundIpAddresses is empty."; exit 1; }
 
           sql_firewall_ips=$(python3 -c 'import sys; print(",".join(sorted({ip.strip() for group in sys.argv[1:] for ip in group.split(",") if ip.strip()})))' "$api_ips" "$function_ips")
           test -n "$sql_firewall_ips" || { echo "No SQL firewall IP addresses were collected."; exit 1; }
