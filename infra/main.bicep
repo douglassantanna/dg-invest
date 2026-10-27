@@ -247,6 +247,8 @@ resource apiApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: applicationInsights.properties.ConnectionString }
         { name: 'AllowedOrigins__0', value: corsOrigins[0] }
         { name: 'AllowedOrigins__1', value: corsOrigins[1] }
+        { name: 'RateLimiterSettings__RequestsPermitLimit', value: '320' }
+        { name: 'RateLimiterSettings__WindowLimitInMinutes', value: '10' }
         { name: 'ConnectionStrings__DefaultConnection', value: sqlConnectionStringSecretReference }
         { name: 'DefaultConnection', value: sqlConnectionStringSecretReference }
         { name: 'AzureStorageSettings__ConnectionString', value: storageConnectionStringSecretReference }
@@ -332,6 +334,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
   parent: functionApp
   name: 'appsettings'
   properties: {
+    AzureWebJobsStorage__accountName: storageAccount.name
     AzureWebJobsStorage__credential: 'managedidentity'
     AzureWebJobsStorage__blobServiceUri: storageAccount.properties.primaryEndpoints.blob
     AzureWebJobsStorage__queueServiceUri: storageAccount.properties.primaryEndpoints.queue
