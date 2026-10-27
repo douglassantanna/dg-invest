@@ -43,13 +43,17 @@ public class MigrationsController : ControllerBase
 
     private bool HasValidMigrationToken(string? migrationToken)
     {
-        if (!_settings.RemoteTriggerEnabled || string.IsNullOrEmpty(migrationToken) || string.IsNullOrEmpty(_settings.RemoteTriggerToken))
+        var configuredToken = _settings.RemoteTriggerToken;
+        if (!_settings.RemoteTriggerEnabled
+            || string.IsNullOrEmpty(migrationToken)
+            || string.IsNullOrWhiteSpace(configuredToken)
+            || configuredToken.StartsWith("@Microsoft.KeyVault(", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
         var providedBytes = Encoding.UTF8.GetBytes(migrationToken);
-        var expectedBytes = Encoding.UTF8.GetBytes(_settings.RemoteTriggerToken);
+        var expectedBytes = Encoding.UTF8.GetBytes(configuredToken);
         return CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes);
     }
 }
