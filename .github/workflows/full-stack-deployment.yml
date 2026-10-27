@@ -166,9 +166,9 @@ jobs:
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ secrets.AZURE_FUNCTION_NAME }}
-          slot-name: "Production"
           package: .
           publish-profile: ${{ secrets.AZURE_FUNCTION_APP_TOKEN }}
+          sku: flexconsumption
 
   deploy_frontend:
     name: Deploy Frontend to ${{ github.event.inputs.environment }}
