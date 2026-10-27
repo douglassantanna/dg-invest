@@ -117,15 +117,12 @@ The `full-stack-deployment.yml` workflow deploys the API and then calls the exis
 
 Configure these values in each GitHub Environment used by the workflow:
 
-- Secret `MIGRATION_TOKEN`: a long random token shared with the API App Service setting.
+- Secret `MIGRATION_TOKEN`: a long random token. Store the same value in the environment Key Vault as secret `MigrationToken`; Bicep references it in the API App Service setting.
 - Variable `AZURE_API_BASE_URL`: the deployed API base URL, including `https://` and without a trailing slash.
 
-Configure these API App Service settings for the target environment:
+Bicep sets `Migrations__RemoteTriggerEnabled=true` and configures `Migrations__RemoteTriggerToken` as a versionless Key Vault reference. Do not add the token value directly to the App Service settings or repository.
 
-- `Migrations__RemoteTriggerEnabled=true`
-- `Migrations__RemoteTriggerToken=<same value as MIGRATION_TOKEN>`
-
-The endpoint also remains available to authenticated administrators. The remote trigger is disabled unless explicitly enabled and never logs the token. The API's normal database connection string remains an App Service setting and is not copied into GitHub Actions.
+The endpoint also remains available to authenticated administrators and never logs the token. The API's normal database connection string remains an App Service setting and is not copied into GitHub Actions.
 
 ### Blob logging
 

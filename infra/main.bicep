@@ -36,6 +36,7 @@ var deploymentContainerName = 'function-app-packages'
 var keyVaultUri = 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/'
 var sqlConnectionStringSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/SqlConnectionString)'
 var storageConnectionStringSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/StorageConnectionString)'
+var migrationTokenSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/MigrationToken)'
 var jwtSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/JwtSigningSecret)'
 var coinMarketCapKeyReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/CoinMarketCapApiKey)'
 var mailtrapHostReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/MailtrapHost)'
@@ -43,6 +44,9 @@ var mailtrapPortReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets
 var mailtrapUsernameReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/MailtrapUsername)'
 var mailtrapPasswordReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/MailtrapPassword)'
 var mailtrapFromReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/MailtrapFrom)'
+var databaseHealthFailureMessage = 'Database connection is currently unhealthy or unreachable'
+var databaseHealthAlertSubject = 'Database health check failed'
+var databaseHealthAlertBodyTemplate = 'The database health check failed. Reason: {Reason}. {ExceptionDetails} Time: {Timestamp}. Environment: {EnvironmentName}'
 var corsOrigins = [
   'https://${frontend.properties.defaultHostname}'
   'https://${frontendCustomDomain}'
@@ -249,6 +253,12 @@ resource apiApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AllowedOrigins__1', value: corsOrigins[1] }
         { name: 'RateLimiterSettings__RequestsPermitLimit', value: '320' }
         { name: 'RateLimiterSettings__WindowLimitInMinutes', value: '10' }
+        { name: 'DatabaseHealthCheckOptions__FailureMessage', value: databaseHealthFailureMessage }
+        { name: 'DatabaseHealthCheckOptions__AlertSubject', value: databaseHealthAlertSubject }
+        { name: 'DatabaseHealthCheckOptions__AlertBodyTemplate', value: databaseHealthAlertBodyTemplate }
+        { name: 'DatabaseHealthCheckOptions__SendAlertAlways', value: 'true' }
+        { name: 'Migrations__RemoteTriggerEnabled', value: 'true' }
+        { name: 'Migrations__RemoteTriggerToken', value: migrationTokenSecretReference }
         { name: 'ConnectionStrings__DefaultConnection', value: sqlConnectionStringSecretReference }
         { name: 'DefaultConnection', value: sqlConnectionStringSecretReference }
         { name: 'AzureStorageSettings__ConnectionString', value: storageConnectionStringSecretReference }
@@ -345,6 +355,10 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     AzureStorageSettings__ContainerName: 'assets'
     AzureStorageSettings__LogContainer: 'logs'
     AzureStorageSettings__WelcomeEmailQueue: 'welcomeemail'
+    DatabaseHealthCheckOptions__FailureMessage: databaseHealthFailureMessage
+    DatabaseHealthCheckOptions__AlertSubject: databaseHealthAlertSubject
+    DatabaseHealthCheckOptions__AlertBodyTemplate: databaseHealthAlertBodyTemplate
+    DatabaseHealthCheckOptions__SendAlertAlways: 'true'
     DefaultConnection: sqlConnectionStringSecretReference
     KeyVaultSettings__VaultUri: keyVaultUri
     BybitKeyVaultSettings__VaultUri: keyVaultUri
@@ -359,6 +373,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     MailtrapSettings__Username: mailtrapUsernameReference
     MailtrapSettings__Password: mailtrapPasswordReference
     MailtrapSettings__From: mailtrapFromReference
+    HealthPingOptions__RunFunction: 'false'
   }
 }
 

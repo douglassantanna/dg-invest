@@ -22,6 +22,7 @@ Bicep creates Key Vaults and app settings containing versionless Key Vault refer
 
 - `SqlConnectionString` — connection string for that environment database.
 - `StorageConnectionString` — connection string for that environment storage account. The application currently uses the storage SDK with a connection string, so shared-key access remains enabled on these test accounts.
+- `MigrationToken` — same random token as the GitHub Environment secret `MIGRATION_TOKEN`; Bicep exposes it to the API as a versionless Key Vault reference.
 - `JwtSigningSecret`
 - `CoinMarketCapApiKey`
 - `MailtrapHost`, `MailtrapPort`, `MailtrapUsername`, `MailtrapPassword`, and `MailtrapFrom`
@@ -29,6 +30,8 @@ Bicep creates Key Vaults and app settings containing versionless Key Vault refer
 The API reads `ConnectionStrings__DefaultConnection`; the Functions project currently reads `DefaultConnection`. Both read `AzureStorageSettings__ConnectionString`.
 
 Each Function App is explicitly provisioned with `BybitSync__Enabled=true`; it begins scheduled synchronization after its code, Key Vault permissions/secrets, and database connection are configured. Set the app setting to `false` if an environment must remain paused.
+
+Database health-check message settings are provisioned by Bicep. The timer-based `HealthPing` Function remains disabled by default (`HealthPingOptions__RunFunction=false`); do not copy the local placeholder endpoint or local Function key into Azure. Enable it only after setting the correct API endpoint and a dedicated shared Key Vault secret for its function key.
 
 Application Insights resources and connection strings are provisioned, but the API project does not currently include the Application Insights SDK and the Functions SDK references are commented out. Confirm telemetry collection during application validation; code instrumentation changes remain separate from infrastructure deployment.
 
