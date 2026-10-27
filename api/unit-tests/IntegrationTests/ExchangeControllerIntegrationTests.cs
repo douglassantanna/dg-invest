@@ -10,6 +10,8 @@ using api.Exchanges.Commands;
 using api.Exchanges.Models;
 using api.Exchanges.Services;
 using api.Users.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace unit_tests.IntegrationTests;
@@ -1464,6 +1466,22 @@ public class ExchangeControllerIntegrationTests
     {
         using var client = _fixture.Factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Migration-Token", "invalid-token");
+
+        (await client.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task RunMigrations_RejectsUnresolvedKeyVaultReferenceAsToken()
+    {
+        const string unresolvedKeyVaultReference = "@Microsoft.KeyVault(SecretUri=https://example.vault.azure.net/secrets/MigrationToken)";
+        using var factory = _fixture.Factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Migrations:RemoteTriggerEnabled"] = "true",
+                ["Migrations:RemoteTriggerToken"] = unresolvedKeyVaultReference
+            })));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Migration-Token", unresolvedKeyVaultReference);
 
         (await client.PostAsync("/api/Migrations/run", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
