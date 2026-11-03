@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://dgi-api-w-dzhgetg4g7hab0fp.northeurope-01.azurewebsites.net/api',
+  apiUrl: 'https://dginvest-stage-api-weu-01.azurewebsites.net/api',
   navbarColor: 'bg-secondary',
   btnColor: 'btn-secondary',
 };
