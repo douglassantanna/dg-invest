@@ -13,8 +13,8 @@ param sqlAdministratorLogin string = 'dginvestSqlAdmin'
 @secure()
 param sqlAdministratorPassword string
 
-@description('Current App Service and Functions egress IPs collected by the deployment workflow for Azure SQL firewall rules. Flex addresses can change.')
-param sqlFirewallIpAddresses array = []
+@description('Daily ingestion cap (GB) for the shared Log Analytics workspace, as a decimal string. Ingestion stops for the rest of the UTC day once reached. Use \'-1\' for no cap.')
+param logAnalyticsDailyQuotaGb string = '0.15'
 
 @description('Set true only after the Cloudflare DNS records are verified and the existing Static Web App domain binding is ready to move.')
 param bindCustomDomain bool = false
@@ -113,6 +113,9 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
       name: 'PerGB2018'
     }
     retentionInDays: 30
+    workspaceCapping: {
+      dailyQuotaGb: json(logAnalyticsDailyQuotaGb)
+    }
     features: {
       enableLogAccessUsingOnlyResourcePermissions: true
     }
@@ -377,16 +380,16 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
   }
 }
 
-var sqlFirewallIpAddressesFiltered = filter(sqlFirewallIpAddresses, ipAddress => !empty(trim(ipAddress)))
-
-resource appOutboundSqlFirewallRules 'Microsoft.Sql/servers/firewallRules@2023-08-01' = [for (ipAddress, index) in sqlFirewallIpAddressesFiltered: {
+// Flex Consumption has no stable outbound IPs, so per-IP rules drift. This special 0.0.0.0 rule admits
+// traffic from Azure-hosted services; SQL authentication remains the access control.
+resource sqlAllowAzureServices 'Microsoft.Sql/servers/firewallRules@2023-08-01' = {
   parent: sqlServer
-  name: '${environmentName}-app-${index}'
+  name: 'AllowAllWindowsAzureIps'
   properties: {
-    startIpAddress: trim(ipAddress)
-    endIpAddress: trim(ipAddress)
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
   }
-}]
+}
 
 output environment string = environmentName
 output apiUrl string = 'https://${apiName}.azurewebsites.net'
@@ -404,6 +407,3 @@ output sqlServerName string = sqlServer.name
 output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
 output sqlDatabaseName string = sqlDatabase.name
 output functionStorageRoleScope string = storageAccount.id
-output apiPossibleOutboundIpAddresses string = apiApp.properties.possibleOutboundIpAddresses
-output functionPossibleOutboundIpAddresses string = functionApp.properties.possibleOutboundIpAddresses
-output sqlFirewallIpAddresses array = sqlFirewallIpAddressesFiltered
