@@ -91,52 +91,34 @@ jobs:
             --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
             --output none
 
-      - name: Collect app outbound IP addresses
+      - name: Remove obsolete per-IP SQL firewall rules
         if: ${{ inputs.apply }}
         env:
           TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+          SQL_SERVER_NAME: dginvest-data-frc-01
         run: |
-          deployment_name="dginvest-${TARGET_ENVIRONMENT}-infra"
-          api_ips=$(az deployment group show \
+          set -euo pipefail
+          # Earlier deployments added one rule per collected outbound IP, named <env>-app-<n>.
+          # AllowAllWindowsAzureIps now covers Azure-hosted apps, so those rules are removed.
+          # Only this naming pattern is touched; developer or home-IP rules are kept.
+          stale_rules=$(az sql server firewall-rule list \
             --resource-group TestDouglas \
-            --name "$deployment_name" \
-            --query "properties.outputs.apiPossibleOutboundIpAddresses.value" \
+            --server "$SQL_SERVER_NAME" \
+            --query "[?starts_with(name, '${TARGET_ENVIRONMENT}-app-')].name" \
             --output tsv)
-          function_ips=$(az deployment group show \
-            --resource-group TestDouglas \
-            --name "$deployment_name" \
-            --query "properties.outputs.functionPossibleOutboundIpAddresses.value" \
-            --output tsv)
-
-          test -n "$api_ips" || { echo "Bicep deployment output apiPossibleOutboundIpAddresses is empty."; exit 1; }
-          test -n "$function_ips" || { echo "Bicep deployment output functionPossibleOutboundIpAddresses is empty."; exit 1; }
-
-          sql_firewall_ips=$(python3 -c 'import sys; print(",".join(sorted({ip.strip() for group in sys.argv[1:] for ip in group.split(",") if ip.strip()})))' "$api_ips" "$function_ips")
-          test -n "$sql_firewall_ips" || { echo "No SQL firewall IP addresses were collected."; exit 1; }
-          printf 'SQL_FIREWALL_IP_ADDRESSES=%s\n' "$sql_firewall_ips" >> "$GITHUB_ENV"
-          printf 'Collected %s outbound IP addresses for the SQL firewall.\n' "$(python3 -c 'import sys; print(len([ip for ip in sys.argv[1].split(",") if ip]))' "$sql_firewall_ips")" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Show SQL firewall what-if changes
-        if: ${{ inputs.apply }}
-        env:
-          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
-        run: |
-          az deployment group what-if \
-            --resource-group TestDouglas \
-            --name dginvest-${{ inputs.target_environment }}-infra \
-            --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
-            --result-format FullResourcePayloads
-
-      - name: Apply SQL firewall rules
-        if: ${{ inputs.apply }}
-        env:
-          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
-        run: |
-          az deployment group create \
-            --resource-group TestDouglas \
-            --name dginvest-${{ inputs.target_environment }}-infra \
-            --parameters infra/environments/${{ inputs.target_environment }}.bicepparam \
-            --output none
+          if [ -z "$stale_rules" ]; then
+            echo "No obsolete ${TARGET_ENVIRONMENT}-app-* firewall rules found."
+            exit 0
+          fi
+          while IFS= read -r rule; do
+            [ -n "$rule" ] || continue
+            echo "Deleting obsolete SQL firewall rule: $rule"
+            az sql server firewall-rule delete \
+              --resource-group TestDouglas \
+              --server "$SQL_SERVER_NAME" \
+              --name "$rule" \
+              --output none
+          done <<< "$stale_rules"
 
       - name: Show deployment outputs
         if: ${{ inputs.apply }}

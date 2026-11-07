@@ -10,9 +10,17 @@ Infrastructure is deployed to the existing `TestDouglas` resource group in the M
 4. Run **Deploy Azure Infrastructure** with `stage` or `prod` and leave `apply` disabled first. Review validation and `what-if` output.
 5. Run it again with `apply` enabled only after reviewing the changes.
 
-When `apply` is enabled, the workflow first deploys the resource graph, reads the API and Function App possible outbound IPs from the deployment outputs, then runs a second `what-if` and Bicep deployment to add the SQL firewall rules. No manual IP copy into the parameter files is needed. If either deployment output is empty, the workflow fails after the base deployment so the output can be investigated before the firewall rules are applied.
+### SQL network access
 
-The owner accepts this as a best-effort, test-only allowlist: Flex Consumption egress addresses can change as Azure scales the app, so a Functions-to-SQL connection can stop working until the updated address list is applied. This is not a stable-egress guarantee or a production network boundary. Rerun the workflow after egress-related connection failures. If the IP list shrinks, review and remove obsolete SQL firewall rules manually.
+The Function App runs on Flex Consumption, which has no stable outbound IP addresses, so per-IP SQL firewall rules go stale as Azure scales the app. Bicep instead declares the special `AllowAllWindowsAzureIps` rule (`0.0.0.0`, shown in the portal as "Allow Azure services and resources to access this server"). It costs nothing and needs no maintenance.
+
+Trade-off: any Azure-hosted client, including other tenants' resources, can reach the SQL endpoint; it still has to authenticate. Keep the application credentials least-privilege and in Key Vault. A NAT Gateway static IP (about $35+/month) or a Private Endpoint with VNet integration would give a tighter boundary, but neither fits this app's cost target.
+
+When `apply` is enabled, the workflow also deletes the obsolete `<env>-app-<n>` rules that earlier deployments created from collected outbound IPs. Other rules, such as developer IPs, are left alone.
+
+### Log Analytics daily cap
+
+The shared workspace has a daily ingestion cap (`logAnalyticsDailyQuotaGb`, default `0.15` GB). When the cap is reached, ingestion stops until the next UTC day, so telemetry for the rest of that day is lost. Raise it, or set `-1`, while investigating an incident.
 
 The workflow serializes PROD and STAGE deployments because both update shared resources: the Windows F1 App Service plan and Log Analytics workspace in `westeurope`, plus the SQL logical server in `francecentral`. Keep `sqlLocation` consistent in both parameter files.
 
