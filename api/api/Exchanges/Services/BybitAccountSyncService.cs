@@ -89,82 +89,20 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             var startTime = cutoff is { } dateTime
                 ? new DateTimeOffset(dateTime.Subtract(SyncOverlap), TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : (long?)null;
-            var orders = await _bybitService.GetOrderHistoryAsync(
-                apiKey.Value,
-                apiSecret.Value,
-                region,
-                limit: 50,
-                startTime: startTime,
-                cancellationToken: cancellationToken);
+            // Process every Bybit event in time order so a buy is applied after the deposit,
+            // transfer or sell that funded it. Cash is not mutated per event: Bybit is the source
+            // of truth for cash, so it is reconciled to the wallet once all events are recorded.
+            var events = await CollectEventsAsync(apiKey.Value, apiSecret.Value, region, startTime, window: null, cancellationToken);
             var hasFailures = false;
+            string? lastOrderId = null;
 
-            foreach (var order in orders.Where(order => order.OrderStatus == "Filled"))
+            foreach (var syncEvent in events.OrderBy(item => item.Timestamp).ThenBy(item => item.Kind))
             {
-                IReadOnlyList<BybitExecutionData> executions = [];
-                try
-                {
-                    executions = await _bybitService.GetExecutionHistoryAsync(
-                        apiKey.Value,
-                        apiSecret.Value,
-                        region,
-                        order.OrderId,
-                        cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException
-                    && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
-                {
-                    _logger.LogDebug(ex, "Bybit execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
-                }
-
-                if (!await _orderSyncService.ProcessOrderAsync(
-                    order,
-                    account,
-                    userId,
-                    "RestPoll",
-                    cancellationToken,
-                    executions))
-                {
+                if (!await ProcessEventAsync(syncEvent, account, region, apiKey.Value, apiSecret.Value, "RestPoll", cancellationToken))
                     hasFailures = true;
-                }
-            }
 
-            var deposits = await _bybitService.GetDepositHistoryAsync(
-                apiKey.Value,
-                apiSecret.Value,
-                region,
-                limit: 50,
-                startTime: startTime,
-                cancellationToken: cancellationToken);
-            foreach (var deposit in deposits)
-            {
-                if (!await _orderSyncService.ProcessDepositAsync(deposit, account, userId, cancellationToken))
-                    hasFailures = true;
-            }
-
-            var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(
-                apiKey.Value,
-                apiSecret.Value,
-                region,
-                limit: 50,
-                startTime: startTime,
-                cancellationToken: cancellationToken);
-            foreach (var withdrawal in withdrawals)
-            {
-                if (!await _orderSyncService.ProcessWithdrawalAsync(withdrawal, account, userId, cancellationToken))
-                    hasFailures = true;
-            }
-
-            var internalTransfers = await _bybitService.GetInternalTransferHistoryAsync(
-                apiKey.Value,
-                apiSecret.Value,
-                region,
-                limit: 50,
-                startTime: startTime,
-                cancellationToken: cancellationToken);
-            foreach (var internalTransfer in internalTransfers)
-            {
-                if (!await _orderSyncService.ProcessInternalTransferAsync(internalTransfer, account, userId, cancellationToken))
-                    hasFailures = true;
+                if (syncEvent.Value is BybitOrderData order)
+                    lastOrderId = order.OrderId;
             }
 
             if (hasFailures)
@@ -174,8 +112,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             }
 
             await ReconcileCurrentCryptoBalancesAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
+            await ReconcileCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
-            var lastOrderId = orders.Count > 0 ? orders.Last().OrderId : null;
             await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
             return BybitAccountSyncResult.Succeeded($"Bybit account {account.Name} synchronized successfully");
         }
@@ -241,60 +179,15 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 return BybitAccountSyncResult.Skipped("Bybit credentials are not configured for this account");
 
             var region = BybitEndpoints.Parse(syncStatus.Region);
-            var events = new List<BackfillEvent>();
+            var events = new List<SyncEvent>();
             var windowStart = start;
 
             while (windowStart < end)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var windowEnd = windowStart.AddDays(7) < end ? windowStart.AddDays(7) : end;
-                var startTime = windowStart.ToUnixTimeMilliseconds();
-
-                var orders = await _bybitService.GetOrderHistoryAsync(
-                    apiKey.Value, apiSecret.Value, region, 50, startTime, cancellationToken, windowEnd.ToUnixTimeMilliseconds());
-                foreach (var order in orders.Where(order => order.OrderStatus == "Filled")
-                    .Where(order => TryGetTimestamp(order, out var timestamp) && timestamp >= windowStart && timestamp < windowEnd))
-                {
-                    TryGetTimestamp(order, out var timestamp);
-                    events.Add(new BackfillEvent(timestamp, BackfillEventKind.Order, order));
-                }
-
-                var deposits = await _bybitService.GetDepositHistoryAsync(
-                    apiKey.Value, apiSecret.Value, region, 50, startTime, cancellationToken, windowEnd.ToUnixTimeMilliseconds());
-                foreach (var deposit in deposits
-                    .Where(deposit => TryGetTimestamp(deposit.SuccessAt, out var timestamp) && timestamp >= windowStart && timestamp < windowEnd))
-                {
-                    TryGetTimestamp(deposit.SuccessAt, out var timestamp);
-                    events.Add(new BackfillEvent(timestamp, BackfillEventKind.Deposit, deposit));
-                }
-
-                var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(
-                    apiKey.Value, apiSecret.Value, region, 50, startTime, cancellationToken, windowEnd.ToUnixTimeMilliseconds());
-                foreach (var withdrawal in withdrawals
-                    .Where(withdrawal => TryGetTimestamp(withdrawal, out var timestamp) && timestamp >= windowStart && timestamp < windowEnd))
-                {
-                    TryGetTimestamp(withdrawal, out var timestamp);
-                    events.Add(new BackfillEvent(timestamp, BackfillEventKind.Withdrawal, withdrawal));
-                }
-
-                var transfers = await _bybitService.GetInternalTransferHistoryAsync(
-                    apiKey.Value, apiSecret.Value, region, 50, startTime, cancellationToken, windowEnd.ToUnixTimeMilliseconds());
-                foreach (var transfer in transfers
-                    .Where(transfer => TryGetTimestamp(transfer.Timestamp, out var timestamp) && timestamp >= windowStart && timestamp < windowEnd))
-                {
-                    TryGetTimestamp(transfer.Timestamp, out var timestamp);
-                    events.Add(new BackfillEvent(timestamp, BackfillEventKind.InternalTransfer, transfer));
-                }
-
-                var universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(
-                    apiKey.Value, apiSecret.Value, region, 50, startTime, cancellationToken, windowEnd.ToUnixTimeMilliseconds());
-                foreach (var transfer in universalTransfers
-                    .Where(transfer => TryGetTimestamp(transfer.Timestamp, out var timestamp) && timestamp >= windowStart && timestamp < windowEnd))
-                {
-                    TryGetTimestamp(transfer.Timestamp, out var timestamp);
-                    events.Add(new BackfillEvent(timestamp, BackfillEventKind.UniversalTransfer, transfer));
-                }
-
+                events.AddRange(await CollectEventsAsync(
+                    apiKey.Value, apiSecret.Value, region, windowStart.ToUnixTimeMilliseconds(), (windowStart, windowEnd), cancellationToken));
                 windowStart = windowEnd;
             }
 
@@ -303,15 +196,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             foreach (var backfillEvent in events.OrderBy(item => item.Timestamp).ThenBy(item => item.Kind))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var succeeded = backfillEvent.Kind switch
-                {
-                    BackfillEventKind.Order => await ProcessBackfillOrderAsync((BybitOrderData)backfillEvent.Value, account, region, apiKey.Value, apiSecret.Value, cancellationToken),
-                    BackfillEventKind.Deposit => await _orderSyncService.ProcessDepositAsync((BybitDepositWithdrawalRow)backfillEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
-                    BackfillEventKind.Withdrawal => await _orderSyncService.ProcessWithdrawalAsync((BybitDepositWithdrawalRow)backfillEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
-                    BackfillEventKind.InternalTransfer => await _orderSyncService.ProcessInternalTransferAsync((BybitInternalTransferRow)backfillEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
-                    BackfillEventKind.UniversalTransfer => await _orderSyncService.ProcessInternalTransferAsync((BybitInternalTransferRow)backfillEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
-                    _ => false
-                };
+                var succeeded = await ProcessEventAsync(
+                    backfillEvent, account, region, apiKey.Value, apiSecret.Value, "BybitBackfill", cancellationToken);
 
                 if (!succeeded)
                     return BybitAccountSyncResult.Failed("One or more historical items failed to process; the import can be retried safely.");
@@ -552,12 +438,78 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         _cacheService.Remove(CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(account.UserId.ToString()));
     }
 
-    private async Task<bool> ProcessBackfillOrderAsync(
+    private async Task<List<SyncEvent>> CollectEventsAsync(
+        string apiKey,
+        string apiSecret,
+        BybitRegion region,
+        long? startTime,
+        (DateTimeOffset Start, DateTimeOffset End)? window,
+        CancellationToken cancellationToken)
+    {
+        var events = new List<SyncEvent>();
+        var endTime = window?.End.ToUnixTimeMilliseconds();
+
+        // Inside a backfill window, rows without a usable timestamp or outside the window are dropped.
+        // The incremental sync keeps them and orders them last, so nothing it fetched is skipped.
+        void Add<T>(IEnumerable<T> rows, SyncEventKind kind, Func<T, DateTimeOffset?> timestampOf) where T : notnull
+        {
+            foreach (var row in rows)
+            {
+                var timestamp = timestampOf(row);
+                if (window is { } range && (timestamp is null || timestamp < range.Start || timestamp >= range.End))
+                    continue;
+                events.Add(new SyncEvent(timestamp ?? DateTimeOffset.MaxValue, kind, row));
+            }
+        }
+
+        var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
+        Add(orders.Where(order => order.OrderStatus == "Filled"), SyncEventKind.Order,
+            order => TryGetTimestamp(order, out var timestamp) ? timestamp : null);
+
+        var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
+        Add(deposits, SyncEventKind.Deposit,
+            deposit => TryGetTimestamp(deposit.SuccessAt, out var timestamp) ? timestamp : null);
+
+        var withdrawals = await _bybitService.GetWithdrawalHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
+        Add(withdrawals, SyncEventKind.Withdrawal,
+            withdrawal => TryGetTimestamp(withdrawal, out var timestamp) ? timestamp : null);
+
+        var transfers = await _bybitService.GetInternalTransferHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
+        Add(transfers, SyncEventKind.InternalTransfer,
+            transfer => TryGetTimestamp(transfer.Timestamp, out var timestamp) ? timestamp : null);
+
+        var universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
+        Add(universalTransfers, SyncEventKind.UniversalTransfer,
+            transfer => TryGetTimestamp(transfer.Timestamp, out var timestamp) ? timestamp : null);
+
+        return events;
+    }
+
+    // Events are recorded without touching account cash; callers reconcile cash to Bybit afterwards.
+    private async Task<bool> ProcessEventAsync(
+        SyncEvent syncEvent,
+        Account account,
+        BybitRegion region,
+        string apiKey,
+        string apiSecret,
+        string importSource,
+        CancellationToken cancellationToken) => syncEvent.Kind switch
+    {
+        SyncEventKind.Order => await ProcessOrderAsync((BybitOrderData)syncEvent.Value, account, region, apiKey, apiSecret, importSource, cancellationToken),
+        SyncEventKind.Deposit => await _orderSyncService.ProcessDepositAsync((BybitDepositWithdrawalRow)syncEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
+        SyncEventKind.Withdrawal => await _orderSyncService.ProcessWithdrawalAsync((BybitDepositWithdrawalRow)syncEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
+        SyncEventKind.InternalTransfer or SyncEventKind.UniversalTransfer
+            => await _orderSyncService.ProcessInternalTransferAsync((BybitInternalTransferRow)syncEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
+        _ => false
+    };
+
+    private async Task<bool> ProcessOrderAsync(
         BybitOrderData order,
         Account account,
         BybitRegion region,
         string apiKey,
         string apiSecret,
+        string importSource,
         CancellationToken cancellationToken)
     {
         IReadOnlyList<BybitExecutionData> executions = [];
@@ -568,14 +520,14 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         catch (Exception ex) when (ex is not OperationCanceledException
             && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
         {
-            _logger.LogDebug(ex, "Bybit historical execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
+            _logger.LogDebug(ex, "Bybit execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
         }
 
         return await _orderSyncService.ProcessOrderAsync(
             order,
             account,
             account.UserId,
-            "BybitBackfill",
+            importSource,
             cancellationToken,
             executions,
             applyCashBalance: false);
@@ -609,7 +561,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         return true;
     }
 
-    private enum BackfillEventKind
+    private enum SyncEventKind
     {
         Order,
         Deposit,
@@ -618,7 +570,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         UniversalTransfer
     }
 
-    private sealed record BackfillEvent(DateTimeOffset Timestamp, BackfillEventKind Kind, object Value);
+    private sealed record SyncEvent(DateTimeOffset Timestamp, SyncEventKind Kind, object Value);
 
     private async Task PopulateInitialCashBalanceAsync(
         Account account,
@@ -629,38 +581,89 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
     {
         try
         {
-            var balance = 0m;
-            foreach (var accountType in new[] { "FUND", "UNIFIED" })
-            {
-                foreach (var coin in BybitCashBalance.CashCoins)
-                {
-                    try
-                    {
-                        var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(
-                            apiKey,
-                            apiSecret,
-                            region,
-                            accountType,
-                            coin,
-                            account.ExternalId);
-                        balance += BybitCashBalance.FromAccountCoinBalance(coinBalance);
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException
-                        && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
-                    {
-                        _logger.LogDebug(ex, "Bybit sync: failed to fetch {AccountType} {Coin} balance for account {AccountId}",
-                            accountType, coin, account.Id);
-                    }
-                }
-            }
-
-            await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, balance, cancellationToken);
+            var cash = await GetBybitCashBalanceAsync(account, apiKey, apiSecret, region);
+            await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, cash.Total, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException
             && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
         {
             _logger.LogDebug(ex, "Bybit sync: failed to fetch initial cash balance for account {AccountId}", account.Id);
         }
+    }
+
+    // Bybit already executed every synced order, so its wallet is the source of truth for cash.
+    // Only a complete read replaces the local balance; a partial or failed read leaves it unchanged.
+    private async Task ReconcileCashBalanceAsync(
+        Account account,
+        string apiKey,
+        string apiSecret,
+        BybitRegion region,
+        CancellationToken cancellationToken)
+    {
+        (decimal Total, bool IsComplete) cash;
+        try
+        {
+            cash = await GetBybitCashBalanceAsync(account, apiKey, apiSecret, region);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Bybit cash reconciliation skipped for account {AccountId}: wallet balance unavailable", account.Id);
+            return;
+        }
+
+        if (!cash.IsComplete)
+        {
+            _logger.LogWarning("Bybit cash reconciliation skipped for account {AccountId}: wallet balance read was incomplete", account.Id);
+            return;
+        }
+
+        if (account.Balance == cash.Total)
+            return;
+
+        _logger.LogWarning(
+            "Bybit cash reconciliation changed account {AccountId} cash: local {LocalBalance}, Bybit {BybitBalance}",
+            account.Id,
+            account.Balance,
+            cash.Total);
+        account.AddToBalance(cash.Total - account.Balance);
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{account.UserId}");
+    }
+
+    private async Task<(decimal Total, bool IsComplete)> GetBybitCashBalanceAsync(
+        Account account,
+        string apiKey,
+        string apiSecret,
+        BybitRegion region)
+    {
+        var total = 0m;
+        var isComplete = true;
+        foreach (var accountType in new[] { "FUND", "UNIFIED" })
+        {
+            foreach (var coin in BybitCashBalance.CashCoins)
+            {
+                try
+                {
+                    var coinBalance = await _bybitService.GetAccountCoinBalanceAsync(
+                        apiKey,
+                        apiSecret,
+                        region,
+                        accountType,
+                        coin,
+                        account.ExternalId);
+                    total += BybitCashBalance.FromAccountCoinBalance(coinBalance);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException
+                    && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
+                {
+                    isComplete = false;
+                    _logger.LogDebug(ex, "Bybit sync: failed to fetch {AccountType} {Coin} balance for account {AccountId}",
+                        accountType, coin, account.Id);
+                }
+            }
+        }
+
+        return (total, isComplete);
     }
 
     private async Task MarkErrorAsync(Account account, string message, CancellationToken cancellationToken)

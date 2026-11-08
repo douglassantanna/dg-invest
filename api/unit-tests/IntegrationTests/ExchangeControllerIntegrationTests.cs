@@ -94,7 +94,8 @@ public class ExchangeControllerIntegrationTests
                 .SingleAsync(transaction => transaction.ExchangeOrderId == "order-xrp-basic-buy-1");
             cryptoTransaction.Amount.Should().Be(3.80m);
             cryptoTransaction.Price.Should().Be(1.3153m);
-            account.Balance.Should().Be(95.00186m);
+            // Cash is reconciled to the fake Bybit wallet (100 USDT), not derived from the synced buy.
+            account.Balance.Should().Be(100m);
             (await context.AccountTransactions.CountAsync(transaction =>
                 EF.Property<int>(transaction, "AccountId") == accountId
                 && transaction.ExchangeTransactionId == "order-xrp-basic-buy-1")).Should().Be(1);
@@ -172,7 +173,8 @@ public class ExchangeControllerIntegrationTests
                 EF.Property<int>(transaction, "AccountId") == accountId
                 && (transaction.ExchangeTransactionId == firstOrder.OrderId
                     || transaction.ExchangeTransactionId == secondOrder.OrderId))).Should().Be(2);
-            (await context.Accounts.SingleAsync(account => account.Id == accountId)).Balance.Should().Be(90.00866m);
+            // Cash is reconciled to the fake Bybit wallet (100 USDT), not derived from the synced buy.
+            (await context.Accounts.SingleAsync(account => account.Id == accountId)).Balance.Should().Be(100m);
 
             using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
             var response = await client.GetAsync($"/api/Exchange/{accountId}/transactions");
@@ -200,9 +202,11 @@ public class ExchangeControllerIntegrationTests
             "XRP",
             DateTime.UtcNow,
             new Quote(new USD(0, DateTime.UtcNow, 0)));
+        // An unparseable price makes the order fail to process. Local cash no longer can, because
+        // synced orders are recorded without a cash check and cash is reconciled to Bybit.
         _fixture.Factory.Bybit.OrderHistory.Add(FilledOrder(
             "order-xrp-failure-1",
-            "1.3153",
+            "not-a-price",
             "2026-09-17T14:34:01Z"));
 
         try
@@ -269,7 +273,8 @@ public class ExchangeControllerIntegrationTests
             cryptoTransaction.FeeQuoteValue.Should().Be(0.01m);
             cryptoTransaction.ExchangeExecutionId.Should().Be("execution-xrp-fee-1");
             accountTransaction.FeeQuoteValue.Should().Be(0.01m);
-            account.Balance.Should().Be(94.99186m);
+            // Cash is reconciled to the fake Bybit wallet (100 USDT), not derived from the synced buy.
+            account.Balance.Should().Be(100m);
         }
         finally
         {
