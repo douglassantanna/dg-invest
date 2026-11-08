@@ -484,7 +484,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         }
 
         var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
-        Add(orders.Where(order => order.OrderStatus == "Filled"), SyncEventKind.Order,
+        Add(orders.Where(IsExecuted), SyncEventKind.Order,
             order => TryGetTimestamp(order, out var timestamp) ? timestamp : null);
 
         var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
@@ -505,6 +505,14 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
         return events;
     }
+
+    // A spot order that partly filled before being canceled still executed its filled quantity;
+    // AvgPrice and CumExecQty describe only the executed part, so it is imported like a fill.
+    private static bool IsExecuted(BybitOrderData order) =>
+        order.OrderStatus == "Filled"
+        || (order.OrderStatus == "PartiallyFilledCanceled"
+            && decimal.TryParse(order.CumExecQty, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var executedQty)
+            && executedQty > 0);
 
     // Events are recorded without touching account cash; callers reconcile cash to Bybit afterwards.
     private async Task<bool> ProcessEventAsync(

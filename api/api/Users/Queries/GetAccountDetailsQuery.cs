@@ -69,6 +69,7 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                     (at.ExchangeStatus != null &&
                         (at.ExchangeStatus.ToLower() == "success" ||
                          at.ExchangeStatus.ToLower() == "filled" ||
+                         at.ExchangeStatus.ToLower() == "partiallyfilledcanceled" ||
                          at.ExchangeStatus.ToLower() == "internaltransfer")));
             else if (status == "failed")
                 transactionsQuery = transactionsQuery.Where(at =>
@@ -82,6 +83,7 @@ public class GetAccountDetailsQueryHandler : IRequestHandler<GetAccountDetailsQu
                     (at.ExchangeStatus == null ||
                         (at.ExchangeStatus.ToLower() != "success" &&
                          at.ExchangeStatus.ToLower() != "filled" &&
+                         at.ExchangeStatus.ToLower() != "partiallyfilledcanceled" &&
                          at.ExchangeStatus.ToLower() != "internaltransfer" &&
                          at.ExchangeStatus.ToLower() != "failed" &&
                          at.ExchangeStatus.ToLower() != "fail")));

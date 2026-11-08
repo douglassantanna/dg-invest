@@ -130,6 +130,31 @@ public class BybitAccountSyncServiceSyncTests
         end.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(1));
     }
 
+    [Fact]
+    public async Task SyncAsync_ImportsPartiallyFilledCanceledOrdersWithExecutedQuantity()
+    {
+        var harness = await Harness.CreateAsync();
+        var partial = Order("partial-1", "Buy", -2);
+        partial.OrderStatus = "PartiallyFilledCanceled";
+        partial.CumExecQty = "0.5";
+        var unfilled = Order("unfilled-1", "Buy", -1);
+        unfilled.OrderStatus = "PartiallyFilledCanceled";
+        unfilled.CumExecQty = "0";
+        harness.Orders.AddRange([unfilled, partial]);
+        var processed = new List<string>();
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .Callback<BybitOrderData, Account, int, string, CancellationToken, IReadOnlyList<BybitExecutionData>?, bool>(
+                (order, _, _, _, _, _, _) => processed.Add(order.OrderId))
+            .ReturnsAsync(true);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        processed.Should().Equal("partial-1");
+    }
+
     private static void AssertContiguousWindows(List<(long? Start, long? End)> requests, DateTime expectedStart)
     {
         requests.Should().NotBeEmpty();
