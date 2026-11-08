@@ -59,20 +59,20 @@ public class SyncBybitOrdersTests
 
         var bybitService = new Mock<IBybitService>();
         bybitService.Setup(service => service.GetOrderHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([]);
         bybitService.Setup(service => service.GetDepositHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .Returns((string key, string _, BybitRegion _, int? _, long? _, CancellationToken _, long? _) =>
                 key == "failing-key"
                     ? Task.FromException<List<BybitDepositWithdrawalRow>>(
                         new BybitTransportException("/v5/asset/deposit/query-record", new HttpRequestException("connection reset")))
                     : Task.FromResult(new List<BybitDepositWithdrawalRow>()));
         bybitService.Setup(service => service.GetWithdrawalHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([]);
         bybitService.Setup(service => service.GetInternalTransferHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([]);
         var emailService = new Mock<IEmailService>();
         emailService.Setup(service => service.SendBybitIntegrationPausedAlertAsync(It.IsAny<BybitIntegrationPausedAlert>(), It.IsAny<CancellationToken>()))
@@ -95,7 +95,7 @@ public class SyncBybitOrdersTests
         paused.ConsecutiveTransportFailures.Should().Be(ExchangeIntegration.TransportFailurePauseThreshold);
         (await context.ExchangeIntegrations.SingleAsync(item => item.UserId == healthyUser.Id)).Enabled.Should().BeTrue();
         bybitService.Verify(service => service.GetDepositHistoryAsync(
-            "failing-key", "failing-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Exactly(10));
+            "failing-key", "failing-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Exactly(10));
         emailService.Verify(service => service.SendBybitIntegrationPausedAlertAsync(
             It.Is<BybitIntegrationPausedAlert>(alert => alert.UserId == failingUser.Id && alert.UserEmail == failingUser.Email),
             It.IsAny<CancellationToken>()), Times.Once);
@@ -103,7 +103,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         bybitService.Verify(service => service.GetDepositHistoryAsync(
-            "failing-key", "failing-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Exactly(10));
+            "failing-key", "failing-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Exactly(10));
         keyVault.Verify(service => service.GetSecretReadResultAsync(
             BybitCredentialKeys.LegacyAccountKey(failingUser.Id, failingAccount.Id, "api-key")), Times.Exactly(10));
         emailService.Verify(service => service.SendBybitIntegrationPausedAlertAsync(It.IsAny<BybitIntegrationPausedAlert>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -145,10 +145,10 @@ public class SyncBybitOrdersTests
                 ? new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, value)
                 : throw new InvalidOperationException($"Unexpected vault key: {key}")));
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetOrderHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
@@ -156,14 +156,14 @@ public class SyncBybitOrdersTests
 
         await function.Run(null!, functionContext.Object);
 
-         bybitService.Verify(x => x.GetOrderHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
-         bybitService.Verify(x => x.GetDepositHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
-         bybitService.Verify(x => x.GetWithdrawalHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+         bybitService.Verify(x => x.GetOrderHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
+         bybitService.Verify(x => x.GetDepositHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
+         bybitService.Verify(x => x.GetWithdrawalHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(accountApiKey), Times.Exactly(2));
         keyVault.Verify(x => x.GetSecretReadResultAsync(accountApiSecret), Times.Exactly(2));
         keyVault.Verify(x => x.GetSecretReadResultAsync(integrationApiKey), Times.Once);
         keyVault.Verify(x => x.GetSecretReadResultAsync(integrationApiSecret), Times.Once);
-         bybitService.Verify(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+         bybitService.Verify(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         keyVault.Verify(x => x.GetSecretReadResultAsync(It.IsAny<string>()), Times.Never);
-         bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
+         bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -218,7 +218,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         keyVault.Verify(x => x.GetSecretReadResultAsync(It.IsAny<string>()), Times.Never);
-         bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
+         bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -241,16 +241,16 @@ public class SyncBybitOrdersTests
         keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-secret")))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
         var function = CreateFunction(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
         await function.Run(null!, functionContext.Object);
 
-         bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+         bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -275,16 +275,16 @@ public class SyncBybitOrdersTests
         keyVault.Setup(x => x.GetSecretReadResultAsync(legacyApiSecret))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "legacy-api-secret"));
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
         var function = CreateFunction(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
         functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
 
         await function.Run(null!, functionContext.Object);
 
-         bybitService.Verify(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+         bybitService.Verify(x => x.GetOrderHistoryAsync("legacy-api-key", "legacy-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -320,9 +320,9 @@ public class SyncBybitOrdersTests
             .ReturnsAsync(AccountCoinBalance("UNIFIED", "USDT", "6000", "UID-001"));
         bybitService.Setup(x => x.GetAccountCoinBalanceAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), "UNIFIED", "USDC", "UID-001"))
             .ReturnsAsync(AccountCoinBalance("UNIFIED", "USDC", "4000", "UID-001"));
-         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService.Setup(x => x.ProcessOpeningBalanceAsync(account, 1, 11000m, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -333,7 +333,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         orderSyncService.Verify(x => x.ProcessOpeningBalanceAsync(account, 1, 11000m, It.IsAny<CancellationToken>()), Times.Once);
-         bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+         bybitService.Verify(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -370,11 +370,11 @@ public class SyncBybitOrdersTests
             Timestamp = "1790000000000"
         };
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetInternalTransferHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([transfer]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetInternalTransferHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([transfer]);
+         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, account, 1, It.IsAny<CancellationToken>(), false))
             .ReturnsAsync(true);
@@ -434,11 +434,11 @@ public class SyncBybitOrdersTests
             Timestamp = "1790000000000"
         };
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([transfer]);
+         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([transfer]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, sourceAccount, 1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, destinationAccount, 1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
@@ -448,7 +448,7 @@ public class SyncBybitOrdersTests
 
         await function.Run(null!, functionContext.Object);
 
-         bybitService.Verify(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+         bybitService.Verify(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
         orderSyncService.Verify(x => x.ProcessInternalTransferAsync(transfer, sourceAccount, 1, It.IsAny<CancellationToken>()), Times.Once);
         orderSyncService.Verify(x => x.ProcessInternalTransferAsync(transfer, destinationAccount, 1, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -485,11 +485,11 @@ public class SyncBybitOrdersTests
             Timestamp = "1790000000000"
         };
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([transfer]);
+         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([transfer]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
@@ -525,7 +525,7 @@ public class SyncBybitOrdersTests
         keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, account.Id, "api-secret")))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "api-secret"));
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+         bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ThrowsAsync(new BybitApiException(10003, "API key is invalid"));
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
@@ -538,8 +538,8 @@ public class SyncBybitOrdersTests
             "Bybit rejected sync request: 10003 - API key is invalid", It.IsAny<CancellationToken>()), Times.Once);
         integration.Status.Should().Be(ExchangeIntegration.AutoPausedStatus);
         integration.Enabled.Should().BeFalse();
-         bybitService.Verify(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
-        bybitService.Verify(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
+         bybitService.Verify(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Never);
+        bybitService.Verify(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -582,23 +582,23 @@ public class SyncBybitOrdersTests
 
         var bybitService = new Mock<IBybitService>();
         bybitService.Setup(service => service.GetOrderHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([]);
         bybitService.Setup(service => service.GetDepositHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([]);
         bybitService.Setup(service => service.GetWithdrawalHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .Returns((string apiKey, string _, BybitRegion _, int? _, long? _, CancellationToken _, long? _) =>
                 apiKey == "subaccount-key"
                     ? Task.FromException<List<BybitDepositWithdrawalRow>>(
                         new BybitApiException(10005, "Permission denied for this endpoint", "withdrawal history"))
                     : Task.FromResult(new List<BybitDepositWithdrawalRow>()));
         bybitService.Setup(service => service.GetInternalTransferHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([]);
         bybitService.Setup(service => service.GetUniversalTransferHistoryAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([]);
 
         var function = CreateFunction(
@@ -615,13 +615,13 @@ public class SyncBybitOrdersTests
         integration.Status.Should().NotBe(ExchangeIntegration.AutoPausedStatus);
         bybitService.Verify(service => service.GetOrderHistoryAsync(
             "subaccount-key", "subaccount-secret", It.IsAny<BybitRegion>(), 50,
-            It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
         bybitService.Verify(service => service.GetOrderHistoryAsync(
             "healthy-key", "healthy-secret", It.IsAny<BybitRegion>(), 50,
-            It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
         bybitService.Verify(service => service.GetWithdrawalHistoryAsync(
             "healthy-key", "healthy-secret", It.IsAny<BybitRegion>(), 50,
-            It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -645,11 +645,11 @@ public class SyncBybitOrdersTests
         keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "credential"));
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ThrowsAsync(new BybitApiException(10003, "API key is invalid"));
         var function = CreateFunction(bybitService.Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
@@ -683,14 +683,14 @@ public class SyncBybitOrdersTests
         keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
             .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "credential"));
         var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
             .ReturnsAsync([new BybitOrderData { OrderId = "order-1", OrderStatus = "Filled" }]);
          bybitService.Setup(x => x.GetExecutionHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService
             .Setup(x => x.ProcessOrderAsync(
