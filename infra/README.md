@@ -43,14 +43,45 @@ Database health-check message settings are provisioned by Bicep. The timer-based
 
 Application Insights resources and connection strings are provisioned, but the API project does not currently include the Application Insights SDK and the Functions SDK references are commented out. Confirm telemetry collection during application validation; code instrumentation changes remain separate from infrastructure deployment.
 
+### Key Vaults
+
+Each environment has two vaults, both created by Bicep:
+
+| Vault | Contents |
+|---|---|
+| `dginvest-<env>-sec-weu1` (app vault) | App secrets: `SqlConnectionString`, `StorageConnectionString`, `JwtSigningSecret`, `MigrationToken`, CoinMarketCap and Mailtrap settings. |
+| `dginvest-<env>-cred-weu1` (credential vault) | User-owned Bybit credentials (`bybit-*` secrets). The API and Function App reach it through `BybitKeyVaultSettings__VaultUri`. |
+
+The credential vault has **purge protection** enabled. It cannot be turned off, deleted secrets stay recoverable for the 7-day retention period, and a deleted vault keeps its name reserved until that period ends.
+
+Locally, leave `BybitKeyVaultSettings:VaultUri` empty to use the single `KeyVaultSettings:VaultUri` vault for everything.
+
+### Role assignments
+
 The deployment identity has Contributor, which cannot create Azure RBAC role assignments. After each environment deployment, the subscription Owner must manually assign:
 
-- `Key Vault Secrets Officer` to the operator identity that will create/update secrets in that environment vault. Subscription Owner alone does not grant Key Vault data-plane access when the vault uses RBAC authorization.
-- `Key Vault Secrets Officer` to the API system identity, scoped to that environment Key Vault. The API saves, updates, and clears Bybit credentials there.
-- `Key Vault Secrets User` to the Function App system identity, scoped to that environment Key Vault, for read-only secret access.
-- `Storage Blob Data Owner`, `Storage Queue Data Contributor`, and `Storage Table Data Contributor` to the Function App system identity, scoped to that environment storage account. These roles are used by the Flex Functions host and its managed-identity deployment storage.
+- `Key Vault Secrets Officer` to the operator identity that creates and updates secrets, scoped to the app vault (and to the credential vault only if manual credential support is needed). Subscription Owner alone does not grant Key Vault data-plane access when a vault uses RBAC authorization.
+- To the API system identity:
+  - `Key Vault Secrets Officer` scoped to the **credential vault**, because the API saves, updates and clears Bybit credentials there.
+  - `Key Vault Secrets User` scoped to the **app vault**, which is read-only and enough to resolve Key Vault references. Do not grant the API write access to the app vault.
+- `Key Vault Secrets User` to the Function App system identity, scoped to **both** vaults, for read-only secret access.
+- `Storage Blob Data Owner`, `Storage Queue Data Contributor`, and `Storage Table Data Contributor` to the Function App system identity, scoped to that environment storage account. The Flex Functions host and its managed-identity deployment storage use these roles.
 
-Use the `apiPrincipalId`, `functionPrincipalId`, `keyVaultResourceId`, and `functionStorageRoleScope` deployment outputs as the assignment inputs. The functions will not resolve their Key Vault references or access host storage until the required role assignments exist.
+Use the `apiPrincipalId`, `functionPrincipalId`, `keyVaultResourceId`, `credentialVaultResourceId`, and `functionStorageRoleScope` deployment outputs as the assignment inputs. The Functions won't resolve their Key Vault references or access host storage until the required role assignments exist.
+
+### Migrating an existing environment to the credential vault
+
+This applies only to environments that stored `bybit-*` secrets in the app vault before the credential vault existed (STAGE). A new environment (PROD) writes credentials to the credential vault from the start.
+
+1. Deploy the infrastructure. The credential vault is created, and both apps point `BybitKeyVaultSettings__VaultUri` at it.
+2. Assign the credential vault roles above (API: Secrets Officer; Function App: Secrets User). Also assign the API Secrets User on the app vault, but keep its existing Secrets Officer there for now.
+3. Run `infra/scripts/migrate-bybit-secrets.sh <env>` as an operator with Secrets User on the app vault and Secrets Officer on the credential vault. It copies the secrets without printing their values.
+4. Restart the API and Function App. This clears the 24-hour in-memory Bybit secret cache in `KeyVaultService`.
+5. Run the script again. This catches credentials saved to the old vault between steps 1 and 3.
+6. Validate: manual sync (`POST /api/Exchange/bybit/sync/{id}`), the timer sync, and saving, updating and disconnecting Bybit credentials.
+7. Only then delete the `bybit-*` secrets from the app vault, and remove the API's Secrets Officer role on the app vault.
+
+Rollback before step 7: point `BybitKeyVaultSettings__VaultUri` back at the app vault and restart. The original secrets are still there.
 
 The SQL server administrator credential is only for provisioning and database administration. After importing each BACPAC, create a database-scoped application login/user with only the permissions the application and its EF migrations require. Put that connection string in the environment Key Vault as `SqlConnectionString`; do not use the server administrator login in application settings.
 

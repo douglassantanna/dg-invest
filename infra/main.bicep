@@ -29,11 +29,14 @@ var functionName = 'dginvest-${environmentName}-jobs-weu-01'
 var functionPlanName = 'dginvest-${environmentName}-jobs-flex-weu'
 var frontendName = 'dginvest-${environmentName}-web-weu-01'
 var keyVaultName = 'dginvest-${environmentName}-sec-weu1'
+// User-owned exchange credentials (bybit-* secrets) live apart from app secrets; max 24 chars ("dginvest-stage-cred-weu1").
+var credentialVaultName = 'dginvest-${environmentName}-cred-weu1'
 var storageAccountName = environmentName == 'prod' ? 'dginvestproddataweu1' : 'dginveststagedataweu1'
 var databaseName = 'dginvest-${environmentName}'
 var appInsightsName = 'dginvest-${environmentName}-observe-weu-01'
 var deploymentContainerName = 'function-app-packages'
 var keyVaultUri = 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/'
+var credentialVaultUri = 'https://${credentialVaultName}${environment().suffixes.keyvaultDns}/'
 var sqlConnectionStringSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/SqlConnectionString)'
 var storageConnectionStringSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/StorageConnectionString)'
 var migrationTokenSecretReference = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/MigrationToken)'
@@ -156,6 +159,31 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   tags: union(commonTags, { Component: 'secrets' })
 }
 
+// Holds user Bybit API keys, secrets and webhook secrets. KeyVaultService routes every bybit-* secret here
+// through BybitKeyVaultSettings:VaultUri. Purge protection is irreversible: deleted credentials stay
+// recoverable for the retention period, and a deleted vault keeps its name reserved until then.
+resource credentialVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: credentialVaultName
+  location: location
+  properties: {
+    tenantId: tenant().tenantId
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 7
+    enablePurgeProtection: true
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Allow'
+    }
+  }
+  tags: union(commonTags, { Component: 'user-credentials' })
+}
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
@@ -269,7 +297,7 @@ resource apiApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureStorageSettings__LogContainer', value: 'logs' }
         { name: 'AzureStorageSettings__WelcomeEmailQueue', value: 'welcomeemail' }
         { name: 'KeyVaultSettings__VaultUri', value: keyVaultUri }
-        { name: 'BybitKeyVaultSettings__VaultUri', value: keyVaultUri }
+        { name: 'BybitKeyVaultSettings__VaultUri', value: credentialVaultUri }
         { name: 'JWTSettings__Secret', value: jwtSecretReference }
         { name: 'JWTSettings__Issuer', value: 'dginvest-${environmentName}' }
         { name: 'JWTSettings__ExpiryMinutes', value: '120' }
@@ -364,7 +392,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     DatabaseHealthCheckOptions__SendAlertAlways: 'true'
     DefaultConnection: sqlConnectionStringSecretReference
     KeyVaultSettings__VaultUri: keyVaultUri
-    BybitKeyVaultSettings__VaultUri: keyVaultUri
+    BybitKeyVaultSettings__VaultUri: credentialVaultUri
     JWTSettings__Secret: jwtSecretReference
     JWTSettings__Issuer: 'dginvest-${environmentName}'
     JWTSettings__ExpiryMinutes: '120'
@@ -400,6 +428,8 @@ output apiPrincipalId string = apiApp.identity.principalId
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVaultUri
 output keyVaultResourceId string = keyVault.id
+output credentialVaultName string = credentialVault.name
+output credentialVaultResourceId string = credentialVault.id
 output frontendDefaultHostname string = frontend.properties.defaultHostname
 output frontendCustomDomain string = frontendCustomDomain
 output storageAccountName string = storageAccount.name
