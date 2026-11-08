@@ -131,6 +131,21 @@ public class BybitAccountSyncServiceSyncTests
     }
 
     [Fact]
+    public async Task SyncAsync_WithoutAnyCheckpoint_LooksBackThirtyDaysInSevenDayWindows()
+    {
+        var harness = await Harness.CreateAsync(credentialsSetAt: false);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        AssertContiguousWindows(harness.OrderHistoryRequests, DateTime.UtcNow.AddDays(-30));
+        harness.OrderHistoryRequests.Should().HaveCount(5);
+        harness.DepositHistoryRequests.Should().Equal(harness.OrderHistoryRequests);
+        DateTimeOffset.FromUnixTimeMilliseconds(harness.OrderHistoryRequests[^1].End!.Value)
+            .Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
     public async Task SyncAsync_ImportsPartiallyFilledCanceledOrdersWithExecutedQuantity()
     {
         var harness = await Harness.CreateAsync();
@@ -199,7 +214,7 @@ public class BybitAccountSyncServiceSyncTests
         public List<(long? Start, long? End)> OrderHistoryRequests { get; } = [];
         public List<(long? Start, long? End)> DepositHistoryRequests { get; } = [];
 
-        public static async Task<Harness> CreateAsync(decimal localBalance = 0, DateTime? lastSyncAt = null)
+        public static async Task<Harness> CreateAsync(decimal localBalance = 0, DateTime? lastSyncAt = null, bool credentialsSetAt = true)
         {
             var options = new DbContextOptionsBuilder<DataContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -211,7 +226,9 @@ public class BybitAccountSyncServiceSyncTests
             await context.SaveChangesAsync();
 
             var syncStatus = new SyncStatus(1, account.Id, "Bybit");
-            syncStatus.EnableForCredentials();
+            // Legacy rows created before BybitCredentialsSetAt existed have no credentials timestamp.
+            if (credentialsSetAt)
+                syncStatus.EnableForCredentials();
             if (lastSyncAt is { } checkpoint)
                 syncStatus.MarkConnected(string.Empty, checkpoint);
             context.SyncStatuses.Add(syncStatus);

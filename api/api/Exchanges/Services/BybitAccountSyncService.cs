@@ -14,6 +14,9 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
     private static readonly TimeSpan SyncOverlap = TimeSpan.FromMinutes(5);
     // Bybit order and transfer history accept at most 7 days per request (deposits and withdrawals 30).
     private static readonly TimeSpan MaxWindow = TimeSpan.FromDays(7);
+    // Lookback when a status has no checkpoint at all (legacy rows without BybitCredentialsSetAt);
+    // matches Bybit's own 30-day default for deposit and withdrawal history.
+    private static readonly TimeSpan InitialLookback = TimeSpan.FromDays(30);
     // Caps the catch-up work of a single run; a checkpoint further behind resumes on the next run.
     private const int MaxWindowsPerSync = 8;
 
@@ -96,7 +99,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             var cutoff = syncStatus.LastSyncAt ?? syncStatus.BybitCredentialsSetAt;
             var windowStart = cutoff is { } dateTime
                 ? new DateTimeOffset(dateTime.Subtract(SyncOverlap), TimeSpan.Zero)
-                : now - MaxWindow;
+                : now - InitialLookback;
             var events = new List<SyncEvent>();
             for (var windowCount = 0; windowStart < now && windowCount < MaxWindowsPerSync; windowCount++)
             {
