@@ -22,7 +22,7 @@ public class TransferOutTransaction : ITransactionStrategy
 
         if (account.Balance < accountTransaction.Amount)
         {
-            _logger.LogError("TransferOutTransaction: Insufficient funds for account ID: {AccountId}. Required: {RequiredAmount}, Available: {AvailableBalance}",
+            _logger.LogWarning("TransferOutTransaction: Insufficient funds for account ID: {AccountId}. Required: {RequiredAmount}, Available: {AvailableBalance}",
                 account.Id, accountTransaction.Amount, account.Balance);
 
             return new Response("You don't have sufficient funds to complete the transfer", false);

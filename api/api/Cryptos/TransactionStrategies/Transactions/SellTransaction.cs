@@ -27,7 +27,7 @@ public class SellTransaction : ITransactionStrategy
 
         if (cryptoAsset.Balance < accountTransaction.Amount)
         {
-            _logger.LogError("SellTransaction: Insufficient crypto holdings for account ID: {AccountId}. Required: {RequiredAmount}, Available: {AvailableAmount}",
+            _logger.LogWarning("SellTransaction: Insufficient crypto holdings for account ID: {AccountId}. Required: {RequiredAmount}, Available: {AvailableAmount}",
                 account.Id, accountTransaction.Amount, cryptoAsset?.Balance);
 
             return new Response("You don't have sufficient crypto holdings to complete this transaction", false);

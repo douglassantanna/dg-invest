@@ -21,7 +21,7 @@ public class WithdrawDepositTransaction : ITransactionStrategy
 
         if (account.Balance < accountTransaction.Amount)
         {
-            _logger.LogError("WithdrawDepositTransaction: Insufficient funds for account ID: {AccountId}. Required: {RequiredAmount}, Available: {AvailableBalance}",
+            _logger.LogWarning("WithdrawDepositTransaction: Insufficient funds for account ID: {AccountId}. Required: {RequiredAmount}, Available: {AvailableBalance}",
                 account.Id, accountTransaction.Amount, account.Balance);
 
             return new Response("You don't have sufficient funds to complete the withdraw", false);

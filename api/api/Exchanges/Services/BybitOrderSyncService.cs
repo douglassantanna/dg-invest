@@ -127,7 +127,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             : RecordWithoutCashMutation(account, accountTx);
         if (!result.IsSuccess)
         {
-            _logger.LogDebug("Bybit sync: transaction strategy failed for order {OrderId}: {Message}", order.OrderId, result.Message);
+            _logger.LogWarning("Bybit sync: transaction strategy failed for order {OrderId} ({Symbol}): {Message}", order.OrderId, baseSymbol, result.Message);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed", result.Message, importSource, logId, cancellationToken);
             return false;
         }
