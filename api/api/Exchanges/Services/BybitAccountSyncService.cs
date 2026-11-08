@@ -12,6 +12,13 @@ namespace api.Exchanges.Services;
 public sealed class BybitAccountSyncService : IBybitAccountSyncService
 {
     private static readonly TimeSpan SyncOverlap = TimeSpan.FromMinutes(5);
+    // Bybit order and transfer history accept at most 7 days per request (deposits and withdrawals 30).
+    private static readonly TimeSpan MaxWindow = TimeSpan.FromDays(7);
+    // Lookback when a status has no checkpoint at all (legacy rows without BybitCredentialsSetAt);
+    // matches Bybit's own 30-day default for deposit and withdrawal history.
+    private static readonly TimeSpan InitialLookback = TimeSpan.FromDays(30);
+    // Caps the catch-up work of a single run; a checkpoint further behind resumes on the next run.
+    private const int MaxWindowsPerSync = 8;
 
     private readonly IBybitService _bybitService;
     private readonly IBybitOrderSyncService _orderSyncService;
@@ -85,14 +92,29 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             var region = BybitEndpoints.Parse(syncStatus.Region);
             await PopulateInitialCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
+            // Fetch from the checkpoint to now in explicit windows of at most 7 days. With only a
+            // startTime, Bybit returns startTime + 7 days for orders/transfers (silently dropping
+            // newer items) and rejects deposits/withdrawals older than 30 days with 131002.
+            var now = DateTimeOffset.UtcNow;
             var cutoff = syncStatus.LastSyncAt ?? syncStatus.BybitCredentialsSetAt;
-            var startTime = cutoff is { } dateTime
-                ? new DateTimeOffset(dateTime.Subtract(SyncOverlap), TimeSpan.Zero).ToUnixTimeMilliseconds()
-                : (long?)null;
+            var windowStart = cutoff is { } dateTime
+                ? new DateTimeOffset(dateTime.Subtract(SyncOverlap), TimeSpan.Zero)
+                : now - InitialLookback;
+            var events = new List<SyncEvent>();
+            for (var windowCount = 0; windowStart < now && windowCount < MaxWindowsPerSync; windowCount++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var windowEnd = windowStart + MaxWindow < now ? windowStart + MaxWindow : now;
+                events.AddRange(await CollectEventsAsync(
+                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: false, cancellationToken));
+                windowStart = windowEnd;
+            }
+
+            var checkpointAt = windowStart.UtcDateTime;
+
             // Process every Bybit event in time order so a buy is applied after the deposit,
             // transfer or sell that funded it. Cash is not mutated per event: Bybit is the source
             // of truth for cash, so it is reconciled to the wallet once all events are recorded.
-            var events = await CollectEventsAsync(apiKey.Value, apiSecret.Value, region, startTime, window: null, cancellationToken);
             var hasFailures = false;
             string? lastOrderId = null;
 
@@ -114,7 +136,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             await ReconcileCurrentCryptoBalancesAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
             await ReconcileCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
-            await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken);
+            await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken, checkpointAt);
             return BybitAccountSyncResult.Succeeded($"Bybit account {account.Name} synchronized successfully");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -187,7 +209,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 cancellationToken.ThrowIfCancellationRequested();
                 var windowEnd = windowStart.AddDays(7) < end ? windowStart.AddDays(7) : end;
                 events.AddRange(await CollectEventsAsync(
-                    apiKey.Value, apiSecret.Value, region, windowStart.ToUnixTimeMilliseconds(), (windowStart, windowEnd), cancellationToken));
+                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: true, cancellationToken));
                 windowStart = windowEnd;
             }
 
@@ -442,28 +464,30 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         string apiKey,
         string apiSecret,
         BybitRegion region,
-        long? startTime,
-        (DateTimeOffset Start, DateTimeOffset End)? window,
+        (DateTimeOffset Start, DateTimeOffset End) window,
+        bool dropOutsideWindow,
         CancellationToken cancellationToken)
     {
         var events = new List<SyncEvent>();
-        var endTime = window?.End.ToUnixTimeMilliseconds();
+        var startTime = window.Start.ToUnixTimeMilliseconds();
+        var endTime = window.End.ToUnixTimeMilliseconds();
 
-        // Inside a backfill window, rows without a usable timestamp or outside the window are dropped.
-        // The incremental sync keeps them and orders them last, so nothing it fetched is skipped.
+        // Backfill drops rows without a usable timestamp or outside the window. The incremental sync
+        // keeps every row Bybit returned (timestamp-less rows ordered last); downstream processing is
+        // idempotent, so a row returned by two adjacent windows is recorded once.
         void Add<T>(IEnumerable<T> rows, SyncEventKind kind, Func<T, DateTimeOffset?> timestampOf) where T : notnull
         {
             foreach (var row in rows)
             {
                 var timestamp = timestampOf(row);
-                if (window is { } range && (timestamp is null || timestamp < range.Start || timestamp >= range.End))
+                if (dropOutsideWindow && (timestamp is null || timestamp < window.Start || timestamp >= window.End))
                     continue;
                 events.Add(new SyncEvent(timestamp ?? DateTimeOffset.MaxValue, kind, row));
             }
         }
 
         var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
-        Add(orders.Where(order => order.OrderStatus == "Filled"), SyncEventKind.Order,
+        Add(orders.Where(IsExecuted), SyncEventKind.Order,
             order => TryGetTimestamp(order, out var timestamp) ? timestamp : null);
 
         var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
@@ -484,6 +508,14 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
         return events;
     }
+
+    // A spot order that partly filled before being canceled still executed its filled quantity;
+    // AvgPrice and CumExecQty describe only the executed part, so it is imported like a fill.
+    private static bool IsExecuted(BybitOrderData order) =>
+        order.OrderStatus == "Filled"
+        || (order.OrderStatus == "PartiallyFilledCanceled"
+            && decimal.TryParse(order.CumExecQty, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var executedQty)
+            && executedQty > 0);
 
     // Events are recorded without touching account cash; callers reconcile cash to Bybit afterwards.
     private async Task<bool> ProcessEventAsync(
