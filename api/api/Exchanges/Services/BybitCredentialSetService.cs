@@ -65,9 +65,14 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
         try
         {
-            await _vault.SetSecretAsync(Key("api-key"), apiKey);
-            await _vault.SetSecretAsync(Key("api-secret"), apiSecret);
-            await _vault.SetSecretAsync(Key("webhook-secret"), webhookSecret ?? string.Empty);
+            // Write only the secrets the caller provided. A partial update (e.g. only a webhook secret,
+            // or a key rotation without re-typing the webhook secret) must not blank the stored values.
+            if (!string.IsNullOrEmpty(apiKey))
+                await _vault.SetSecretAsync(Key("api-key"), apiKey);
+            if (!string.IsNullOrEmpty(apiSecret))
+                await _vault.SetSecretAsync(Key("api-secret"), apiSecret);
+            if (!string.IsNullOrEmpty(webhookSecret))
+                await _vault.SetSecretAsync(Key("webhook-secret"), webhookSecret);
         }
         catch (Exception ex)
         {

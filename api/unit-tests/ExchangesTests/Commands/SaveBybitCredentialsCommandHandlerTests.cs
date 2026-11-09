@@ -61,6 +61,26 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenUpdatingOnlyWebhookSecret_ShouldKeepStoredApiKeyAndSecret()
+    {
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
+        await _context.SaveChangesAsync();
+        var cmd = new SaveBybitCredentialsCommand(
+            UserId: 1, AccountId: 1,
+            ApiKey: "",
+            ApiSecret: "",
+            WebhookSecret: "new-webhook-secret");
+
+        var result = await _handler.Handle(cmd, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(s => s.EndsWith("api-key")), It.IsAny<string>()), Times.Never);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(s => s.EndsWith("api-secret")), It.IsAny<string>()), Times.Never);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(
+            It.Is<string>(s => s.EndsWith("webhook-secret")), "new-webhook-secret"), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_WhenAccountNotFound_ShouldReturnNotFound()
     {
         var cmd = new SaveBybitCredentialsCommand(
