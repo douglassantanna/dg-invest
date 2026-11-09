@@ -31,10 +31,9 @@ Use this page as the starting point for code navigation. The root README is for 
 - `POST /api/Exchange/bybit/sync-accounts` discovers or reconciles exchange accounts.
 - `POST /api/Exchange/bybit/sync/{accountId}` runs an account-level manual sync.
 - `POST /api/Exchange/bybit/backfill/{accountId}` imports historical data from a requested date.
-- `SyncBybitOrders` runs every 30 seconds when `BybitSync:Enabled` is enabled, then delegates account work to `IBybitAccountSyncService`.
-- Webhook processing is handled by `ProcessBybitWebhookCommand`; do not assume the timer is the only sync path.
+- `SyncBybitOrders` runs every 30 seconds when `BybitSync:Enabled` is enabled, then delegates account work to `IBybitAccountSyncService`. The timer and manual sync are the only sync paths (there is no webhook).
 
-For a route list, use `ExchangeController.cs` as the source of truth. For sync semantics, use `BybitAccountSyncService.cs` and `BybitOrderSyncService.cs`, not older README examples.
+For how the integration behaves (sync windows, balances, transfers, credentials, limitations), read the [Bybit integration section of the root README](../README.md#bybit-integration). It is kept current with every change. For a route list, use `ExchangeController.cs`; for implementation detail, `BybitAccountSyncService.cs` and `BybitOrderSyncService.cs`.
 
 ## Accounts Page and Selector
 
