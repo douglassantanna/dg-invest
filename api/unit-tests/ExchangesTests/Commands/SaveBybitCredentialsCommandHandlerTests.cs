@@ -81,6 +81,41 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenApiKeyIsNotReadOnly_ShouldRejectWithoutWritingSecrets()
+    {
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
+        await _context.SaveChangesAsync();
+        var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, ReadOnlyKeyBybit(readOnly: 0).Object));
+
+        var result = await handler.Handle(
+            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "rw-key", ApiSecret: "rw-secret", WebhookSecret: null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("read-only");
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenBybitRejectsApiKey_ShouldRejectWithoutWritingSecrets()
+    {
+        _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
+        await _context.SaveChangesAsync();
+        var bybit = new Mock<IBybitService>();
+        bybit.Setup(service => service.GetApiKeyInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new BybitApiException(10003, "API key is invalid.", "/v5/user/query-api"));
+        var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, bybit.Object));
+
+        var result = await handler.Handle(
+            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "bad-key", ApiSecret: "bad-secret", WebhookSecret: null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Bybit rejected");
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenAccountNotFound_ShouldReturnNotFound()
     {
         var cmd = new SaveBybitCredentialsCommand(
@@ -222,6 +257,14 @@ public class SaveBybitCredentialsCommandHandlerTests
         integration.Region.Should().Be("Eu");
     }
 
-    private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault) =>
-        new BybitCredentialSetService(context, vault, Mock.Of<ILogger<BybitCredentialSetService>>());
+    private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault, IBybitService? bybit = null) =>
+        new BybitCredentialSetService(context, vault, bybit ?? ReadOnlyKeyBybit().Object, Mock.Of<ILogger<BybitCredentialSetService>>());
+
+    private static Mock<IBybitService> ReadOnlyKeyBybit(int readOnly = 1)
+    {
+        var bybit = new Mock<IBybitService>();
+        bybit.Setup(service => service.GetApiKeyInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BybitApiKeyInfo { ReadOnly = readOnly });
+        return bybit;
+    }
 }

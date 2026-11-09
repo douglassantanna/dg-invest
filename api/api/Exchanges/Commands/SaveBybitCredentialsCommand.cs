@@ -51,6 +51,7 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
         }
         var result = await _credentials.SaveAsync(request.UserId, accountId, request.ApiKey, request.ApiSecret, request.WebhookSecret, request.Region, cancellationToken);
         if (result.Success) return new("Credentials saved successfully", true);
+        if (result.RejectedStatusCode is { } rejectedStatusCode) return new(result.Error!, false, rejectedStatusCode);
         return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save credentials; recovery may be required", false, 500);
     }
     public static string BuildKey(int userId, int accountId, string suffix) => BybitCredentialKeys.LegacyAccountKey(userId, accountId, suffix);

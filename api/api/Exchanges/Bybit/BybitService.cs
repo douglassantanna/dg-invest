@@ -19,6 +19,7 @@ public class BybitService : IBybitService
     private const string AccountCoinBalanceEndpoint = "/v5/asset/transfer/query-account-coin-balance";
     private const string AccountCoinBalancesEndpoint = "/v5/asset/transfer/query-account-coins-balance";
     private const string AccountInfoEndpoint = "/v5/account/info";
+    private const string ApiKeyInfoEndpoint = "/v5/user/query-api";
     private const int RecvWindow = 60000;
 
     private readonly bool _useTestnet;
@@ -73,6 +74,17 @@ public class BybitService : IBybitService
             _logger.LogDebug(ex, "Bybit sub-account request failed");
             throw;
         }
+    }
+
+    // Throws BybitApiException when Bybit rejects the key and BybitTransportException when Bybit is unreachable.
+    public async Task<BybitApiKeyInfo> GetApiKeyInfoAsync(string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default)
+    {
+        var response = await SendPrivateGetAsync<BybitApiKeyInfoResponse>(
+            apiKey, apiSecret, region, ApiKeyInfoEndpoint, new Dictionary<string, object>(), cancellationToken);
+        if (response.RetCode != 0)
+            throw new BybitApiException(response.RetCode, response.RetMsg, ApiKeyInfoEndpoint);
+
+        return response.Result;
     }
 
     public async Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)

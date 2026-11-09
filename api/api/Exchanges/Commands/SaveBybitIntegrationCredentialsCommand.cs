@@ -33,6 +33,8 @@ public class SaveBybitIntegrationCredentialsCommandHandler : IRequestHandler<Sav
         var validation = await new SaveBybitIntegrationCredentialsCommandValidator().ValidateAsync(request, cancellationToken);
         if (!validation.IsValid) return new("Validation failed", false, validation.Errors.Select(x => x.ErrorMessage).ToList());
         var result = await _credentials.SaveAsync(request.UserId, null, request.ApiKey, request.ApiSecret, null, request.Region, cancellationToken);
+        if (result.RejectedStatusCode is { } rejectedStatusCode)
+            return new(result.Error!, false, rejectedStatusCode);
         if (result.Success && !string.IsNullOrWhiteSpace(request.MasterUid))
         {
             var integration = await _context.ExchangeIntegrations
