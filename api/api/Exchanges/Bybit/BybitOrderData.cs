@@ -1,21 +1,6 @@
 using System.Text.Json.Serialization;
 
 namespace api.Exchanges.Bybit;
-public class BybitWebhookPayload
-{
-    [JsonPropertyName("topic")]
-    public string Topic { get; set; } = string.Empty;
-
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
-
-    [JsonPropertyName("creationTime")]
-    public string CreationTime { get; set; } = string.Empty;
-
-    [JsonPropertyName("data")]
-    public List<BybitOrderData> Data { get; set; } = new();
-}
-
 public class BybitOrderData
 {
     [JsonPropertyName("symbol")]
