@@ -46,7 +46,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         _logger = logger;
     }
 
-    public async Task<BybitAccountSyncResult> SyncAsync(Account account, CancellationToken cancellationToken)
+    public Task<BybitAccountSyncResult> SyncAsync(Account account, CancellationToken cancellationToken)
+        => SyncAsync(account, cancellationToken, retriedWithFreshCredentials: false);
+
+    private async Task<BybitAccountSyncResult> SyncAsync(Account account, CancellationToken cancellationToken, bool retriedWithFreshCredentials)
     {
         try
         {
@@ -147,6 +150,15 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         catch (BybitApiException ex)
         {
             var failure = BybitApiFailureClassifier.Classify(ex);
+            if (failure.Kind == BybitApiFailureKind.PermanentCredential && !retriedWithFreshCredentials)
+            {
+                // Credentials are cached per process for up to 24h, and saving through the API only clears the
+                // API's cache. After a reconnect, the Functions host may still hold the revoked key: retry once with
+                // values re-read from Key Vault before treating the rejection as permanent and pausing.
+                BybitCredentialReader.Invalidate(_keyVaultService, account.UserId, account.Id);
+                return await SyncAsync(account, cancellationToken, retriedWithFreshCredentials: true);
+            }
+
             var message = $"Bybit rejected sync request: {ex.RetCode} - {ex.RetMsg}";
             await MarkErrorAsync(account, message, cancellationToken);
             if (failure.Kind == BybitApiFailureKind.PermanentCredential)

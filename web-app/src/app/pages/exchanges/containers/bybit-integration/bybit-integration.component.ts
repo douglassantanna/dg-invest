@@ -155,7 +155,7 @@ export class BybitIntegrationComponent implements OnInit {
   }
 
   disconnect(): void {
-    if (!window.confirm('Disconnect Bybit? Account history remains available, but discovery and synchronization stop.')) return;
+    if (!window.confirm('Disconnect Bybit? Account history remains available, but discovery and synchronization stop.\n\nAlso delete this API key in Bybit (Account > API Management) so it can no longer be used.')) return;
     this.disconnecting = true;
     this.loadError = '';
     this.exchangeService.disconnectBybit().subscribe({

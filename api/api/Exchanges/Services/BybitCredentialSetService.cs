@@ -44,18 +44,51 @@ public interface IBybitCredentialSetService
     Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, string? webhookSecret, BybitRegion region, CancellationToken cancellationToken = default);
 }
 
-public record SaveCredentialResult(bool Success, bool Unavailable, string? Error = null);
+// RejectedStatusCode is set when the credentials themselves were refused (e.g. not a read-only key); Error then holds
+// a user-facing message and nothing was written.
+public record SaveCredentialResult(bool Success, bool Unavailable, string? Error = null, int? RejectedStatusCode = null);
 
 public class BybitCredentialSetService : IBybitCredentialSetService
 {
     private readonly DataContext _context;
     private readonly IKeyVaultService _vault;
+    private readonly IBybitService _bybit;
     private readonly ILogger<BybitCredentialSetService> _logger;
-    public BybitCredentialSetService(DataContext context, IKeyVaultService vault, ILogger<BybitCredentialSetService> logger)
-        => (_context, _vault, _logger) = (context, vault, logger);
+    public BybitCredentialSetService(DataContext context, IKeyVaultService vault, IBybitService bybit, ILogger<BybitCredentialSetService> logger)
+        => (_context, _vault, _bybit, _logger) = (context, vault, bybit, logger);
 
     public async Task<KeyVaultSecretReadResult> ReadAsync(int userId, int? accountId, string suffix, CancellationToken cancellationToken = default)
         => await BybitCredentialReader.ReadAsync(_vault, userId, accountId, suffix, cancellationToken);
+
+    // DG Invest only reads from Bybit. A key that can trade (or withdraw, on a master account) is refused before it is
+    // stored, which also verifies the key against Bybit instead of saving an invalid one.
+    private async Task<SaveCredentialResult?> VerifyReadOnlyKeyAsync(string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var info = await _bybit.GetApiKeyInfoAsync(apiKey, apiSecret, region, cancellationToken);
+            return info.IsReadOnly
+                ? null
+                : new SaveCredentialResult(false, false,
+                    "This Bybit API key can trade or withdraw. Create a read-only key in Bybit (API Management > Read-Only) and try again. "
+                    + "For the master account key, also enable Wallet > Account Transfer / Subaccount Transfer so sub-accounts can be discovered.",
+                    400);
+        }
+        catch (BybitApiException ex)
+        {
+            _logger.LogWarning("Bybit rejected the API key during credential save: {RetCode} {RetMsg}", ex.RetCode, ex.RetMsg);
+            return new SaveCredentialResult(false, false,
+                $"Bybit rejected this API key ({ex.RetCode}). Check the key, secret and region, then try again.",
+                400);
+        }
+        catch (BybitTransportException ex)
+        {
+            _logger.LogWarning(ex, "Bybit was unreachable while verifying an API key");
+            return new SaveCredentialResult(false, false,
+                "Could not reach Bybit to verify the API key. Try again in a moment.",
+                503);
+        }
+    }
 
     public async Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, string? webhookSecret, BybitRegion region, CancellationToken cancellationToken = default)
     {
@@ -63,11 +96,20 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             ? BybitCredentialKeys.LegacyAccountKey(userId, id, suffix)
             : BybitCredentialKeys.LegacyIntegrationKey(userId, suffix);
 
+        if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret)
+            && await VerifyReadOnlyKeyAsync(apiKey, apiSecret, region, cancellationToken) is { } rejection)
+            return rejection;
+
         try
         {
-            await _vault.SetSecretAsync(Key("api-key"), apiKey);
-            await _vault.SetSecretAsync(Key("api-secret"), apiSecret);
-            await _vault.SetSecretAsync(Key("webhook-secret"), webhookSecret ?? string.Empty);
+            // Write only the secrets the caller provided. A partial update (e.g. only a webhook secret,
+            // or a key rotation without re-typing the webhook secret) must not blank the stored values.
+            if (!string.IsNullOrEmpty(apiKey))
+                await _vault.SetSecretAsync(Key("api-key"), apiKey);
+            if (!string.IsNullOrEmpty(apiSecret))
+                await _vault.SetSecretAsync(Key("api-secret"), apiSecret);
+            if (!string.IsNullOrEmpty(webhookSecret))
+                await _vault.SetSecretAsync(Key("webhook-secret"), webhookSecret);
         }
         catch (Exception ex)
         {

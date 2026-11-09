@@ -51,6 +51,17 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
         }
         var result = await _credentials.SaveAsync(request.UserId, accountId, request.ApiKey, request.ApiSecret, request.WebhookSecret, request.Region, cancellationToken);
         if (result.Success) return new("Credentials saved successfully", true);
+        if (result.RejectedStatusCode is { } rejectedStatusCode)
+        {
+            // A rejected key writes nothing to Key Vault, so the account created for it holds no data; remove it so a retry
+            // with the same name is not blocked. (A Key Vault failure below keeps the account for recovery instead.)
+            if (createdAccount is not null)
+            {
+                _context.Accounts.Remove(createdAccount);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            return new(result.Error!, false, rejectedStatusCode);
+        }
         return result.Unavailable ? new(api.AzureKeyVault.KeyVaultSecretReadResult.UnavailableMessage, false, 503) : new("Failed to save credentials; recovery may be required", false, 500);
     }
     public static string BuildKey(int userId, int accountId, string suffix) => BybitCredentialKeys.LegacyAccountKey(userId, accountId, suffix);

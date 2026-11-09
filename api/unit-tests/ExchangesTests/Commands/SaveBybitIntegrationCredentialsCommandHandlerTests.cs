@@ -63,6 +63,14 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         (await context.ExchangeIntegrations.CountAsync()).Should().Be(0);
     }
 
-    private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault) =>
-        new BybitCredentialSetService(context, vault, Mock.Of<ILogger<BybitCredentialSetService>>());
+    private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault, IBybitService? bybit = null) =>
+        new BybitCredentialSetService(context, vault, bybit ?? ReadOnlyKeyBybit().Object, Mock.Of<ILogger<BybitCredentialSetService>>());
+
+    private static Mock<IBybitService> ReadOnlyKeyBybit(int readOnly = 1)
+    {
+        var bybit = new Mock<IBybitService>();
+        bybit.Setup(service => service.GetApiKeyInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BybitApiKeyInfo { ReadOnly = readOnly });
+        return bybit;
+    }
 }
