@@ -190,6 +190,20 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenCreatingAccount_AndKeyIsRejected_ShouldRemoveTheNewAccount()
+    {
+        // Nothing reached Key Vault, so the just-created account has no data and must not block a retry with the same name.
+        var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, ReadOnlyKeyBybit(readOnly: 0).Object));
+
+        var result = await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "rw-key", "rw-secret", "", "Futures", "UID-001"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("read-only");
+        (await _context.Accounts.CountAsync()).Should().Be(0);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenCreatingAccount_AndKeyVaultFails_ShouldRetainAccountWithoutSyncStatus()
     {
         _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
