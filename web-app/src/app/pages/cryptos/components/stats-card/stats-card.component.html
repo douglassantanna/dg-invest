@@ -2,7 +2,7 @@
   class="bg-white dark:bg-gray-800 rounded-md p-6 flex flex-col border-gray-300 dark:border-gray-700 border shadow-md sm:p-2.5">
   <div class="flex flex-col">
     <div class="mt-1">
-      @if (title() !== 'Balance') {
+      @if (!isQuantity()) {
       <span class="text-base font-normal text-gray-900 dark:text-gray-100">{{ value() | formatCurrency }}</span>
       } @else {
       <span class="text-base font-normal text-gray-900 dark:text-gray-100">{{ value() }}</span>

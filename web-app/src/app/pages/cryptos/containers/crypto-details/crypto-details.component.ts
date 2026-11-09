@@ -1,5 +1,5 @@
 import { UpperCasePipe } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 
 import { TransactionTableComponent } from '../../components/transaction-table/transaction-table.component';
 import { CryptoService } from '../../../../core/services/crypto.service';
@@ -30,6 +30,8 @@ export class CryptoDetailsComponent implements OnInit, OnDestroy {
   private unsubscribe$ = new Subject<void>();
   transactions = signal<CryptoTransactionHistory[]>([]);
   cryptoAssetData = signal<CryptoAssetData[]>([]);
+  // Quantity Bybit holds that no recorded transaction explains (sent by the API only when above zero).
+  withoutHistory = computed(() => this.cryptoAssetData().find(card => card.title === 'Without history')?.value ?? 0);
   isLoading = signal(true);
   isCryptoAssetsLoading = signal(false);
   isTransactionDataLoading = signal(false);
