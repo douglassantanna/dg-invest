@@ -2,7 +2,8 @@
 #
 # Local test of the transfer cost fix, in this order:
 #   1. Start the API with the current rule (Legacy, the default):  cd api/api && dotnet run
-#   2. Log in, paste the token below (without "Bearer"), and set @cryptoAssetId to the BTC asset id
+#   2. Log in, put the token (without "Bearer") in api/api/Requests/.env as DGI_TOKEN=... (git-ignored; never paste
+#      it into this file), and set @cryptoAssetId to the BTC asset id
 #      (from the asset page URL; create the BTC asset in the app first if needed).
 #   3. Run "Buy 1 BTC at 60k", then "Withdraw 0.5 BTC". The asset page now shows the bug:
 #      average price 120k, invested 60k.
@@ -13,7 +14,7 @@
 
 @url-dev = http://localhost:5062/api
 @url-stage = https://dginvest-stage-api-weu-01.azurewebsites.net/api
-@token =
+@token = {{$dotenv DGI_TOKEN}}
 @cryptoAssetId = 0
 
 ### Buy 1 BTC at 60k
