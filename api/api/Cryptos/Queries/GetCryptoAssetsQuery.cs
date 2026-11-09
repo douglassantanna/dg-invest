@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using api.Cache;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
@@ -23,6 +24,7 @@ public record GetCryptoAssetsQuery : IRequest<PageList<UserCryptoAssetDto>>
 }
 public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery, PageList<UserCryptoAssetDto>>
 {
+    private readonly TransferCostPolicy _transferCostPolicy;
     private const decimal MinimumVisibleInvestedAmount = 0.10m;
 
     private readonly DataContext _context;
@@ -32,12 +34,14 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
     public GetCryptoAssetsQueryHandler(DataContext context,
                                         ICoinMarketCapService coinMarketCapService,
                                         ILogger<GetCryptoAssetsQueryHandler> logger,
-                                        ICacheService cacheService)
+                                        ICacheService cacheService,
+        IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _context = context;
         _coinMarketCapService = coinMarketCapService;
         _logger = logger;
         _cacheService = cacheService;
+        _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public async Task<PageList<UserCryptoAssetDto>> Handle(GetCryptoAssetsQuery request, CancellationToken cancellationToken)
@@ -50,6 +54,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Include(x => x.CryptoAssets)
+                    .ThenInclude(ca => ca.Transactions)
                 .Include(x => x.AccountTransactions)
                 .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted, ct);
 
@@ -87,18 +92,22 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
             }
 
             var cryptoAssetDtos = filteredAssets.Select(ca =>
-            new ViewMinimalCryptoAssetDto(
-                Id: ca.Id,
-                Symbol: ca.Symbol.ToLower(),
-                PricePerUnit: _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse),
-                Balance: ca.Balance,
-                InvestedAmount: ca.TotalInvested,
-                CurrentWorth: ca.CurrentWorth(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                InvestmentGainLossValue: ca.GetInvestmentGainLossValue(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                InvestmentGainLossPercentage: ca.GetInvestmentGainLossPercentage(_coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)),
-                CoinMarketCapId: ca.CoinMarketCapId,
-                Image: ca.Symbol.ToLower()
-            ));
+            {
+                var price = _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse);
+                var costBasis = ca.GetCostBasis(price, _transferCostPolicy);
+                return new ViewMinimalCryptoAssetDto(
+                    Id: ca.Id,
+                    Symbol: ca.Symbol.ToLower(),
+                    PricePerUnit: price,
+                    Balance: ca.Balance,
+                    InvestedAmount: costBasis.Invested,
+                    CurrentWorth: ca.CurrentWorth(price),
+                    InvestmentGainLossValue: costBasis.GainLoss,
+                    InvestmentGainLossPercentage: costBasis.GainLossPercentage,
+                    CoinMarketCapId: ca.CoinMarketCapId,
+                    Image: ca.Symbol.ToLower()
+                );
+            });
 
             if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
             {

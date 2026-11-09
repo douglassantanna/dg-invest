@@ -1,3 +1,5 @@
+using api.Models.Cryptos;
+using Microsoft.Extensions.Options;
 using api.Cache;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
@@ -12,6 +14,7 @@ namespace api.Cryptos.Queries;
 public record GetCryptoAssetByIdQuery(int CryptoAssetId) : IRequest<Response>;
 public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetByIdQuery, Response>
 {
+    private readonly TransferCostPolicy _transferCostPolicy;
     private readonly ICryptoAssetRepository _cryptoAssetRepository;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ILogger<GetCryptoAssetByIdQueryHandler> _logger;
@@ -21,12 +24,14 @@ public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetById
         ICoinMarketCapService coinMarketCapService,
         ICryptoAssetRepository cryptoAssetRepository,
         ILogger<GetCryptoAssetByIdQueryHandler> logger,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _coinMarketCapService = coinMarketCapService;
         _cryptoAssetRepository = cryptoAssetRepository;
         _logger = logger;
         _cacheService = cacheService;
+        _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public async Task<Response> Handle(GetCryptoAssetByIdQuery request, CancellationToken cancellationToken)
@@ -55,15 +60,19 @@ public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetById
             }
 
             var currentPrice = _coinMarketCapService.GetCryptoCurrencyPriceById(cryptoAsset.CoinMarketCapId, cmpResponse);
+            var costBasis = cryptoAsset.GetCostBasis(currentPrice, _transferCostPolicy);
             List<CryptoAssetData> cards = new()
             {
                 new CryptoAssetData("Current price", currentPrice),
-                new CryptoAssetData("Average price", cryptoAsset.AveragePrice),
+                new CryptoAssetData("Average price", costBasis.AveragePrice),
                 new CryptoAssetData("Balance", cryptoAsset.Balance),
-                new CryptoAssetData("Invested amount", cryptoAsset.TotalInvested),
+                new CryptoAssetData("Invested amount", costBasis.Invested),
                 new CryptoAssetData("Current worth", cryptoAsset.CurrentWorth(currentPrice)),
-                new CryptoAssetData("Gain/Loss", cryptoAsset.GetInvestmentGainLossValue(currentPrice), cryptoAsset.GetInvestmentGainLossPercentage(currentPrice)),
+                new CryptoAssetData("Gain/Loss", costBasis.GainLoss, costBasis.GainLossPercentage),
             };
+            // Quantity Bybit holds that no recorded transaction explains; valued at the current price above.
+            if (costBasis.UnexplainedBalance > 0)
+                cards.Add(new CryptoAssetData(CryptoAssetData.WithoutHistoryTitle, costBasis.UnexplainedBalance));
 
             return new ViewCryptoAssetDto
             (

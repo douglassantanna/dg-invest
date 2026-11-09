@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using api.Cache;
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
@@ -44,6 +45,7 @@ public class AddTransactionCommandValidator : AbstractValidator<AddTransactionCo
 }
 public class AddTransactionCommandHandler : IRequestHandler<AddTransactionCommand, Response>
 {
+    private readonly TransferCostPolicy _transferCostPolicy;
     private readonly ILogger<AddTransactionCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
     private readonly DataContext _context;
@@ -52,12 +54,14 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
     public AddTransactionCommandHandler(ILogger<AddTransactionCommandHandler> logger,
                                         ITransactionService transactionService,
                                         DataContext context,
-                                        ICacheService cacheService)
+                                        ICacheService cacheService,
+                                        IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
         _cacheService = cacheService;
+        _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public async Task<Response> Handle(AddTransactionCommand request, CancellationToken cancellationToken)
@@ -108,7 +112,7 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
                                                                                          cryptoAssetId: cryptoAsset.Id,
                                                                                          cryptoAsset: cryptoAsset,
                                                                                          fee: request.Fee));
-            cryptoAsset.AddTransaction(transaction);
+            cryptoAsset.AddTransaction(transaction, _transferCostPolicy);
 
             if (!response.IsSuccess)
             {

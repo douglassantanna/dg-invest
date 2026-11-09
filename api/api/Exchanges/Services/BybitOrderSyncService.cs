@@ -16,6 +16,7 @@ namespace api.Exchanges.Services;
 
 public class BybitOrderSyncService : IBybitOrderSyncService
 {
+    private readonly TransferCostPolicy _transferCostPolicy;
     private List<string>? _knownQuoteCurrencies;
 
     private readonly ICoinMarketCapService _coinMarketCapService;
@@ -33,7 +34,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         IOptions<AzureStorageSettings> storageSettings,
         DataContext context,
         ILogger<BybitOrderSyncService> logger,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _coinMarketCapService = coinMarketCapService;
         _transactionService = transactionService;
@@ -42,6 +44,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _context = context;
         _logger = logger;
         _cacheService = cacheService;
+        _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public Task<bool> ProcessOrderAsync(BybitOrderData order, Account account, int userId, string importSource, CancellationToken cancellationToken)
@@ -133,9 +136,9 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
 
         if (applyCashBalance)
-            cryptoAsset.AddTransaction(cryptoTx);
+            cryptoAsset.AddTransaction(cryptoTx, _transferCostPolicy);
         else
-            cryptoAsset.AddHistoricalTransaction(cryptoTx);
+            cryptoAsset.AddHistoricalTransaction(cryptoTx, _transferCostPolicy);
 
         await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Success", null, importSource, logId, cancellationToken);
         _logger.LogInformation("Bybit sync: saved order {OrderId} ({Side} {Qty} {Symbol} @ {Price})", order.OrderId, order.Side, qty, baseSymbol, price);
@@ -203,9 +206,9 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             0);
 
         if (applyCashBalance)
-            cryptoAsset.AddTransaction(depositCryptoTx);
+            cryptoAsset.AddTransaction(depositCryptoTx, _transferCostPolicy);
         else
-            cryptoAsset.AddHistoricalTransaction(depositCryptoTx);
+            cryptoAsset.AddHistoricalTransaction(depositCryptoTx, _transferCostPolicy);
 
         var accountTx = new AccountTransaction(
             date: successAt,
@@ -301,9 +304,9 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             fee);
 
         if (applyCashBalance)
-            cryptoAsset.AddTransaction(withdrawalCryptoTx);
+            cryptoAsset.AddTransaction(withdrawalCryptoTx, _transferCostPolicy);
         else
-            cryptoAsset.AddHistoricalTransaction(withdrawalCryptoTx);
+            cryptoAsset.AddHistoricalTransaction(withdrawalCryptoTx, _transferCostPolicy);
 
         var accountTx = new AccountTransaction(
             date: successAt,
@@ -803,7 +806,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         accountTransaction.UpdateFee(fee.Amount, fee.Currency, fee.QuoteValue, fee.ExecutionId);
         cryptoTransaction.UpdateFee(fee.Amount, fee.Currency, fee.QuoteValue, fee.ExecutionId);
-        cryptoAsset.RecalculateFromTransactions();
+        cryptoAsset.RecalculateFromTransactions(_transferCostPolicy);
         await _context.SaveChangesAsync(cancellationToken);
     }
 

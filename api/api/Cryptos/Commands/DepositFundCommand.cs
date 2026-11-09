@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
@@ -50,6 +51,7 @@ public class DepositFundCommandValidator : AbstractValidator<DepositFundCommand>
 
 public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Response>
 {
+    private readonly TransferCostPolicy _transferCostPolicy;
     private readonly DataContext _context;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
@@ -58,12 +60,14 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
         ILogger<DepositFundCommandHandler> logger,
         ITransactionService transactionService,
         DataContext context,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
         _cacheService = cacheService;
+        _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public async Task<Response> Handle(DepositFundCommand request, CancellationToken cancellationToken)
@@ -149,7 +153,7 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
                 0
             );
 
-            cryptoAsset.AddTransaction(transferTx);
+            cryptoAsset.AddTransaction(transferTx, _transferCostPolicy);
 
             return new AccountTransaction(
                 date: date,

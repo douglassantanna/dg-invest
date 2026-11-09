@@ -39,5 +39,9 @@ public record ViewAddressDto(int Id,
 public record ViewCryptoInformation(string Symbol,
                                     int CoinMarketCapId);
 
-public record CryptoAssetData(string Title, decimal Value, decimal? Percent = null);
+public record CryptoAssetData(string Title, decimal Value, decimal? Percent = null)
+{
+    // Card shown when Bybit holds more of the coin than recorded transactions explain. The web app matches this title.
+    public const string WithoutHistoryTitle = "Without history";
+}
 public record ViewCryptoDto(int Id, string Symbol, string Name, string Image, int CoinMarketCapId);
