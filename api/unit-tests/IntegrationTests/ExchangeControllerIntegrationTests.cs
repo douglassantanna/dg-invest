@@ -624,7 +624,6 @@ public class ExchangeControllerIntegrationTests
             accountId = exchangeAccountId,
             apiKey = "sub-api-key",
             apiSecret = "sub-api-secret",
-            webhookSecret = "sub-webhook-secret",
         });
         saveSubaccountCredentials.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -710,7 +709,6 @@ public class ExchangeControllerIntegrationTests
             accountId,
             apiKey = "account-api-key",
             apiSecret = "account-api-secret",
-            webhookSecret = "account-webhook-secret",
         });
         saveAccountCredentials.StatusCode.Should().Be(HttpStatusCode.OK);
         (await saveAccountCredentials.Content.ReadAsStringAsync()).Should().NotContain("account-api-secret");
@@ -738,7 +736,6 @@ public class ExchangeControllerIntegrationTests
         connectionGroupsPayload.Should().Contain("\"subaccounts\":[]");
         connectionGroupsPayload.Should().NotContain("Integration subaccount");
         (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyIntegrationKey(userId, "api-key"))).Should().Be(string.Empty);
-        (await _fixture.Factory.KeyVault.GetSecretAsync(BybitCredentialKeys.LegacyAccountKey(userId, accountId, "webhook-secret"))).Should().Be(string.Empty);
     }
 
     [Fact]
@@ -1250,7 +1247,6 @@ public class ExchangeControllerIntegrationTests
             name = "Credential status account",
             apiKey = "api-key",
             apiSecret = "api-secret",
-            webhookSecret = "webhook-secret",
         });
         save.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -1275,7 +1271,6 @@ public class ExchangeControllerIntegrationTests
 
         await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-key"));
         await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "api-secret"));
-        await _fixture.Factory.KeyVault.DeleteSecretAsync(SaveBybitCredentialsCommandHandler.BuildKey(userId, accountId, "webhook-secret"));
 
         foreach (var endpoint in endpoints)
             (await client.GetAsync(endpoint)).StatusCode.Should().Be(HttpStatusCode.OK);
@@ -1303,7 +1298,6 @@ public class ExchangeControllerIntegrationTests
             bybitUid = "legacy-uid-001",
             apiKey = "account-api-key",
             apiSecret = "account-api-secret",
-            webhookSecret = "account-webhook-secret",
         });
 
         integration.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -1327,7 +1321,7 @@ public class ExchangeControllerIntegrationTests
         {
             var response = endpoint.EndsWith("integration-credentials", StringComparison.Ordinal)
                 ? await client.PostAsJsonAsync(endpoint, new { apiKey = "api-key", apiSecret = "api-secret" })
-                : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Unavailable account", bybitUid = "unavailable-uid", apiKey = "api-key", apiSecret = "api-secret", webhookSecret = "" });
+                : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Unavailable account", bybitUid = "unavailable-uid", apiKey = "api-key", apiSecret = "api-secret" });
 
             response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
             var payload = await response.Content.ReadAsStringAsync();
@@ -1352,7 +1346,7 @@ public class ExchangeControllerIntegrationTests
         {
             var response = endpoint.EndsWith("integration-credentials", StringComparison.Ordinal)
                 ? await client.PostAsJsonAsync(endpoint, new { apiKey = "api-key", apiSecret = "api-secret" })
-                : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Pending account", bybitUid = "pending-uid", apiKey = "api-key", apiSecret = "api-secret", webhookSecret = "webhook-secret" });
+                : await client.PostAsJsonAsync(endpoint, new { accountId = 0, subaccountTag = "Pending account", bybitUid = "pending-uid", apiKey = "api-key", apiSecret = "api-secret" });
 
             var body = await response.Content.ReadAsStringAsync();
             response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
@@ -1407,7 +1401,7 @@ public class ExchangeControllerIntegrationTests
         var (userId, mainAccountId) = await _fixture.CreateUserAsync();
         using var client = _fixture.Factory.CreateAuthenticatedClient(userId);
 
-        (await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new { accountId = mainAccountId, apiKey = "key", apiSecret = "secret", webhookSecret = "" }))
+        (await client.PostAsJsonAsync("/api/Exchange/bybit/credentials", new { accountId = mainAccountId, apiKey = "key", apiSecret = "secret" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await client.PostAsync($"/api/Exchange/bybit/test-connection/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await client.PostAsync($"/api/Exchange/bybit/toggle/{mainAccountId}", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);

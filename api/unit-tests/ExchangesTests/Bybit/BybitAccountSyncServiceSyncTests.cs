@@ -191,6 +191,36 @@ public class BybitAccountSyncServiceSyncTests
     }
 
     [Fact]
+    public async Task SyncAsync_WhenKeyCannotReadTransfers_SkipsTransfersAndStillImportsOrders()
+    {
+        // Sub-account keys need Wallet > SubMemberTransferList to list universal transfers. Without it Bybit returns
+        // 10005; that must not stop orders, deposits and withdrawals from being imported.
+        var harness = await Harness.CreateAsync();
+        harness.Orders.Add(Order("buy-1", "Buy", -1));
+        harness.Bybit.Setup(s => s.GetUniversalTransferHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
+                It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
+            .ThrowsAsync(new BybitApiException(10005, "Permission denied, please check your API key permissions.", "/v5/asset/transfer/query-universal-transfer-list"));
+        harness.Bybit.Setup(s => s.GetInternalTransferHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
+                It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
+            .ThrowsAsync(new BybitApiException(10005, "Permission denied, please check your API key permissions.", "/v5/asset/transfer/query-inter-transfer-list"));
+        var processed = new List<string>();
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .Callback<BybitOrderData, Account, int, string, CancellationToken, IReadOnlyList<BybitExecutionData>?, bool>(
+                (order, _, _, _, _, _, _) => processed.Add(order.OrderId))
+            .ReturnsAsync(true);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        processed.Should().Equal("buy-1");
+        harness.LastCheckpointAt.Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task SyncAsync_ImportsPartiallyFilledCanceledOrdersWithExecutedQuantity()
     {
         var harness = await Harness.CreateAsync();

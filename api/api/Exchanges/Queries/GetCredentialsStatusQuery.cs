@@ -14,8 +14,7 @@ public record CredentialsStatusDto(
     int AccountId,
     string AccountName,
     bool HasApiKey,
-    bool HasApiSecret,
-    bool HasWebhookSecret)
+    bool HasApiSecret)
 {
     public string AccountTag => AccountName;
 }
@@ -44,17 +43,15 @@ public class GetCredentialsStatusQueryHandler : IRequestHandler<GetCredentialsSt
         {
             var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
             var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
-            var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
 
-            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
                 return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
             results.Add(new CredentialsStatusDto(
                 AccountId: account.Id,
                 AccountName: account.Name,
                 HasApiKey: apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value),
-                HasApiSecret: apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value),
-                HasWebhookSecret: webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value)));
+                HasApiSecret: apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value)));
         }
 
         return new Response("ok", true, results);

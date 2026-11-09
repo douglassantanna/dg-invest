@@ -33,9 +33,7 @@ public record BybitSubaccountRowDto(
     string Status,
     bool HasApiKey,
     bool HasApiSecret,
-    bool HasWebhookSecret,
     string? MaskedApiKey,
-    string WebhookUrl,
     string? LastVerifiedAt,
     bool IsEnabled,
     bool IsMaster = false)
@@ -81,7 +79,6 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
 
             var hasApiKey = false;
             var hasApiSecret = false;
-            var hasWebhookSecret = false;
             string? apiKeyValue = null;
             if (integration?.Status == ExchangeIntegration.AutoPausedStatus)
             {
@@ -95,18 +92,16 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
             {
                 var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-key", cancellationToken);
                 var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "api-secret", cancellationToken);
-                var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, account.Id, "webhook-secret", cancellationToken);
 
-                if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+                if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
                     return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
                 hasApiKey = apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value);
                 hasApiSecret = apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value);
-                hasWebhookSecret = webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value);
                 apiKeyValue = apiKey.Value;
             }
 
-            var hasAnyCredentials = hasApiKey || hasApiSecret || hasWebhookSecret;
+            var hasAnyCredentials = hasApiKey || hasApiSecret;
 
             string status;
             if (!hasAnyCredentials)
@@ -126,10 +121,6 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
                 ? "...." + apiKeyValue[^4..]
                 : null;
 
-            var webhookUrl = hasWebhookSecret
-                ? $"/api/tradewebhook/bybit/{request.UserId}/{account.Id}"
-                : string.Empty;
-
             var lastVerifiedAt = syncStatus?.LastVerifiedAt is { } dt
                 ? FormatRelativeTime(dt)
                 : null;
@@ -141,9 +132,7 @@ public class GetBybitConnectionGroupQueryHandler : IRequestHandler<GetBybitConne
                 Status: status,
                 HasApiKey: hasApiKey,
                 HasApiSecret: hasApiSecret,
-                HasWebhookSecret: hasWebhookSecret,
                 MaskedApiKey: maskedApiKey,
-                WebhookUrl: webhookUrl,
                 LastVerifiedAt: lastVerifiedAt,
                 IsEnabled: syncStatus?.IsEnabled ?? false,
                 IsMaster: account.Id == integration?.MasterAccountId));

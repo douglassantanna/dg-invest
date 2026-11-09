@@ -16,7 +16,6 @@ export interface ExchangeConnectionDto {
   lastErrorMessage: string | null;
   hasApiKey: boolean;
   hasApiSecret: boolean;
-  hasWebhookSecret: boolean;
 }
 
 export interface ExchangeAccountDetailDto {

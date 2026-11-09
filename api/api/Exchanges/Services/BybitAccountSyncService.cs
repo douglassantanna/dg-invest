@@ -109,7 +109,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 cancellationToken.ThrowIfCancellationRequested();
                 var windowEnd = windowStart + MaxWindow < now ? windowStart + MaxWindow : now;
                 events.AddRange(await CollectEventsAsync(
-                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: false, cancellationToken));
+                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: false, account.Id, cancellationToken));
                 windowStart = windowEnd;
             }
 
@@ -221,7 +221,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 cancellationToken.ThrowIfCancellationRequested();
                 var windowEnd = windowStart.AddDays(7) < end ? windowStart.AddDays(7) : end;
                 events.AddRange(await CollectEventsAsync(
-                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: true, cancellationToken));
+                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: true, account.Id, cancellationToken));
                 windowStart = windowEnd;
             }
 
@@ -478,6 +478,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         BybitRegion region,
         (DateTimeOffset Start, DateTimeOffset End) window,
         bool dropOutsideWindow,
+        int accountId,
         CancellationToken cancellationToken)
     {
         var events = new List<SyncEvent>();
@@ -510,15 +511,41 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         Add(withdrawals, SyncEventKind.Withdrawal,
             withdrawal => TryGetTimestamp(withdrawal, out var timestamp) ? timestamp : null);
 
-        var transfers = await _bybitService.GetInternalTransferHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
+        var transfers = await TransfersOrEmptyAsync(
+            () => _bybitService.GetInternalTransferHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime),
+            accountId, "internal", "transfer permissions");
         Add(transfers, SyncEventKind.InternalTransfer,
             transfer => TryGetTimestamp(transfer.Timestamp, out var timestamp) ? timestamp : null);
 
-        var universalTransfers = await _bybitService.GetUniversalTransferHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
+        var universalTransfers = await TransfersOrEmptyAsync(
+            () => _bybitService.GetUniversalTransferHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime),
+            accountId, "universal", "Subaccount Transfer (master key) / SubMemberTransferList (sub-account key)");
         Add(universalTransfers, SyncEventKind.UniversalTransfer,
             transfer => TryGetTimestamp(transfer.Timestamp, out var timestamp) ? timestamp : null);
 
         return events;
+    }
+
+    // Transfers are optional data. Listing them needs a Wallet permission that read-only keys may not carry
+    // (10005); without it, skip transfers instead of failing the whole sync, so orders, deposits and
+    // withdrawals still import. Cash is reconciled from the wallet either way.
+    private async Task<List<BybitInternalTransferRow>> TransfersOrEmptyAsync(
+        Func<Task<List<BybitInternalTransferRow>>> fetch,
+        int accountId,
+        string transferKind,
+        string requiredPermission)
+    {
+        try
+        {
+            return await fetch();
+        }
+        catch (BybitApiException ex) when (ex.RetCode == 10005)
+        {
+            _logger.LogWarning(
+                "Bybit sync: the API key for account {AccountId} cannot list {TransferKind} transfers (10005); transfers are skipped. Enable Wallet > {RequiredPermission} on the key to import them.",
+                accountId, transferKind, requiredPermission);
+            return [];
+        }
     }
 
     // A spot order that partly filled before being canceled still executed its filled quantity;

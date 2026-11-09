@@ -9,17 +9,6 @@ public static class BybitCashBalance
 
     public static bool IsCashCoin(string symbol) => CashCoinSet.Contains(symbol);
 
-    public static decimal SumStablecoinCash(BybitWalletBalanceResponse wallet)
-    {
-        var account = wallet.Result.List.FirstOrDefault();
-        if (account is null)
-            return 0;
-
-        return account.Coin
-            .Where(coin => CashCoinSet.Contains(coin.Coin))
-            .Sum(coin => ParseAmount(string.IsNullOrWhiteSpace(coin.AvailableBalance) ? coin.WalletBalance : coin.AvailableBalance));
-    }
-
     public static decimal FromAccountCoinBalance(BybitAccountCoinBalanceResponse response)
     {
         return ParseAccountCoinBalance(response.Result.Balance);

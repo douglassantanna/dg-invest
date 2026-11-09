@@ -21,9 +21,7 @@ export interface BybitSubaccountRowDto {
   status: string;
   hasApiKey: boolean;
   hasApiSecret: boolean;
-  hasWebhookSecret: boolean;
   maskedApiKey: string | null;
-  webhookUrl: string;
   lastVerifiedAt: string | null;
   isEnabled: boolean;
   isMaster: boolean;

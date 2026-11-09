@@ -148,7 +148,8 @@ public class SyncBybitOrdersTests
          bybitService.Setup(x => x.GetOrderHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
          bybitService.Setup(x => x.GetDepositHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
          bybitService.Setup(x => x.GetWithdrawalHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetInternalTransferHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
         var functionContext = new Mock<FunctionContext>();
@@ -159,11 +160,10 @@ public class SyncBybitOrdersTests
          bybitService.Verify(x => x.GetOrderHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
          bybitService.Verify(x => x.GetDepositHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
          bybitService.Verify(x => x.GetWithdrawalHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
-        keyVault.Verify(x => x.GetSecretReadResultAsync(accountApiKey), Times.Exactly(2));
-        keyVault.Verify(x => x.GetSecretReadResultAsync(accountApiSecret), Times.Exactly(2));
-        keyVault.Verify(x => x.GetSecretReadResultAsync(integrationApiKey), Times.Once);
-        keyVault.Verify(x => x.GetSecretReadResultAsync(integrationApiSecret), Times.Once);
-         bybitService.Verify(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
+        // Universal transfers are fetched per account with the account's own key; integration keys are never used for sync.
+         bybitService.Verify(x => x.GetUniversalTransferHistoryAsync("account-api-key", "account-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
+        keyVault.Verify(x => x.GetSecretReadResultAsync(integrationApiKey), Times.Never);
+        keyVault.Verify(x => x.GetSecretReadResultAsync(integrationApiSecret), Times.Never);
     }
 
     [Fact]
@@ -385,72 +385,6 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         orderSyncService.Verify(x => x.ProcessInternalTransferAsync(transfer, account, 1, It.IsAny<CancellationToken>(), false), Times.Once);
-    }
-
-    [Fact]
-    public async Task Run_WhenUniversalTransfersExist_ShouldUseIntegrationCredentials()
-    {
-        var options = new DbContextOptionsBuilder<DataContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        var context = new DataContext(options);
-        var sourceAccount = new Account("Master", 1, EAccountType.Exchange, "Bybit", "UID-MASTER");
-        var destinationAccount = new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        var integration = new ExchangeIntegration(1, "Bybit");
-        integration.MarkEnabled();
-        context.AddRange(sourceAccount, destinationAccount, integration);
-        await context.SaveChangesAsync();
-
-        var sourceStatus = new SyncStatus(1, sourceAccount.Id, "Bybit");
-        sourceStatus.EnableForCredentials();
-        var destinationStatus = new SyncStatus(1, destinationAccount.Id, "Bybit");
-        destinationStatus.EnableForCredentials();
-        context.SyncStatuses.AddRange(sourceStatus, destinationStatus);
-        await context.SaveChangesAsync();
-
-        var keyVault = new Mock<IKeyVaultService>();
-        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, sourceAccount.Id, "api-key")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "source-api-key"));
-        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, sourceAccount.Id, "api-secret")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "source-api-secret"));
-        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, destinationAccount.Id, "api-key")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "destination-api-key"));
-        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyAccountKey(1, destinationAccount.Id, "api-secret")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "destination-api-secret"));
-        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyIntegrationKey(1, "api-key")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "integration-api-key"));
-        keyVault.Setup(x => x.GetSecretReadResultAsync(BybitCredentialKeys.LegacyIntegrationKey(1, "api-secret")))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "integration-api-secret"));
-
-        var transfer = new BybitInternalTransferRow
-        {
-            TransferId = "universal-transfer-1",
-            Coin = "USDC",
-            Amount = "125",
-            FromAccountType = "FUND",
-            FromMemberId = "UID-MASTER",
-            ToAccountType = "UNIFIED",
-            ToMemberId = "UID-001",
-            Timestamp = "1790000000000"
-        };
-        var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([transfer]);
-        var orderSyncService = new Mock<IBybitOrderSyncService>();
-        orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, sourceAccount, 1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        orderSyncService.Setup(x => x.ProcessInternalTransferAsync(transfer, destinationAccount, 1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
-        var functionContext = new Mock<FunctionContext>();
-        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
-
-        await function.Run(null!, functionContext.Object);
-
-         bybitService.Verify(x => x.GetUniversalTransferHistoryAsync("integration-api-key", "integration-api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
-        orderSyncService.Verify(x => x.ProcessInternalTransferAsync(transfer, sourceAccount, 1, It.IsAny<CancellationToken>()), Times.Once);
-        orderSyncService.Verify(x => x.ProcessInternalTransferAsync(transfer, destinationAccount, 1, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -733,8 +667,6 @@ public class SyncBybitOrdersTests
             .ReturnsAsync(new BybitWalletBalanceResponse());
 
         return new(
-            bybitService,
-            orderSyncService,
             new BybitAccountSyncService(
                 bybitService,
                 orderSyncService,

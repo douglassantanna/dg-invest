@@ -62,7 +62,7 @@ The completed integration will separate three concepts:
 
 PR2 makes discovery create or update only exchange accounts and match them by `(UserId, Exchange, ExternalId)`. It must not match or mutate manual accounts based on a display name. PR4 adds an account selector that groups manual and exchange contexts by origin.
 
-Disabling an integration or account stops every sync path, including polling and webhooks. Disconnecting removes stored credentials while preserving historical portfolio data.
+Disabling an integration or account stops every sync path (the background timer and manual sync). Disconnecting removes stored credentials while preserving historical portfolio data.
 
 ## Delivery Flow
 

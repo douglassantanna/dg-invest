@@ -173,247 +173,223 @@ The frontend launches automatically. Access the application using the credential
 - password: admin123
 
 ---
-### Bybit auto-trade sync
+### Bybit integration
 
-Orders, deposits, and withdrawals from your Bybit account are automatically synced to the app — no manual entry required. This works through two complementary mechanisms:
+DG Invest reads your Bybit **spot** activity and balances using **read-only** API keys. It never places orders or moves funds. Sync runs in the background every 30 seconds and on demand.
 
-| Method | When | What it syncs |
-|--------|------|---------------|
-| **Webhook** (real-time) | An order is filled | Orders only |
-| **REST polling** (every 30s) | Runs continuously in the background | Orders, deposits, and withdrawals |
+This section describes how the integration works today. Keep it current: every change to the integration updates this section in the same PR.
 
-The webhook catches trades instantly. The REST poll catches anything the webhook missed, including deposits and withdrawals Bybit doesn't send webhooks for. Both paths pass through the same dedup logic, so nothing is ever double-counted.
+#### Concepts
 
-#### Account Context And Rollout
+- **Manual account**: a user-owned portfolio such as Main or Savings. Discovery never turns it into an exchange account.
+- **Exchange integration**: the per-user connection to Bybit. It holds the integration-level (master) credentials, the region, and the connection state (connected, disconnected, auto-paused).
+- **Exchange account**: one portfolio per Bybit UID (`AccountType = Exchange`, `Exchange = "Bybit"`, `ExternalId = <UID>`). The master account and each sub-account are separate exchange accounts, matched by user, exchange and UID.
 
-The exchange integration is being delivered in phases. The target architecture separates:
+**Account selector:**
+- `GET /api/Account/selector-options` returns every non-deleted Manual and Exchange account of the user, with balance, selection and sync health (connected, disconnected, paused, setup-needed, attention-required).
+- `POST /api/Account/select-account` persists the selection.
+- **Add portfolio** creates a Manual account (`/api/Account/create`).
+- Deposits and withdrawals are entered manually only for Manual portfolios; exchange accounts are managed from the Exchange Hub.
 
-- **Manual account** — a user-owned portfolio such as Main or Savings. It never becomes an exchange account through discovery.
-- **Exchange integration** — the per-user connection to Bybit. It owns integration-level connection state and discovery credentials stored in Key Vault.
-- **Exchange account** — a separately selectable portfolio identified by `AccountType = Exchange`, its exchange name, and the external Bybit UID.
-
-Bybit discovery creates or updates only exchange accounts, matching them by user, exchange, and external UID. Manual accounts remain separate. The Accounts page classifies Manual and Exchange contexts by `AccountType`, groups exchange contexts by `Exchange`, and shows source and sync health. The header passively displays the selected account; switching happens on the Accounts page.
-
-**Account selector data:** `GET /api/Account/selector-options` returns every non-deleted Manual and Exchange account belonging to the authenticated user, including disabled or disconnected exchange accounts, with balance, selected state, and sync-health details. Health distinguishes connected, disconnected, paused, setup-needed, and attention-required states. Exchange names are data-driven, so the same selector can group future exchanges.
-
-**Selection and creation:** Selecting a context uses `POST /api/Account/select-account` and persists the selected account. **Add portfolio** creates a Manual account through the existing `/api/Account/create` endpoint. Deposits and withdrawals are available only for Manual portfolios; exchange account management links to the relevant Exchange Hub page. No schema migration is required.
-
-The delivery roadmap is PR1 data-model foundation, PR2 exchange-agnostic API, PR3 real exchange pages, PR4 account selector, and PR5 sync-engine refinement. See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) for phase scope, and [Repository Map](docs/README.md) for current code entry points.
-
-#### What gets synced
-
-| Data | How it's recorded |
-|------|------------------|
-| **Buy** | Deducts cost (qty × price + fee) from your account balance. Adds coins to the crypto asset. |
-| **Sell** | Adds proceeds (qty × price − fee) to your account balance. Removes coins from the crypto asset. |
-| **Deposit** (crypto) | Adds coins to the crypto asset balance. Updates account balance by deposit value (qty × price). |
-| **Withdrawal** (crypto) | Removes coins from the crypto asset balance. Deducts withdrawal value from account balance. |
-
-If a coin doesn't exist in your portfolio yet, the sync automatically creates it by looking up the symbol on CoinMarketCap. Unknown coins will appear in the sync logs as failed — you can create them manually from the app.
-
-Deposits and withdrawals go through multiple statuses (Pending → Processing → Success / Failed). The sync tracks each status change and only affects your balances when the status reaches **Success**. Pending/failed transactions appear in your account history with a status badge so you always know what's happening.
-
-#### Bybit API status reference
-
-Non-Success entries are **skipped entirely** — no database records are created until Success is reached. This is intentional: creating a pending record would block the full creation path when Success arrives later (the dedup check would match the existing `ExchangeTransactionId` and return early without crediting the asset or updating balances).
-
-Status values as returned by the Bybit V5 API:
-
-| Operation | Success value | Type | Bybit docs |
-|-----------|--------------|------|------------|
-| **Deposit** | `"3"` (integer in JSON) | Numeric enum | [depositStatus](https://bybit-exchange.github.io/docs/v5/enum#depositstatus) |
-| **Withdrawal** | `"success"` (string literal) | String enum | [withdrawStatus](https://bybit-exchange.github.io/docs/v5/enum#withdrawstatus) |
-| **Order** | `"Filled"` (string literal) | String enum | [orderStatus](https://bybit-exchange.github.io/docs/v5/enum#orderstatus) |
-
-Deposit statuses: `0`=unknown, `1`=toBeConfirmed, `2`=processing, `3`=success, `4`=failed, `7`=rollback processing, plus sub-statuses `70011`–`10012`.  
-Withdrawal statuses: `SecurityCheck`, `Pending`, `success`, `CancelByUser`, `Reject`, `Fail`, `BlockchainConfirmed`, `MoreInformationRequired`.
-
-#### Data flow
-
-```
-Bybit (order filled)
-  │
-  ├─ Webhook POST → /api/tradewebhook/bybit/{userId}/{accountId}
-  │    ├─ HMAC-SHA256 signature validated against your Key Vault secret
-  │    ├─ Dedup check via ExchangeOrderId (idempotent)
-  │    ├─ Coin auto-created via CoinMarketCap if new
-  │    └─ Order saved + balance updated
-  │
-  └─ (missed webhook / deposit / withdrawal)
-       │
-       └─ Timer function (every 30s)
-            ├─ Fetch recent orders from Bybit REST API
-            ├─ Fetch recent deposits & withdrawals from Bybit REST API
-            ├─ Dedup check via ExchangeOrderId / ExchangeTransactionId
-            ├─ Status tracked (Pending / Success / Failed)
-            └─ Saved to database + balance updated
-
-      Sync logs are written to Azure Blob Storage (JSONL format)
-      and can be viewed in the Exchange Management UI.
-```
-
-#### Retrying a missed Bybit order
-
-If an order was skipped because the sync cursor advanced before the importer was corrected, rewind the cursor for only the affected user and account. This changes no balances and deletes no transactions; it only makes the next timer run request recent Bybit activity again.
-
-Inspect the current cursor first:
-
-```sql
-SELECT Id, UserId, AccountId, ExchangeName, LastSyncAt, LastOrderId, Status
-FROM SyncStatuses
-WHERE UserId = 6
-  AND AccountId = 33
-  AND ExchangeName = 'Bybit';
-```
-
-Reset it inside a transaction:
-
-```sql
-BEGIN TRANSACTION;
-
-UPDATE SyncStatuses
-SET LastSyncAt = DATEADD(minute, -15, SYSUTCDATETIME()),
-    LastOrderId = NULL
-WHERE UserId = 6
-  AND AccountId = 33
-  AND ExchangeName = 'Bybit';
-
-SELECT Id, UserId, AccountId, ExchangeName, LastSyncAt, LastOrderId, Status
-FROM SyncStatuses
-WHERE UserId = 6
-  AND AccountId = 33
-  AND ExchangeName = 'Bybit';
-
-COMMIT TRANSACTION;
-```
-
-Replace `UserId` and `AccountId` with the affected records. A 15-minute rewind may re-fetch other recent activity, but the sync deduplication prevents existing orders, deposits, withdrawals, and transfers from being recorded twice. Order deduplication is scoped to the current exchange account, so an order saved for another account can be imported correctly. After the next Function run, verify the log reports `saved order` rather than `already saved`.
-
-Run this only against the intended environment database. `LastOrderId` is informational; `LastSyncAt` controls the replay window.
+See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) and the [Repository Map](docs/README.md) for code entry points.
 
 #### Setup
 
-**1. Save integration-level Bybit credentials**
+**1. Create read-only API keys in Bybit** (API Management → *Read-Only*):
+
+- **Master key:** enable *Wallet → Account Transfer / Subaccount Transfer*. Bybit requires this permission to list sub-accounts (`/v5/user/submembers`), and it is allowed on read-only keys.
+- **Each sub-account** that should sync needs its own read-only key with *Wallet → SubMemberTransferList* enabled. Bybit requires this permission for a sub-account key to list universal transfers.
+- When you save a new key, DG Invest checks it with Bybit (`/v5/user/query-api`) **before** storing it:
+  - keys that can trade or withdraw (`readOnly != 1`) are rejected;
+  - keys Bybit rejects are refused;
+  - if Bybit is unreachable, the save fails with 503 and nothing is stored.
+
+**2. Connect the integration.** Use the Exchange Hub (`/exchanges/bybit`) to enter the master key, secret, master UID and region. The API endpoint is:
 
 ```http
 POST /api/exchange/bybit/integration-credentials
 Authorization: Bearer <jwt>
 
-{
-  "apiKey": "your-bybit-api-key",
-  "apiSecret": "your-bybit-api-secret",
-  "region": "Global",
-  "masterUid": "optional-bybit-master-uid"
-}
+{ "apiKey": "...", "apiSecret": "...", "region": "Global", "masterUid": "optional-bybit-master-uid" }
 ```
 
-Credentials are stored in **Azure Key Vault** — never in the database or browser state after save. The application owns the Key Vault naming convention.
+**Region:** `Global` (api.bybit.com) or `Eu` (api.bybit.eu, for accounts under the EU entity).
 
-**2. Sync your sub-accounts**
+**3. Discover sub-accounts** (`POST /api/exchange/bybit/sync-accounts`):
+- Bybit UIDs are matched by user, exchange and UID.
+- New UIDs become new exchange accounts, and returned UIDs are re-enabled.
+- UIDs no longer returned are disabled, but their history is kept.
+- The linked master account is never disabled by discovery.
 
-```http
-POST /api/exchange/bybit/sync-accounts
-Authorization: Bearer <jwt>
+**4. Save a read-only key for each sub-account** on its account page (`POST /api/exchange/bybit/credentials`).
+
+**5. Optional:** run the [historical import](#historical-import-backfill) to bring in activity from before the connection.
+
+#### How sync works
+
+The timer `SyncBybitOrders` (every 30 seconds, when `BybitSync:Enabled`) and the manual **Sync now** button (`POST /api/Exchange/bybit/sync/{accountId}`) both run `BybitAccountSyncService.SyncAsync`. For each enabled account, one run does the following:
+
+1. **Checks** that the account has a sync status, sync is enabled, the integration is connected (not disconnected or auto-paused) and credentials exist.
+2. **Picks the start of the range:**
+   - `LastSyncAt − 5 min` (the 5-minute overlap catches late arrivals);
+   - if the account never synced, `BybitCredentialsSetAt − 5 min`, so manual entries made before connecting are not imported again;
+   - with neither, the last 30 days.
+3. **Fetches from that point to now in windows of at most 7 days**, always sending both `startTime` and `endTime`.
+   - Bybit allows 7 days per request for orders and transfers, and less than 30 days for deposits and withdrawals. If you send only a start time, Bybit returns just the next 7 days, or rejects deposits with `131002`.
+   - One run covers at most **8 windows (~56 days)**. An account further behind catches up over the following runs.
+   - Each window fetches spot order history (paginated), deposits, withdrawals, internal transfers and universal transfers.
+4. **Records the events in time order**, so a buy is recorded after the deposit, transfer or sell that funded it. Every event is idempotent:
+
+   | Event | Deduplication key |
+   |---|---|
+   | Order | Bybit `orderId`, per crypto asset (unique index) |
+   | Deposit / withdrawal | Bybit `txID` |
+   | Transfer | transfer ID + direction + account |
+
+   Orders imported:
+   - `Filled`;
+   - `PartiallyFilledCanceled` with an executed quantity above zero (only the executed quantity and average price are used).
+
+   Fees come from Bybit's execution history when available.
+5. **Reconciles balances with Bybit** (see [where each number comes from](#where-each-number-comes-from)).
+6. **Advances the checkpoint** to the end of the last fetched window, **only if every item was processed**. If any item failed, the checkpoint stays and the next run retries the same range.
+
+Synced events are recorded **without** the local "insufficient funds" check: Bybit already executed them, and cash is taken from the Bybit wallet afterwards.
+
+#### Where each number comes from
+
+| Value | Source |
+|---|---|
+| Quantity of each coin | **Bybit wallet** (Funding + Unified). It replaces the history-derived quantity on every sync. |
+| Cash (USDT + USDC) | **Bybit wallet** (Funding + Unified). A failed or incomplete read leaves cash unchanged. |
+| Cost, average price, gain/loss | DG Invest transaction history |
+| Total deposited | History: deposits + transfers in − withdrawals − transfers out (the opening balance is excluded) |
+
+On every sync, each asset is first recalculated from its history, then its quantity is set to the Bybit wallet:
+- If Bybit holds **less** than history explains, the cost is reduced proportionally, like a sale at the average price.
+- If Bybit holds **more**, the extra currently enters with **no cost**, which inflates gains (see [Known limitations](#known-limitations)).
+
+Calculating everything from history alone is not viable: Bybit has many activity types (Earn, convert, P2P, airdrops, fees in the traded coin), and any missed event would leave balances wrong forever. Bybit, however, does not know your cost basis for coins that came from elsewhere, so cost comes from DG Invest's history.
+
+#### Transfers
+
+| Transfer | What DG Invest records |
+|---|---|
+| Within the same UID (Funding ↔ Unified) | Nothing. It nets to zero. |
+| Between UIDs (master ↔ sub, sub ↔ sub) in USDT/USDC | `TransferOut` on the source account and `TransferIn` on the destination, each side recorded by that account's own sync. They count toward each account's total deposited and net to zero across your accounts. |
+| Between UIDs in other coins (e.g. BTC) | Not recorded in history yet. Quantities move only through wallet reconciliation (see Known limitations). |
+
+If a key lacks permission to list transfers (Bybit error `10005`), the sync **skips transfers** for that account and logs a warning, but still imports orders, deposits and withdrawals. Cash is still reconciled from the wallet. Only the `TransferIn`/`TransferOut` history entries, and therefore that account's total deposited, are missing. After adding the permission, run the historical import to recover them: the checkpoint has already moved past the skipped range.
+
+#### Historical import (backfill)
+
+`POST /api/Exchange/bybit/backfill/{accountId}` (the **Historical import** card on the account page) imports Bybit history from a start date, up to two years back, through now:
+- It uses 7-day windows and drops events whose timestamp falls outside each window.
+- It records history **without changing cash**, reconciles coin quantities, and sets the checkpoint to the end of the import.
+- It is safe to run again: events already stored are skipped.
+
+Use it to recover trades that are missing from history. It runs as a single synchronous request.
+
+To force the regular sync to look further back instead, rewind the checkpoint for one account (advanced; affects only the next runs):
+
+```sql
+BEGIN TRANSACTION;
+UPDATE SyncStatuses
+SET LastSyncAt = DATEADD(minute, -15, SYSUTCDATETIME()), LastOrderId = NULL
+WHERE UserId = 6 AND AccountId = 33 AND ExchangeName = 'Bybit';
+SELECT Id, UserId, AccountId, LastSyncAt, Status FROM SyncStatuses
+WHERE UserId = 6 AND AccountId = 33 AND ExchangeName = 'Bybit';
+COMMIT TRANSACTION;
 ```
 
-This reads the Bybit account hierarchy, matches exchange accounts by user, exchange, and external UID, and creates or updates exchange portfolio contexts. Manual accounts are not converted by discovery.
+#### Credentials and security
 
-**3. Set up the webhook (optional — for instant order sync)**
+- **Read-only keys only** (see Setup).
+- **Storage:** credentials live in Azure Key Vault, never in the database or browser state.
+  - Each environment has a dedicated credential vault, `dginvest-<env>-cred-weu1`, separate from the app-secrets vault (see [infra/README.md](infra/README.md#key-vaults)).
+  - Secret names: `bybit-{userId}-{accountId}-api-key|api-secret` (per account) and `bybit-integration-{userId}-api-key|api-secret` (integration).
+- **The browser only sees** a masked key (last 4 characters) and has/has-not flags.
+- **Saving only writes the values provided.** A save without a new key never blanks the stored secrets.
+- **Caching:** each process caches credentials for 24 hours. When Bybit rejects a key (10003/10004), the sync re-reads it from Key Vault and retries **once** before pausing, so a key rotated through the API is picked up by the Functions host.
+- **Disconnect** stops discovery and sync, disables the accounts' sync statuses and blanks the stored keys; history is kept. **Also delete the key in Bybit** (the confirmation dialog says so). Deleting the secrets instead would block reconnecting for 7 days, because the credential vault has soft delete with purge protection.
 
-In Bybit → Account → API Management → Webhooks, set the endpoint URL to:
+#### Automatic pause
 
-```
-https://your-domain.com/api/tradewebhook/bybit/{userId}/{accountId}
-```
+| Trigger | Result |
+|---|---|
+| Bybit rejects the credentials again after the fresh-key retry | Integration auto-paused immediately, and the user is emailed. Disconnect and reconnect from the Exchange Hub. |
+| 10 consecutive transport failures (network, 5xx, 429) | Integration auto-paused |
+| Any other error | The account's sync status becomes `Error`, and the next run retries |
 
-Use a different URL for each sub-account so trades are routed to the correct portfolio account. If you skip this step, orders are still picked up by the REST poller within 30 seconds.
+#### Bybit status reference
 
-#### Feature flag
+Non-success deposits and withdrawals are **skipped entirely** and recorded once they succeed. Storing a pending row first would make the later success look like a duplicate.
 
-The background sync can be turned off without deploying code. Set the following in your Azure Function app settings:
-
-```
-BybitSync:Enabled = false
-```
-
-It defaults to `true` if not set.
-
-#### Sync cutoff (preventing manual-entry duplicates)
-
-When you enable Bybit sync on an account that already has manual entries, the sync must avoid importing the same trades again and doubling your balances. The system uses a sliding time-window cutoff:
-
-| Scenario | `startTime` sent to Bybit | Result |
-|----------|--------------------------|--------|
-| First sync after credentials saved | `BybitCredentialsSetAt` (time credentials were saved) | Manual entries before this timestamp are untouched |
-| Every subsequent sync | `LastSyncAt` (time of the last successful sync) | Only new Bybit orders are fetched; the window slides forward naturally |
-
-`BybitCredentialsSetAt` is stamped exactly once (never overwritten) when you save your credentials in the UI. `LastSyncAt` updates after every successful sync run, keeping the window within Bybit's 7-day order-history limit. Deposits and withdrawals use the same sliding window.
-
-#### Migrating existing accounts
-
-If you saved Bybit credentials **before** this cutoff mechanism was introduced, your account lacks a `SyncStatus` row in the database. The sync **skips** these accounts to prevent accidental full-history imports.
-
-To enable sync on these accounts, **re-save your credentials** in the Exchange Management UI. This creates the `SyncStatus` row with a fresh `BybitCredentialsSetAt` timestamp, and the next sync run will only import orders after that moment — leaving your manual entries intact.
-
-#### Azure Key Vault configuration
-
-Add the following to `appsettings.json`:
-
-```json
-"KeyVaultSettings": {
-  "VaultUri": "https://your-keyvault-name.vault.azure.net/"
-}
-```
-
-The API uses `DefaultAzureCredential` to authenticate, which works with:
-- Managed Identity (Azure App Service / Azure Container Apps)
-- Azure CLI (`az login`) for local development
-
-#### Security
-
-- Webhook endpoint does **not** require JWT — it is protected exclusively by HMAC-SHA256 signature validation.
-- Invalid signatures return `401`. Processing errors return `200` to prevent Bybit retry storms.
-- `ExchangeOrderId` and `ExchangeTransactionId` provide idempotency — if Bybit delivers the same event more than once, it's silently skipped.
-- API credentials are stored in Azure Key Vault, never in the database or browser.
+| Operation | Imported when | Bybit docs |
+|---|---|---|
+| **Deposit** | `"3"` (success) | [depositStatus](https://bybit-exchange.github.io/docs/v5/enum#depositstatus) |
+| **Withdrawal** | `"success"` | [withdrawStatus](https://bybit-exchange.github.io/docs/v5/enum#withdrawstatus) |
+| **Order** | `Filled`, or `PartiallyFilledCanceled` with executed quantity > 0 | [orderStatus](https://bybit-exchange.github.io/docs/v5/enum#orderstatus) |
 
 #### Exchange Hub
 
-The frontend provides a dedicated **Exchange Hub** (`/exchanges`) for managing exchange integrations without touching the API. The page lists connected exchange accounts and provides a route to manage the Bybit integration. The Accounts page's **Connect an exchange** link opens this hub; a selected exchange account's **Manage this account** action opens its account details.
+The **Exchange Hub** (`/exchanges`) manages exchange integrations from the app. The Accounts page's **Connect an exchange** link opens it. The Bybit area provides:
 
-The Bybit integration area contains:
-
-1. **Credentials form** — enter API key, secret, and webhook signing secret per internal account.
-2. **Sub-account sync** — pull sub-accounts from Bybit, see them listed with their UID, username, and remark. Unmapped sub-accounts can be linked to an internal portfolio account with one click.
-3. **Sync status table** — shows the health of each exchange connection: status badge (Connected / Error / Disconnected), last sync timestamp, last processed order/transaction ID, and error count.
-4. **Sync log viewer** — expandable per account, displays every processed event (order, deposit, withdrawal) with its status (Success / Duplicate / Failed), symbol, type (Buy / Sell / Deposit / Withdraw), quantity, price, and error message. Supports date filtering.
+1. **Integration credentials:** master key, secret, master UID and region, plus connect and disconnect.
+2. **Sub-account discovery:** lists Bybit sub-accounts by UID and maps them to exchange accounts.
+3. **Account pages:** a per-account read-only key and region, test connection, sync now, pause and resume, historical import, and sync logs.
+4. **Sync health:** status badge, last sync time, error count and the last error.
 
 #### Monitoring
 
-Every synced event is recorded in two places:
-
 | Where | What's stored |
 |-------|--------------|
-| **Sync logs** (Azure Blob Storage) | JSONL log per day per account with full event details |
-| **Sync status** (database) | Current health of each exchange connection (last sync time, error state, last processed ID) |
-| **Account transactions** (database) | Your account history with status badges (Pending / Completed / Failed) |
-| **Crypto transactions** (database) | Per-coin trade history with type badges (Buy / Sell / Deposit / Withdraw) |
+| **Sync logs** (Azure Blob Storage) | A JSONL log per day with the events that **failed** to import and why. Successful and duplicate events are not logged; they are visible as transactions. |
+| **Sync status** (database) | Per-account health: last sync (checkpoint), status, error count, last error |
+| **Account transactions** (database) | Account history with status badges (Pending / Completed / Failed) |
+| **Crypto transactions** (database) | Per-coin history (Buy / Sell / Transfer In / Transfer Out) |
+
+#### Feature flag
+
+Set `BybitSync:Enabled = false` in the Function App settings to stop background sync without deploying code. It defaults to `true`.
 
 #### Troubleshooting
 
-**Transactions not appearing in the app**
-1. Check the Exchange Management UI → Sync Logs — every event is logged with its status
-2. Verify `BybitSync:Enabled` is not set to `false` in your function app settings
-3. Confirm your API key has the required permissions (account transfer + spot trade history)
-4. For deposits/withdrawals, only `Success` status affects your balance; pending ones display with a yellow badge
+**A transaction is missing**
+1. Check the account's sync logs, which list items that failed to import.
+2. Check that `BybitSync:Enabled` is not `false` and the integration is not paused.
+3. Run the **historical import** from a date before the missing trade.
+4. If it is still missing, check its type and status in Bybit. Only spot orders (`Filled` / `PartiallyFilledCanceled`) and successful deposits and withdrawals are imported.
 
-**Sync log errors**
-- `Could not resolve asset for symbol` — the coin is not in your portfolio and CoinMarketCap returned no data. Create it manually from the app.
-- `Transaction strategy failed` — check the error message in the log detail. Usually indicates an inconsistent balance (e.g., trying to withdraw more than you hold).
-- `Failed to fetch` — your Bybit API credentials may be invalid or expired. Re-save them from the Credentials form.
-- `no sync status for account` — your credentials were saved before the sync cutoff mechanism was introduced. Re-save them in the Exchange Management UI to enable sync.
+**Common errors**
 
-**Duplicate transactions**
-The sync is idempotent — running it multiple times will never create duplicates. If you see duplicates, check the `ExchangeOrderId` or `ExchangeTransactionId` values in the database for collisions.
+| Message | Meaning and fix |
+|---|---|
+| `Bybit rejected sync request: 10003 …` / `10004 …` | The key is invalid, revoked, or the region is wrong. Save a new read-only key with the right region. |
+| `This Bybit API key can trade or withdraw…` | Create a **read-only** key. For the master key, also enable Wallet → Account Transfer / Subaccount Transfer. |
+| `One or more Bybit items failed to process; checkpoint was not advanced` | One item could not be imported (see the sync logs). The account retries every run until it is fixed. A coin unknown to CoinMarketCap can be created manually. |
+| `Could not resolve asset for symbol` | CoinMarketCap has no data for the coin. Create it manually in the app. |
+| `… cannot list universal transfers (10005); transfers are skipped` (warning in the Function logs) | The key lacks the transfer permission. Enable *Wallet → SubMemberTransferList* (sub-account key) or *Subaccount Transfer* (master key) in Bybit. Then run the **historical import** from the date transfers started being skipped, because the regular sync does not go back for them. |
+| `Credential storage is temporarily unavailable` | Key Vault is unreachable. The next run retries automatically. |
+| `no sync status for account` (log) | The credentials predate the sync-status mechanism. Re-save them to enable sync. |
+
+**Duplicates:** sync is idempotent, so running it again never duplicates. If you see duplicates, check `ExchangeOrderId` / `ExchangeTransactionId` for collisions.
+
+#### Known limitations
+
+These are tracked in the integration review and planned for upcoming PRs:
+
+- **Cost basis:**
+  - coins Bybit holds beyond what history explains enter at zero cost, which inflates gains;
+  - `TransferIn` adds coins at zero cost;
+  - `TransferOut` keeps the full cost on the remaining coins;
+  - crypto transfers between your own accounts are not recorded, so cost is lost at the destination;
+  - deposits record the price at processing time, not at deposit time, which is wrong for backfilled deposits.
+- **Non-USD pairs** (e.g. `BTCBRL`, `ETHBTC`) are recorded with the quote-currency price as if it were USD.
+- **Deposit and withdrawal deduplication** uses the `txID` across all accounts, not per account.
+- **One item that can never be imported** blocks that account's checkpoint.
+- **Cash** uses Bybit's transferable balance, which excludes USDT locked in open orders.
+- **Cost and resilience:** the timer runs every 30 s with sequential Bybit calls, ~15 per account; there is no short timeout or rate-limit handling.
 
 ---
 

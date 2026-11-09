@@ -30,7 +30,7 @@ public class ApiContractCompatibilityTests
             new SyncStatusDto(1, "Futures", "Bybit", "Connected", null, null, 0, null),
             JsonOptions);
         var subaccount = JsonSerializer.Serialize(
-            new BybitSubaccountRowDto(1, "Futures", "UID-001", "ok", true, true, false, null, "", null, true),
+            new BybitSubaccountRowDto(1, "Futures", "UID-001", "ok", true, true, null, null, true),
             JsonOptions);
         var subMember = JsonSerializer.Serialize(
             new BybitSubMemberDto("UID-001", "futures", "", "Futures", 1),

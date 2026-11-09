@@ -73,8 +73,6 @@ public sealed class ExchangeApiIntegrationFixture : IAsyncLifetime
     {
         using var scope = Factory.Services.CreateScope();
         var function = new SyncBybitOrders(
-            Factory.Bybit,
-            scope.ServiceProvider.GetRequiredService<IBybitOrderSyncService>(),
             scope.ServiceProvider.GetRequiredService<IBybitAccountSyncService>(),
             Factory.KeyVault,
             scope.ServiceProvider.GetRequiredService<DataContext>(),
@@ -255,7 +253,6 @@ public sealed class FakeBybitService : IBybitService
     public int OrderHistoryCallCount { get; private set; }
     public Dictionary<string, BybitWalletBalanceResponse> WalletBalancesByAccountType { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public bool ValidateWebhookSignature(string rawBody, string signature, string timestamp, string webhookSecret) => true;
     public Task<BybitApiKeyInfo> GetApiKeyInfoAsync(string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default) =>
         Task.FromResult(new BybitApiKeyInfo { ReadOnly = 1 });
     public Task<List<BybitSubMember>> GetSubAccountsAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)

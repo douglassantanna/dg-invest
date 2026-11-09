@@ -57,8 +57,6 @@ public class DeleteCredentialsCommandHandler : IRequestHandler<DeleteCredentials
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-key"), string.Empty);
             await _keyVaultService.SetSecretAsync(
                 SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "api-secret"), string.Empty);
-            await _keyVaultService.SetSecretAsync(
-                SaveBybitCredentialsCommandHandler.BuildKey(request.UserId, request.AccountId, "webhook-secret"), string.Empty);
 
             var strategy = _context.Database.CreateExecutionStrategy();
             await strategy.ExecuteAsync(async () =>

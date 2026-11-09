@@ -15,7 +15,7 @@ public static class BybitCredentialKeys
 
 public static class BybitCredentialReader
 {
-    private static readonly string[] CacheableCredentialSuffixes = ["api-key", "api-secret", "webhook-secret"];
+    private static readonly string[] CacheableCredentialSuffixes = ["api-key", "api-secret"];
 
     public static async Task<KeyVaultSecretReadResult> ReadAsync(IKeyVaultService vault, int userId, int? accountId, string suffix, CancellationToken cancellationToken = default, ILogger? logger = null)
     {
@@ -41,7 +41,7 @@ public static class BybitCredentialReader
 public interface IBybitCredentialSetService
 {
     Task<KeyVaultSecretReadResult> ReadAsync(int userId, int? accountId, string suffix, CancellationToken cancellationToken = default);
-    Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, string? webhookSecret, BybitRegion region, CancellationToken cancellationToken = default);
+    Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default);
 }
 
 // RejectedStatusCode is set when the credentials themselves were refused (e.g. not a read-only key); Error then holds
@@ -90,7 +90,7 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         }
     }
 
-    public async Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, string? webhookSecret, BybitRegion region, CancellationToken cancellationToken = default)
+    public async Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default)
     {
         string Key(string suffix) => accountId is { } id
             ? BybitCredentialKeys.LegacyAccountKey(userId, id, suffix)
@@ -102,14 +102,11 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
         try
         {
-            // Write only the secrets the caller provided. A partial update (e.g. only a webhook secret,
-            // or a key rotation without re-typing the webhook secret) must not blank the stored values.
+            // Write only the secrets the caller provided, so a partial call never blanks a stored value.
             if (!string.IsNullOrEmpty(apiKey))
                 await _vault.SetSecretAsync(Key("api-key"), apiKey);
             if (!string.IsNullOrEmpty(apiSecret))
                 await _vault.SetSecretAsync(Key("api-secret"), apiSecret);
-            if (!string.IsNullOrEmpty(webhookSecret))
-                await _vault.SetSecretAsync(Key("webhook-secret"), webhookSecret);
         }
         catch (Exception ex)
         {

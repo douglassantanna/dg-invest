@@ -14,9 +14,7 @@ describe('Exchange management', () => {
     status: 'ok',
     hasApiKey: true,
     hasApiSecret: true,
-    hasWebhookSecret: true,
     maskedApiKey: '....1234',
-    webhookUrl: '/api/tradewebhook/bybit/1/101',
     lastVerifiedAt: 'Just now',
     isEnabled: true,
   });
@@ -53,7 +51,6 @@ describe('Exchange management', () => {
       lastErrorMessage: null,
       hasApiKey: true,
       hasApiSecret: true,
-      hasWebhookSecret: true,
     }],
   });
 
@@ -83,7 +80,7 @@ describe('Exchange management', () => {
     status: 'Imported',
     errorMessage: null,
     timestamp: '2026-08-19T12:00:00Z',
-    importSource: 'Webhook',
+    importSource: 'RestPoll',
   }]);
 
   const subMembers = response([{
@@ -353,9 +350,7 @@ describe('Exchange management', () => {
       status: 'ok',
       hasApiKey: true,
       hasApiSecret: true,
-      hasWebhookSecret: true,
       maskedApiKey: '....9999',
-      webhookUrl: '/api/tradewebhook/bybit/1/202',
       lastVerifiedAt: 'Just now',
       isEnabled: true,
     });
@@ -406,7 +401,6 @@ describe('Exchange management', () => {
         accountId: 101,
         apiKey: 'new-key',
         apiSecret: 'new-secret',
-        webhookSecret: 'new-webhook',
         region: 'Global',
       });
       request.reply(response(null, 'Credentials saved successfully'));
@@ -415,12 +409,10 @@ describe('Exchange management', () => {
 
     cy.get('#account-api-key').type('new-key');
     cy.get('#account-api-secret').type('new-secret');
-    cy.get('#account-webhook-secret').type('new-webhook');
     cy.contains('button', 'Save credentials').click();
     cy.wait('@saveCredentials');
     cy.get('#account-api-key').should('have.value', '');
     cy.get('#account-api-secret').should('have.value', '');
-    cy.get('#account-webhook-secret').should('have.value', '');
   });
 
   it('surfaces Bybit account test connection errors', () => {
