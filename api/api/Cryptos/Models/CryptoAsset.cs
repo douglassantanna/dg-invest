@@ -132,8 +132,32 @@ public class CryptoAsset : Entity
                 GetInvestmentGainLossPercentage(currentPrice),
                 0m);
 
-        var unexplained = Math.Max(0m, Balance - HistoryBalance());
-        var invested = TotalInvested + unexplained * currentPrice;
+        return ToCostBasisView(TotalInvested, HistoryBalance(), currentPrice);
+    }
+
+    // What GetCostBasis would show after recalculating from history under the policy and reconciling back to the
+    // current balance, which is what the next Bybit sync or a recalculation does. Does not change the asset.
+    public CostBasisView PreviewCostBasis(decimal currentPrice, TransferCostPolicy policy)
+    {
+        var (historyBalance, historyInvested) = Replay(_transactions, policy);
+        var invested = Balance == 0 ? 0m
+            : historyBalance > 0 && Balance < historyBalance ? historyInvested * (Balance / historyBalance)
+            : historyInvested;
+
+        if (policy == TransferCostPolicy.Legacy)
+        {
+            var legacyGain = invested == 0 ? 0 : CurrentWorth(currentPrice) - invested;
+            return new CostBasisView(invested, Balance == 0 ? 0 : invested / Balance, legacyGain,
+                invested == 0 ? 0 : legacyGain / invested * 100, 0m);
+        }
+
+        return ToCostBasisView(invested, historyBalance, currentPrice);
+    }
+
+    private CostBasisView ToCostBasisView(decimal recordedInvested, decimal historyBalance, decimal currentPrice)
+    {
+        var unexplained = Math.Max(0m, Balance - historyBalance);
+        var invested = recordedInvested + unexplained * currentPrice;
         var averagePrice = Balance == 0 ? 0 : invested / Balance;
         var gainLoss = invested == 0 ? 0 : CurrentWorth(currentPrice) - invested;
         var gainLossPercentage = invested == 0 ? 0 : gainLoss / invested * 100;

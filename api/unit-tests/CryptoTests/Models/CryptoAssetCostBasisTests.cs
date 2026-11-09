@@ -113,6 +113,35 @@ public class CryptoAssetCostBasisTests
     }
 
     [Fact]
+    public void Preview_ShowsTheProportionalResultWithoutChangingTheAsset()
+    {
+        // Stored values were computed with Legacy: the withdrawal kept the full cost.
+        var asset = Asset(Tx(ETransactionType.Buy, 1m, 60_000m, 0), Tx(ETransactionType.TransferOut, 0.5m, 80_000m, 1));
+        asset.TotalInvested.Should().Be(60_000m);
+
+        var preview = asset.PreviewCostBasis(80_000m, TransferCostPolicy.Proportional);
+
+        preview.Invested.Should().Be(30_000m);
+        preview.AveragePrice.Should().Be(60_000m);
+        preview.GainLoss.Should().Be(10_000m);
+        asset.TotalInvested.Should().Be(60_000m, "a preview must not change the stored values");
+    }
+
+    [Fact]
+    public void Preview_ReconcilesToTheCurrentBalanceLikeTheNextSync()
+    {
+        // History explains 1 BTC at 60k, but Bybit reported only 0.8 BTC (e.g. fees in BTC): cost scales down.
+        var asset = Asset(Tx(ETransactionType.Buy, 1m, 60_000m, 0));
+        asset.ReconcileBalance(0.8m);
+
+        var preview = asset.PreviewCostBasis(80_000m, TransferCostPolicy.Proportional);
+
+        preview.Invested.Should().Be(48_000m);
+        preview.AveragePrice.Should().Be(60_000m);
+        preview.UnexplainedBalance.Should().Be(0m);
+    }
+
+    [Fact]
     public void CostBasis_WithoutGapMatchesTheStoredValues()
     {
         var asset = Asset(Tx(ETransactionType.Buy, 1m, 60_000m, 0));
