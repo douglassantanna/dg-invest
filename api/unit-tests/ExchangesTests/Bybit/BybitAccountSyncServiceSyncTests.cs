@@ -146,6 +146,51 @@ public class BybitAccountSyncServiceSyncTests
     }
 
     [Fact]
+    public async Task SyncAsync_WhenCachedCredentialIsRejected_RetriesWithFreshCredentialsBeforePausing()
+    {
+        // The Functions host caches credentials for 24h, so a key saved through the API after a reconnect
+        // is invisible until the cache is cleared. The first call fails with the stale key (10003).
+        var harness = await Harness.CreateAsync();
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.MarkEnabled();
+        harness.Context.ExchangeIntegrations.Add(integration);
+        await harness.Context.SaveChangesAsync();
+        var orderHistoryCalls = 0;
+        harness.Bybit.Setup(s => s.GetOrderHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
+                It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
+            .ReturnsAsync(() => ++orderHistoryCalls == 1
+                ? throw new BybitApiException(10003, "API key is invalid.", "/v5/order/history")
+                : []);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        orderHistoryCalls.Should().Be(2);
+        harness.KeyVault.Verify(vault => vault.InvalidateCachedSecret(It.Is<string>(name => name.EndsWith("api-key"))), Times.AtLeastOnce);
+        (await harness.Context.ExchangeIntegrations.SingleAsync()).Status.Should().NotBe(ExchangeIntegration.AutoPausedStatus);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenFreshCredentialIsAlsoRejected_PausesTheIntegration()
+    {
+        var harness = await Harness.CreateAsync();
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.MarkEnabled();
+        harness.Context.ExchangeIntegrations.Add(integration);
+        await harness.Context.SaveChangesAsync();
+        harness.Bybit.Setup(s => s.GetOrderHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
+                It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
+            .ThrowsAsync(new BybitApiException(10003, "API key is invalid.", "/v5/order/history"));
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        (await harness.Context.ExchangeIntegrations.SingleAsync()).Status.Should().Be(ExchangeIntegration.AutoPausedStatus);
+    }
+
+    [Fact]
     public async Task SyncAsync_ImportsPartiallyFilledCanceledOrdersWithExecutedQuantity()
     {
         var harness = await Harness.CreateAsync();
@@ -205,6 +250,8 @@ public class BybitAccountSyncServiceSyncTests
         public required Account Account { get; init; }
         public required BybitAccountSyncService Service { get; init; }
         public required Mock<IBybitOrderSyncService> OrderSync { get; init; }
+        public required Mock<IKeyVaultService> KeyVault { get; init; }
+        public required Mock<IBybitService> Bybit { get; init; }
         public List<BybitOrderData> Orders { get; } = [];
         public List<BybitDepositWithdrawalRow> Deposits { get; } = [];
         public Dictionary<(string AccountType, string Coin), string> CashBalances { get; } = [];
@@ -249,7 +296,15 @@ public class BybitAccountSyncServiceSyncTests
                 Mock.Of<ICoinMarketCapService>(),
                 NullLogger<BybitAccountSyncService>.Instance);
 
-            var harness = new Harness { Context = context, Account = account, Service = service, OrderSync = orderSync };
+            var harness = new Harness
+            {
+                Context = context,
+                Account = account,
+                Service = service,
+                OrderSync = orderSync,
+                KeyVault = keyVault,
+                Bybit = bybit
+            };
 
             bybit.Setup(s => s.GetOrderHistoryAsync(
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
