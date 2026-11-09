@@ -105,7 +105,6 @@ public class DisconnectBybitIntegrationCommandHandler : IRequestHandler<Disconne
         {
             await _keyVaultService.SetSecretAsync(BybitCredentialKeys.LegacyAccountKey(userId, accountId, "api-key"), string.Empty);
             await _keyVaultService.SetSecretAsync(BybitCredentialKeys.LegacyAccountKey(userId, accountId, "api-secret"), string.Empty);
-            await _keyVaultService.SetSecretAsync(BybitCredentialKeys.LegacyAccountKey(userId, accountId, "webhook-secret"), string.Empty);
         }
     }
 }

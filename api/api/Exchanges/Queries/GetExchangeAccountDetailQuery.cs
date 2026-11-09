@@ -25,8 +25,7 @@ public record ExchangeConnectionDto(
     int ErrorCount,
     string? LastErrorMessage,
     bool HasApiKey,
-    bool HasApiSecret,
-    bool HasWebhookSecret);
+    bool HasApiSecret);
 
 public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeAccountDetailQuery, Response>
 {
@@ -61,9 +60,8 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
         {
             var apiKey = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-key", cancellationToken);
             var apiSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "api-secret", cancellationToken);
-            var webhookSecret = await BybitCredentialReader.ReadAsync(_keyVaultService, request.UserId, request.AccountId, "webhook-secret", cancellationToken);
 
-            if (apiKey.IsUnavailable || apiSecret.IsUnavailable || webhookSecret.IsUnavailable)
+            if (apiKey.IsUnavailable || apiSecret.IsUnavailable)
                 return new Response(KeyVaultSecretReadResult.UnavailableMessage, false, 503);
 
             connections.Add(new ExchangeConnectionDto(
@@ -73,8 +71,7 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
                 status.ErrorCount,
                 status.LastErrorMessage,
                 apiKey.IsFound && !string.IsNullOrEmpty(apiKey.Value),
-                apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value),
-                webhookSecret.IsFound && !string.IsNullOrEmpty(webhookSecret.Value)));
+                apiSecret.IsFound && !string.IsNullOrEmpty(apiSecret.Value)));
         }
 
         // If no sync status exists, still report the account as NotConfigured
@@ -86,7 +83,6 @@ public class GetExchangeAccountDetailQueryHandler : IRequestHandler<GetExchangeA
                 null,
                 0,
                 null,
-                false,
                 false,
                 false));
         }

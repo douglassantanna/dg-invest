@@ -54,7 +54,6 @@ public class DisconnectBybitIntegrationCommandHandlerTests
         _keyVault.Verify(v => v.SetSecretAsync("bybit-integration-1-api-secret", string.Empty), Times.Once);
         _keyVault.Verify(v => v.SetSecretAsync($"bybit-1-{account.Id}-api-key", string.Empty), Times.Once);
         _keyVault.Verify(v => v.SetSecretAsync($"bybit-1-{account.Id}-api-secret", string.Empty), Times.Once);
-        _keyVault.Verify(v => v.SetSecretAsync($"bybit-1-{account.Id}-webhook-secret", string.Empty), Times.Once);
     }
 
     [Fact]
@@ -116,6 +115,5 @@ public class DisconnectBybitIntegrationCommandHandlerTests
         status.IsEnabled.Should().BeFalse();
         status.Status.Should().Be("Disconnected");
         _keyVault.Verify(v => v.SetSecretAsync("bybit-integration-1-api-key", string.Empty), Times.Once);
-        _keyVault.Verify(v => v.SetSecretAsync($"bybit-1-{account.Id}-webhook-secret", string.Empty), Times.Once);
     }
 }

@@ -44,8 +44,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         var cmd = new SaveBybitCredentialsCommand(
             UserId: 1, AccountId: 1,
             ApiKey: "my-api-key",
-            ApiSecret: "my-api-secret",
-            WebhookSecret: "my-webhook-secret");
+            ApiSecret: "my-api-secret");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -56,28 +55,19 @@ public class SaveBybitCredentialsCommandHandlerTests
             It.Is<string>(s => s.EndsWith("api-key")), "my-api-key"), Times.Once);
         _keyVaultMock.Verify(v => v.SetSecretAsync(
             It.Is<string>(s => s.EndsWith("api-secret")), "my-api-secret"), Times.Once);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(
-            It.Is<string>(s => s.EndsWith("webhook-secret")), "my-webhook-secret"), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_WhenUpdatingOnlyWebhookSecret_ShouldKeepStoredApiKeyAndSecret()
+    public async Task Handle_WhenEditingWithoutNewCredentials_ShouldKeepStoredApiKeyAndSecret()
     {
         _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
         await _context.SaveChangesAsync();
-        var cmd = new SaveBybitCredentialsCommand(
-            UserId: 1, AccountId: 1,
-            ApiKey: "",
-            ApiSecret: "",
-            WebhookSecret: "new-webhook-secret");
+        var cmd = new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "", ApiSecret: "");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue(result.Message);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(s => s.EndsWith("api-key")), It.IsAny<string>()), Times.Never);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(It.Is<string>(s => s.EndsWith("api-secret")), It.IsAny<string>()), Times.Never);
-        _keyVaultMock.Verify(v => v.SetSecretAsync(
-            It.Is<string>(s => s.EndsWith("webhook-secret")), "new-webhook-secret"), Times.Once);
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -88,7 +78,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, ReadOnlyKeyBybit(readOnly: 0).Object));
 
         var result = await handler.Handle(
-            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "rw-key", ApiSecret: "rw-secret", WebhookSecret: null),
+            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "rw-key", ApiSecret: "rw-secret"),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
@@ -107,7 +97,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, bybit.Object));
 
         var result = await handler.Handle(
-            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "bad-key", ApiSecret: "bad-secret", WebhookSecret: null),
+            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "bad-key", ApiSecret: "bad-secret"),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
@@ -120,7 +110,7 @@ public class SaveBybitCredentialsCommandHandlerTests
     {
         var cmd = new SaveBybitCredentialsCommand(
             UserId: 99, AccountId: 999,
-            ApiKey: "key", ApiSecret: "secret", WebhookSecret: "webhook");
+            ApiKey: "key", ApiSecret: "secret");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -133,7 +123,7 @@ public class SaveBybitCredentialsCommandHandlerTests
     {
         var cmd = new SaveBybitCredentialsCommand(
             UserId: 0, AccountId: 0,
-            ApiKey: "", ApiSecret: "", WebhookSecret: "");
+            ApiKey: "", ApiSecret: "");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -149,7 +139,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         await _context.SaveChangesAsync();
 
         var result = await _handler.Handle(new SaveBybitCredentialsCommand(
-            UserId: 1, AccountId: 1, ApiKey: "same", ApiSecret: "same", WebhookSecret: ""), CancellationToken.None);
+            UserId: 1, AccountId: 1, ApiKey: "same", ApiSecret: "same"), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -162,7 +152,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
 
-        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, account.Id, "key", "secret", ""), CancellationToken.None);
+        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, account.Id, "key", "secret"), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Contain("Bybit exchange account");
@@ -180,7 +170,7 @@ public class SaveBybitCredentialsCommandHandlerTests
 
         var cmd = new SaveBybitCredentialsCommand(
             UserId: 1, AccountId: 1,
-            ApiKey: "key", ApiSecret: "secret", WebhookSecret: "webhook");
+            ApiKey: "key", ApiSecret: "secret");
 
         var result = await _handler.Handle(cmd, CancellationToken.None);
 
@@ -195,7 +185,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         // Nothing reached Key Vault, so the just-created account has no data and must not block a retry with the same name.
         var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, ReadOnlyKeyBybit(readOnly: 0).Object));
 
-        var result = await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "rw-key", "rw-secret", "", "Futures", "UID-001"), CancellationToken.None);
+        var result = await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "rw-key", "rw-secret", "Futures", "UID-001"), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Contain("read-only");
@@ -209,7 +199,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         _keyVaultMock.Setup(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("failed"));
 
-        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "Futures", "UID-001"), CancellationToken.None);
+        var result = await _handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "Futures", "UID-001"), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Contain("recovery may be required");
@@ -230,8 +220,8 @@ public class SaveBybitCredentialsCommandHandlerTests
         await context.SaveChangesAsync();
         var handler = new SaveBybitCredentialsCommandHandler(context, CredentialService(context, _keyVaultMock.Object));
 
-        (await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "First", ""), CancellationToken.None)).IsSuccess.Should().BeTrue();
-        (await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "", "Second", "   "), CancellationToken.None)).IsSuccess.Should().BeTrue();
+        (await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "First", ""), CancellationToken.None)).IsSuccess.Should().BeTrue();
+        (await handler.Handle(new SaveBybitCredentialsCommand(1, 0, "key", "secret", "Second", "   "), CancellationToken.None)).IsSuccess.Should().BeTrue();
 
         (await context.Accounts.Where(account => account.Exchange == "Bybit" && account.ExternalId == null).CountAsync()).Should().Be(2);
         (await context.Accounts.Where(account => account.Exchange == "Bybit" && account.ExternalId != null && account.ExternalId != "").CountAsync()).Should().Be(0);
@@ -244,7 +234,7 @@ public class SaveBybitCredentialsCommandHandlerTests
         await _context.SaveChangesAsync();
         var service = CredentialService(_context, _keyVaultMock.Object);
 
-        var result = await service.SaveAsync(1, 1, "key", "secret", "webhook", BybitRegion.Global, CancellationToken.None);
+        var result = await service.SaveAsync(1, 1, "key", "secret", BybitRegion.Global, CancellationToken.None);
 
         result.Success.Should().BeTrue();
         _keyVaultMock.Verify(v => v.SetSecretAsync(
@@ -261,7 +251,7 @@ public class SaveBybitCredentialsCommandHandlerTests
     {
         var service = CredentialService(_context, _keyVaultMock.Object);
 
-        var result = await service.SaveAsync(1, null, "key", "secret", null, BybitRegion.Eu, CancellationToken.None);
+        var result = await service.SaveAsync(1, null, "key", "secret", BybitRegion.Eu, CancellationToken.None);
 
         result.Success.Should().BeTrue();
         _keyVaultMock.Verify(v => v.SetSecretAsync(

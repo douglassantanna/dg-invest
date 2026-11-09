@@ -3,5 +3,4 @@ export interface CredentialsStatusDto {
   accountName: string;
   hasApiKey: boolean;
   hasApiSecret: boolean;
-  hasWebhookSecret: boolean;
 }

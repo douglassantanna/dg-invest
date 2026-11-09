@@ -8,12 +8,12 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Exchanges.Commands;
-public record SaveBybitCredentialsCommand(int UserId, int AccountId, string ApiKey, string ApiSecret, string WebhookSecret, string? Name = null, string? ExternalId = null, BybitRegion Region = BybitRegion.Global) : IRequest<Response>;
+public record SaveBybitCredentialsCommand(int UserId, int AccountId, string ApiKey, string ApiSecret, string? Name = null, string? ExternalId = null, BybitRegion Region = BybitRegion.Global) : IRequest<Response>;
 public class SaveBybitCredentialsCommandValidator : AbstractValidator<SaveBybitCredentialsCommand>
 {
     public SaveBybitCredentialsCommandValidator()
     {
-        RuleFor(x => x.UserId).GreaterThan(0); RuleFor(x => x.AccountId).GreaterThan(-1); RuleFor(x => x.ApiKey).MaximumLength(255); RuleFor(x => x.ApiSecret).MaximumLength(255); RuleFor(x => x.WebhookSecret).MaximumLength(255);
+        RuleFor(x => x.UserId).GreaterThan(0); RuleFor(x => x.AccountId).GreaterThan(-1); RuleFor(x => x.ApiKey).MaximumLength(255); RuleFor(x => x.ApiSecret).MaximumLength(255);
         When(x => x.AccountId == 0, () => { RuleFor(x => x.Name).NotEmpty().MaximumLength(255); RuleFor(x => x.ApiKey).NotEmpty(); RuleFor(x => x.ApiSecret).NotEmpty(); });
         When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiKey), () => RuleFor(x => x.ApiSecret).NotEmpty());
         When(x => x.AccountId > 0 && !string.IsNullOrWhiteSpace(x.ApiSecret), () => RuleFor(x => x.ApiKey).NotEmpty());
@@ -49,7 +49,7 @@ public class SaveBybitCredentialsCommandHandler : IRequestHandler<SaveBybitCrede
             if (account == null) return new("Account not found", false, 404);
             if (account.AccountType != EAccountType.Exchange || account.Exchange != "Bybit") return new("Account is not an active Bybit exchange account", false, 400);
         }
-        var result = await _credentials.SaveAsync(request.UserId, accountId, request.ApiKey, request.ApiSecret, request.WebhookSecret, request.Region, cancellationToken);
+        var result = await _credentials.SaveAsync(request.UserId, accountId, request.ApiKey, request.ApiSecret, request.Region, cancellationToken);
         if (result.Success) return new("Credentials saved successfully", true);
         if (result.RejectedStatusCode is { } rejectedStatusCode)
         {

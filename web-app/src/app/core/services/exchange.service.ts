@@ -24,8 +24,8 @@ export class ExchangeService {
     return this.http.post<Response<any>>(`${url}/bybit/test-integration-connection`, {});
   }
 
-  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, webhookSecret: string, name?: string, externalId?: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
-    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, webhookSecret, name, externalId, region });
+  saveBybitCredentials(accountId: number, apiKey: string, apiSecret: string, name?: string, externalId?: string, region: 'Global' | 'Eu' = 'Global'): Observable<Response<any>> {
+    return this.http.post<Response<any>>(`${url}/bybit/credentials`, { accountId, apiKey, apiSecret, name, externalId, region });
   }
 
   getExchangeAccounts(): Observable<Response<ExchangeAccountDto[]>> {

@@ -39,7 +39,7 @@ public class DeleteCredentialsCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         var saved = await _context.Accounts.FindAsync(account.Id);
         saved!.IsDeleted.Should().BeTrue();
-        _keyVault.Verify(k => k.SetSecretAsync(It.IsAny<string>(), string.Empty), Times.Exactly(3));
+        _keyVault.Verify(k => k.SetSecretAsync(It.IsAny<string>(), string.Empty), Times.Exactly(2));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class DeleteCredentialsCommandHandlerTests
         var read = await BybitCredentialReader.ReadAsync(vault.Object, user.Id, account.Id, "api-key");
         read.IsFound.Should().BeTrue();
         read.Value.Should().Be(string.Empty);
-        vault.Verify(v => v.SetSecretAsync(It.IsAny<string>(), string.Empty), Times.Exactly(3));
+        vault.Verify(v => v.SetSecretAsync(It.IsAny<string>(), string.Empty), Times.Exactly(2));
     }
 
     [Fact]

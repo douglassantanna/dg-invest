@@ -66,7 +66,6 @@ public class ExchangeController : ControllerBase
             request.AccountId,
             request.ApiKey,
             request.ApiSecret,
-            request.WebhookSecret,
             request.ResolvedName,
             request.ResolvedExternalId,
             request.Region);
@@ -334,7 +333,6 @@ public record SaveBybitCredentialsRequest(
     int AccountId,
     string ApiKey,
     string ApiSecret,
-    string WebhookSecret,
     string? Name = null,
     string? ExternalId = null,
     string? SubaccountTag = null,
