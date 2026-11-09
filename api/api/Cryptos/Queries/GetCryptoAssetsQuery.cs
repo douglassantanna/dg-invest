@@ -1,3 +1,4 @@
+using api.Cryptos.Models;
 using Microsoft.Extensions.Options;
 using api.Cache;
 using api.CoinMarketCap;
@@ -50,12 +51,15 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
         {
-            var account = await _context.Accounts
+            IQueryable<Account> accounts = _context.Accounts
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Include(x => x.CryptoAssets)
-                    .ThenInclude(ca => ca.Transactions)
-                .Include(x => x.AccountTransactions)
+                .Include(x => x.AccountTransactions);
+            // Transaction history is only read under Proportional (balance without history); skip it otherwise.
+            accounts = _transferCostPolicy == TransferCostPolicy.Proportional
+                ? accounts.Include(x => x.CryptoAssets).ThenInclude(ca => ca.Transactions)
+                : accounts.Include(x => x.CryptoAssets);
+            var account = await accounts
                 .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted, ct);
 
             if (account == null)
