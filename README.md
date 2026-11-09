@@ -198,7 +198,7 @@ See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) and the [Re
 **1. Create read-only API keys in Bybit** (API Management → *Read-Only*):
 
 - **Master key:** enable *Wallet → Account Transfer / Subaccount Transfer*. Bybit requires this permission to list sub-accounts (`/v5/user/submembers`), and it is allowed on read-only keys.
-- **Each sub-account** that should sync needs its own read-only key.
+- **Each sub-account** that should sync needs its own read-only key with *Wallet → SubMemberTransferList* enabled. Bybit requires this permission for a sub-account key to list universal transfers.
 - When you save a new key, DG Invest checks it with Bybit (`/v5/user/query-api`) **before** storing it:
   - keys that can trade or withdraw (`readOnly != 1`) are rejected;
   - keys Bybit rejects are refused;
@@ -278,6 +278,8 @@ Calculating everything from history alone is not viable: Bybit has many activity
 | Within the same UID (Funding ↔ Unified) | Nothing. It nets to zero. |
 | Between UIDs (master ↔ sub, sub ↔ sub) in USDT/USDC | `TransferOut` on the source account and `TransferIn` on the destination, each side recorded by that account's own sync. They count toward each account's total deposited and net to zero across your accounts. |
 | Between UIDs in other coins (e.g. BTC) | Not recorded in history yet. Quantities move only through wallet reconciliation (see Known limitations). |
+
+If a key lacks permission to list transfers (Bybit error `10005`), the sync **skips transfers** for that account and logs a warning, but still imports orders, deposits and withdrawals. Cash is still reconciled from the wallet. Only the `TransferIn`/`TransferOut` history entries, and therefore that account's total deposited, are missing. After adding the permission, run the historical import to recover them: the checkpoint has already moved past the skipped range.
 
 #### Historical import (backfill)
 
@@ -367,6 +369,7 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 | `This Bybit API key can trade or withdraw…` | Create a **read-only** key. For the master key, also enable Wallet → Account Transfer / Subaccount Transfer. |
 | `One or more Bybit items failed to process; checkpoint was not advanced` | One item could not be imported (see the sync logs). The account retries every run until it is fixed. A coin unknown to CoinMarketCap can be created manually. |
 | `Could not resolve asset for symbol` | CoinMarketCap has no data for the coin. Create it manually in the app. |
+| `… cannot list universal transfers (10005); transfers are skipped` (warning in the Function logs) | The key lacks the transfer permission. Enable *Wallet → SubMemberTransferList* (sub-account key) or *Subaccount Transfer* (master key) in Bybit. Then run the **historical import** from the date transfers started being skipped, because the regular sync does not go back for them. |
 | `Credential storage is temporarily unavailable` | Key Vault is unreachable. The next run retries automatically. |
 | `no sync status for account` (log) | The credentials predate the sync-status mechanism. Re-save them to enable sync. |
 
