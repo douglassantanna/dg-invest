@@ -70,7 +70,8 @@ public class BybitCredentialSetService : IBybitCredentialSetService
             return info.IsReadOnly
                 ? null
                 : new SaveCredentialResult(false, false,
-                    "This Bybit API key can trade or withdraw. Create a read-only key in Bybit (API Management > Read-Only) and try again.",
+                    "This Bybit API key can trade or withdraw. Create a read-only key in Bybit (API Management > Read-Only) and try again. "
+                    + "For the master account key, also enable Wallet > Account Transfer / Subaccount Transfer so sub-accounts can be discovered.",
                     400);
         }
         catch (BybitApiException ex)
