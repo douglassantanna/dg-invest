@@ -16,6 +16,13 @@ param sqlAdministratorPassword string
 @description('Daily ingestion cap (GB) for the shared Log Analytics workspace, as a decimal string. Ingestion stops for the rest of the UTC day once reached. Use \'-1\' for no cap.')
 param logAnalyticsDailyQuotaGb string = '0.15'
 
+@description('Cost-basis rule for crypto transfers and Bybit balance without history. Switch to Proportional after reviewing GET /api/Recalculate/preview; see the README "Cost basis" section.')
+@allowed([
+  'Legacy'
+  'Proportional'
+])
+param transferCostPolicy string = 'Legacy'
+
 @description('Set true only after the Cloudflare DNS records are verified and the existing Static Web App domain binding is ready to move.')
 param bindCustomDomain bool = false
 param frontendCustomDomain string
@@ -298,6 +305,7 @@ resource apiApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureStorageSettings__WelcomeEmailQueue', value: 'welcomeemail' }
         { name: 'KeyVaultSettings__VaultUri', value: keyVaultUri }
         { name: 'BybitKeyVaultSettings__VaultUri', value: credentialVaultUri }
+        { name: 'CostBasisSettings__TransferCostPolicy', value: transferCostPolicy }
         { name: 'JWTSettings__Secret', value: jwtSecretReference }
         { name: 'JWTSettings__Issuer', value: 'dginvest-${environmentName}' }
         { name: 'JWTSettings__ExpiryMinutes', value: '120' }
@@ -393,6 +401,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     DefaultConnection: sqlConnectionStringSecretReference
     KeyVaultSettings__VaultUri: keyVaultUri
     BybitKeyVaultSettings__VaultUri: credentialVaultUri
+    CostBasisSettings__TransferCostPolicy: transferCostPolicy
     JWTSettings__Secret: jwtSecretReference
     JWTSettings__Issuer: 'dginvest-${environmentName}'
     JWTSettings__ExpiryMinutes: '120'
