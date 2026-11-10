@@ -330,6 +330,71 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessDepositAsync_WhenSameTxIdExistsOnAnotherAccount_ShouldStillImportIt()
+    {
+        // An on-chain transfer between two users (or two of a user's accounts) shares one txID: a withdrawal on one
+        // account and a deposit on the other. Each account must record its own side.
+        using var context = CreateContext();
+        var sender = new Account("Sender", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var receiver = new Account("Receiver", 2, EAccountType.Exchange, "Bybit", "UID-002");
+        context.Accounts.AddRange(sender, receiver);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        await sut.ProcessWithdrawalAsync(new BybitDepositWithdrawalRow
+        {
+            Coin = "USDT", Amount = "100", Status = "success", TxId = "shared-tx", WithdrawId = "w-1", WithdrawFee = "0", CreateTime = "1790000000000"
+        }, sender, 1, CancellationToken.None, applyCashBalance: false);
+
+        var result = await sut.ProcessDepositAsync(new BybitDepositWithdrawalRow
+        {
+            Coin = "USDT", Amount = "100", Status = "3", TxId = "shared-tx", Id = "d-1", SuccessAt = "1790000060000"
+        }, receiver, 2, CancellationToken.None, applyCashBalance: false);
+
+        result.Should().BeTrue();
+        (await context.AccountTransactions.CountAsync(t => t.ExchangeTransactionId == "shared-tx")).Should().Be(2);
+        receiver.TotalDeposited().Should().Be(100m);
+    }
+
+    [Fact]
+    public async Task ProcessWithdrawalAsync_WhenTxIdIsEmpty_ShouldUseBybitWithdrawIdAsKey()
+    {
+        // Bybit returns an empty txID for some withdrawals; before, all of them collided on "".
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        foreach (var id in new[] { "w-1", "w-2" })
+        {
+            (await sut.ProcessWithdrawalAsync(new BybitDepositWithdrawalRow
+            {
+                Coin = "USDT", Amount = "10", Status = "success", TxId = "", WithdrawId = id, WithdrawFee = "0", CreateTime = "1790000000000"
+            }, account, 1, CancellationToken.None, applyCashBalance: false)).Should().BeTrue();
+        }
+
+        var keys = await context.AccountTransactions.Select(t => t.ExchangeTransactionId).ToListAsync();
+        keys.Should().BeEquivalentTo(["bybit-withdraw-w-1", "bybit-withdraw-w-2"]);
+    }
+
+    [Fact]
+    public async Task ProcessDepositAsync_WhenCalledTwiceForTheSameRecord_ShouldNotDuplicate()
+    {
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        var deposit = new BybitDepositWithdrawalRow { Coin = "USDT", Amount = "50", Status = "3", TxId = "", Id = "d-9", SuccessAt = "1790000000000" };
+
+        await sut.ProcessDepositAsync(deposit, account, 1, CancellationToken.None, applyCashBalance: false);
+        await sut.ProcessDepositAsync(deposit, account, 1, CancellationToken.None, applyCashBalance: false);
+
+        (await context.AccountTransactions.CountAsync()).Should().Be(1);
+        (await context.AccountTransactions.SingleAsync()).ExchangeTransactionId.Should().Be("bybit-deposit-d-9");
+    }
+
+    [Fact]
     public async Task ProcessInternalTransferAsync_WhenAccountReceivesStablecoin_ShouldCreateTransferInLedgerTransaction()
     {
         using var context = CreateContext();

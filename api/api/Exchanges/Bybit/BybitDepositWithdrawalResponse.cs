@@ -37,6 +37,14 @@ public class BybitDepositWithdrawalResult
 
 public class BybitDepositWithdrawalRow
 {
+    // Bybit's unique record ids: "id" on deposit records, "withdrawId" on withdrawal records. Used as the dedup key
+    // when txID is empty (Bybit returns "" for failed/cancelled withdrawals and some off-chain records).
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("withdrawId")]
+    public string WithdrawId { get; set; } = string.Empty;
+
     [JsonPropertyName("coin")]
     public string Coin { get; set; } = string.Empty;
 

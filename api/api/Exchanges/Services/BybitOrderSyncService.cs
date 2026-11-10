@@ -154,6 +154,14 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _logger.LogInformation("Bybit sync: processing deposit {TxId} (Coin: {Coin}, Amount: {Amount}, Status: {Status})",
             deposit.TxId, deposit.Coin, deposit.Amount, deposit.Status);
 
+        var depositKey = DepositKey(deposit);
+        if (depositKey is null)
+        {
+            _logger.LogWarning("Bybit sync: deposit without txID or id for account {AccountId} cannot be deduplicated; skipped", account.Id);
+            await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Failed", "Deposit has no txID or id", "BybitDeposit", logId, cancellationToken);
+            return false;
+        }
+
         if (!TryParseDepositWithdrawalAmount(deposit, out var amount))
         {
             _logger.LogDebug("Bybit sync: could not parse amount for deposit {TxId}", deposit.TxId);
@@ -162,7 +170,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
 
         var existingTx = await _context.AccountTransactions
-            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == deposit.TxId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == depositKey
+                && EF.Property<int?>(t, "AccountId") == account.Id, cancellationToken);
         if (existingTx != null)
         {
             if (existingTx.ExchangeStatus != deposit.Status)
@@ -220,7 +229,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
             fee: 0,
-            exchangeTransactionId: deposit.TxId,
+            exchangeTransactionId: DepositKey(deposit),
             exchangeStatus: deposit.Status);
 
         var result = applyCashBalance
@@ -247,6 +256,14 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _logger.LogInformation("Bybit sync: processing withdrawal {TxId} (Coin: {Coin}, Amount: {Amount}, Status: {Status})",
             withdrawal.TxId, withdrawal.Coin, withdrawal.Amount, withdrawal.Status);
 
+        var withdrawalKey = WithdrawalKey(withdrawal);
+        if (withdrawalKey is null)
+        {
+            _logger.LogWarning("Bybit sync: withdrawal without txID or withdrawId for account {AccountId} cannot be deduplicated; skipped", account.Id);
+            await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Failed", "Withdrawal has no txID or withdrawId", "BybitWithdrawal", logId, cancellationToken);
+            return false;
+        }
+
         if (!TryParseDepositWithdrawalAmount(withdrawal, out var amount))
         {
             _logger.LogDebug("Bybit sync: could not parse amount for withdrawal {TxId}", withdrawal.TxId);
@@ -260,7 +277,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
 
         var existingTx = await _context.AccountTransactions
-            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == withdrawal.TxId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == withdrawalKey
+                && EF.Property<int?>(t, "AccountId") == account.Id, cancellationToken);
         if (existingTx != null)
         {
             if (existingTx.ExchangeStatus != withdrawal.Status)
@@ -318,7 +336,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
             fee: fee,
-            exchangeTransactionId: withdrawal.TxId,
+            exchangeTransactionId: WithdrawalKey(withdrawal),
             exchangeStatus: withdrawal.Status);
 
         var result = applyCashBalance
@@ -352,7 +370,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: null,
             cryptoAsset: null,
             fee: 0,
-            exchangeTransactionId: deposit.TxId,
+            exchangeTransactionId: DepositKey(deposit),
             exchangeStatus: deposit.Status);
 
         var result = applyCashBalance
@@ -386,7 +404,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: null,
             cryptoAsset: null,
             fee: fee,
-            exchangeTransactionId: withdrawal.TxId,
+            exchangeTransactionId: WithdrawalKey(withdrawal),
             exchangeStatus: withdrawal.Status);
 
         var result = applyCashBalance
@@ -811,6 +829,19 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     }
 
     private sealed record ResolvedBybitFee(decimal Amount, string? Currency, decimal? QuoteValue, string? ExecutionId);
+
+    // Key stored in AccountTransactions.ExchangeTransactionId. The on-chain txID is kept when present so rows saved
+    // before Bybit record ids were used still match; otherwise Bybit's own unique record id identifies the record.
+    // Lookups are scoped to the account: two accounts can legitimately share a txID (one withdraws, the other receives).
+    internal static string? DepositKey(BybitDepositWithdrawalRow row) =>
+        !string.IsNullOrWhiteSpace(row.TxId) ? row.TxId
+        : !string.IsNullOrWhiteSpace(row.Id) ? $"bybit-deposit-{row.Id}"
+        : null;
+
+    internal static string? WithdrawalKey(BybitDepositWithdrawalRow row) =>
+        !string.IsNullOrWhiteSpace(row.TxId) ? row.TxId
+        : !string.IsNullOrWhiteSpace(row.WithdrawId) ? $"bybit-withdraw-{row.WithdrawId}"
+        : null;
 
     private static bool IsCashCoin(string symbol) => BybitCashBalance.CashCoins.Contains(symbol, StringComparer.OrdinalIgnoreCase);
 
