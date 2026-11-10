@@ -38,6 +38,9 @@ public class SyncStatus : Entity
         LastErrorMessage = null;
     }
 
+    // A completed sync that skipped items: stays Connected, but the message is shown to the user.
+    public void RecordWarning(string warningMessage) => LastErrorMessage = warningMessage;
+
     public void MarkError(string? errorMessage = null)
     {
         Status = "Error";

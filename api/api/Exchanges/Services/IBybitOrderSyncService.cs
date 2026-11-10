@@ -18,4 +18,5 @@ public interface IBybitOrderSyncService
         CancellationToken cancellationToken,
         DateTime? checkpointAt = null);
     Task MarkSyncStatusErrorAsync(int userId, int accountId, string errorMessage, CancellationToken cancellationToken);
+    Task MarkSyncStatusWarningAsync(int userId, int accountId, string warningMessage, CancellationToken cancellationToken);
 }

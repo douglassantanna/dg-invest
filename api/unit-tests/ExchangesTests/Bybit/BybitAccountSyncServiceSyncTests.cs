@@ -221,6 +221,45 @@ public class BybitAccountSyncServiceSyncTests
     }
 
     [Fact]
+    public async Task SyncAsync_WhenAnItemCannotBeImported_SkipsItAdvancesTheCheckpointAndWarns()
+    {
+        // A permanently failing item (e.g. a coin CoinMarketCap does not know) used to block the account forever.
+        var harness = await Harness.CreateAsync();
+        harness.Orders.AddRange([Order("bad-1", "Buy", -2), Order("good-1", "Buy", -1)]);
+        var processed = new List<string>();
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .Callback<BybitOrderData, Account, int, string, CancellationToken, IReadOnlyList<BybitExecutionData>?, bool>(
+                (order, _, _, _, _, _, _) => processed.Add(order.OrderId))
+            .ReturnsAsync((BybitOrderData order, Account _, int _, string _, CancellationToken _, IReadOnlyList<BybitExecutionData>? _, bool _) => order.OrderId != "bad-1");
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        processed.Should().Equal("bad-1", "good-1");
+        harness.LastCheckpointAt.Should().NotBeNull("the checkpoint must advance past the skipped item");
+        harness.OrderSync.Verify(service => service.MarkSyncStatusWarningAsync(
+            harness.Account.UserId, harness.Account.Id, It.Is<string>(message => message.StartsWith("1 Bybit item")), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenEveryItemImports_RecordsNoWarning()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Orders.Add(Order("good-1", "Buy", -1));
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        harness.OrderSync.Verify(service => service.MarkSyncStatusWarningAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SyncAsync_ImportsPartiallyFilledCanceledOrdersWithExecutedQuantity()
     {
         var harness = await Harness.CreateAsync();

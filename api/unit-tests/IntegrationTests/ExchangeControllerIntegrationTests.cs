@@ -192,7 +192,7 @@ public class ExchangeControllerIntegrationTests
     }
 
     [Fact]
-    public async Task BybitOrderSync_WhenOrderFails_ShouldNotAdvanceCheckpoint()
+    public async Task BybitOrderSync_WhenOrderCannotBeImported_ShouldSkipItAdvanceCheckpointAndWarn()
     {
         var (userId, accountId) = await CreateExchangeSyncAccountAsync();
         _fixture.Factory.Bybit.OrderHistoryApiKey = $"integration-api-key-{userId}";
@@ -202,8 +202,8 @@ public class ExchangeControllerIntegrationTests
             "XRP",
             DateTime.UtcNow,
             new Quote(new USD(0, DateTime.UtcNow, 0)));
-        // An unparseable price makes the order fail to process. Local cash no longer can, because
-        // synced orders are recorded without a cash check and cash is reconciled to Bybit.
+        // An unparseable price can never be imported. It is skipped (logged as Failed) instead of blocking the
+        // account forever: the checkpoint advances and the sync status carries a warning.
         _fixture.Factory.Bybit.OrderHistory.Add(FilledOrder(
             "order-xrp-failure-1",
             "not-a-price",
@@ -216,7 +216,9 @@ public class ExchangeControllerIntegrationTests
             using var scope = _fixture.Factory.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             var syncStatus = await context.SyncStatuses.SingleAsync(status => status.AccountId == accountId && status.ExchangeName == "Bybit");
-            syncStatus.LastSyncAt.Should().BeNull();
+            syncStatus.LastSyncAt.Should().NotBeNull();
+            syncStatus.Status.Should().Be("Connected");
+            syncStatus.LastErrorMessage.Should().StartWith("1 Bybit item(s) could not be imported");
             (await context.CryptoTransactions.CountAsync(transaction =>
                 transaction.ExchangeOrderId == "order-xrp-failure-1")).Should().Be(0);
         }

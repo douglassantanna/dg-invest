@@ -576,6 +576,17 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task MarkSyncStatusWarningAsync(int userId, int accountId, string warningMessage, CancellationToken cancellationToken)
+    {
+        var status = await _context.SyncStatuses
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
+        if (status is null)
+            return;
+
+        status.RecordWarning(warningMessage);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task MarkSyncStatusErrorAsync(int userId, int accountId, string errorMessage, CancellationToken cancellationToken)
     {
         var status = await _context.SyncStatuses
@@ -623,36 +634,30 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         if (existing != null)
             return existing;
 
-        try
+        // Exceptions (CoinMarketCap outage, database error) propagate so the sync fails and retries the item later.
+        // Only an answer that the coin is unknown, or an asset the account rejects, returns null so the caller skips it.
+        var quote = await _coinMarketCapService.GetQuoteBySymbol(symbol.ToUpperInvariant());
+        if (quote?.Data == null || !quote.Data.Any())
         {
-            var quote = await _coinMarketCapService.GetQuoteBySymbol(symbol.ToUpperInvariant());
-            if (quote?.Data == null || !quote.Data.Any())
-            {
-                _logger.LogDebug("Bybit sync: CoinMarketCap returned no data for symbol {Symbol}", symbol);
-                return null;
-            }
-
-            var coin = quote.Data.First().Value;
-            var newAsset = new CryptoAsset(coin.Name, coin.Name, coin.Symbol, coin.Id);
-            var addResult = account.AddCryptoAsset(newAsset);
-
-            if (!addResult.IsSuccess)
-            {
-                _logger.LogDebug("Bybit sync: could not add crypto asset {Symbol}: {Message}", symbol, addResult.Message);
-                return null;
-            }
-
-            _context.Accounts.Update(account);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation("Bybit sync: auto-created crypto asset {Symbol} (CMC ID {Id})", coin.Symbol, coin.Id);
-            return newAsset;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Bybit sync: error creating crypto asset for {Symbol}", symbol);
+            _logger.LogDebug("Bybit sync: CoinMarketCap returned no data for symbol {Symbol}", symbol);
             return null;
         }
+
+        var coin = quote.Data.First().Value;
+        var newAsset = new CryptoAsset(coin.Name, coin.Name, coin.Symbol, coin.Id);
+        var addResult = account.AddCryptoAsset(newAsset);
+
+        if (!addResult.IsSuccess)
+        {
+            _logger.LogDebug("Bybit sync: could not add crypto asset {Symbol}: {Message}", symbol, addResult.Message);
+            return null;
+        }
+
+        _context.Accounts.Update(account);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Bybit sync: auto-created crypto asset {Symbol} (CMC ID {Id})", coin.Symbol, coin.Id);
+        return newAsset;
     }
 
     private async Task<List<string>> GetQuoteCurrenciesAsync()

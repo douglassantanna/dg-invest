@@ -1,6 +1,7 @@
 using api.AzureStorage;
 using api.AzureStorage.Blob;
 using api.CoinMarketCap.Service;
+using api.CoinMarketCap;
 using api.Exchanges.Bybit;
 using api.Exchanges.Models;
 using api.Exchanges.Services;
@@ -395,6 +396,52 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessOrderAsync_WhenCoinMarketCapFails_ShouldThrowSoTheSyncRetries()
+    {
+        // A CoinMarketCap outage is temporary: the order must not be reported as an unknown coin and skipped.
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var coinMarketCap = new Mock<ICoinMarketCapService>();
+        coinMarketCap.Setup(c => c.GetQuoteBySymbol(It.IsAny<string>())).ThrowsAsync(new HttpRequestException("CoinMarketCap unavailable"));
+        var sut = CreateService(context, coinMarketCap: coinMarketCap.Object);
+
+        var act = () => sut.ProcessOrderAsync(NewOrder("order-1", "NEWCOINUSDT"), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    [Fact]
+    public async Task ProcessOrderAsync_WhenCoinMarketCapDoesNotKnowTheCoin_ShouldReturnFalse()
+    {
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var coinMarketCap = new Mock<ICoinMarketCapService>();
+        coinMarketCap.Setup(c => c.GetQuoteBySymbol(It.IsAny<string>()))
+            .ReturnsAsync(new GetQuoteResponse(new Status(0, null), new Dictionary<string, Coin>()));
+        var sut = CreateService(context, coinMarketCap: coinMarketCap.Object);
+
+        var result = await sut.ProcessOrderAsync(NewOrder("order-1", "NEWCOINUSDT"), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        result.Should().BeFalse();
+    }
+
+    private static BybitOrderData NewOrder(string orderId, string symbol) => new()
+    {
+        OrderId = orderId,
+        Symbol = symbol,
+        Side = "Buy",
+        OrderStatus = "Filled",
+        AvgPrice = "1",
+        CumExecQty = "1",
+        CumExecFee = "0",
+        CreatedTime = "1790000000000"
+    };
+
+    [Fact]
     public async Task ProcessInternalTransferAsync_WhenAccountReceivesStablecoin_ShouldCreateTransferInLedgerTransaction()
     {
         using var context = CreateContext();
@@ -564,7 +611,7 @@ public class BybitOrderSyncServiceTests
             CreatedTime = DateTimeOffset.Parse(createdTime).ToUnixTimeMilliseconds().ToString()
         };
 
-    private static BybitOrderSyncService CreateService(DataContext context, IBlobStorageService? blobStorageOverride = null)
+    private static BybitOrderSyncService CreateService(DataContext context, IBlobStorageService? blobStorageOverride = null, ICoinMarketCapService? coinMarketCap = null)
     {
         var transactionService = new TransactionService([
             new FiatDepositTransaction(Mock.Of<ILogger<FiatDepositTransaction>>()),
@@ -584,7 +631,7 @@ public class BybitOrderSyncServiceTests
         }
 
         return new BybitOrderSyncService(
-            Mock.Of<ICoinMarketCapService>(),
+            coinMarketCap ?? Mock.Of<ICoinMarketCapService>(),
             transactionService,
             blobStorage,
             Options.Create(new AzureStorageSettings()),

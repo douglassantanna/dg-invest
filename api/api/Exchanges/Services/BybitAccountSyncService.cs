@@ -122,28 +122,34 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             // Process every Bybit event in time order so a buy is applied after the deposit,
             // transfer or sell that funded it. Cash is not mutated per event: Bybit is the source
             // of truth for cash, so it is reconciled to the wallet once all events are recorded.
-            var hasFailures = false;
+            //
+            // An item that can never be imported (a coin CoinMarketCap does not know, unparseable data, a record
+            // without an id) is logged as Failed and skipped, so it cannot block the account forever. Temporary
+            // failures (network, database, CoinMarketCap outage) throw, fail the run and keep the checkpoint.
+            var skipped = 0;
             string? lastOrderId = null;
 
             foreach (var syncEvent in events.OrderBy(item => item.Timestamp).ThenBy(item => item.Kind))
             {
                 if (!await ProcessEventAsync(syncEvent, account, region, apiKey.Value, apiSecret.Value, "RestPoll", cancellationToken))
-                    hasFailures = true;
+                    skipped++;
 
                 if (syncEvent.Value is BybitOrderData order)
                     lastOrderId = order.OrderId;
-            }
-
-            if (hasFailures)
-            {
-                const string errorMessage = "One or more Bybit items failed to process; checkpoint was not advanced";
-                return BybitAccountSyncResult.Failed(errorMessage);
             }
 
             await ReconcileCurrentCryptoBalancesAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
             await ReconcileCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
             await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken, checkpointAt);
+            if (skipped > 0)
+            {
+                var warning = SkippedItemsWarning(skipped);
+                _logger.LogWarning("Bybit sync for account {AccountId} skipped {Skipped} item(s) that could not be imported", accountId, skipped);
+                await _orderSyncService.MarkSyncStatusWarningAsync(userId, accountId, warning, cancellationToken);
+                return BybitAccountSyncResult.Succeeded($"Bybit account {account.Name} synchronized. {warning}");
+            }
+
             return BybitAccountSyncResult.Succeeded($"Bybit account {account.Name} synchronized successfully");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -230,6 +236,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             }
 
             var processed = 0;
+            var skipped = 0;
             string? lastOrderId = null;
             foreach (var backfillEvent in events.OrderBy(item => item.Timestamp).ThenBy(item => item.Kind))
             {
@@ -237,8 +244,12 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 var succeeded = await ProcessEventAsync(
                     backfillEvent, account, region, apiKey.Value, apiSecret.Value, "BybitBackfill", cancellationToken);
 
+                // Same rule as the regular sync: an item that can never be imported is logged and skipped.
                 if (!succeeded)
-                    return BybitAccountSyncResult.Failed("One or more historical items failed to process; the import can be retried safely.");
+                {
+                    skipped++;
+                    continue;
+                }
 
                 if (backfillEvent.Value is BybitOrderData order)
                     lastOrderId = order.OrderId;
@@ -253,6 +264,13 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 lastOrderId,
                 cancellationToken,
                 end.UtcDateTime);
+            if (skipped > 0)
+            {
+                var warning = SkippedItemsWarning(skipped);
+                await _orderSyncService.MarkSyncStatusWarningAsync(account.UserId, account.Id, warning, cancellationToken);
+                return BybitAccountSyncResult.Succeeded($"Imported {processed} Bybit historical items without changing the cash balance. {warning}");
+            }
+
             return BybitAccountSyncResult.Succeeded($"Imported {processed} Bybit historical items without changing the cash balance.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -529,6 +547,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
         return events;
     }
+
+    private static string SkippedItemsWarning(int skipped) =>
+        $"{skipped} Bybit item(s) could not be imported and were skipped; see the sync logs for the reason. "
+        + "After fixing it (for example, adding a missing coin), run the historical import to bring them in.";
 
     // Transfers are optional data. Listing them needs a Wallet permission that read-only keys may not carry
     // (10005); without it, skip transfers instead of failing the whole sync, so orders, deposits and
