@@ -288,6 +288,8 @@ How transfers and balance without history are treated depends on `CostBasisSetti
 | **Transfer out** (crypto withdrawal) | Keeps the **full cost** on the remaining coins, so the average price jumps | Removes cost at the **average price**, like a sale |
 | **Balance without history** (Bybit only) | Counts as free coins, which **inflates** the gain | Valued at the **current price**, so it adds no gain or loss. The asset page shows a "Without history" card and a note suggesting the historical import. |
 
+**Current setting:** STAGE uses `Proportional` (since 2026-11-10); PROD uses `Legacy`.
+
 Example: buy 1 BTC at 60k, then withdraw 0.5 BTC. With `Legacy` the remaining 0.5 BTC shows an average of 120k. With `Proportional` it shows 60k.
 
 **Preview before switching:**
