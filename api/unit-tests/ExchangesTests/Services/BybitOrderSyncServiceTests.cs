@@ -429,6 +429,44 @@ public class BybitOrderSyncServiceTests
         result.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData("BTCBRL")]
+    [InlineData("ETHBTC")]
+    public async Task ProcessOrderAsync_WhenPairIsNotQuotedInUsd_ShouldNotImportIt(string symbol)
+    {
+        // Prices of non-USD pairs are in the quote currency (BRL, BTC); storing them as USD distorts cost and gains.
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        account.AddCryptoAsset(new CryptoAsset("Ethereum", "Ethereum", "ETH", 1027)).IsSuccess.Should().BeTrue();
+        account.AddCryptoAsset(new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1)).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        var result = await sut.ProcessOrderAsync(NewOrder("order-1", symbol), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        result.Should().BeFalse();
+        (await context.CryptoTransactions.CountAsync()).Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("BTCUSDT")]
+    [InlineData("BTCUSDC")]
+    public async Task ProcessOrderAsync_WhenPairIsQuotedInUsd_ShouldImportIt(string symbol)
+    {
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        account.AddCryptoAsset(new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1)).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        var result = await sut.ProcessOrderAsync(NewOrder("order-1", symbol), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        result.Should().BeTrue();
+        (await context.CryptoTransactions.CountAsync()).Should().Be(1);
+    }
+
     private static BybitOrderData NewOrder(string orderId, string symbol) => new()
     {
         OrderId = orderId,

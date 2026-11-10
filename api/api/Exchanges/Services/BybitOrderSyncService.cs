@@ -80,6 +80,16 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return true;
         }
 
+        // Only USD-quoted pairs are supported: a BTCBRL or ETHBTC price is in BRL or BTC, and storing it as USD would
+        // distort cost and gains. Such orders are logged as not imported and counted as skipped.
+        if (!IsUsdQuoted(order.Symbol))
+        {
+            _logger.LogWarning("Bybit sync: order {OrderId} ({Symbol}) is not quoted in USDT/USDC/USD; not imported", order.OrderId, order.Symbol);
+            await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed",
+                $"Not imported: {order.Symbol} is not quoted in USDT, USDC or USD", importSource, logId, cancellationToken);
+            return false;
+        }
+
         if (!TryParseOrderValues(order, out var price, out var qty, out _))
         {
             _logger.LogDebug("Bybit sync: could not parse numeric values for order {OrderId}", order.OrderId);
@@ -834,6 +844,11 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     }
 
     private sealed record ResolvedBybitFee(decimal Amount, string? Currency, decimal? QuoteValue, string? ExecutionId);
+
+    private static readonly string[] UsdQuoteCurrencies = ["USDT", "USDC", "USD"];
+
+    internal static bool IsUsdQuoted(string tradingPair) =>
+        UsdQuoteCurrencies.Any(quote => tradingPair.EndsWith(quote, StringComparison.OrdinalIgnoreCase));
 
     // Key stored in AccountTransactions.ExchangeTransactionId. The on-chain txID is kept when present so rows saved
     // before Bybit record ids were used still match; otherwise Bybit's own unique record id identifies the record.
