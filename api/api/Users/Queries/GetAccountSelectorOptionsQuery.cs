@@ -134,6 +134,10 @@ public class GetAccountSelectorOptionsQueryHandler(DataContext context)
         if (string.Equals(syncStatus, "Disconnected", StringComparison.OrdinalIgnoreCase))
             return "Disconnected";
 
+        // No key stored for this account: a healthy integration must not make it look connected.
+        if (string.Equals(syncStatus, SyncStatus.NotConfiguredStatus, StringComparison.OrdinalIgnoreCase))
+            return "NotConfigured";
+
         return string.Equals(syncStatus, "Connected", StringComparison.OrdinalIgnoreCase)
             || string.Equals(syncStatus, "Healthy", StringComparison.OrdinalIgnoreCase)
             || string.Equals(integrationStatus, "Healthy", StringComparison.OrdinalIgnoreCase)

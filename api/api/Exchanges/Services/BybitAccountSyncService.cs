@@ -5,6 +5,7 @@ using api.CoinMarketCap.Service;
 using api.Cryptos.Models;
 using api.Data;
 using api.Exchanges.Bybit;
+using api.Exchanges.Models;
 using api.Models.Cryptos;
 using Microsoft.EntityFrameworkCore;
 
@@ -92,6 +93,13 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
             if (string.IsNullOrWhiteSpace(apiKey.Value) || string.IsNullOrWhiteSpace(apiSecret.Value))
             {
+                // Record the state so a stale error is not shown forever; write only when it changes.
+                if (syncStatus.Status != SyncStatus.NotConfiguredStatus)
+                {
+                    syncStatus.MarkNotConfigured();
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
                 const string errorMessage = "Bybit credentials are not configured for this account";
                 return BybitAccountSyncResult.Skipped(errorMessage);
             }

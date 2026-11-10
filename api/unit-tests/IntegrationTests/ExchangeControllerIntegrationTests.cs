@@ -469,12 +469,15 @@ public class ExchangeControllerIntegrationTests
         int disconnectedAccountId;
         int disabledIntegrationAccountId;
         int awaitingFirstSyncAccountId;
+        int withoutKeyAccountId;
         using (var scope = _fixture.Factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             var bybitIntegration = new ExchangeIntegration(userId, "Bybit");
             bybitIntegration.MarkConfigured();
             bybitIntegration.MarkEnabled();
+            // A sync cycle has succeeded, as in STAGE: the integration is Healthy.
+            bybitIntegration.MarkSyncCycleSucceeded(DateTime.UtcNow);
             var disabledGeminiIntegration = new ExchangeIntegration(userId, "Gemini");
             disabledGeminiIntegration.MarkConfigured();
             disabledGeminiIntegration.MarkDisabled();
@@ -486,8 +489,9 @@ public class ExchangeControllerIntegrationTests
             var disconnected = new Account("Bybit disconnected", userId, EAccountType.Exchange, "Bybit", "disconnected-uid");
             var disabledIntegrationAccount = new Account("Gemini disabled", userId, EAccountType.Exchange, "Gemini", "disabled-uid");
             var awaitingFirstSync = new Account("Bybit awaiting first sync", userId, EAccountType.Exchange, "Bybit", "first-sync-uid");
+            var withoutKey = new Account("Bybit without key", userId, EAccountType.Exchange, "Bybit", "no-key-uid");
             disconnected.Disable();
-            context.AddRange(bybitIntegration, disabledGeminiIntegration, connected, paused, needsAttention, unconfigured, disconnected, disabledIntegrationAccount, awaitingFirstSync);
+            context.AddRange(bybitIntegration, disabledGeminiIntegration, connected, paused, needsAttention, unconfigured, disconnected, disabledIntegrationAccount, awaitingFirstSync, withoutKey);
             await context.SaveChangesAsync();
             connectedAccountId = connected.Id;
             pausedAccountId = paused.Id;
@@ -496,6 +500,7 @@ public class ExchangeControllerIntegrationTests
             disconnectedAccountId = disconnected.Id;
             disabledIntegrationAccountId = disabledIntegrationAccount.Id;
             awaitingFirstSyncAccountId = awaitingFirstSync.Id;
+            withoutKeyAccountId = withoutKey.Id;
 
             var connectedStatus = new SyncStatus(userId, connected.Id, "Bybit");
             connectedStatus.EnableForCredentials();
@@ -508,7 +513,10 @@ public class ExchangeControllerIntegrationTests
             errorStatus.MarkError("Temporary connection error");
             var firstSyncStatus = new SyncStatus(userId, awaitingFirstSync.Id, "Bybit");
             firstSyncStatus.EnableForCredentials();
-            context.SyncStatuses.AddRange(connectedStatus, pausedStatus, errorStatus, firstSyncStatus);
+            // Discovered sub-account whose key was never saved: the sync marks it NotConfigured.
+            var withoutKeyStatus = new SyncStatus(userId, withoutKey.Id, "Bybit");
+            withoutKeyStatus.MarkNotConfigured();
+            context.SyncStatuses.AddRange(connectedStatus, pausedStatus, errorStatus, firstSyncStatus, withoutKeyStatus);
             await context.SaveChangesAsync();
         }
 
@@ -532,6 +540,8 @@ public class ExchangeControllerIntegrationTests
         accounts[disconnectedAccountId].GetProperty("accountName").GetString().Should().Be("Bybit disconnected");
         accounts[disabledIntegrationAccountId].GetProperty("healthStatus").GetString().Should().Be("Paused");
         accounts[awaitingFirstSyncAccountId].GetProperty("healthStatus").GetString().Should().Be("Disconnected");
+        // A healthy integration must not make an account without a key look connected.
+        accounts[withoutKeyAccountId].GetProperty("healthStatus").GetString().Should().Be("NotConfigured");
 
         var selectExchangeAccount = await client.PostAsJsonAsync("/api/Account/select-account", new { accountId = connectedAccountId });
         selectExchangeAccount.StatusCode.Should().Be(HttpStatusCode.OK);

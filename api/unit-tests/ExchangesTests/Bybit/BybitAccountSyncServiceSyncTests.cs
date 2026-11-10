@@ -260,6 +260,26 @@ public class BybitAccountSyncServiceSyncTests
     }
 
     [Fact]
+    public async Task SyncAsync_WhenAccountHasNoKey_MarksItNotConfiguredAndClearsAStaleError()
+    {
+        // Account 36 (STAGE) kept "Credential storage is temporarily unavailable" from an old failure, because a sync
+        // skipped for missing credentials never updated the status.
+        var harness = await Harness.CreateAsync();
+        var status = await harness.Context.SyncStatuses.SingleAsync();
+        status.MarkError("Credential storage is temporarily unavailable");
+        await harness.Context.SaveChangesAsync();
+        harness.KeyVault.Setup(vault => vault.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSkipped.Should().BeTrue();
+        status.Status.Should().Be("NotConfigured");
+        status.LastErrorMessage.Should().BeNull();
+        status.ErrorCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task SyncAsync_ImportsPartiallyFilledCanceledOrdersWithExecutedQuantity()
     {
         var harness = await Harness.CreateAsync();
