@@ -46,7 +46,7 @@ public class CryptoAsset : Entity
         _addresses.Add(address);
     }
 
-    public void AddTransaction(CryptoTransaction transaction)
+    public void AddTransaction(CryptoTransaction transaction, TransferCostPolicy policy = TransferCostPolicy.Legacy)
     {
         switch (transaction.TransactionType)
         {
@@ -57,10 +57,10 @@ public class CryptoAsset : Entity
                 HandleSellTransaction(transaction);
                 break;
             case ETransactionType.TransferIn:
-                HandleTransferIn(transaction);
+                HandleTransferIn(transaction, policy);
                 break;
             case ETransactionType.TransferOut:
-                HandleTransferOut(transaction);
+                HandleTransferOut(transaction, policy);
                 break;
             default:
                 throw new CryptoAssetException("Invalid transaction type");
@@ -69,10 +69,10 @@ public class CryptoAsset : Entity
         _transactions.Add(transaction);
     }
 
-    public void AddHistoricalTransaction(CryptoTransaction transaction)
+    public void AddHistoricalTransaction(CryptoTransaction transaction, TransferCostPolicy policy = TransferCostPolicy.Legacy)
     {
         _transactions.Add(transaction);
-        RecalculateFromTransactions();
+        RecalculateFromTransactions(policy);
     }
 
     public void AddBalance(decimal amount)
@@ -112,43 +112,96 @@ public class CryptoAsset : Entity
         Balance = externalBalance;
     }
 
-    public void RecalculateFromTransactions()
+    public void RecalculateFromTransactions(TransferCostPolicy policy = TransferCostPolicy.Legacy)
     {
-        Balance = 0;
-        TotalInvested = 0;
+        (Balance, TotalInvested) = Replay(_transactions, policy);
+    }
 
-        var ordered = _transactions
-            .OrderBy(t => t.PurchaseDate)
-            .ToList();
+    // Quantity explained by the transaction history. It does not depend on the cost policy.
+    public decimal HistoryBalance() => Replay(_transactions, TransferCostPolicy.Legacy).Balance;
 
-        foreach (var t in ordered)
+    // Cost figures for display. Under Proportional, coins Bybit holds beyond what history explains (Balance was
+    // reconciled to the wallet) are valued at the current price instead of at zero cost, so they add no gain.
+    public CostBasisView GetCostBasis(decimal currentPrice, TransferCostPolicy policy)
+    {
+        if (policy == TransferCostPolicy.Legacy)
+            return new CostBasisView(
+                TotalInvested,
+                AveragePrice,
+                GetInvestmentGainLossValue(currentPrice),
+                GetInvestmentGainLossPercentage(currentPrice),
+                0m);
+
+        return ToCostBasisView(TotalInvested, HistoryBalance(), currentPrice);
+    }
+
+    // What GetCostBasis would show after recalculating from history under the policy and reconciling back to the
+    // current balance, which is what the next Bybit sync or a recalculation does. Does not change the asset.
+    public CostBasisView PreviewCostBasis(decimal currentPrice, TransferCostPolicy policy)
+    {
+        var (historyBalance, historyInvested) = Replay(_transactions, policy);
+        var invested = Balance == 0 ? 0m
+            : historyBalance > 0 && Balance < historyBalance ? historyInvested * (Balance / historyBalance)
+            : historyInvested;
+
+        if (policy == TransferCostPolicy.Legacy)
+        {
+            var legacyGain = invested == 0 ? 0 : CurrentWorth(currentPrice) - invested;
+            return new CostBasisView(invested, Balance == 0 ? 0 : invested / Balance, legacyGain,
+                invested == 0 ? 0 : legacyGain / invested * 100, 0m);
+        }
+
+        return ToCostBasisView(invested, historyBalance, currentPrice);
+    }
+
+    private CostBasisView ToCostBasisView(decimal recordedInvested, decimal historyBalance, decimal currentPrice)
+    {
+        var unexplained = Math.Max(0m, Balance - historyBalance);
+        var invested = recordedInvested + unexplained * currentPrice;
+        var averagePrice = Balance == 0 ? 0 : invested / Balance;
+        var gainLoss = invested == 0 ? 0 : CurrentWorth(currentPrice) - invested;
+        var gainLossPercentage = invested == 0 ? 0 : gainLoss / invested * 100;
+        return new CostBasisView(invested, averagePrice, gainLoss, gainLossPercentage, unexplained);
+    }
+
+    private static (decimal Balance, decimal Invested) Replay(IEnumerable<CryptoTransaction> transactions, TransferCostPolicy policy)
+    {
+        var balance = 0m;
+        var invested = 0m;
+
+        foreach (var t in transactions.OrderBy(t => t.PurchaseDate))
         {
             switch (t.TransactionType)
             {
                 case ETransactionType.Buy:
-                    Balance += t.Amount;
-                    TotalInvested += (t.Amount * t.Price) + t.FeeInQuoteValue;
+                    balance += t.Amount;
+                    invested += (t.Amount * t.Price) + t.FeeInQuoteValue;
                     break;
 
                 case ETransactionType.Sell:
-                    if (t.Amount > Balance) break; // skip corrupted sells
-                    decimal costBasisRemoved = t.Amount * (Balance == 0 ? 0 : TotalInvested / Balance);
-                    Balance -= t.Amount;
-                    TotalInvested -= costBasisRemoved;
-                    if (Balance == 0) TotalInvested = 0;
+                    if (t.Amount > balance) break; // skip corrupted sells
+                    invested -= t.Amount * (balance == 0 ? 0 : invested / balance);
+                    balance -= t.Amount;
+                    if (balance == 0) invested = 0;
                     break;
 
                 case ETransactionType.TransferIn:
-                    Balance += t.Amount;
+                    balance += t.Amount;
+                    if (policy == TransferCostPolicy.Proportional)
+                        invested += t.Amount * t.Price;
                     break;
 
                 case ETransactionType.TransferOut:
-                    if (t.Amount > Balance) break; // skip transfers without a known opening balance
-                    Balance -= t.Amount;
-                    if (Balance == 0) TotalInvested = 0;
+                    if (t.Amount > balance) break; // skip transfers without a known opening balance
+                    if (policy == TransferCostPolicy.Proportional)
+                        invested -= t.Amount * (balance == 0 ? 0 : invested / balance);
+                    balance -= t.Amount;
+                    if (balance == 0) invested = 0;
                     break;
             }
         }
+
+        return (balance, invested);
     }
 
     internal decimal CurrentWorth(decimal currentPrice)
@@ -173,15 +226,17 @@ public class CryptoAsset : Entity
         return (gainOrLoss / TotalInvested) * 100;
     }
 
-    private void HandleTransferIn(CryptoTransaction transaction)
+    private void HandleTransferIn(CryptoTransaction transaction, TransferCostPolicy policy)
     {
         if (transaction.Amount <= 0)
             throw new CryptoAssetException("Transfer amount must be greater than zero");
 
         Balance += transaction.Amount;
+        if (policy == TransferCostPolicy.Proportional)
+            TotalInvested += transaction.Amount * transaction.Price;
     }
 
-    private void HandleTransferOut(CryptoTransaction transaction)
+    private void HandleTransferOut(CryptoTransaction transaction, TransferCostPolicy policy)
     {
         if (transaction.Amount <= 0)
             throw new CryptoAssetException("Transfer amount must be greater than zero");
@@ -189,6 +244,8 @@ public class CryptoAsset : Entity
         if (transaction.Amount > Balance)
             throw new CryptoAssetException("Insufficient balance");
 
+        if (policy == TransferCostPolicy.Proportional)
+            TotalInvested -= transaction.Amount * AveragePrice;
         Balance -= transaction.Amount;
 
         if (Balance == 0)

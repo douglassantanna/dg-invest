@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
@@ -50,6 +51,7 @@ public class WithdrawFundCommandValidator : AbstractValidator<WithdrawFundComman
 
 public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, Response>
 {
+    private readonly TransferCostPolicy _transferCostPolicy;
     private readonly ITransactionService _transactionService;
     private readonly ILogger<WithdrawFundCommandHandler> _logger;
     private readonly DataContext _context;
@@ -59,12 +61,14 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
         ILogger<WithdrawFundCommandHandler> logger,
         ITransactionService transactionService,
         DataContext context,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
         _cacheService = cacheService;
+        _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public async Task<Response> Handle(WithdrawFundCommand request, CancellationToken cancellationToken)
@@ -111,7 +115,7 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
                     0
                 );
 
-                cryptoAsset.AddTransaction(transferTx);
+                cryptoAsset.AddTransaction(transferTx, _transferCostPolicy);
 
                 var accountTransaction = new AccountTransaction(
                     date: date,

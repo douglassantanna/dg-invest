@@ -8,8 +8,7 @@ Authorization: Bearer {{token}}
 {
     "accountId": 1,
     "apiKey": "0",
-    "apiSecret": "0",
-    "webhookSecret": "first-test-webhook-secret"
+    "apiSecret": "0"
 }
 
 ###

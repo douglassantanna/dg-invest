@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using api.AzureKeyVault;
 using api.Cache;
 using api.CoinMarketCap.Service;
@@ -11,6 +12,7 @@ namespace api.Exchanges.Services;
 
 public sealed class BybitAccountSyncService : IBybitAccountSyncService
 {
+    private readonly TransferCostPolicy _transferCostPolicy;
     private static readonly TimeSpan SyncOverlap = TimeSpan.FromMinutes(5);
     // Bybit order and transfer history accept at most 7 days per request (deposits and withdrawals 30).
     private static readonly TimeSpan MaxWindow = TimeSpan.FromDays(7);
@@ -35,7 +37,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         DataContext context,
         ICacheService cacheService,
         ICoinMarketCapService coinMarketCapService,
-        ILogger<BybitAccountSyncService> logger)
+        ILogger<BybitAccountSyncService> logger,
+        IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _bybitService = bybitService;
         _orderSyncService = orderSyncService;
@@ -44,6 +47,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         _cacheService = cacheService;
         _coinMarketCapService = coinMarketCapService;
         _logger = logger;
+        _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public Task<BybitAccountSyncResult> SyncAsync(Account account, CancellationToken cancellationToken)
@@ -370,7 +374,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         }
 
         foreach (var asset in cryptoAssets)
-            asset.RecalculateFromTransactions();
+            asset.RecalculateFromTransactions(_transferCostPolicy);
 
         // Bybit's wallet-balance endpoint supports UNIFIED only. FUND balances
         // use a different account-coin endpoint.

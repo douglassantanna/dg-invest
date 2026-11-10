@@ -1,3 +1,4 @@
+using api.Models.Cryptos;
 using System.Text;
 using System.Threading.RateLimiting;
 using api.Authentication;
@@ -74,6 +75,7 @@ public static class ServiceExtensions
         services.Configure<BybitKeyVaultSettings>(config.GetSection(nameof(BybitKeyVaultSettings)));
         services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
         services.Configure<MigrationsSettings>(config.GetSection("Migrations"));
+        services.Configure<CostBasisSettings>(config.GetSection(nameof(CostBasisSettings)));
         return services;
     }
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
@@ -146,6 +148,7 @@ public static class ServiceExtensions
         services.Configure<CoinMarketCapSettings>(config.GetSection(nameof(CoinMarketCapSettings)));
         services.Configure<AzureStorageSettings>(config.GetSection(nameof(AzureStorageSettings)));
         services.Configure<BybitSettings>(config.GetSection(nameof(BybitSettings)));
+        services.Configure<CostBasisSettings>(config.GetSection(nameof(CostBasisSettings)));
         services.Configure<RecalculationSettings>(config.GetSection(nameof(RecalculationSettings)));
         services.Configure<KeyVaultSettings>(config.GetSection(nameof(KeyVaultSettings)));
         services.Configure<BybitKeyVaultSettings>(config.GetSection(nameof(BybitKeyVaultSettings)));

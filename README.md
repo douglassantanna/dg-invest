@@ -54,6 +54,9 @@ Before running the API you need to configure the settings file:
     "RequestsPermitLimit": 320,
     "WindowLimitInMinutes": 10
   },
+  "CostBasisSettings": {
+    "TransferCostPolicy": "Legacy"
+  },
   "RunMigrations": false,
   "Serilog": {
     "MinimumLevel": {
@@ -265,11 +268,39 @@ Synced events are recorded **without** the local "insufficient funds" check: Byb
 | Cost, average price, gain/loss | DG Invest transaction history |
 | Total deposited | History: deposits + transfers in − withdrawals − transfers out (the opening balance is excluded) |
 
-On every sync, each asset is first recalculated from its history, then its quantity is set to the Bybit wallet:
+On every sync, each asset is first recalculated from its history (see [Cost basis](#cost-basis)), then its quantity is set to the Bybit wallet:
 - If Bybit holds **less** than history explains, the cost is reduced proportionally, like a sale at the average price.
-- If Bybit holds **more**, the extra currently enters with **no cost**, which inflates gains (see [Known limitations](#known-limitations)).
+- If Bybit holds **more**, the difference is the asset's **balance without history**. How it is valued depends on the transfer cost policy (below).
 
 Calculating everything from history alone is not viable: Bybit has many activity types (Earn, convert, P2P, airdrops, fees in the traded coin), and any missed event would leave balances wrong forever. Bybit, however, does not know your cost basis for coins that came from elsewhere, so cost comes from DG Invest's history.
+
+#### Cost basis
+
+DG Invest uses the **average-cost method**:
+- A **buy** adds `quantity × price + fee` to the invested amount.
+- A **sell** removes cost at the current average price, so the average does not change.
+
+How transfers and balance without history are treated depends on `CostBasisSettings:TransferCostPolicy` (API and Function App settings). It applies to Bybit and manual accounts alike:
+
+| | `Legacy` (default, being phased out) | `Proportional` |
+|---|---|---|
+| **Transfer in** (crypto deposit) | Adds coins at **zero cost**, ignoring the recorded price | Adds cost at the **recorded price** (market price when the deposit was recorded) |
+| **Transfer out** (crypto withdrawal) | Keeps the **full cost** on the remaining coins, so the average price jumps | Removes cost at the **average price**, like a sale |
+| **Balance without history** (Bybit only) | Counts as free coins, which **inflates** the gain | Valued at the **current price**, so it adds no gain or loss. The asset page shows a "Without history" card and a note suggesting the historical import. |
+
+Example: buy 1 BTC at 60k, then withdraw 0.5 BTC. With `Legacy` the remaining 0.5 BTC shows an average of 120k. With `Proportional` it shows 60k.
+
+**Preview before switching:**
+- `GET /api/Recalculate/preview` (any signed-in user) returns, for the caller's **own** assets, the figures shown today (`before`, Legacy) and the figures after switching (`after`, Proportional). Nothing is saved. Rows are ordered by the largest change in gain percentage.
+- `before`/`after` contain `invested`, `averagePrice`, `gainLoss`, `gainLossPercentage` and `unexplainedBalance`.
+
+**Switching to `Proportional`:**
+1. Check `GET /api/Recalculate/preview` for the accounts you care about.
+2. Set `param transferCostPolicy = 'Proportional'` in `infra/environments/<env>.bicepparam` and run **Deploy Azure Infrastructure**. This sets `CostBasisSettings__TransferCostPolicy` on both the API and the Function App. Do not set it by hand in the portal: the next infra deploy rewrites all app settings and would revert it.
+3. Bybit accounts update on their next sync, because sync recalculates from history.
+4. **Manual accounts** keep their stored figures until recalculated. An **admin** runs `POST /api/Recalculate/recalculate` once, with `RecalculationSettings__EnableRecalculation = true` set temporarily in the API app settings, then removes it. The next infra deploy also removes it.
+
+`POST /api/Recalculate/recalculate` recalculates **every user's** accounts. It requires the Admin role, as well as the flag.
 
 #### Transfers
 
@@ -380,11 +411,9 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 These are tracked in the integration review and planned for upcoming PRs:
 
 - **Cost basis:**
-  - coins Bybit holds beyond what history explains enter at zero cost, which inflates gains;
-  - `TransferIn` adds coins at zero cost;
-  - `TransferOut` keeps the full cost on the remaining coins;
-  - crypto transfers between your own accounts are not recorded, so cost is lost at the destination;
-  - deposits record the price at processing time, not at deposit time, which is wrong for backfilled deposits.
+  - Until `TransferCostPolicy` is switched to `Proportional`, transfers and balance without history use the Legacy rules described in [Cost basis](#cost-basis).
+  - Crypto transfers between your own accounts are not recorded, so cost is lost at the destination.
+  - Deposits record the price at processing time, not at deposit time, which is wrong for backfilled deposits.
 - **Non-USD pairs** (e.g. `BTCBRL`, `ETHBTC`) are recorded with the quote-currency price as if it were USD.
 - **Deposit and withdrawal deduplication** uses the `txID` across all accounts, not per account.
 - **One item that can never be imported** blocks that account's checkpoint.
