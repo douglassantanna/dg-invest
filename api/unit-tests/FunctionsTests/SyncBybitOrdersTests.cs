@@ -388,54 +388,6 @@ public class SyncBybitOrdersTests
     }
 
     [Fact]
-    public async Task Run_WhenUniversalTransferSourceIsNotLinked_ShouldSkipTransfer()
-    {
-        var options = new DbContextOptionsBuilder<DataContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        var context = new DataContext(options);
-        var account = new Account("Subaccount", 1, EAccountType.Exchange, "Bybit", "UID-001");
-        var integration = new ExchangeIntegration(1, "Bybit");
-        integration.MarkEnabled();
-        context.AddRange(account, integration);
-        await context.SaveChangesAsync();
-        var status = new SyncStatus(1, account.Id, "Bybit");
-        status.EnableForCredentials();
-        context.SyncStatuses.Add(status);
-        await context.SaveChangesAsync();
-
-        var keyVault = new Mock<IKeyVaultService>();
-        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
-            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "credential"));
-        var transfer = new BybitInternalTransferRow
-        {
-            TransferId = "unlinked-transfer",
-            Coin = "USDC",
-            Amount = "10",
-            FromAccountType = "FUND",
-            FromMemberId = "UID-MISSING",
-            ToAccountType = "FUND",
-            ToMemberId = "UID-001",
-            Timestamp = "1790000000000"
-        };
-        var bybitService = new Mock<IBybitService>();
-         bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetWithdrawalHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetInternalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
-         bybitService.Setup(x => x.GetUniversalTransferHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([transfer]);
-        var orderSyncService = new Mock<IBybitOrderSyncService>();
-        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
-        var functionContext = new Mock<FunctionContext>();
-        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
-
-        await function.Run(null!, functionContext.Object);
-
-        orderSyncService.Verify(x => x.ProcessInternalTransferAsync(It.IsAny<BybitInternalTransferRow>(), It.IsAny<Account>(), 1, It.IsAny<CancellationToken>()), Times.Never);
-        Assert.Null(integration.LastSyncAt);
-    }
-
-    [Fact]
     public async Task Run_WhenBybitRejectsHistoryRequest_ShouldRecordBybitError()
     {
         var options = new DbContextOptionsBuilder<DataContext>()

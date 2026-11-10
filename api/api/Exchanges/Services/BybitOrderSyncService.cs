@@ -80,6 +80,16 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             return true;
         }
 
+        // Only USD-quoted pairs are supported: a BTCBRL or ETHBTC price is in BRL or BTC, and storing it as USD would
+        // distort cost and gains. Such orders are logged as not imported and counted as skipped.
+        if (!IsUsdQuoted(order.Symbol))
+        {
+            _logger.LogWarning("Bybit sync: order {OrderId} ({Symbol}) is not quoted in USDT/USDC/USD; not imported", order.OrderId, order.Symbol);
+            await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Failed",
+                $"Not imported: {order.Symbol} is not quoted in USDT, USDC or USD", importSource, logId, cancellationToken);
+            return false;
+        }
+
         if (!TryParseOrderValues(order, out var price, out var qty, out _))
         {
             _logger.LogDebug("Bybit sync: could not parse numeric values for order {OrderId}", order.OrderId);
@@ -154,6 +164,14 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _logger.LogInformation("Bybit sync: processing deposit {TxId} (Coin: {Coin}, Amount: {Amount}, Status: {Status})",
             deposit.TxId, deposit.Coin, deposit.Amount, deposit.Status);
 
+        var depositKey = DepositKey(deposit);
+        if (depositKey is null)
+        {
+            _logger.LogWarning("Bybit sync: deposit without txID or id for account {AccountId} cannot be deduplicated; skipped", account.Id);
+            await WriteDepositWithdrawalSyncLogAsync(deposit, symbol, userId, account.Id, "Failed", "Deposit has no txID or id", "BybitDeposit", logId, cancellationToken);
+            return false;
+        }
+
         if (!TryParseDepositWithdrawalAmount(deposit, out var amount))
         {
             _logger.LogDebug("Bybit sync: could not parse amount for deposit {TxId}", deposit.TxId);
@@ -162,7 +180,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
 
         var existingTx = await _context.AccountTransactions
-            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == deposit.TxId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == depositKey
+                && EF.Property<int?>(t, "AccountId") == account.Id, cancellationToken);
         if (existingTx != null)
         {
             if (existingTx.ExchangeStatus != deposit.Status)
@@ -220,7 +239,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
             fee: 0,
-            exchangeTransactionId: deposit.TxId,
+            exchangeTransactionId: DepositKey(deposit),
             exchangeStatus: deposit.Status);
 
         var result = applyCashBalance
@@ -247,6 +266,14 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         _logger.LogInformation("Bybit sync: processing withdrawal {TxId} (Coin: {Coin}, Amount: {Amount}, Status: {Status})",
             withdrawal.TxId, withdrawal.Coin, withdrawal.Amount, withdrawal.Status);
 
+        var withdrawalKey = WithdrawalKey(withdrawal);
+        if (withdrawalKey is null)
+        {
+            _logger.LogWarning("Bybit sync: withdrawal without txID or withdrawId for account {AccountId} cannot be deduplicated; skipped", account.Id);
+            await WriteDepositWithdrawalSyncLogAsync(withdrawal, symbol, userId, account.Id, "Failed", "Withdrawal has no txID or withdrawId", "BybitWithdrawal", logId, cancellationToken);
+            return false;
+        }
+
         if (!TryParseDepositWithdrawalAmount(withdrawal, out var amount))
         {
             _logger.LogDebug("Bybit sync: could not parse amount for withdrawal {TxId}", withdrawal.TxId);
@@ -260,7 +287,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         }
 
         var existingTx = await _context.AccountTransactions
-            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == withdrawal.TxId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.ExchangeTransactionId == withdrawalKey
+                && EF.Property<int?>(t, "AccountId") == account.Id, cancellationToken);
         if (existingTx != null)
         {
             if (existingTx.ExchangeStatus != withdrawal.Status)
@@ -318,7 +346,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: cryptoAsset.Id,
             cryptoAsset: cryptoAsset,
             fee: fee,
-            exchangeTransactionId: withdrawal.TxId,
+            exchangeTransactionId: WithdrawalKey(withdrawal),
             exchangeStatus: withdrawal.Status);
 
         var result = applyCashBalance
@@ -352,7 +380,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: null,
             cryptoAsset: null,
             fee: 0,
-            exchangeTransactionId: deposit.TxId,
+            exchangeTransactionId: DepositKey(deposit),
             exchangeStatus: deposit.Status);
 
         var result = applyCashBalance
@@ -386,7 +414,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             cryptoAssetId: null,
             cryptoAsset: null,
             fee: fee,
-            exchangeTransactionId: withdrawal.TxId,
+            exchangeTransactionId: WithdrawalKey(withdrawal),
             exchangeStatus: withdrawal.Status);
 
         var result = applyCashBalance
@@ -558,6 +586,17 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task MarkSyncStatusWarningAsync(int userId, int accountId, string warningMessage, CancellationToken cancellationToken)
+    {
+        var status = await _context.SyncStatuses
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.AccountId == accountId && s.ExchangeName == "Bybit", cancellationToken);
+        if (status is null)
+            return;
+
+        status.RecordWarning(warningMessage);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task MarkSyncStatusErrorAsync(int userId, int accountId, string errorMessage, CancellationToken cancellationToken)
     {
         var status = await _context.SyncStatuses
@@ -605,36 +644,30 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         if (existing != null)
             return existing;
 
-        try
+        // Exceptions (CoinMarketCap outage, database error) propagate so the sync fails and retries the item later.
+        // Only an answer that the coin is unknown, or an asset the account rejects, returns null so the caller skips it.
+        var quote = await _coinMarketCapService.GetQuoteBySymbol(symbol.ToUpperInvariant());
+        if (quote?.Data == null || !quote.Data.Any())
         {
-            var quote = await _coinMarketCapService.GetQuoteBySymbol(symbol.ToUpperInvariant());
-            if (quote?.Data == null || !quote.Data.Any())
-            {
-                _logger.LogDebug("Bybit sync: CoinMarketCap returned no data for symbol {Symbol}", symbol);
-                return null;
-            }
-
-            var coin = quote.Data.First().Value;
-            var newAsset = new CryptoAsset(coin.Name, coin.Name, coin.Symbol, coin.Id);
-            var addResult = account.AddCryptoAsset(newAsset);
-
-            if (!addResult.IsSuccess)
-            {
-                _logger.LogDebug("Bybit sync: could not add crypto asset {Symbol}: {Message}", symbol, addResult.Message);
-                return null;
-            }
-
-            _context.Accounts.Update(account);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation("Bybit sync: auto-created crypto asset {Symbol} (CMC ID {Id})", coin.Symbol, coin.Id);
-            return newAsset;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Bybit sync: error creating crypto asset for {Symbol}", symbol);
+            _logger.LogDebug("Bybit sync: CoinMarketCap returned no data for symbol {Symbol}", symbol);
             return null;
         }
+
+        var coin = quote.Data.First().Value;
+        var newAsset = new CryptoAsset(coin.Name, coin.Name, coin.Symbol, coin.Id);
+        var addResult = account.AddCryptoAsset(newAsset);
+
+        if (!addResult.IsSuccess)
+        {
+            _logger.LogDebug("Bybit sync: could not add crypto asset {Symbol}: {Message}", symbol, addResult.Message);
+            return null;
+        }
+
+        _context.Accounts.Update(account);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Bybit sync: auto-created crypto asset {Symbol} (CMC ID {Id})", coin.Symbol, coin.Id);
+        return newAsset;
     }
 
     private async Task<List<string>> GetQuoteCurrenciesAsync()
@@ -811,6 +844,24 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     }
 
     private sealed record ResolvedBybitFee(decimal Amount, string? Currency, decimal? QuoteValue, string? ExecutionId);
+
+    private static readonly string[] UsdQuoteCurrencies = ["USDT", "USDC", "USD"];
+
+    internal static bool IsUsdQuoted(string tradingPair) =>
+        UsdQuoteCurrencies.Any(quote => tradingPair.EndsWith(quote, StringComparison.OrdinalIgnoreCase));
+
+    // Key stored in AccountTransactions.ExchangeTransactionId. The on-chain txID is kept when present so rows saved
+    // before Bybit record ids were used still match; otherwise Bybit's own unique record id identifies the record.
+    // Lookups are scoped to the account: two accounts can legitimately share a txID (one withdraws, the other receives).
+    internal static string? DepositKey(BybitDepositWithdrawalRow row) =>
+        !string.IsNullOrWhiteSpace(row.TxId) ? row.TxId
+        : !string.IsNullOrWhiteSpace(row.Id) ? $"bybit-deposit-{row.Id}"
+        : null;
+
+    internal static string? WithdrawalKey(BybitDepositWithdrawalRow row) =>
+        !string.IsNullOrWhiteSpace(row.TxId) ? row.TxId
+        : !string.IsNullOrWhiteSpace(row.WithdrawId) ? $"bybit-withdraw-{row.WithdrawId}"
+        : null;
 
     private static bool IsCashCoin(string symbol) => BybitCashBalance.CashCoins.Contains(symbol, StringComparer.OrdinalIgnoreCase);
 
