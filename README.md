@@ -300,7 +300,11 @@ Example: buy 1 BTC at 60k, then withdraw 0.5 BTC. With `Legacy` the remaining 0.
 1. Check `GET /api/Recalculate/preview` for the accounts you care about.
 2. Set `param transferCostPolicy = 'Proportional'` in `infra/environments/<env>.bicepparam` and run **Deploy Azure Infrastructure**. This sets `CostBasisSettings__TransferCostPolicy` on both the API and the Function App. Do not set it by hand in the portal: the next infra deploy rewrites all app settings and would revert it.
 3. Bybit accounts update on their next sync, because sync recalculates from history.
-4. **Manual accounts** keep their stored figures until recalculated. An **admin** runs `POST /api/Recalculate/recalculate` once, with `RecalculationSettings__EnableRecalculation = true` set temporarily in the API app settings, then removes it. The next infra deploy also removes it.
+4. **Manual accounts** keep their stored figures until recalculated:
+   - set `param enableRecalculation = true` in the same `.bicepparam` and deploy;
+   - an **admin** runs `POST /api/Recalculate/recalculate` once;
+   - set it back to `false` in a follow-up PR and deploy again.
+   It is a Bicep parameter (default `false`, API only) so that it never drifts from what Bicep deploys.
 
 `POST /api/Recalculate/recalculate` recalculates **every user's** accounts. It requires the Admin role, as well as the flag.
 
