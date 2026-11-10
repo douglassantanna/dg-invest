@@ -15,6 +15,23 @@ public class BybitCashBalanceTests
     }
 
     [Fact]
+    public void ParseAccountCoinBalance_ShouldUseTheWalletBalanceIncludingFundsLockedInOpenOrders()
+    {
+        // 100 USDT held, 20 locked in an open limit order: the portfolio still owns 100, only 80 is transferable.
+        var balance = new BybitAccountCoinBalance { Coin = "USDT", WalletBalance = "100", TransferBalance = "80" };
+
+        BybitCashBalance.ParseAccountCoinBalance(balance).Should().Be(100m);
+    }
+
+    [Fact]
+    public void ParseAccountCoinBalance_WhenWalletBalanceIsMissing_ShouldFallBackToTransferBalance()
+    {
+        var balance = new BybitAccountCoinBalance { Coin = "USDT", WalletBalance = "", TransferBalance = "80" };
+
+        BybitCashBalance.ParseAccountCoinBalance(balance).Should().Be(80m);
+    }
+
+    [Fact]
     public void SumWalletBalances_ShouldAggregateCoinsAcrossWalletAccounts()
     {
         var responses = new[]
