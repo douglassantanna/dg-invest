@@ -113,6 +113,14 @@ public class CryptoAsset : Entity
     // Quantity explained by the transaction history. It does not depend on the cost policy.
     public decimal HistoryBalance() => Replay(_transactions, TransferCostPolicy.Legacy).Balance;
 
+    // Average cost per coin from the transactions before `at`, or null when that history does not hold at least
+    // `quantity` coins with a known cost (missing history, or coins that arrived without one).
+    public decimal? AveragePriceBefore(DateTimeOffset at, decimal quantity)
+    {
+        var (balance, invested) = Replay(_transactions.Where(t => t.PurchaseDate < at), TransferCostPolicy.Proportional);
+        return balance > 0 && balance >= quantity && invested > 0 ? invested / balance : null;
+    }
+
     // Cost figures for display. Under Proportional, coins Bybit holds beyond what history explains (Balance was
     // reconciled to the wallet) are valued at the current price instead of at zero cost, so they add no gain.
     public CostBasisView GetCostBasis(decimal currentPrice, TransferCostPolicy policy)
