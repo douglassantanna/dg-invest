@@ -42,12 +42,42 @@ public class BybitApiFailureClassifierTests
         result.Endpoint.Should().Be("/v5/asset/deposit/query-record");
     }
 
-    [Fact]
-    public void Classify_RateLimitResponse_DoesNotReturnPermanentCredentialFailure()
+    [Theory]
+    [InlineData(10006)]
+    [InlineData(10018)]
+    public void Classify_RateLimitRetCode_ReturnsRateLimited(int retCode)
     {
-        var result = BybitApiFailureClassifier.Classify(new BybitApiException(10006, "rate limit"));
+        var result = BybitApiFailureClassifier.Classify(new BybitApiException(retCode, "rate limit"));
 
-        result.Kind.Should().Be(BybitApiFailureKind.Other);
+        result.Kind.Should().Be(BybitApiFailureKind.RateLimited);
+    }
+
+    [Fact]
+    public void Classify_HttpRateLimit_ReturnsRateLimitedNotTransport()
+    {
+        var result = BybitApiFailureClassifier.Classify(
+            new BybitRateLimitException("/v5/order/history", 403, new Exception("forbidden")));
+
+        result.Kind.Should().Be(BybitApiFailureKind.RateLimited);
+        result.Endpoint.Should().Be("/v5/order/history");
+    }
+
+    [Theory]
+    [InlineData(10003, "API key")]
+    [InlineData(10010, "IP")]
+    [InlineData(131002, "date range")]
+    public void Describe_CommonCodes_ExplainWhatToDoAndKeepTheCode(int retCode, string expected)
+    {
+        var message = BybitErrorMessages.Describe(new BybitApiException(retCode, "raw"), "sync request");
+
+        message.Should().Contain(expected).And.Contain($"[Bybit {retCode}]");
+    }
+
+    [Fact]
+    public void Describe_UnknownCode_KeepsBybitsText()
+    {
+        BybitErrorMessages.Describe(new BybitApiException(170131, "Insufficient balance"), "sync request")
+            .Should().Be("Bybit rejected sync request: 170131 - Insufficient balance");
     }
 
     [Fact]

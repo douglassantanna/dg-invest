@@ -178,7 +178,7 @@ The frontend launches automatically. Access the application using the credential
 ---
 ### Bybit integration
 
-DG Invest reads your Bybit **spot** activity and balances using **read-only** API keys. It never places orders or moves funds. Sync runs in the background every 30 seconds and on demand.
+DG Invest reads your Bybit **spot** activity and balances using **read-only** API keys. It never places orders or moves funds. Sync runs in the background every minute and on demand.
 
 This section describes how the integration works today. Keep it current: every change to the integration updates this section in the same PR.
 
@@ -231,7 +231,7 @@ Authorization: Bearer <jwt>
 
 #### How sync works
 
-The timer `SyncBybitOrders` (every 30 seconds, when `BybitSync:Enabled`) and the manual **Sync now** button (`POST /api/Exchange/bybit/sync/{accountId}`) both run `BybitAccountSyncService.SyncAsync`. For each enabled account, one run does the following:
+The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enabled`) and the manual **Sync now** button (`POST /api/Exchange/bybit/sync/{accountId}`) both run `BybitAccountSyncService.SyncAsync`. For each enabled account, one run does the following:
 
 1. **Checks** that the account has a sync status, sync is enabled, the integration is connected (not disconnected or auto-paused) and credentials exist.
 2. **Picks the start of the range:**
@@ -257,8 +257,8 @@ The timer `SyncBybitOrders` (every 30 seconds, when `BybitSync:Enabled`) and the
    - `PartiallyFilledCanceled` with an executed quantity above zero (only the executed quantity and average price are used).
    - Only pairs quoted in **USDT, USDC or USD**. A pair like `BTCBRL` or `ETHBTC` is priced in another currency, so it is not imported. It is logged and counted as a skipped item.
 
-   Fees come from Bybit's execution history when available.
-5. **Reconciles balances with Bybit** (see [where each number comes from](#where-each-number-comes-from)).
+   Fees come from Bybit's execution history when available. Executions are fetched only for orders not yet imported with one; an order already stored with its execution keeps its fee, so a re-fetched window costs no extra calls.
+5. **Reconciles balances with Bybit** (see [where each number comes from](#where-each-number-comes-from)). The cash wallet is read **once per run**, after the events: four calls (Funding and Unified × USDT and USDC). The same read sets the opening balance on the first sync.
 6. **Advances the checkpoint** to the end of the last fetched window. Failures are handled in two ways:
    - **An item that can never be imported** (a coin CoinMarketCap does not know, unparseable data, a non-USD pair, a record without an id) is logged as Failed and **skipped**. The account status stays `Connected` with a warning: *"N Bybit item(s) could not be imported and were skipped…"*. After fixing the cause, run the historical import to bring them in.
    - **A temporary failure** (network, database, CoinMarketCap outage) fails the run. The checkpoint stays, and the next run retries the same range.
@@ -374,8 +374,11 @@ COMMIT TRANSACTION;
 | Trigger | Result |
 |---|---|
 | Bybit rejects the credentials again after the fresh-key retry | Integration auto-paused immediately, and the user is emailed. Disconnect and reconnect from the Exchange Hub. |
-| 10 consecutive transport failures (network, 5xx, 429) | Integration auto-paused |
+| 10 consecutive transport failures (network, timeout, 408, 5xx) | Integration auto-paused |
+| Rate limit (HTTP 403 or 429, codes `10006` / `10018`) | **Not counted.** The run stops for every account, because Bybit limits per IP, and the next run retries. The account status is not changed. |
 | Any other error | The account's sync status becomes `Error`, and the next run retries |
+
+Every Bybit request times out after **20 seconds**, so a slow Bybit fails fast instead of overlapping the next run.
 
 #### Bybit status reference
 
@@ -421,7 +424,13 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 
 | Message | Meaning and fix |
 |---|---|
-| `Bybit rejected sync request: 10003 …` / `10004 …` | The key is invalid, revoked, or the region is wrong. Save a new read-only key with the right region. |
+| `Bybit rejected the API key … [Bybit 10003]` / `… the API secret does not match the key … [Bybit 10004]` | The key is invalid, revoked, or the region is wrong. Save a new read-only key with the right region. |
+| `… only accepts requests from specific IP addresses … [Bybit 10010]` | The key has an IP whitelist. Remove it in Bybit, or create a key without one. |
+| `… missing a permission … [Bybit 10005]` | The key lacks a read permission for that request. Check the key's permissions in Bybit. |
+| `Bybit rejected the requested date range … [Bybit 131002]` | A time window Bybit does not accept. The next sync uses 7-day windows; if it keeps failing, run a historical import. |
+| `Bybit is limiting requests right now…` | Rate limit. Nothing to fix: the next run retries, and it does not count toward the automatic pause. If it lasts for hours, check whether Bybit is blocking the Function's region (Bybit also answers 403 to blocked regions). |
+| `Could not reach Bybit (…)` | Network error, timeout or Bybit outage. The next run retries; 10 in a row pause the integration. |
+| `Bybit rejected sync request: <code> - <text>` | Any other Bybit error, with Bybit's own text. |
 | `This Bybit API key belongs to UID …, but this account is UID …` | The key was created in another Bybit account (for example, another sub-account). Create a read-only key inside the account shown on the page. |
 | `This Bybit API key can trade or withdraw…` | Create a **read-only** key. For the master key, also enable Wallet → Account Transfer / Subaccount Transfer. |
 | `N Bybit item(s) could not be imported and were skipped; see the sync logs…` | Those items were logged as Failed and skipped; the account keeps syncing. Fix the cause (for example, create a coin CoinMarketCap does not know), then run the historical import from before the skipped items. |
@@ -441,7 +450,7 @@ These are tracked in the integration review and planned for upcoming PRs:
 - **Cost basis:**
   - Environments still on `TransferCostPolicy = Legacy` (PROD) use the Legacy rules described in [Cost basis](#cost-basis).
   - Deposits, withdrawals and transfers recorded before 2026-11 keep the price from processing time (today's CoinMarketCap price), not the event time.
-- **Cost and resilience:** the timer runs every 30 s with sequential Bybit calls, ~15 per account; there is no short timeout or rate-limit handling.
+- **Sequential calls:** accounts are synced one after another, ~12 calls per account per run plus one per new order.
 
 ---
 

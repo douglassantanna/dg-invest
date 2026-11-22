@@ -46,6 +46,32 @@ public class BybitServiceTests
         exception.Endpoint.Should().Be("/v5/account/info");
     }
 
+    [Theory]
+    [InlineData(403)]
+    [InlineData(429)]
+    public async Task GetOrderHistoryAsync_WhenBybitRateLimits_ShouldThrowRateLimitException(int statusCode)
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWith("rate limited", statusCode);
+
+        var exception = await Assert.ThrowsAsync<BybitRateLimitException>(() =>
+            _sut.GetOrderHistoryAsync("api-key", "api-secret"));
+
+        exception.StatusCode.Should().Be(statusCode);
+        exception.Endpoint.Should().Be("/v5/order/history");
+    }
+
+    [Fact]
+    public async Task PrivateRequests_UseATwentySecondTimeout()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = Array.Empty<object>() } });
+
+        await _sut.GetOrderHistoryAsync("api-key", "api-secret");
+
+        httpTest.CallLog.Should().ContainSingle().Which.Request.Settings.Timeout.Should().Be(TimeSpan.FromSeconds(20));
+    }
+
     [Fact]
     public async Task TestConnectionAsync_WhenBybitReturnsServiceUnavailable_ShouldThrowClassifiedTransportException()
     {

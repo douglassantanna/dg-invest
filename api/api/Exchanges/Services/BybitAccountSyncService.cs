@@ -105,7 +105,6 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             }
 
             var region = BybitEndpoints.Parse(syncStatus.Region);
-            await PopulateInitialCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
             // Fetch from the checkpoint to now in explicit windows of at most 7 days. With only a
             // startTime, Bybit returns startTime + 7 days for orders/transfers (silently dropping
@@ -147,7 +146,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             }
 
             await ReconcileCurrentCryptoBalancesAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
-            await ReconcileCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
+            await SyncCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
             await _orderSyncService.UpsertSyncStatusAsync(userId, accountId, lastOrderId, cancellationToken, checkpointAt);
             if (skipped > 0)
@@ -177,15 +176,22 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 return await SyncAsync(account, cancellationToken, retriedWithFreshCredentials: true);
             }
 
-            var message = $"Bybit rejected sync request: {ex.RetCode} - {ex.RetMsg}";
+            if (failure.Kind == BybitApiFailureKind.RateLimited)
+                return RateLimited(account, failure);
+
+            var message = BybitErrorMessages.Describe(ex, "sync request");
             await MarkErrorAsync(account, message, cancellationToken);
             if (failure.Kind == BybitApiFailureKind.PermanentCredential)
                 await PauseForPermanentCredentialFailureAsync(account, failure, message, cancellationToken);
             return BybitAccountSyncResult.Failed(message, 400, failure.Kind, failure.Code, failure.Endpoint);
         }
+        catch (BybitRateLimitException ex)
+        {
+            return RateLimited(account, BybitApiFailureClassifier.Classify(ex));
+        }
         catch (BybitTransportException ex)
         {
-            var message = $"Bybit request failed while connecting to {ex.Endpoint}";
+            var message = BybitErrorMessages.Unreachable(ex.Endpoint);
             await MarkErrorAsync(account, message, cancellationToken);
             return BybitAccountSyncResult.Failed(message, 503, BybitApiFailureKind.Transport, "transport", ex.Endpoint);
         }
@@ -288,7 +294,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         catch (BybitApiException ex)
         {
             var failure = BybitApiFailureClassifier.Classify(ex);
-            var message = $"Bybit rejected the historical import: {ex.RetCode} - {ex.RetMsg}";
+            if (failure.Kind == BybitApiFailureKind.RateLimited)
+                return RateLimited(account, failure);
+
+            var message = BybitErrorMessages.Describe(ex, "the historical import");
             if (failure.Kind == BybitApiFailureKind.PermanentCredential)
                 await PauseForPermanentCredentialFailureAsync(account, failure, message, cancellationToken);
             return BybitAccountSyncResult.Failed(
@@ -298,10 +307,14 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 failure.Code,
                 failure.Endpoint);
         }
+        catch (BybitRateLimitException ex)
+        {
+            return RateLimited(account, BybitApiFailureClassifier.Classify(ex));
+        }
         catch (BybitTransportException ex)
         {
             return BybitAccountSyncResult.Failed(
-                $"Bybit request failed while connecting to {ex.Endpoint}",
+                BybitErrorMessages.Unreachable(ex.Endpoint),
                 503,
                 BybitApiFailureKind.Transport,
                 "transport",
@@ -356,7 +369,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         catch (BybitApiException ex)
         {
             var failure = BybitApiFailureClassifier.Classify(ex);
-            var message = $"Bybit rejected balance reconciliation: {ex.RetCode} - {ex.RetMsg}";
+            if (failure.Kind == BybitApiFailureKind.RateLimited)
+                return RateLimited(account, failure);
+
+            var message = BybitErrorMessages.Describe(ex, "balance reconciliation");
             if (failure.Kind == BybitApiFailureKind.PermanentCredential)
                 await PauseForPermanentCredentialFailureAsync(account, failure, message, cancellationToken);
             return BybitAccountSyncResult.Failed(
@@ -366,10 +382,14 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 failure.Code,
                 failure.Endpoint);
         }
+        catch (BybitRateLimitException ex)
+        {
+            return RateLimited(account, BybitApiFailureClassifier.Classify(ex));
+        }
         catch (BybitTransportException ex)
         {
             return BybitAccountSyncResult.Failed(
-                $"Bybit request failed while connecting to {ex.Endpoint}",
+                BybitErrorMessages.Unreachable(ex.Endpoint),
                 503,
                 BybitApiFailureKind.Transport,
                 "transport",
@@ -617,15 +637,21 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         string importSource,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<BybitExecutionData> executions = [];
-        try
+        // An order already imported with its execution has its final fee: fetching executions again would cost one
+        // Bybit call per order per run for nothing. Null tells the order sync to leave the stored fee as it is.
+        IReadOnlyList<BybitExecutionData>? executions = null;
+        if (!HasImportedExecution(account, order.OrderId))
         {
-            executions = await _bybitService.GetExecutionHistoryAsync(apiKey, apiSecret, region, order.OrderId, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException
-            && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
-        {
-            _logger.LogDebug(ex, "Bybit execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
+            executions = [];
+            try
+            {
+                executions = await _bybitService.GetExecutionHistoryAsync(apiKey, apiSecret, region, order.OrderId, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException
+                && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
+            {
+                _logger.LogDebug(ex, "Bybit execution history unavailable for order {OrderId}; using order fee details", order.OrderId);
+            }
         }
 
         return await _orderSyncService.ProcessOrderAsync(
@@ -677,28 +703,22 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
     private sealed record SyncEvent(DateTimeOffset Timestamp, SyncEventKind Kind, object Value);
 
-    private async Task PopulateInitialCashBalanceAsync(
-        Account account,
-        string apiKey,
-        string apiSecret,
-        BybitRegion region,
-        CancellationToken cancellationToken)
+    private static bool HasImportedExecution(Account account, string orderId) =>
+        account.CryptoAssets
+            .SelectMany(asset => asset.Transactions)
+            .Any(transaction => transaction.ExchangeOrderId == orderId && !string.IsNullOrEmpty(transaction.ExchangeExecutionId));
+
+    private BybitAccountSyncResult RateLimited(Account account, BybitApiFailure failure)
     {
-        try
-        {
-            var cash = await GetBybitCashBalanceAsync(account, apiKey, apiSecret, region);
-            await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, cash.Total, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException
-            && BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
-        {
-            _logger.LogDebug(ex, "Bybit sync: failed to fetch initial cash balance for account {AccountId}", account.Id);
-        }
+        _logger.LogWarning("Bybit rate limit ({Code}) at {Endpoint} for account {AccountId}; the next run retries",
+            failure.Code, failure.Endpoint, account.Id);
+        return BybitAccountSyncResult.Failed(BybitErrorMessages.RateLimited, 429, BybitApiFailureKind.RateLimited, failure.Code, failure.Endpoint);
     }
 
-    // Bybit already executed every synced order, so its wallet is the source of truth for cash.
-    // Only a complete read replaces the local balance; a partial or failed read leaves it unchanged.
-    private async Task ReconcileCashBalanceAsync(
+    // Bybit already executed every synced order, so its wallet is the source of truth for cash. The wallet is read once
+    // per run, after the events are recorded: the same read sets the opening balance on the first sync and reconciles
+    // cash afterwards. Only a complete read is used; a partial or failed read leaves cash unchanged.
+    private async Task SyncCashBalanceAsync(
         Account account,
         string apiKey,
         string apiSecret,
@@ -722,6 +742,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             return;
         }
 
+        await _orderSyncService.ProcessOpeningBalanceAsync(account, account.UserId, cash.Total, cancellationToken);
         if (account.Balance == cash.Total)
             return;
 
