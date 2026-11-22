@@ -79,6 +79,28 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         keyVault.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_WhenReKeyingALinkedIntegrationWithoutMasterUid_ShouldCheckTheKeyAgainstTheLinkedMasterUid()
+    {
+        await using var context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var masterAccount = new Account("Bybit master account", 1, EAccountType.Exchange, "Bybit", "28660419");
+        context.Accounts.Add(masterAccount);
+        await context.SaveChangesAsync();
+        var integration = new api.Exchanges.Models.ExchangeIntegration(1, "Bybit");
+        integration.LinkMasterAccount(masterAccount.Id);
+        context.ExchangeIntegrations.Add(integration);
+        await context.SaveChangesAsync();
+        var keyVault = new Mock<IKeyVaultService>();
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(
+            CredentialService(context, keyVault.Object, ReadOnlyKeyBybit(ownerUid: 500206929).Object), context);
+
+        var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "other-key", "other-secret"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("28660419");
+        keyVault.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
     private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault, IBybitService? bybit = null) =>
         new BybitCredentialSetService(context, vault, bybit ?? ReadOnlyKeyBybit().Object, Mock.Of<ILogger<BybitCredentialSetService>>());
 

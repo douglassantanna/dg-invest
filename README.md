@@ -204,7 +204,7 @@ See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) and the [Re
 - **Each sub-account** that should sync needs its own read-only key with *Wallet → SubMemberTransferList* enabled. Bybit requires this permission for a sub-account key to list universal transfers.
 - When you save a new key, DG Invest checks it with Bybit (`/v5/user/query-api`) **before** storing it:
   - keys that can trade or withdraw (`readOnly != 1`) are rejected;
-  - keys that belong to a **different UID** than the account (or than the master UID, for the integration key) are rejected. A key from another sub-account would make the account mirror that other wallet;
+  - keys that belong to a **different UID** than the account (or than the master UID, for the integration key; when the master UID is left empty on a re-key, the already linked master UID is used) are rejected. A key from another sub-account would make the account mirror that other wallet;
   - keys Bybit rejects are refused;
   - if Bybit is unreachable, the save fails with 503 and nothing is stored.
 
