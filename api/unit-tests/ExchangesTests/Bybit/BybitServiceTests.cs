@@ -71,6 +71,57 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetExecutionsAsync_RequestsSpotFillsInTheWindowAndFetchesAllPages()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = new[] { new { orderId = "o-1", execId = "e-1" } }, nextPageCursor = "next" } })
+            .RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = new[] { new { orderId = "o-2", execId = "e-2" } }, nextPageCursor = "" } });
+
+        var fills = await _sut.GetExecutionsAsync("api-key", "api-secret", BybitRegion.Global, 1000, 2000);
+
+        fills.Select(fill => fill.ExecId).Should().Equal("e-1", "e-2");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/execution/list")
+            .WithQueryParam("category", "spot")
+            .WithQueryParam("startTime", 1000)
+            .WithQueryParam("endTime", 2000)
+            .WithQueryParam("limit", 100);
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/execution/list").WithQueryParam("cursor", "next");
+    }
+
+    [Fact]
+    public async Task GetOpenOrdersAsync_ListsOpenSpotOrdersAcrossPages()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = new[] { new { orderId = "o-1" } }, nextPageCursor = "next" } })
+            .RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = new[] { new { orderId = "o-2" } }, nextPageCursor = "" } });
+
+        var orders = await _sut.GetOpenOrdersAsync("api-key", "api-secret", BybitRegion.Global);
+
+        orders.Select(order => order.OrderId).Should().Equal("o-1", "o-2");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/order/realtime")
+            .WithQueryParam("category", "spot")
+            .WithQueryParam("openOnly", 0)
+            .WithQueryParam("limit", 50);
+    }
+
+    [Fact]
+    public async Task GetOrderAsync_LooksTheOrderUpByIdAndReturnsNullWhenBybitHasNoMatch()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = new[] { new { orderId = "o-1", orderStatus = "PartiallyFilledCanceled" } } } })
+            .RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = Array.Empty<object>() } });
+
+        var found = await _sut.GetOrderAsync("api-key", "api-secret", BybitRegion.Global, "o-1");
+        var missing = await _sut.GetOrderAsync("api-key", "api-secret", BybitRegion.Global, "o-9");
+
+        found!.OrderStatus.Should().Be("PartiallyFilledCanceled");
+        missing.Should().BeNull();
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/order/realtime")
+            .WithQueryParam("category", "spot")
+            .WithQueryParam("orderId", "o-1");
+    }
+
+    [Fact]
     public async Task PrivateRequests_UseATwentySecondTimeout()
     {
         using var httpTest = new HttpTest();

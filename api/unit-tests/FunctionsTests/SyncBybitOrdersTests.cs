@@ -667,6 +667,10 @@ public class SyncBybitOrdersTests
         DataContext context,
         IEmailService? emailService = null)
     {
+        // Every run also lists fills to catch late-filled limit orders; default to none.
+        Mock.Get(bybitService).Setup(service => service.GetExecutionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         Mock.Get(bybitService).Setup(service => service.GetWalletBalanceAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),

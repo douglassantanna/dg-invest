@@ -241,7 +241,7 @@ The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enab
 3. **Fetches from that point to now in windows of at most 7 days**, always sending both `startTime` and `endTime`.
    - Bybit allows 7 days per request for orders and transfers, and less than 30 days for deposits and withdrawals. If you send only a start time, Bybit returns just the next 7 days, or rejects deposits with `131002`.
    - One run covers at most **8 windows (~56 days)**. An account further behind catches up over the following runs.
-   - Each window fetches spot order history (paginated), deposits, withdrawals, internal transfers and universal transfers.
+   - Each window fetches spot order history (paginated), spot fills (`/v5/execution/list`, paginated), deposits, withdrawals, internal transfers and universal transfers.
 4. **Records the events in time order**, so a buy is recorded after the deposit, transfer or sell that funded it. Every event is idempotent:
 
    | Event | Deduplication key |
@@ -251,6 +251,20 @@ The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enab
    | Transfer | transfer ID + direction + account |
 
    The database enforces both per-account rules with unique indexes: `IX_AccountTransactions_AccountId_ExchangeTransactionId` (non-empty ids) and `IX_CryptoAssets_AccountId_CoinMarketCapId` (one asset per coin per account). If two syncs of the same account overlap, the second one fails on the index and the next run finds the existing record. Like the order index, these indexes are created by SQL migrations and are not part of the EF model.
+
+   **Limit orders that fill late.** Order history is filtered by **creation** time, so a limit order that fills after its window has passed (more than ~5 minutes after it was placed) is never returned again. Fills are listed by **execution** time, so each window also checks them:
+   - an order with a fill in the window that order history did not return, and that is not imported yet, is **looked up by order id** (`/v5/order/realtime`, which also returns recently closed orders);
+   - if it closed with fills (`Filled` / `PartiallyFilledCanceled`), Bybit's own totals are used for quantity and average price. Its fills are fetched for fees and the date; they are **not** summed into the order, because Bybit may only return the last 7 days of fills for an order;
+   - **dated by when it completed:** the last fill when the fills add up to the order's filled quantity, otherwise the order's last update (and fees then come from the order's own fee details);
+   - still open, or not returned by id: remembered as pending (below);
+   - it then goes through the normal order import (same deduplication and rules).
+
+   **Partly filled orders.** A cancel is not a fill, so an order that fills partly and is cancelled long after its window would still be missed. The sync **remembers** such orders in `BybitPendingOrders` (one row per account and order):
+   - a row is added when a fill leaves part of the order open (`leavesQty > 0`), or when order history returns it as `PartiallyFilled`;
+   - on each sync, only when the account has pending rows, one call lists the open orders (`/v5/order/realtime`). Rows still open are kept; each row that left the list is looked up once by order id (Bybit returns the last 500 closed orders);
+   - closed **with** fills (`PartiallyFilledCanceled`, or `Filled`): imported through the normal order path, then the row is removed;
+   - already imported, or closed **without** fills (`Cancelled`, `Rejected`): the row is removed;
+   - not found for **30 days**: the row is removed with a warning in the Function logs; run the historical import for that period.
 
    Orders imported:
    - `Filled`;
@@ -418,7 +432,8 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 1. Check the account's sync logs, which list items that failed to import.
 2. Check that `BybitSync:Enabled` is not `false` and the integration is not paused.
 3. Run the **historical import** from a date before the missing trade.
-4. If it is still missing, check its type and status in Bybit. Only spot orders (`Filled` / `PartiallyFilledCanceled`) and successful deposits and withdrawals are imported.
+4. If it is still missing, check its type and status in Bybit. Only spot orders (`Filled` / `PartiallyFilledCanceled`) and successful deposits and withdrawals are imported. In Bybit, **Order History shows when an order was placed; Trade History shows when it filled.**
+5. Before late-filled limit orders were handled (2026-11), the regular sync skipped them. Run the historical import from before the order to recover them.
 
 **Common errors**
 
@@ -450,7 +465,8 @@ These are tracked in the integration review and planned for upcoming PRs:
 - **Cost basis:**
   - Environments still on `TransferCostPolicy = Legacy` (PROD) use the Legacy rules described in [Cost basis](#cost-basis).
   - Deposits, withdrawals and transfers recorded before 2026-11 keep the price from processing time (today's CoinMarketCap price), not the event time.
-- **Sequential calls:** accounts are synced one after another, ~12 calls per account per run plus one per new order.
+- **Sequential calls:** accounts are synced one after another, ~13 calls per account per run, plus one per new or late-filled order.
+- **Pending orders not found:** a partly filled order Bybit no longer returns by id (beyond its last 500 closed orders, or after a Bybit restart) is dropped after 30 days and needs the historical import.
 
 ---
 

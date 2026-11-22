@@ -33,6 +33,9 @@ public class BybitOrderData
     [JsonPropertyName("createdTime")]
     public string CreatedTime { get; set; } = string.Empty;
 
+    [JsonPropertyName("updatedTime")]
+    public string UpdatedTime { get; set; } = string.Empty;
+
     [JsonPropertyName("category")]
     public string Category { get; set; } = string.Empty;
 }
@@ -62,4 +65,14 @@ public class BybitExecutionData
 
     [JsonPropertyName("execTime")]
     public string ExecTime { get; set; } = string.Empty;
+
+    [JsonPropertyName("symbol")]
+    public string Symbol { get; set; } = string.Empty;
+
+    [JsonPropertyName("side")]
+    public string Side { get; set; } = string.Empty;
+
+    // Quantity still open on the order after this fill; "0" on the fill that completes it.
+    [JsonPropertyName("leavesQty")]
+    public string LeavesQty { get; set; } = string.Empty;
 }

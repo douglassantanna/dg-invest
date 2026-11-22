@@ -36,6 +36,9 @@ public class BybitAccountSyncServiceBackfillTests
 
         long? requestedEndTime = null;
         var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(service => service.GetExecutionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         bybitService.Setup(service => service.GetOrderHistoryAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
                 It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))

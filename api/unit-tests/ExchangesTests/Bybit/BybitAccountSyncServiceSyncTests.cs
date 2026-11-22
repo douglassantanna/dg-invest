@@ -400,6 +400,267 @@ public class BybitAccountSyncServiceSyncTests
             harness.Account.UserId, harness.Account.Id, result.Message, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task SyncAsync_ImportsALimitOrderThatFilledAfterItsCreationWindow()
+    {
+        // The AAVE case: created before the window (so order history no longer returns it), filled inside it.
+        var harness = await Harness.CreateAsync();
+        harness.Fills.AddRange([
+            Fill("late-1", "exec-2", "0.0203", "99.33", leavesQty: "0", minutesFromNow: -1),
+            Fill("late-1", "exec-1", "0.01", "98", leavesQty: "0.0203", minutesFromNow: -2)]);
+        harness.OrdersById["late-1"] = LateOrder("late-1", cumExecQty: "0.0303", avgPrice: "98.9", createdMinutesFromNow: -9, updatedMinutesFromNow: -1);
+        var processed = CaptureProcessedOrders(harness);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        var (order, executions) = processed.Single();
+        // Quantity and price are Bybit's own order totals, not a rebuild from the fills.
+        order.OrderId.Should().Be("late-1");
+        order.Symbol.Should().Be("AAVEUSDT");
+        order.OrderStatus.Should().Be("Filled");
+        order.CumExecQty.Should().Be("0.0303");
+        order.AvgPrice.Should().Be("98.9");
+        // Dated by its last fill, not by when it was placed.
+        order.CreatedTime.Should().Be(Ms(-1));
+        executions.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenTheFillsDoNotAddUpToTheOrder_UsesTheOrderFeesAndUpdateTime()
+    {
+        // Bybit can return only the last 7 days of fills for an order; a partial list must not drive the import.
+        var harness = await Harness.CreateAsync();
+        harness.Fills.Add(Fill("late-1", "exec-9", "0.01", "99", leavesQty: "0", minutesFromNow: -1));
+        harness.OrdersById["late-1"] = LateOrder("late-1", cumExecQty: "0.05", avgPrice: "97.5", createdMinutesFromNow: -20_000, updatedMinutesFromNow: -1);
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        var (order, executions) = processed.Single();
+        order.CumExecQty.Should().Be("0.05");
+        order.CreatedTime.Should().Be(Ms(-1));
+        // Empty fills: the order's own fee details are used instead of a partial sum.
+        executions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenALateOrderIsNotFoundById_RemembersItAsPending()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Fills.Add(Fill("late-1", "exec-1", "0.01", "99", leavesQty: "0", minutesFromNow: -1));
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        processed.Should().BeEmpty();
+        (await PendingOrderIdsAsync(harness)).Should().Equal("late-1");
+    }
+
+    private static BybitOrderData LateOrder(string orderId, string cumExecQty, string avgPrice, int createdMinutesFromNow, int updatedMinutesFromNow) => new()
+    {
+        OrderId = orderId,
+        Symbol = "AAVEUSDT",
+        Side = "Buy",
+        OrderStatus = "Filled",
+        CumExecQty = cumExecQty,
+        AvgPrice = avgPrice,
+        CumExecFee = "0",
+        CreatedTime = Ms(createdMinutesFromNow),
+        UpdatedTime = Ms(updatedMinutesFromNow)
+    };
+
+    [Fact]
+    public async Task SyncAsync_DoesNotImportAnOrderThatIsStillPartlyOpen()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Fills.Add(Fill("open-1", "exec-1", "0.01", "98", leavesQty: "0.02", minutesFromNow: -1));
+        var stillOpen = LateOrder("open-1", cumExecQty: "0.01", avgPrice: "98", createdMinutesFromNow: -9, updatedMinutesFromNow: -1);
+        stillOpen.OrderStatus = "PartiallyFilled";
+        harness.OrdersById["open-1"] = stillOpen;
+        var processed = CaptureProcessedOrders(harness);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        processed.Should().BeEmpty();
+        // Remembered, so a later cancel of the rest is not missed.
+        (await PendingOrderIdsAsync(harness)).Should().Equal("open-1");
+    }
+
+    [Fact]
+    public async Task SyncAsync_RemembersAPartlyFilledOrderReturnedByOrderHistory()
+    {
+        var harness = await Harness.CreateAsync();
+        var partial = Order("partial-open-1", "Buy", -1);
+        partial.OrderStatus = "PartiallyFilled";
+        partial.CumExecQty = "0.5";
+        harness.Orders.Add(partial);
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        processed.Should().BeEmpty();
+        (await PendingOrderIdsAsync(harness)).Should().Equal("partial-open-1");
+    }
+
+    [Fact]
+    public async Task SyncAsync_ImportsAPendingOrderCancelledAfterAPartialFill()
+    {
+        var harness = await Harness.CreateAsync();
+        await AddPendingAsync(harness, "pending-1", DateTime.UtcNow.AddHours(-3));
+        var cancelled = Order("pending-1", "Buy", -180);
+        cancelled.OrderStatus = "PartiallyFilledCanceled";
+        cancelled.CumExecQty = "0.4";
+        harness.OrdersById["pending-1"] = cancelled;
+        var processed = CaptureProcessedOrders(harness);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        processed.Should().ContainSingle().Which.Order.Should().BeSameAs(cancelled);
+        (await PendingOrderIdsAsync(harness)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SyncAsync_LeavesAPendingOrderThatIsStillOpen()
+    {
+        var harness = await Harness.CreateAsync();
+        await AddPendingAsync(harness, "pending-1", DateTime.UtcNow.AddHours(-3));
+        harness.OpenOrders.Add(new BybitOrderData { OrderId = "pending-1", OrderStatus = "PartiallyFilled" });
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        processed.Should().BeEmpty();
+        (await PendingOrderIdsAsync(harness)).Should().Equal("pending-1");
+        harness.Bybit.Verify(s => s.GetOrderAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SyncAsync_DropsPendingOrdersThatAreImportedCancelledWithoutFillsOrTooOld()
+    {
+        var harness = await Harness.CreateAsync();
+        var asset = new CryptoAsset("Aave", "Aave", "AAVE", 7278);
+        harness.Account.AddCryptoAsset(asset);
+        asset.AddHistoricalTransaction(new CryptoTransaction(1, 100, Now.AddHours(-1), "Bybit", ETransactionType.Buy, 0, exchangeOrderId: "imported-1"));
+        await harness.Context.SaveChangesAsync();
+        await AddPendingAsync(harness, "imported-1", DateTime.UtcNow.AddHours(-2));
+        await AddPendingAsync(harness, "cancelled-empty-1", DateTime.UtcNow.AddHours(-2));
+        await AddPendingAsync(harness, "lost-1", DateTime.UtcNow.AddDays(-31));
+        await AddPendingAsync(harness, "not-found-yet-1", DateTime.UtcNow.AddDays(-1));
+        harness.OrdersById["cancelled-empty-1"] = new BybitOrderData { OrderId = "cancelled-empty-1", OrderStatus = "Cancelled", CumExecQty = "0" };
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        processed.Should().BeEmpty();
+        // Not found for 30 days: given up (left to the historical import). Not found for a day: kept.
+        (await PendingOrderIdsAsync(harness)).Should().Equal("not-found-yet-1");
+        harness.Bybit.Verify(s => s.GetOrderAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), "imported-1", It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WithNoPendingOrders_DoesNotListOpenOrders()
+    {
+        var harness = await Harness.CreateAsync();
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        harness.Bybit.Verify(s => s.GetOpenOrdersAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static async Task AddPendingAsync(Harness harness, string orderId, DateTime firstSeenAt)
+    {
+        harness.Context.BybitPendingOrders.Add(new BybitPendingOrder(harness.Account.Id, orderId, firstSeenAt));
+        await harness.Context.SaveChangesAsync();
+    }
+
+    private static async Task<List<string>> PendingOrderIdsAsync(Harness harness) =>
+        await harness.Context.BybitPendingOrders.AsNoTracking()
+            .Where(pending => pending.AccountId == harness.Account.Id)
+            .OrderBy(pending => pending.OrderId)
+            .Select(pending => pending.OrderId)
+            .ToListAsync();
+
+    [Fact]
+    public async Task SyncAsync_UsesOrderHistoryForOrdersItReturns()
+    {
+        var harness = await Harness.CreateAsync();
+        var fromHistory = Order("buy-1", "Buy", -2);
+        harness.Orders.Add(fromHistory);
+        harness.Fills.Add(Fill("buy-1", "exec-1", "1", "100", leavesQty: "0", minutesFromNow: -2));
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        processed.Should().ContainSingle().Which.Order.Should().BeSameAs(fromHistory);
+    }
+
+    [Fact]
+    public async Task SyncAsync_DoesNotLookUpALateFilledOrderThatIsAlreadyImported()
+    {
+        var harness = await Harness.CreateAsync();
+        var asset = new CryptoAsset("Aave", "Aave", "AAVE", 7278);
+        harness.Account.AddCryptoAsset(asset);
+        asset.AddHistoricalTransaction(new CryptoTransaction(0.0303m, 98.83m, Now.AddMinutes(-1), "Bybit", ETransactionType.Buy, 0,
+            exchangeOrderId: "late-1", exchangeExecutionId: "exec-1"));
+        await harness.Context.SaveChangesAsync();
+        harness.Fills.Add(Fill("late-1", "exec-1", "0.0303", "98.83", leavesQty: "0", minutesFromNow: -1));
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        processed.Should().BeEmpty();
+        harness.Bybit.Verify(s => s.GetExecutionHistoryAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), "late-1", It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenTheFillListIsRejected_StillImportsTheRest()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Orders.Add(Order("buy-1", "Buy", -1));
+        harness.Bybit.Setup(s => s.GetExecutionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new BybitApiException(10005, "Permission denied"));
+        var processed = CaptureProcessedOrders(harness);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        processed.Should().ContainSingle().Which.Order.OrderId.Should().Be("buy-1");
+    }
+
+    private static List<(BybitOrderData Order, IReadOnlyList<BybitExecutionData>? Executions)> CaptureProcessedOrders(Harness harness)
+    {
+        var processed = new List<(BybitOrderData, IReadOnlyList<BybitExecutionData>?)>();
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .Callback<BybitOrderData, Account, int, string, CancellationToken, IReadOnlyList<BybitExecutionData>?, bool>(
+                (order, _, _, _, _, executions, _) => processed.Add((order, executions)))
+            .ReturnsAsync(true);
+        return processed;
+    }
+
+    private static BybitExecutionData Fill(string orderId, string execId, string quantity, string price, string leavesQty, int minutesFromNow) => new()
+    {
+        OrderId = orderId,
+        ExecId = execId,
+        Symbol = "AAVEUSDT",
+        Side = "Buy",
+        ExecQty = quantity,
+        ExecPrice = price,
+        ExecFee = "0",
+        FeeCurrency = "AAVE",
+        LeavesQty = leavesQty,
+        ExecTime = Ms(minutesFromNow)
+    };
+
     private static void AssertContiguousWindows(List<(long? Start, long? End)> requests, DateTime expectedStart)
     {
         requests.Should().NotBeEmpty();
@@ -439,6 +700,9 @@ public class BybitAccountSyncServiceSyncTests
         public required Mock<IBybitService> Bybit { get; init; }
         public List<BybitOrderData> Orders { get; } = [];
         public List<BybitDepositWithdrawalRow> Deposits { get; } = [];
+        public List<BybitExecutionData> Fills { get; } = [];
+        public List<BybitOrderData> OpenOrders { get; } = [];
+        public Dictionary<string, BybitOrderData> OrdersById { get; } = [];
         public Dictionary<(string AccountType, string Coin), string> CashBalances { get; } = [];
         public Exception? CashBalanceError { get; set; }
         public string? LastCheckpointOrderId { get; private set; }
@@ -517,7 +781,17 @@ public class BybitAccountSyncServiceSyncTests
                 .ReturnsAsync([]);
             bybit.Setup(s => s.GetExecutionHistoryAsync(
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync([]);
+                .ReturnsAsync((string _, string _, BybitRegion _, string orderId, CancellationToken _) =>
+                    harness.Fills.Where(fill => fill.OrderId == orderId).ToList());
+            bybit.Setup(s => s.GetOpenOrdersAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => harness.OpenOrders.ToList());
+            bybit.Setup(s => s.GetOrderAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string _, string _, BybitRegion _, string orderId, CancellationToken _) => harness.OrdersById.GetValueOrDefault(orderId));
+            bybit.Setup(s => s.GetExecutionsAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => harness.Fills.ToList());
             bybit.Setup(s => s.GetWalletBalanceAsync(
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<string>(), It.IsAny<string?>()))
                 .ReturnsAsync(new BybitWalletBalanceResponse());
