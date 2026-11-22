@@ -71,6 +71,24 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task GetExecutionsAsync_RequestsSpotFillsInTheWindowAndFetchesAllPages()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = new[] { new { orderId = "o-1", execId = "e-1" } }, nextPageCursor = "next" } })
+            .RespondWithJson(new { retCode = 0, retMsg = "OK", result = new { list = new[] { new { orderId = "o-2", execId = "e-2" } }, nextPageCursor = "" } });
+
+        var fills = await _sut.GetExecutionsAsync("api-key", "api-secret", BybitRegion.Global, 1000, 2000);
+
+        fills.Select(fill => fill.ExecId).Should().Equal("e-1", "e-2");
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/execution/list")
+            .WithQueryParam("category", "spot")
+            .WithQueryParam("startTime", 1000)
+            .WithQueryParam("endTime", 2000)
+            .WithQueryParam("limit", 100);
+        httpTest.ShouldHaveCalled("https://api.bybit.com/v5/execution/list").WithQueryParam("cursor", "next");
+    }
+
+    [Fact]
     public async Task PrivateRequests_UseATwentySecondTimeout()
     {
         using var httpTest = new HttpTest();

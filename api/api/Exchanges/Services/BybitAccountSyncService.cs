@@ -120,7 +120,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 cancellationToken.ThrowIfCancellationRequested();
                 var windowEnd = windowStart + MaxWindow < now ? windowStart + MaxWindow : now;
                 events.AddRange(await CollectEventsAsync(
-                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: false, account.Id, cancellationToken));
+                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: false, account, cancellationToken));
                 windowStart = windowEnd;
             }
 
@@ -245,7 +245,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 cancellationToken.ThrowIfCancellationRequested();
                 var windowEnd = windowStart.AddDays(7) < end ? windowStart.AddDays(7) : end;
                 events.AddRange(await CollectEventsAsync(
-                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: true, account.Id, cancellationToken));
+                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: true, account, cancellationToken));
                 windowStart = windowEnd;
             }
 
@@ -528,9 +528,10 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         BybitRegion region,
         (DateTimeOffset Start, DateTimeOffset End) window,
         bool dropOutsideWindow,
-        int accountId,
+        Account account,
         CancellationToken cancellationToken)
     {
+        var accountId = account.Id;
         var events = new List<SyncEvent>();
         var startTime = window.Start.ToUnixTimeMilliseconds();
         var endTime = window.End.ToUnixTimeMilliseconds();
@@ -552,6 +553,16 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         var orders = await _bybitService.GetOrderHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
         Add(orders.Where(IsExecuted), SyncEventKind.Order,
             order => TryGetTimestamp(order, out var timestamp) ? timestamp : null);
+
+        // Order history is filtered by creation time: a limit order that fills after its window has passed is never
+        // returned again. Fills are listed by execution time, so they catch it.
+        foreach (var lateOrder in await CollectLateFilledOrdersAsync(apiKey, apiSecret, region, startTime, endTime, orders, account, cancellationToken))
+        {
+            var timestamp = TryGetTimestamp(lateOrder.Order, out var filledAt) ? filledAt : (DateTimeOffset?)null;
+            if (dropOutsideWindow && (timestamp is null || timestamp < window.Start || timestamp >= window.End))
+                continue;
+            events.Add(new SyncEvent(timestamp ?? DateTimeOffset.MaxValue, SyncEventKind.Order, lateOrder.Order, lateOrder.Fills));
+        }
 
         var deposits = await _bybitService.GetDepositHistoryAsync(apiKey, apiSecret, region, 50, startTime, cancellationToken, endTime);
         Add(deposits, SyncEventKind.Deposit,
@@ -620,7 +631,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         string importSource,
         CancellationToken cancellationToken) => syncEvent.Kind switch
     {
-        SyncEventKind.Order => await ProcessOrderAsync((BybitOrderData)syncEvent.Value, account, region, apiKey, apiSecret, importSource, cancellationToken),
+        SyncEventKind.Order => await ProcessOrderAsync((BybitOrderData)syncEvent.Value, account, region, apiKey, apiSecret, importSource, cancellationToken, syncEvent.Fills),
         SyncEventKind.Deposit => await _orderSyncService.ProcessDepositAsync((BybitDepositWithdrawalRow)syncEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
         SyncEventKind.Withdrawal => await _orderSyncService.ProcessWithdrawalAsync((BybitDepositWithdrawalRow)syncEvent.Value, account, account.UserId, cancellationToken, applyCashBalance: false),
         SyncEventKind.InternalTransfer or SyncEventKind.UniversalTransfer
@@ -635,12 +646,13 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         string apiKey,
         string apiSecret,
         string importSource,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyList<BybitExecutionData>? prefetchedFills = null)
     {
         // An order already imported with its execution has its final fee: fetching executions again would cost one
         // Bybit call per order per run for nothing. Null tells the order sync to leave the stored fee as it is.
-        IReadOnlyList<BybitExecutionData>? executions = null;
-        if (!HasImportedExecution(account, order.OrderId))
+        IReadOnlyList<BybitExecutionData>? executions = prefetchedFills;
+        if (executions is null && !HasImportedExecution(account, order.OrderId))
         {
             executions = [];
             try
@@ -701,7 +713,94 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         UniversalTransfer
     }
 
-    private sealed record SyncEvent(DateTimeOffset Timestamp, SyncEventKind Kind, object Value);
+    // Fills: executions already fetched for the order (late-filled orders), so they are not requested again.
+    private sealed record SyncEvent(DateTimeOffset Timestamp, SyncEventKind Kind, object Value, IReadOnlyList<BybitExecutionData>? Fills = null);
+
+    private sealed record LateFilledOrder(BybitOrderData Order, IReadOnlyList<BybitExecutionData> Fills);
+
+    // Orders with a fill in this window that order history did not return and that are not imported yet. Each one is
+    // rebuilt from all its fills (they can span windows) once its last fill leaves nothing open. An order still open,
+    // or partly filled and later cancelled, cannot be told apart from fills alone and is left to the historical import.
+    private async Task<List<LateFilledOrder>> CollectLateFilledOrdersAsync(
+        string apiKey,
+        string apiSecret,
+        BybitRegion region,
+        long startTime,
+        long endTime,
+        IReadOnlyCollection<BybitOrderData> listedOrders,
+        Account account,
+        CancellationToken cancellationToken)
+    {
+        List<BybitExecutionData> fills;
+        try
+        {
+            fills = await _bybitService.GetExecutionsAsync(apiKey, apiSecret, region, startTime, endTime, cancellationToken);
+        }
+        catch (BybitApiException ex) when (BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
+        {
+            _logger.LogWarning("Bybit sync: fill list unavailable for account {AccountId} ({RetCode}); late-filled limit orders are not checked in this window",
+                account.Id, ex.RetCode);
+            return [];
+        }
+
+        var listedOrderIds = listedOrders.Select(order => order.OrderId).ToHashSet(StringComparer.Ordinal);
+        var candidates = fills
+            .Select(fill => fill.OrderId)
+            .Where(orderId => !string.IsNullOrWhiteSpace(orderId) && !listedOrderIds.Contains(orderId) && !HasImportedOrder(account, orderId))
+            .Distinct(StringComparer.Ordinal);
+
+        var lateOrders = new List<LateFilledOrder>();
+        foreach (var orderId in candidates)
+        {
+            var orderFills = await _bybitService.GetExecutionHistoryAsync(apiKey, apiSecret, region, orderId, cancellationToken);
+            if (BuildFromFills(orderId, orderFills) is { } order)
+            {
+                _logger.LogInformation("Bybit sync: order {OrderId} filled after its creation window; importing it from {FillCount} fill(s)",
+                    orderId, orderFills.Count);
+                lateOrders.Add(new LateFilledOrder(order, orderFills));
+            }
+        }
+
+        return lateOrders;
+    }
+
+    private static bool HasImportedOrder(Account account, string orderId) =>
+        account.CryptoAssets.SelectMany(asset => asset.Transactions).Any(transaction => transaction.ExchangeOrderId == orderId);
+
+    // The order as order history would have returned it once filled: quantity and quantity-weighted price from the
+    // fills, dated by the last fill. Fees are taken from the fills when it is processed.
+    private static BybitOrderData? BuildFromFills(string orderId, IReadOnlyList<BybitExecutionData> fills)
+    {
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        var parsed = fills
+            .Select(fill => (
+                Fill: fill,
+                Quantity: decimal.TryParse(fill.ExecQty, System.Globalization.NumberStyles.Any, culture, out var quantity) ? quantity : 0m,
+                Price: decimal.TryParse(fill.ExecPrice, System.Globalization.NumberStyles.Any, culture, out var price) ? price : 0m,
+                ExecutedAt: long.TryParse(fill.ExecTime, out var executedAt) ? executedAt : 0L))
+            .Where(item => item.Quantity > 0 && item.Price > 0)
+            .ToList();
+
+        var completed = fills.Any(fill => decimal.TryParse(fill.LeavesQty, System.Globalization.NumberStyles.Any, culture, out var left) && left == 0);
+        if (parsed.Count == 0 || !completed)
+            return null;
+
+        var quantity = parsed.Sum(item => item.Quantity);
+        var averagePrice = parsed.Sum(item => item.Quantity * item.Price) / quantity;
+        var last = parsed.MaxBy(item => item.ExecutedAt);
+        return new BybitOrderData
+        {
+            OrderId = orderId,
+            Symbol = last.Fill.Symbol,
+            Side = last.Fill.Side,
+            OrderStatus = "Filled",
+            AvgPrice = averagePrice.ToString(culture),
+            CumExecQty = quantity.ToString(culture),
+            CumExecFee = "0",
+            CreatedTime = last.ExecutedAt.ToString(culture),
+            Category = "spot"
+        };
+    }
 
     private static bool HasImportedExecution(Account account, string orderId) =>
         account.CryptoAssets

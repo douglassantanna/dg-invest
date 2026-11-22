@@ -241,7 +241,7 @@ The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enab
 3. **Fetches from that point to now in windows of at most 7 days**, always sending both `startTime` and `endTime`.
    - Bybit allows 7 days per request for orders and transfers, and less than 30 days for deposits and withdrawals. If you send only a start time, Bybit returns just the next 7 days, or rejects deposits with `131002`.
    - One run covers at most **8 windows (~56 days)**. An account further behind catches up over the following runs.
-   - Each window fetches spot order history (paginated), deposits, withdrawals, internal transfers and universal transfers.
+   - Each window fetches spot order history (paginated), spot fills (`/v5/execution/list`, paginated), deposits, withdrawals, internal transfers and universal transfers.
 4. **Records the events in time order**, so a buy is recorded after the deposit, transfer or sell that funded it. Every event is idempotent:
 
    | Event | Deduplication key |
@@ -251,6 +251,13 @@ The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enab
    | Transfer | transfer ID + direction + account |
 
    The database enforces both per-account rules with unique indexes: `IX_AccountTransactions_AccountId_ExchangeTransactionId` (non-empty ids) and `IX_CryptoAssets_AccountId_CoinMarketCapId` (one asset per coin per account). If two syncs of the same account overlap, the second one fails on the index and the next run finds the existing record. Like the order index, these indexes are created by SQL migrations and are not part of the EF model.
+
+   **Limit orders that fill late.** Order history is filtered by **creation** time, so a limit order that fills after its window has passed (more than ~5 minutes after it was placed) is never returned again. Fills are listed by **execution** time, so each window also checks them:
+   - an order with a fill in the window that order history did not return, and that is not imported yet, is fetched by order id with all its fills;
+   - once its last fill leaves nothing open (`leavesQty = 0`), it is rebuilt from the fills: quantity = sum of the fills, price = quantity-weighted average, fees from the fills, **dated by the last fill**;
+   - it then goes through the normal order import (same deduplication and rules).
+
+   An order that fills partly and is **cancelled later** cannot be told apart from an open order using fills alone, so it is only picked up by the historical import.
 
    Orders imported:
    - `Filled`;
@@ -418,7 +425,8 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 1. Check the account's sync logs, which list items that failed to import.
 2. Check that `BybitSync:Enabled` is not `false` and the integration is not paused.
 3. Run the **historical import** from a date before the missing trade.
-4. If it is still missing, check its type and status in Bybit. Only spot orders (`Filled` / `PartiallyFilledCanceled`) and successful deposits and withdrawals are imported.
+4. If it is still missing, check its type and status in Bybit. Only spot orders (`Filled` / `PartiallyFilledCanceled`) and successful deposits and withdrawals are imported. In Bybit, **Order History shows when an order was placed; Trade History shows when it filled.**
+5. Before late-filled limit orders were handled (2026-11), the regular sync skipped them. Run the historical import from before the order to recover them.
 
 **Common errors**
 
@@ -450,7 +458,8 @@ These are tracked in the integration review and planned for upcoming PRs:
 - **Cost basis:**
   - Environments still on `TransferCostPolicy = Legacy` (PROD) use the Legacy rules described in [Cost basis](#cost-basis).
   - Deposits, withdrawals and transfers recorded before 2026-11 keep the price from processing time (today's CoinMarketCap price), not the event time.
-- **Sequential calls:** accounts are synced one after another, ~12 calls per account per run plus one per new order.
+- **Sequential calls:** accounts are synced one after another, ~13 calls per account per run, plus one per new or late-filled order.
+- **Partly filled, then cancelled later:** such a limit order is only imported by the historical import (see [Limit orders that fill late](#how-sync-works)).
 
 ---
 

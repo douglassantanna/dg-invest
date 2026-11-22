@@ -183,6 +183,38 @@ public class BybitService : IBybitService
         }
     }
 
+    // Order history filters by creation time, so a limit order that fills after its window has passed never comes back
+    // from it. The fill list is ordered by execution time and catches those fills.
+    public async Task<List<BybitExecutionData>> GetExecutionsAsync(string apiKey, string apiSecret, BybitRegion region, long startTime, long endTime, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await GetPagedAsync(
+                cursor =>
+                {
+                    var query = new Dictionary<string, object>
+                    {
+                        ["category"] = "spot",
+                        ["limit"] = 100,
+                        ["startTime"] = startTime,
+                        ["endTime"] = endTime
+                    };
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                        query["cursor"] = cursor;
+
+                    return SendPrivateGetAsync<BybitExecutionHistoryResponse>(
+                        apiKey, apiSecret, region, ExecutionHistoryEndpoint, query, cancellationToken);
+                },
+                response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
+                "execution list", cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Bybit execution list request failed");
+            throw;
+        }
+    }
+
     public async Task<List<BybitExecutionData>> GetExecutionHistoryAsync(string apiKey, string apiSecret, BybitRegion region, string orderId, CancellationToken cancellationToken = default)
     {
         try
