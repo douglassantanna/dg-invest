@@ -90,10 +90,7 @@ public class GetCryptoAssetByIdQueryHandler : IRequestHandler<GetCryptoAssetById
                                                                                 t.ExchangeName,
                                                                                 t.TransactionType,
                                                                                 t.GetPercentDifference(currentPrice),
-                                                                                t.Fee)).ToList(),
-                cryptoAsset.Addresses.Select(a => new ViewAddressDto(a.Id,
-                                                                    a.AddressName,
-                                                                    a.AddressValue)).ToList()
+                                                                                t.Fee)).ToList()
             );
         },
         absoluteExpiration: absoluteExpiration,

@@ -85,6 +85,33 @@ public class DataIntegrityIndexMigrationTests
         await insertDuplicate.Should().ThrowAsync<SqlException>();
     }
 
+    [Fact]
+    public async Task AddressRemoval_DropsTheUnusedEmptyTable()
+    {
+        await using var container = await StartSqlAsync();
+        await using var context = await MigratedToBeforeIndexesAsync(container);
+
+        await context.Database.MigrateAsync();
+
+        (await context.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) AS Value FROM sys.tables WHERE name = 'Address'").SingleAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AddressRemoval_WhenTheTableHasRows_FailsInsteadOfDroppingData()
+    {
+        await using var container = await StartSqlAsync();
+        await using var context = await MigratedToBeforeIndexesAsync(container);
+        var accountId = await CreateAccountAsync(context);
+        var assetId = await InsertAssetAsync(context, accountId, "BTC", 1);
+        await context.Database.ExecuteSqlRawAsync(
+            $"INSERT INTO dbo.Address (CryptoAssetId, AddressName, AddressValue, Deleted) VALUES ({assetId}, 'cold wallet', 'bc1q-test', 0);");
+
+        var migrate = () => context.Database.MigrateAsync();
+
+        (await migrate.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(51005);
+    }
+
     private static async Task<MsSqlContainer> StartSqlAsync()
     {
         var container = new MsSqlBuilder().WithPassword($"T{Guid.NewGuid():N}aA1!").Build();

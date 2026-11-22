@@ -52,7 +52,6 @@ public class GetCryptoAssetByIdQueryTest
     private static CryptoAsset GetCryptoAsset()
     {
         CryptoAsset cryptoAsset = new("BTC", "USD", "BTC", 1);
-        cryptoAsset.AddAddress(new Address());
         List<CryptoTransaction> transactions = new()
         {
             new(amount: 1,

@@ -18,8 +18,7 @@ public record ViewMinimalCryptoAssetDto(int Id,
 public record ViewCryptoAssetDto(int Id,
                                  ViewCryptoInformation CryptoInformation,
                                  List<CryptoAssetData> CryptoAssetData,
-                                 IReadOnlyCollection<ViewCryptoTransactionDto> Transactions,
-                                 IReadOnlyCollection<ViewAddressDto> Addresses);
+                                 IReadOnlyCollection<ViewCryptoTransactionDto> Transactions);
 
 public record ViewCryptoDataDto(int Id, List<CryptoAssetData> CryptoAssetData);
 
@@ -31,10 +30,6 @@ public record ViewCryptoTransactionDto(int Id,
                                        ETransactionType TransactionType,
                                        decimal PercentDifference,
                                        decimal Fee);
-
-public record ViewAddressDto(int Id,
-                             string AddressName,
-                             string AddressValue);
 
 public record ViewCryptoInformation(string Symbol,
                                     int CoinMarketCapId);
