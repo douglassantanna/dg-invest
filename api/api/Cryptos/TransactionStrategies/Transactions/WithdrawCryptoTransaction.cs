@@ -19,8 +19,7 @@ public class WithdrawCryptoTransaction : ITransactionStrategy
         _logger.LogInformation("Executing crypto withdrawal transaction for account ID: {AccountId}, amount: {Amount}, crypto price: {CryptoPrice}",
             account.Id, accountTransaction.Amount, accountTransaction.CryptoCurrentPrice);
 
-        var balance = accountTransaction.Amount * accountTransaction.CryptoCurrentPrice;
-        account.SubtractFromBalance(balance);
+        // Cash is not touched: the coin leaves through the crypto asset's balance.
         account.AddTransaction(accountTransaction);
 
         _logger.LogInformation("Crypto withdrawal transaction executed successfully for account ID: {AccountId}, new balance: {NewBalance}",

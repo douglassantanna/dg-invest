@@ -18,7 +18,7 @@ public class WithdrawCryptoTransactionTest
     }
 
     [Fact]
-    public void ExecuteTransaction_ShouldSubtractBalanceAndAddTransaction()
+    public void ExecuteTransaction_ShouldRecordTheTransactionWithoutChangingCash()
     {
         var account = new Account("test", 1);
         var cryptoAsset = new CryptoAsset("BTC", "USD", "Bitcoin", 1);
@@ -39,7 +39,8 @@ public class WithdrawCryptoTransactionTest
         var result = _sut.ExecuteTransaction(account, accountTransaction);
 
         result.IsSuccess.Should().BeTrue();
-        account.Balance.Should().Be(10000 - (0.5m * 50000m));
+        // The coin leaves the account; cash was never involved.
+        account.Balance.Should().Be(10000);
         account.AccountTransactions.Should().Contain(accountTransaction);
     }
 
