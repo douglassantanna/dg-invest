@@ -87,6 +87,37 @@ public class SaveBybitCredentialsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenKeyBelongsToAnotherSubAccount_ShouldRejectWithoutWritingSecrets()
+    {
+        // STAGE account 34 ("trading", UID 428153436) had rentAccount's key (UID 500206929) and mirrored its wallet.
+        _context.Accounts.Add(new Account("trading", 1, EAccountType.Exchange, "Bybit", "428153436"));
+        await _context.SaveChangesAsync();
+        var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, ReadOnlyKeyBybit(ownerUid: 500206929).Object));
+
+        var result = await handler.Handle(
+            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "rent-key", ApiSecret: "rent-secret"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("500206929").And.Contain("428153436");
+        _keyVaultMock.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenKeyBelongsToTheAccount_ShouldSave()
+    {
+        _context.Accounts.Add(new Account("trading", 1, EAccountType.Exchange, "Bybit", "428153436"));
+        await _context.SaveChangesAsync();
+        var handler = new SaveBybitCredentialsCommandHandler(_context, CredentialService(_context, _keyVaultMock.Object, ReadOnlyKeyBybit(ownerUid: 428153436).Object));
+
+        var result = await handler.Handle(
+            new SaveBybitCredentialsCommand(UserId: 1, AccountId: 1, ApiKey: "trading-key", ApiSecret: "trading-secret"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+    }
+
+    [Fact]
     public async Task Handle_WhenBybitRejectsApiKey_ShouldRejectWithoutWritingSecrets()
     {
         _context.Accounts.Add(new Account("Futures", 1, EAccountType.Exchange, "Bybit", "UID-001"));
@@ -264,11 +295,12 @@ public class SaveBybitCredentialsCommandHandlerTests
     private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault, IBybitService? bybit = null) =>
         new BybitCredentialSetService(context, vault, bybit ?? ReadOnlyKeyBybit().Object, Mock.Of<ILogger<BybitCredentialSetService>>());
 
-    private static Mock<IBybitService> ReadOnlyKeyBybit(int readOnly = 1)
+    // ownerUid 0 means Bybit did not report the key owner, which skips the owner check.
+    private static Mock<IBybitService> ReadOnlyKeyBybit(int readOnly = 1, long ownerUid = 0)
     {
         var bybit = new Mock<IBybitService>();
         bybit.Setup(service => service.GetApiKeyInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BybitApiKeyInfo { ReadOnly = readOnly });
+            .ReturnsAsync(new BybitApiKeyInfo { ReadOnly = readOnly, UserId = ownerUid });
         return bybit;
     }
 }

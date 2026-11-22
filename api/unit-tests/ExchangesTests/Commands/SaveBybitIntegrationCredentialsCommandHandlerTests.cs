@@ -3,6 +3,7 @@ using api.Data;
 using api.Exchanges.Bybit;
 using api.Exchanges.Commands;
 using api.Exchanges.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Threading;
@@ -63,14 +64,29 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         (await context.ExchangeIntegrations.CountAsync()).Should().Be(0);
     }
 
+    [Fact]
+    public async Task Handle_WhenKeyIsNotTheMasterUidsKey_ShouldRejectWithoutWritingSecrets()
+    {
+        await using var context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var keyVault = new Mock<IKeyVaultService>();
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(
+            CredentialService(context, keyVault.Object, ReadOnlyKeyBybit(ownerUid: 500206929).Object), context);
+
+        var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "sub-key", "sub-secret", BybitRegion.Global, "28660419"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("28660419");
+        keyVault.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
     private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault, IBybitService? bybit = null) =>
         new BybitCredentialSetService(context, vault, bybit ?? ReadOnlyKeyBybit().Object, Mock.Of<ILogger<BybitCredentialSetService>>());
 
-    private static Mock<IBybitService> ReadOnlyKeyBybit(int readOnly = 1)
+    private static Mock<IBybitService> ReadOnlyKeyBybit(int readOnly = 1, long ownerUid = 0)
     {
         var bybit = new Mock<IBybitService>();
         bybit.Setup(service => service.GetApiKeyInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BybitApiKeyInfo { ReadOnly = readOnly });
+            .ReturnsAsync(new BybitApiKeyInfo { ReadOnly = readOnly, UserId = ownerUid });
         return bybit;
     }
 }

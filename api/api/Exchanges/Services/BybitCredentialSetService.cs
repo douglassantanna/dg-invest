@@ -41,7 +41,8 @@ public static class BybitCredentialReader
 public interface IBybitCredentialSetService
 {
     Task<KeyVaultSecretReadResult> ReadAsync(int userId, int? accountId, string suffix, CancellationToken cancellationToken = default);
-    Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default);
+    // expectedOwnerUid: the Bybit UID the key must belong to. When null and accountId is set, the account's UID is used.
+    Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default, string? expectedOwnerUid = null);
 }
 
 // RejectedStatusCode is set when the credentials themselves were refused (e.g. not a read-only key); Error then holds
@@ -60,19 +61,30 @@ public class BybitCredentialSetService : IBybitCredentialSetService
     public async Task<KeyVaultSecretReadResult> ReadAsync(int userId, int? accountId, string suffix, CancellationToken cancellationToken = default)
         => await BybitCredentialReader.ReadAsync(_vault, userId, accountId, suffix, cancellationToken);
 
-    // DG Invest only reads from Bybit. A key that can trade (or withdraw, on a master account) is refused before it is
-    // stored, which also verifies the key against Bybit instead of saving an invalid one.
-    private async Task<SaveCredentialResult?> VerifyReadOnlyKeyAsync(string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken)
+    // DG Invest only reads from Bybit. Before a key is stored it is checked with Bybit: it must be valid, read-only
+    // (cannot trade or withdraw), and belong to the expected UID. A key from another sub-account would make this account
+    // mirror that other wallet (STAGE account 34 had rentAccount's key).
+    private async Task<SaveCredentialResult?> VerifyKeyAsync(string apiKey, string apiSecret, BybitRegion region, string? expectedOwnerUid, CancellationToken cancellationToken)
     {
         try
         {
             var info = await _bybit.GetApiKeyInfoAsync(apiKey, apiSecret, region, cancellationToken);
-            return info.IsReadOnly
-                ? null
-                : new SaveCredentialResult(false, false,
+            if (!info.IsReadOnly)
+                return new SaveCredentialResult(false, false,
                     "This Bybit API key can trade or withdraw. Create a read-only key in Bybit (API Management > Read-Only) and try again. "
                     + "For the master account key, also enable Wallet > Account Transfer / Subaccount Transfer so sub-accounts can be discovered.",
                     400);
+
+            // UserId 0 means Bybit did not report the owner; the check is skipped rather than blocking the save.
+            var ownerUid = info.UserId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (info.UserId != 0 && !string.IsNullOrWhiteSpace(expectedOwnerUid)
+                && !string.Equals(ownerUid, expectedOwnerUid.Trim(), StringComparison.Ordinal))
+                return new SaveCredentialResult(false, false,
+                    $"This Bybit API key belongs to UID {ownerUid}, but this account is UID {expectedOwnerUid.Trim()}. "
+                    + "Create a read-only key inside that Bybit account and try again.",
+                    400);
+
+            return null;
         }
         catch (BybitApiException ex)
         {
@@ -90,15 +102,23 @@ public class BybitCredentialSetService : IBybitCredentialSetService
         }
     }
 
-    public async Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default)
+    public async Task<SaveCredentialResult> SaveAsync(int userId, int? accountId, string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default, string? expectedOwnerUid = null)
     {
         string Key(string suffix) => accountId is { } id
             ? BybitCredentialKeys.LegacyAccountKey(userId, id, suffix)
             : BybitCredentialKeys.LegacyIntegrationKey(userId, suffix);
 
-        if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret)
-            && await VerifyReadOnlyKeyAsync(apiKey, apiSecret, region, cancellationToken) is { } rejection)
-            return rejection;
+        if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(apiSecret))
+        {
+            expectedOwnerUid ??= accountId is { } accountIdForUid
+                ? await _context.Accounts.AsNoTracking()
+                    .Where(account => account.Id == accountIdForUid && account.UserId == userId)
+                    .Select(account => account.ExternalId)
+                    .SingleOrDefaultAsync(cancellationToken)
+                : null;
+            if (await VerifyKeyAsync(apiKey, apiSecret, region, expectedOwnerUid, cancellationToken) is { } rejection)
+                return rejection;
+        }
 
         try
         {
