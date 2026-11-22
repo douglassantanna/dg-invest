@@ -204,6 +204,7 @@ See [Exchange Integration Rollout](docs/exchange-rollout-roadmap.md) and the [Re
 - **Each sub-account** that should sync needs its own read-only key with *Wallet → SubMemberTransferList* enabled. Bybit requires this permission for a sub-account key to list universal transfers.
 - When you save a new key, DG Invest checks it with Bybit (`/v5/user/query-api`) **before** storing it:
   - keys that can trade or withdraw (`readOnly != 1`) are rejected;
+  - keys that belong to a **different UID** than the account (or than the master UID, for the integration key) are rejected. A key from another sub-account would make the account mirror that other wallet;
   - keys Bybit rejects are refused;
   - if Bybit is unreachable, the save fails with 503 and nothing is stored.
 
@@ -248,6 +249,8 @@ The timer `SyncBybitOrders` (every 30 seconds, when `BybitSync:Enabled`) and the
    | Order | Bybit `orderId`, per crypto asset (unique index) |
    | Deposit / withdrawal | Bybit `txID`, or Bybit's record id when `txID` is empty (`bybit-deposit-{id}`, `bybit-withdraw-{withdrawId}`), **per account** (two accounts can share a `txID`: one withdraws, the other receives) |
    | Transfer | transfer ID + direction + account |
+
+   The database enforces both per-account rules with unique indexes: `IX_AccountTransactions_AccountId_ExchangeTransactionId` (non-empty ids) and `IX_CryptoAssets_AccountId_CoinMarketCapId` (one asset per coin per account). If two syncs of the same account overlap, the second one fails on the index and the next run finds the existing record. Like the order index, these indexes are created by SQL migrations and are not part of the EF model.
 
    Orders imported:
    - `Filled`;
@@ -404,6 +407,7 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 | Message | Meaning and fix |
 |---|---|
 | `Bybit rejected sync request: 10003 …` / `10004 …` | The key is invalid, revoked, or the region is wrong. Save a new read-only key with the right region. |
+| `This Bybit API key belongs to UID …, but this account is UID …` | The key was created in another Bybit account (for example, another sub-account). Create a read-only key inside the account shown on the page. |
 | `This Bybit API key can trade or withdraw…` | Create a **read-only** key. For the master key, also enable Wallet → Account Transfer / Subaccount Transfer. |
 | `N Bybit item(s) could not be imported and were skipped; see the sync logs…` | Those items were logged as Failed and skipped; the account keeps syncing. Fix the cause (for example, create a coin CoinMarketCap does not know), then run the historical import from before the skipped items. |
 | `Not imported: … is not quoted in USDT, USDC or USD` (sync log) | Only USD-quoted pairs are supported. The order is not imported. |
@@ -420,11 +424,10 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 These are tracked in the integration review and planned for upcoming PRs:
 
 - **Cost basis:**
-  - Until `TransferCostPolicy` is switched to `Proportional`, transfers and balance without history use the Legacy rules described in [Cost basis](#cost-basis).
+  - Environments still on `TransferCostPolicy = Legacy` (PROD) use the Legacy rules described in [Cost basis](#cost-basis).
+  - **Manual accounts:** a manual crypto deposit or withdrawal also changes the **cash** balance by quantity × price (`CryptoDepositTransaction` / `WithdrawCryptoTransaction`), counting the value twice. Bybit accounts are not affected, because their cash comes from the wallet.
   - Crypto transfers between your own accounts are not recorded, so cost is lost at the destination.
   - Deposits record the price at processing time, not at deposit time, which is wrong for backfilled deposits.
-- **Duplicate coins in one account** can still be created when two syncs of the same account run at the same time. There is no unique index yet.
-- **A key saved on the wrong account** (for example, another sub-account's key) is accepted. The account then mirrors that other wallet.
 - **Cost and resilience:** the timer runs every 30 s with sequential Bybit calls, ~15 per account; there is no short timeout or rate-limit handling.
 
 ---
