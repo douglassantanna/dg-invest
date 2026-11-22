@@ -246,16 +246,21 @@ The timer `SyncBybitOrders` (every 30 seconds, when `BybitSync:Enabled`) and the
    | Event | Deduplication key |
    |---|---|
    | Order | Bybit `orderId`, per crypto asset (unique index) |
-   | Deposit / withdrawal | Bybit `txID` |
+   | Deposit / withdrawal | Bybit `txID`, or Bybit's record id when `txID` is empty (`bybit-deposit-{id}`, `bybit-withdraw-{withdrawId}`), **per account** (two accounts can share a `txID`: one withdraws, the other receives) |
    | Transfer | transfer ID + direction + account |
 
    Orders imported:
    - `Filled`;
    - `PartiallyFilledCanceled` with an executed quantity above zero (only the executed quantity and average price are used).
+   - Only pairs quoted in **USDT, USDC or USD**. A pair like `BTCBRL` or `ETHBTC` is priced in another currency, so it is not imported. It is logged and counted as a skipped item.
 
    Fees come from Bybit's execution history when available.
 5. **Reconciles balances with Bybit** (see [where each number comes from](#where-each-number-comes-from)).
-6. **Advances the checkpoint** to the end of the last fetched window, **only if every item was processed**. If any item failed, the checkpoint stays and the next run retries the same range.
+6. **Advances the checkpoint** to the end of the last fetched window. Failures are handled in two ways:
+   - **An item that can never be imported** (a coin CoinMarketCap does not know, unparseable data, a non-USD pair, a record without an id) is logged as Failed and **skipped**. The account status stays `Connected` with a warning: *"N Bybit item(s) could not be imported and were skipped…"*. After fixing the cause, run the historical import to bring them in.
+   - **A temporary failure** (network, database, CoinMarketCap outage) fails the run. The checkpoint stays, and the next run retries the same range.
+
+   An account with **no stored key** is skipped and its status set to `NotConfigured` (shown as "setup needed"), replacing any old error.
 
 Synced events are recorded **without** the local "insufficient funds" check: Bybit already executed them, and cash is taken from the Bybit wallet afterwards.
 
@@ -264,7 +269,7 @@ Synced events are recorded **without** the local "insufficient funds" check: Byb
 | Value | Source |
 |---|---|
 | Quantity of each coin | **Bybit wallet** (Funding + Unified). It replaces the history-derived quantity on every sync. |
-| Cash (USDT + USDC) | **Bybit wallet** (Funding + Unified). A failed or incomplete read leaves cash unchanged. |
+| Cash (USDT + USDC) | **Bybit wallet** (Funding + Unified): the wallet balance, **including funds locked in open orders**. A failed or incomplete read leaves cash unchanged. |
 | Cost, average price, gain/loss | DG Invest transaction history |
 | Total deposited | History: deposits + transfers in − withdrawals − transfers out (the opening balance is excluded) |
 
@@ -400,7 +405,9 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 |---|---|
 | `Bybit rejected sync request: 10003 …` / `10004 …` | The key is invalid, revoked, or the region is wrong. Save a new read-only key with the right region. |
 | `This Bybit API key can trade or withdraw…` | Create a **read-only** key. For the master key, also enable Wallet → Account Transfer / Subaccount Transfer. |
-| `One or more Bybit items failed to process; checkpoint was not advanced` | One item could not be imported (see the sync logs). The account retries every run until it is fixed. A coin unknown to CoinMarketCap can be created manually. |
+| `N Bybit item(s) could not be imported and were skipped; see the sync logs…` | Those items were logged as Failed and skipped; the account keeps syncing. Fix the cause (for example, create a coin CoinMarketCap does not know), then run the historical import from before the skipped items. |
+| `Not imported: … is not quoted in USDT, USDC or USD` (sync log) | Only USD-quoted pairs are supported. The order is not imported. |
+| Account shows "setup needed" / status `NotConfigured` | No API key is stored for that account. Save a read-only key on its account page, or pause it if it should not sync. |
 | `Could not resolve asset for symbol` | CoinMarketCap has no data for the coin. Create it manually in the app. |
 | `… cannot list universal transfers (10005); transfers are skipped` (warning in the Function logs) | The key lacks the transfer permission. Enable *Wallet → SubMemberTransferList* (sub-account key) or *Subaccount Transfer* (master key) in Bybit. Then run the **historical import** from the date transfers started being skipped, because the regular sync does not go back for them. |
 | `Credential storage is temporarily unavailable` | Key Vault is unreachable. The next run retries automatically. |
@@ -416,10 +423,8 @@ These are tracked in the integration review and planned for upcoming PRs:
   - Until `TransferCostPolicy` is switched to `Proportional`, transfers and balance without history use the Legacy rules described in [Cost basis](#cost-basis).
   - Crypto transfers between your own accounts are not recorded, so cost is lost at the destination.
   - Deposits record the price at processing time, not at deposit time, which is wrong for backfilled deposits.
-- **Non-USD pairs** (e.g. `BTCBRL`, `ETHBTC`) are recorded with the quote-currency price as if it were USD.
-- **Deposit and withdrawal deduplication** uses the `txID` across all accounts, not per account.
-- **One item that can never be imported** blocks that account's checkpoint.
-- **Cash** uses Bybit's transferable balance, which excludes USDT locked in open orders.
+- **Duplicate coins in one account** can still be created when two syncs of the same account run at the same time. There is no unique index yet.
+- **A key saved on the wrong account** (for example, another sub-account's key) is accepted. The account then mirrors that other wallet.
 - **Cost and resilience:** the timer runs every 30 s with sequential Bybit calls, ~15 per account; there is no short timeout or rate-limit handling.
 
 ---

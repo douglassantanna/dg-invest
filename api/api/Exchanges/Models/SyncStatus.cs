@@ -38,6 +38,20 @@ public class SyncStatus : Entity
         LastErrorMessage = null;
     }
 
+    public const string NotConfiguredStatus = "NotConfigured";
+
+    // No API key/secret is stored for the account (e.g. a discovered sub-account nobody configured). Replaces any
+    // stale error so the account shows "setup needed" instead of an old failure.
+    public void MarkNotConfigured()
+    {
+        Status = NotConfiguredStatus;
+        ErrorCount = 0;
+        LastErrorMessage = null;
+    }
+
+    // A completed sync that skipped items: stays Connected, but the message is shown to the user.
+    public void RecordWarning(string warningMessage) => LastErrorMessage = warningMessage;
+
     public void MarkError(string? errorMessage = null)
     {
         Status = "Error";

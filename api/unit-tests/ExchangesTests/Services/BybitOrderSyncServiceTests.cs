@@ -1,6 +1,7 @@
 using api.AzureStorage;
 using api.AzureStorage.Blob;
 using api.CoinMarketCap.Service;
+using api.CoinMarketCap;
 using api.Exchanges.Bybit;
 using api.Exchanges.Models;
 using api.Exchanges.Services;
@@ -330,6 +331,205 @@ public class BybitOrderSyncServiceTests
     }
 
     [Fact]
+    public async Task ProcessDepositAsync_WhenSameTxIdExistsOnAnotherAccount_ShouldStillImportIt()
+    {
+        // An on-chain transfer between two users (or two of a user's accounts) shares one txID: a withdrawal on one
+        // account and a deposit on the other. Each account must record its own side.
+        using var context = CreateContext();
+        var sender = new Account("Sender", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var receiver = new Account("Receiver", 2, EAccountType.Exchange, "Bybit", "UID-002");
+        context.Accounts.AddRange(sender, receiver);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        await sut.ProcessWithdrawalAsync(new BybitDepositWithdrawalRow
+        {
+            Coin = "USDT", Amount = "100", Status = "success", TxId = "shared-tx", WithdrawId = "w-1", WithdrawFee = "0", CreateTime = "1790000000000"
+        }, sender, 1, CancellationToken.None, applyCashBalance: false);
+
+        var result = await sut.ProcessDepositAsync(new BybitDepositWithdrawalRow
+        {
+            Coin = "USDT", Amount = "100", Status = "3", TxId = "shared-tx", Id = "d-1", SuccessAt = "1790000060000"
+        }, receiver, 2, CancellationToken.None, applyCashBalance: false);
+
+        result.Should().BeTrue();
+        (await context.AccountTransactions.CountAsync(t => t.ExchangeTransactionId == "shared-tx")).Should().Be(2);
+        receiver.TotalDeposited().Should().Be(100m);
+    }
+
+    [Fact]
+    public async Task ProcessWithdrawalAsync_WhenTxIdIsEmpty_ShouldUseBybitWithdrawIdAsKey()
+    {
+        // Bybit returns an empty txID for some withdrawals; before, all of them collided on "".
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        foreach (var id in new[] { "w-1", "w-2" })
+        {
+            (await sut.ProcessWithdrawalAsync(new BybitDepositWithdrawalRow
+            {
+                Coin = "USDT", Amount = "10", Status = "success", TxId = "", WithdrawId = id, WithdrawFee = "0", CreateTime = "1790000000000"
+            }, account, 1, CancellationToken.None, applyCashBalance: false)).Should().BeTrue();
+        }
+
+        var keys = await context.AccountTransactions.Select(t => t.ExchangeTransactionId).ToListAsync();
+        keys.Should().BeEquivalentTo(["bybit-withdraw-w-1", "bybit-withdraw-w-2"]);
+    }
+
+    [Fact]
+    public async Task ProcessDepositAsync_WhenCalledTwiceForTheSameRecord_ShouldNotDuplicate()
+    {
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+        var deposit = new BybitDepositWithdrawalRow { Coin = "USDT", Amount = "50", Status = "3", TxId = "", Id = "d-9", SuccessAt = "1790000000000" };
+
+        await sut.ProcessDepositAsync(deposit, account, 1, CancellationToken.None, applyCashBalance: false);
+        await sut.ProcessDepositAsync(deposit, account, 1, CancellationToken.None, applyCashBalance: false);
+
+        (await context.AccountTransactions.CountAsync()).Should().Be(1);
+        (await context.AccountTransactions.SingleAsync()).ExchangeTransactionId.Should().Be("bybit-deposit-d-9");
+    }
+
+    [Fact]
+    public async Task ProcessOrderAsync_WhenCoinMarketCapFails_ShouldThrowSoTheSyncRetries()
+    {
+        // A CoinMarketCap outage is temporary: the order must not be reported as an unknown coin and skipped.
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var coinMarketCap = new Mock<ICoinMarketCapService>();
+        coinMarketCap.Setup(c => c.GetQuoteBySymbol(It.IsAny<string>())).ThrowsAsync(new HttpRequestException("CoinMarketCap unavailable"));
+        var sut = CreateService(context, coinMarketCap: coinMarketCap.Object);
+
+        var act = () => sut.ProcessOrderAsync(NewOrder("order-1", "NEWCOINUSDT"), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    [Fact]
+    public async Task ProcessOrderAsync_WhenCoinMarketCapDoesNotKnowTheCoin_ShouldReturnFalse()
+    {
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var coinMarketCap = new Mock<ICoinMarketCapService>();
+        coinMarketCap.Setup(c => c.GetQuoteBySymbol(It.IsAny<string>()))
+            .ReturnsAsync(new GetQuoteResponse(new Status(0, null), new Dictionary<string, Coin>()));
+        var sut = CreateService(context, coinMarketCap: coinMarketCap.Object);
+
+        var result = await sut.ProcessOrderAsync(NewOrder("order-1", "NEWCOINUSDT"), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        result.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("BTCBRL")]
+    [InlineData("ETHBTC")]
+    public async Task ProcessOrderAsync_WhenPairIsNotQuotedInUsd_ShouldNotImportIt(string symbol)
+    {
+        // Prices of non-USD pairs are in the quote currency (BRL, BTC); storing them as USD distorts cost and gains.
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        account.AddCryptoAsset(new CryptoAsset("Ethereum", "Ethereum", "ETH", 1027)).IsSuccess.Should().BeTrue();
+        account.AddCryptoAsset(new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1)).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        var result = await sut.ProcessOrderAsync(NewOrder("order-1", symbol), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        result.Should().BeFalse();
+        (await context.CryptoTransactions.CountAsync()).Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("BTCUSDT")]
+    [InlineData("BTCUSDC")]
+    public async Task ProcessOrderAsync_WhenPairIsQuotedInUsd_ShouldImportIt(string symbol)
+    {
+        using var context = CreateContext();
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        account.AddCryptoAsset(new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1)).IsSuccess.Should().BeTrue();
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var sut = CreateService(context);
+
+        var result = await sut.ProcessOrderAsync(NewOrder("order-1", symbol), account, 1, "RestPoll", CancellationToken.None, null, applyCashBalance: false);
+
+        result.Should().BeTrue();
+        (await context.CryptoTransactions.CountAsync()).Should().Be(1);
+    }
+
+    private static BybitOrderData NewOrder(string orderId, string symbol) => new()
+    {
+        OrderId = orderId,
+        Symbol = symbol,
+        Side = "Buy",
+        OrderStatus = "Filled",
+        AvgPrice = "1",
+        CumExecQty = "1",
+        CumExecFee = "0",
+        CreatedTime = "1790000000000"
+    };
+
+    [Fact]
+    public async Task ProcessInternalTransferAsync_WhenAmountCannotBeParsed_ShouldLogTheFailureByTransferId()
+    {
+        // A skipped transfer advances the checkpoint, so it must be identifiable in the sync logs.
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var blob = new Mock<IBlobStorageService>();
+        blob.Setup(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SyncLogEntry>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var sut = CreateService(context, blob.Object);
+
+        var result = await sut.ProcessInternalTransferAsync(BadTransfer(toMemberId: "UID-001"), account, 1, CancellationToken.None, applyCashBalance: false);
+
+        result.Should().BeFalse();
+        blob.Verify(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(),
+            It.Is<SyncLogEntry>(entry => entry.Status == "Failed" && entry.OrderId == "transfer-bad" && entry.AccountId == account.Id),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessInternalTransferAsync_WhenTransferDoesNotInvolveTheAccount_ShouldIgnoreItEvenIfMalformed()
+    {
+        // A malformed transfer between two other accounts must not be reported as a skipped item here.
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var blob = new Mock<IBlobStorageService>();
+        var sut = CreateService(context, blob.Object);
+
+        var result = await sut.ProcessInternalTransferAsync(BadTransfer(toMemberId: "UID-OTHER"), account, 1, CancellationToken.None, applyCashBalance: false);
+
+        result.Should().BeTrue();
+        blob.Verify(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SyncLogEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static BybitInternalTransferRow BadTransfer(string toMemberId) => new()
+    {
+        TransferId = "transfer-bad",
+        Coin = "USDT",
+        Amount = "not-a-number",
+        FromAccountType = "UNIFIED",
+        FromMemberId = "UID-MASTER",
+        ToAccountType = "UNIFIED",
+        ToMemberId = toMemberId,
+        Timestamp = "1790000000000"
+    };
+
+    [Fact]
     public async Task ProcessInternalTransferAsync_WhenAccountReceivesStablecoin_ShouldCreateTransferInLedgerTransaction()
     {
         using var context = CreateContext();
@@ -499,7 +699,7 @@ public class BybitOrderSyncServiceTests
             CreatedTime = DateTimeOffset.Parse(createdTime).ToUnixTimeMilliseconds().ToString()
         };
 
-    private static BybitOrderSyncService CreateService(DataContext context, IBlobStorageService? blobStorageOverride = null)
+    private static BybitOrderSyncService CreateService(DataContext context, IBlobStorageService? blobStorageOverride = null, ICoinMarketCapService? coinMarketCap = null)
     {
         var transactionService = new TransactionService([
             new FiatDepositTransaction(Mock.Of<ILogger<FiatDepositTransaction>>()),
@@ -519,7 +719,7 @@ public class BybitOrderSyncServiceTests
         }
 
         return new BybitOrderSyncService(
-            Mock.Of<ICoinMarketCapService>(),
+            coinMarketCap ?? Mock.Of<ICoinMarketCapService>(),
             transactionService,
             blobStorage,
             Options.Create(new AzureStorageSettings()),

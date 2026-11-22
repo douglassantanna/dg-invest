@@ -14,8 +14,10 @@ public static class BybitCashBalance
         return ParseAccountCoinBalance(response.Result.Balance);
     }
 
+    // The wallet balance is what the account owns, including funds locked in open orders; the transferable balance
+    // excludes them and would make cash (or a coin) drop whenever a limit order is open.
     public static decimal ParseAccountCoinBalance(BybitAccountCoinBalance balance)
-        => ParseAmount(string.IsNullOrWhiteSpace(balance.TransferBalance) ? balance.WalletBalance : balance.TransferBalance);
+        => ParseAmount(string.IsNullOrWhiteSpace(balance.WalletBalance) ? balance.TransferBalance : balance.WalletBalance);
 
     public static IReadOnlyDictionary<string, decimal> SumWalletBalances(
         IEnumerable<BybitWalletBalanceResponse> responses)

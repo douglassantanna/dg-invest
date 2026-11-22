@@ -221,6 +221,65 @@ public class BybitAccountSyncServiceSyncTests
     }
 
     [Fact]
+    public async Task SyncAsync_WhenAnItemCannotBeImported_SkipsItAdvancesTheCheckpointAndWarns()
+    {
+        // A permanently failing item (e.g. a coin CoinMarketCap does not know) used to block the account forever.
+        var harness = await Harness.CreateAsync();
+        harness.Orders.AddRange([Order("bad-1", "Buy", -2), Order("good-1", "Buy", -1)]);
+        var processed = new List<string>();
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .Callback<BybitOrderData, Account, int, string, CancellationToken, IReadOnlyList<BybitExecutionData>?, bool>(
+                (order, _, _, _, _, _, _) => processed.Add(order.OrderId))
+            .ReturnsAsync((BybitOrderData order, Account _, int _, string _, CancellationToken _, IReadOnlyList<BybitExecutionData>? _, bool _) => order.OrderId != "bad-1");
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        processed.Should().Equal("bad-1", "good-1");
+        harness.LastCheckpointAt.Should().NotBeNull("the checkpoint must advance past the skipped item");
+        harness.OrderSync.Verify(service => service.MarkSyncStatusWarningAsync(
+            harness.Account.UserId, harness.Account.Id, It.Is<string>(message => message.StartsWith("1 Bybit item")), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenEveryItemImports_RecordsNoWarning()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Orders.Add(Order("good-1", "Buy", -1));
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        harness.OrderSync.Verify(service => service.MarkSyncStatusWarningAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenAccountHasNoKey_MarksItNotConfiguredAndClearsAStaleError()
+    {
+        // Account 36 (STAGE) kept "Credential storage is temporarily unavailable" from an old failure, because a sync
+        // skipped for missing credentials never updated the status.
+        var harness = await Harness.CreateAsync();
+        var status = await harness.Context.SyncStatuses.SingleAsync();
+        status.MarkError("Credential storage is temporarily unavailable");
+        await harness.Context.SaveChangesAsync();
+        harness.KeyVault.Setup(vault => vault.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.NotFound));
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSkipped.Should().BeTrue();
+        status.Status.Should().Be("NotConfigured");
+        status.LastErrorMessage.Should().BeNull();
+        status.ErrorCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task SyncAsync_ImportsPartiallyFilledCanceledOrdersWithExecutedQuantity()
     {
         var harness = await Harness.CreateAsync();
