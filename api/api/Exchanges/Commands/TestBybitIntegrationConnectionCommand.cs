@@ -62,6 +62,10 @@ public class TestBybitIntegrationConnectionCommandHandler(
                 return new Response("Bybit integration connection successful", true, new { verifiedAt });
             }
         }
+        catch (Exception ex) when (BybitApiFailureClassifier.IsRateLimit(ex))
+        {
+            return new Response(BybitErrorMessages.RateLimited, false, 429);
+        }
         catch (BybitTransportException ex)
         {
             return new Response($"Bybit is temporarily unavailable while testing the integration connection ({ex.Endpoint}). Please try again.", false, 503);

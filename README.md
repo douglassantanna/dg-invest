@@ -428,7 +428,7 @@ Set `BybitSync:Enabled = false` in the Function App settings to stop background 
 | `… only accepts requests from specific IP addresses … [Bybit 10010]` | The key has an IP whitelist. Remove it in Bybit, or create a key without one. |
 | `… missing a permission … [Bybit 10005]` | The key lacks a read permission for that request. Check the key's permissions in Bybit. |
 | `Bybit rejected the requested date range … [Bybit 131002]` | A time window Bybit does not accept. The next sync uses 7-day windows; if it keeps failing, run a historical import. |
-| `Bybit is limiting requests right now…` | Rate limit. Nothing to fix: the next run retries, and it does not count toward the automatic pause. If it lasts for hours, check whether Bybit is blocking the Function's region (Bybit also answers 403 to blocked regions). |
+| `Bybit is limiting requests right now…` | Rate limit (HTTP 429 from the API, also when saving or testing a key or listing sub-accounts). Nothing to fix: wait a minute and try again. The sync retries on its own, and it does not count toward the automatic pause. If it lasts for hours, check whether Bybit is blocking the Function's region (Bybit also answers 403 to blocked regions). |
 | `Could not reach Bybit (…)` | Network error, timeout or Bybit outage. The next run retries; 10 in a row pause the integration. |
 | `Bybit rejected sync request: <code> - <text>` | Any other Bybit error, with Bybit's own text. |
 | `This Bybit API key belongs to UID …, but this account is UID …` | The key was created in another Bybit account (for example, another sub-account). Create a read-only key inside the account shown on the page. |

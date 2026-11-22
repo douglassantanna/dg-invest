@@ -730,7 +730,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         {
             cash = await GetBybitCashBalanceAsync(account, apiKey, apiSecret, region);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // A rate limit is not an incomplete read: it fails the run (keeping the checkpoint) so the next run retries.
+        catch (Exception ex) when (ex is not OperationCanceledException && !BybitApiFailureClassifier.IsRateLimit(ex))
         {
             _logger.LogWarning(ex, "Bybit cash reconciliation skipped for account {AccountId}: wallet balance unavailable", account.Id);
             return;

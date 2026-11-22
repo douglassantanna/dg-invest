@@ -86,6 +86,11 @@ public class BybitCredentialSetService : IBybitCredentialSetService
 
             return null;
         }
+        catch (Exception ex) when (BybitApiFailureClassifier.IsRateLimit(ex))
+        {
+            _logger.LogWarning(ex, "Bybit rate limit while verifying an API key");
+            return new SaveCredentialResult(false, false, BybitErrorMessages.RateLimited, 429);
+        }
         catch (BybitApiException ex)
         {
             _logger.LogWarning("Bybit rejected the API key during credential save: {RetCode} {RetMsg}", ex.RetCode, ex.RetMsg);

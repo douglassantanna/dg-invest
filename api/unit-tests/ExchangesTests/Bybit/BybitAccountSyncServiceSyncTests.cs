@@ -372,6 +372,19 @@ public class BybitAccountSyncServiceSyncTests
     }
 
     [Fact]
+    public async Task SyncAsync_WhenTheCashReadIsRateLimited_ReturnsRateLimitedAndKeepsTheCheckpoint()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.CashBalanceError = new BybitRateLimitException("/v5/asset/transfer/query-account-coin-balance", 429, new Exception("throttled"));
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.FailureKind.Should().Be(BybitApiFailureKind.RateLimited);
+        harness.OrderSync.Verify(s => s.UpsertSyncStatusAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SyncAsync_WhenBybitRejectsTheRequest_RecordsAFriendlyMessageWithTheCode()
     {
         var harness = await Harness.CreateAsync();

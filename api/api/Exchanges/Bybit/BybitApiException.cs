@@ -91,6 +91,8 @@ public static class BybitApiFailureClassifier
         _ => new(BybitApiFailureKind.Other)
     };
 
+    public static bool IsRateLimit(Exception exception) => Classify(exception).Kind == BybitApiFailureKind.RateLimited;
+
     public static bool IsPermanentCredentialCode(int retCode) => PermanentCredentialCodes.Contains(retCode);
 
     public static bool HasTransportFailure(Exception exception, CancellationToken cancellationToken = default)

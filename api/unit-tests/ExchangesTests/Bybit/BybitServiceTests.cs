@@ -62,6 +62,15 @@ public class BybitServiceTests
     }
 
     [Fact]
+    public async Task TestConnectionAsync_WhenBybitRateLimits_ShouldThrowRateLimitExceptionNotReportABadKey()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWith("rate limited", 429);
+
+        await Assert.ThrowsAsync<BybitRateLimitException>(() => _sut.TestConnectionAsync("api-key", "api-secret"));
+    }
+
+    [Fact]
     public async Task PrivateRequests_UseATwentySecondTimeout()
     {
         using var httpTest = new HttpTest();

@@ -134,6 +134,10 @@ public class BybitService : IBybitService
         {
             throw;
         }
+        catch (BybitRateLimitException)
+        {
+            throw;
+        }
         catch (FlurlHttpException ex)
         {
             var errorBody = await ex.GetResponseStringAsync();

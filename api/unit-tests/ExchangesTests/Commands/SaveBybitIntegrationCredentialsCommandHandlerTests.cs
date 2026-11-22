@@ -101,6 +101,24 @@ public class SaveBybitIntegrationCredentialsCommandHandlerTests
         keyVault.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_WhenBybitRateLimitsTheKeyCheck_Returns429WithoutWritingSecrets()
+    {
+        await using var context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var keyVault = new Mock<IKeyVaultService>();
+        var bybit = new Mock<IBybitService>();
+        bybit.Setup(service => service.GetApiKeyInfoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new BybitRateLimitException("/v5/user/query-api", 429, new Exception("throttled")));
+        var handler = new SaveBybitIntegrationCredentialsCommandHandler(CredentialService(context, keyVault.Object, bybit.Object), context);
+
+        var result = await handler.Handle(new SaveBybitIntegrationCredentialsCommand(1, "key", "secret", BybitRegion.Global, "10001"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Data.Should().Be(429);
+        result.Message.Should().Be(BybitErrorMessages.RateLimited);
+        keyVault.Verify(v => v.SetSecretAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
     private static IBybitCredentialSetService CredentialService(DataContext context, IKeyVaultService vault, IBybitService? bybit = null) =>
         new BybitCredentialSetService(context, vault, bybit ?? ReadOnlyKeyBybit().Object, Mock.Of<ILogger<BybitCredentialSetService>>());
 
