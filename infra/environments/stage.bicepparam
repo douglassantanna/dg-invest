@@ -9,3 +9,5 @@ param bindCustomDomain = false
 param sqlAdministratorPassword = readEnvironmentVariable('SQL_ADMIN_PASSWORD')
 // Proportional since 2026-11-10, after reviewing GET /api/Recalculate/preview against STAGE data (README "Cost basis").
 param transferCostPolicy = 'Proportional'
+// Recalculation stays off. The one-off recalculation after switching to Proportional ran on 2026-11-10.
+param enableRecalculation = false

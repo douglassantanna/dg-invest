@@ -23,6 +23,9 @@ param logAnalyticsDailyQuotaGb string = '0.15'
 ])
 param transferCostPolicy string = 'Legacy'
 
+@description('Enables POST /api/Recalculate/recalculate (Admin only), which recalculates every user\'s accounts. Keep false; turn on only for a one-off recalculation, such as after switching transferCostPolicy, then turn it off again.')
+param enableRecalculation bool = false
+
 @description('Set true only after the Cloudflare DNS records are verified and the existing Static Web App domain binding is ready to move.')
 param bindCustomDomain bool = false
 param frontendCustomDomain string
@@ -306,6 +309,7 @@ resource apiApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'KeyVaultSettings__VaultUri', value: keyVaultUri }
         { name: 'BybitKeyVaultSettings__VaultUri', value: credentialVaultUri }
         { name: 'CostBasisSettings__TransferCostPolicy', value: transferCostPolicy }
+        { name: 'RecalculationSettings__EnableRecalculation', value: string(enableRecalculation) }
         { name: 'JWTSettings__Secret', value: jwtSecretReference }
         { name: 'JWTSettings__Issuer', value: 'dginvest-${environmentName}' }
         { name: 'JWTSettings__ExpiryMinutes', value: '120' }
