@@ -33,6 +33,9 @@ public class BybitOrderData
     [JsonPropertyName("createdTime")]
     public string CreatedTime { get; set; } = string.Empty;
 
+    [JsonPropertyName("updatedTime")]
+    public string UpdatedTime { get; set; } = string.Empty;
+
     [JsonPropertyName("category")]
     public string Category { get; set; } = string.Empty;
 }

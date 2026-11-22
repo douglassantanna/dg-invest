@@ -727,9 +727,9 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
     private sealed record LateFilledOrder(BybitOrderData Order, IReadOnlyList<BybitExecutionData> Fills);
 
-    // Orders with a fill in this window that order history did not return and that are not imported yet. Each one is
-    // rebuilt from all its fills (they can span windows) once its last fill leaves nothing open. An order still open,
-    // or partly filled and later cancelled, cannot be told apart from fills alone and is left to the historical import.
+    // Orders with a fill in this window that order history did not return and that are not imported yet. The order
+    // itself is looked up by id, so quantity and price are Bybit's totals: its fills may span more than the 7 days
+    // Bybit returns by default, so they are never summed into the order. Still open, or not found: remembered as pending.
     private async Task<List<LateFilledOrder>> CollectLateFilledOrdersAsync(
         string apiKey,
         string apiSecret,
@@ -762,17 +762,19 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         var lateOrders = new List<LateFilledOrder>();
         foreach (var orderId in candidates)
         {
-            var orderFills = await _bybitService.GetExecutionHistoryAsync(apiKey, apiSecret, region, orderId, cancellationToken);
-            if (BuildFromFills(orderId, orderFills) is { } order)
-            {
-                _logger.LogInformation("Bybit sync: order {OrderId} filled after its creation window; importing it from {FillCount} fill(s)",
-                    orderId, orderFills.Count);
-                lateOrders.Add(new LateFilledOrder(order, orderFills));
-            }
-            else if (orderFills.Count > 0)
+            var order = await _bybitService.GetOrderAsync(apiKey, apiSecret, region, orderId, cancellationToken);
+            if (order is null || !IsExecuted(order))
             {
                 partlyOpenOrderIds?.Add(orderId);
+                continue;
             }
+
+            var orderFills = await _bybitService.GetExecutionHistoryAsync(apiKey, apiSecret, region, orderId, cancellationToken);
+            var lateOrder = DateByCompletion(order, orderFills, out var fillsComplete);
+            _logger.LogInformation("Bybit sync: order {OrderId} closed as {Status} after its creation window; importing it ({FillCount} fill(s), complete: {Complete})",
+                orderId, order.OrderStatus, orderFills.Count, fillsComplete);
+            // Empty fills make the order sync take fees from the order itself instead of a partial sum.
+            lateOrders.Add(new LateFilledOrder(lateOrder, fillsComplete ? orderFills : []));
         }
 
         return lateOrders;
@@ -860,38 +862,34 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
     private static bool HasImportedOrder(Account account, string orderId) =>
         account.CryptoAssets.SelectMany(asset => asset.Transactions).Any(transaction => transaction.ExchangeOrderId == orderId);
 
-    // The order as order history would have returned it once filled: quantity and quantity-weighted price from the
-    // fills, dated by the last fill. Fees are taken from the fills when it is processed.
-    private static BybitOrderData? BuildFromFills(string orderId, IReadOnlyList<BybitExecutionData> fills)
+    // A late order is dated by when it completed, not when it was placed: the last fill when the fills add up to the
+    // order's filled quantity, otherwise the order's last update.
+    private static BybitOrderData DateByCompletion(BybitOrderData order, IReadOnlyList<BybitExecutionData> fills, out bool fillsComplete)
     {
         var culture = System.Globalization.CultureInfo.InvariantCulture;
-        var parsed = fills
-            .Select(fill => (
-                Fill: fill,
-                Quantity: decimal.TryParse(fill.ExecQty, System.Globalization.NumberStyles.Any, culture, out var quantity) ? quantity : 0m,
-                Price: decimal.TryParse(fill.ExecPrice, System.Globalization.NumberStyles.Any, culture, out var price) ? price : 0m,
-                ExecutedAt: long.TryParse(fill.ExecTime, out var executedAt) ? executedAt : 0L))
-            .Where(item => item.Quantity > 0 && item.Price > 0)
-            .ToList();
+        var filledQuantity = fills.Sum(fill => decimal.TryParse(fill.ExecQty, System.Globalization.NumberStyles.Any, culture, out var quantity) ? quantity : 0m);
+        fillsComplete = fills.Count > 0
+            && decimal.TryParse(order.CumExecQty, System.Globalization.NumberStyles.Any, culture, out var orderQuantity)
+            && filledQuantity == orderQuantity;
 
-        var completed = fills.Any(fill => decimal.TryParse(fill.LeavesQty, System.Globalization.NumberStyles.Any, culture, out var left) && left == 0);
-        if (parsed.Count == 0 || !completed)
-            return null;
+        var completedAt = fillsComplete
+            ? fills.Max(fill => long.TryParse(fill.ExecTime, out var executedAt) ? executedAt : 0L).ToString(culture)
+            : string.IsNullOrWhiteSpace(order.UpdatedTime) ? order.CreatedTime : order.UpdatedTime;
 
-        var quantity = parsed.Sum(item => item.Quantity);
-        var averagePrice = parsed.Sum(item => item.Quantity * item.Price) / quantity;
-        var last = parsed.MaxBy(item => item.ExecutedAt);
         return new BybitOrderData
         {
-            OrderId = orderId,
-            Symbol = last.Fill.Symbol,
-            Side = last.Fill.Side,
-            OrderStatus = "Filled",
-            AvgPrice = averagePrice.ToString(culture),
-            CumExecQty = quantity.ToString(culture),
-            CumExecFee = "0",
-            CreatedTime = last.ExecutedAt.ToString(culture),
-            Category = "spot"
+            OrderId = order.OrderId,
+            Symbol = order.Symbol,
+            Side = order.Side,
+            OrderType = order.OrderType,
+            OrderStatus = order.OrderStatus,
+            AvgPrice = order.AvgPrice,
+            CumExecQty = order.CumExecQty,
+            CumExecFee = order.CumExecFee,
+            CumFeeDetail = order.CumFeeDetail,
+            CreatedTime = completedAt,
+            UpdatedTime = order.UpdatedTime,
+            Category = order.Category
         };
     }
 

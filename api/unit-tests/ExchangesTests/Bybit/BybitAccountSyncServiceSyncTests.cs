@@ -408,29 +408,76 @@ public class BybitAccountSyncServiceSyncTests
         harness.Fills.AddRange([
             Fill("late-1", "exec-2", "0.0203", "99.33", leavesQty: "0", minutesFromNow: -1),
             Fill("late-1", "exec-1", "0.01", "98", leavesQty: "0.0203", minutesFromNow: -2)]);
+        harness.OrdersById["late-1"] = LateOrder("late-1", cumExecQty: "0.0303", avgPrice: "98.9", createdMinutesFromNow: -9, updatedMinutesFromNow: -1);
         var processed = CaptureProcessedOrders(harness);
 
         var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue(result.Message);
         var (order, executions) = processed.Single();
+        // Quantity and price are Bybit's own order totals, not a rebuild from the fills.
         order.OrderId.Should().Be("late-1");
         order.Symbol.Should().Be("AAVEUSDT");
-        order.Side.Should().Be("Buy");
         order.OrderStatus.Should().Be("Filled");
-        decimal.Parse(order.CumExecQty, System.Globalization.CultureInfo.InvariantCulture).Should().Be(0.0303m);
-        decimal.Parse(order.AvgPrice, System.Globalization.CultureInfo.InvariantCulture)
-            .Should().BeApproximately((0.01m * 98m + 0.0203m * 99.33m) / 0.0303m, 0.0000001m);
+        order.CumExecQty.Should().Be("0.0303");
+        order.AvgPrice.Should().Be("98.9");
         // Dated by its last fill, not by when it was placed.
         order.CreatedTime.Should().Be(Ms(-1));
         executions.Should().HaveCount(2);
     }
 
     [Fact]
+    public async Task SyncAsync_WhenTheFillsDoNotAddUpToTheOrder_UsesTheOrderFeesAndUpdateTime()
+    {
+        // Bybit can return only the last 7 days of fills for an order; a partial list must not drive the import.
+        var harness = await Harness.CreateAsync();
+        harness.Fills.Add(Fill("late-1", "exec-9", "0.01", "99", leavesQty: "0", minutesFromNow: -1));
+        harness.OrdersById["late-1"] = LateOrder("late-1", cumExecQty: "0.05", avgPrice: "97.5", createdMinutesFromNow: -20_000, updatedMinutesFromNow: -1);
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        var (order, executions) = processed.Single();
+        order.CumExecQty.Should().Be("0.05");
+        order.CreatedTime.Should().Be(Ms(-1));
+        // Empty fills: the order's own fee details are used instead of a partial sum.
+        executions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenALateOrderIsNotFoundById_RemembersItAsPending()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Fills.Add(Fill("late-1", "exec-1", "0.01", "99", leavesQty: "0", minutesFromNow: -1));
+        var processed = CaptureProcessedOrders(harness);
+
+        await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        processed.Should().BeEmpty();
+        (await PendingOrderIdsAsync(harness)).Should().Equal("late-1");
+    }
+
+    private static BybitOrderData LateOrder(string orderId, string cumExecQty, string avgPrice, int createdMinutesFromNow, int updatedMinutesFromNow) => new()
+    {
+        OrderId = orderId,
+        Symbol = "AAVEUSDT",
+        Side = "Buy",
+        OrderStatus = "Filled",
+        CumExecQty = cumExecQty,
+        AvgPrice = avgPrice,
+        CumExecFee = "0",
+        CreatedTime = Ms(createdMinutesFromNow),
+        UpdatedTime = Ms(updatedMinutesFromNow)
+    };
+
+    [Fact]
     public async Task SyncAsync_DoesNotImportAnOrderThatIsStillPartlyOpen()
     {
         var harness = await Harness.CreateAsync();
         harness.Fills.Add(Fill("open-1", "exec-1", "0.01", "98", leavesQty: "0.02", minutesFromNow: -1));
+        var stillOpen = LateOrder("open-1", cumExecQty: "0.01", avgPrice: "98", createdMinutesFromNow: -9, updatedMinutesFromNow: -1);
+        stillOpen.OrderStatus = "PartiallyFilled";
+        harness.OrdersById["open-1"] = stillOpen;
         var processed = CaptureProcessedOrders(harness);
 
         var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);

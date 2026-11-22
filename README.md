@@ -253,8 +253,10 @@ The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enab
    The database enforces both per-account rules with unique indexes: `IX_AccountTransactions_AccountId_ExchangeTransactionId` (non-empty ids) and `IX_CryptoAssets_AccountId_CoinMarketCapId` (one asset per coin per account). If two syncs of the same account overlap, the second one fails on the index and the next run finds the existing record. Like the order index, these indexes are created by SQL migrations and are not part of the EF model.
 
    **Limit orders that fill late.** Order history is filtered by **creation** time, so a limit order that fills after its window has passed (more than ~5 minutes after it was placed) is never returned again. Fills are listed by **execution** time, so each window also checks them:
-   - an order with a fill in the window that order history did not return, and that is not imported yet, is fetched by order id with all its fills;
-   - once its last fill leaves nothing open (`leavesQty = 0`), it is rebuilt from the fills: quantity = sum of the fills, price = quantity-weighted average, fees from the fills, **dated by the last fill**;
+   - an order with a fill in the window that order history did not return, and that is not imported yet, is **looked up by order id** (`/v5/order/realtime`, which also returns recently closed orders);
+   - if it closed with fills (`Filled` / `PartiallyFilledCanceled`), Bybit's own totals are used for quantity and average price. Its fills are fetched for fees and the date; they are **not** summed into the order, because Bybit may only return the last 7 days of fills for an order;
+   - **dated by when it completed:** the last fill when the fills add up to the order's filled quantity, otherwise the order's last update (and fees then come from the order's own fee details);
+   - still open, or not returned by id: remembered as pending (below);
    - it then goes through the normal order import (same deduplication and rules).
 
    **Partly filled orders.** A cancel is not a fill, so an order that fills partly and is cancelled long after its window would still be missed. The sync **remembers** such orders in `BybitPendingOrders` (one row per account and order):
