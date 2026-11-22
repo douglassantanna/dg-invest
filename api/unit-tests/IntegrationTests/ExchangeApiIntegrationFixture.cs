@@ -255,6 +255,8 @@ public sealed class FakeBybitService : IBybitService
 
     public Task<BybitApiKeyInfo> GetApiKeyInfoAsync(string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default) =>
         Task.FromResult(new BybitApiKeyInfo { ReadOnly = 1 });
+    public Task<decimal?> GetSpotPriceAtAsync(string coin, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        Task.FromResult<decimal?>(null);
     public Task<List<BybitSubMember>> GetSubAccountsAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)
     {
         LastApiKey = apiKey;

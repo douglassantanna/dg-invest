@@ -20,6 +20,8 @@ public class BybitService : IBybitService
     private const string AccountCoinBalancesEndpoint = "/v5/asset/transfer/query-account-coins-balance";
     private const string AccountInfoEndpoint = "/v5/account/info";
     private const string ApiKeyInfoEndpoint = "/v5/user/query-api";
+    private const string KlineEndpoint = "/v5/market/kline";
+    private const int UnsupportedSymbolRetCode = 10001;
     private const int RecvWindow = 60000;
 
     private readonly bool _useTestnet;
@@ -64,6 +66,44 @@ public class BybitService : IBybitService
             throw new BybitApiException(response.RetCode, response.RetMsg, ApiKeyInfoEndpoint);
 
         return response.Result;
+    }
+
+    // Public market data, so no key and the global host. Takes the latest 1-minute candle that starts at or before `at`
+    // and returns its close. Bybit answers 10001 for a pair it does not list. Transport failures throw, so the caller
+    // retries rather than recording a fallback price for good.
+    public async Task<decimal?> GetSpotPriceAtAsync(string coin, DateTimeOffset at, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var end = at.ToUnixTimeMilliseconds();
+        var url = BybitEndpoints.GetBaseUrl(BybitRegion.Global, _useTestnet)
+            .AppendPathSegment(KlineEndpoint)
+            .SetQueryParam("category", "spot")
+            .SetQueryParam("symbol", $"{coin.ToUpperInvariant()}USDT")
+            .SetQueryParam("interval", "1")
+            .SetQueryParam("start", end - (long)TimeSpan.FromMinutes(5).TotalMilliseconds)
+            .SetQueryParam("end", end)
+            .SetQueryParam("limit", 5);
+
+        BybitKlineResponse response;
+        try
+        {
+            response = await url.GetJsonAsync<BybitKlineResponse>(cancellationToken: cancellationToken);
+        }
+        catch (Exception ex) when (BybitApiFailureClassifier.HasTransportFailure(ex, cancellationToken))
+        {
+            throw new BybitTransportException(KlineEndpoint, ex);
+        }
+
+        if (response.RetCode == UnsupportedSymbolRetCode)
+            return null;
+        if (response.RetCode != 0)
+            throw new BybitApiException(response.RetCode, response.RetMsg, KlineEndpoint);
+
+        return response.Result.List.FirstOrDefault() is { Count: > 4 } candle
+            && decimal.TryParse(candle[4], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var close)
+            && close > 0
+                ? close
+                : null;
     }
 
     public async Task<bool> TestConnectionAsync(string apiKey, string apiSecret, BybitRegion region = BybitRegion.Global)

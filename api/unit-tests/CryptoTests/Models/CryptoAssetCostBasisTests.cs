@@ -81,6 +81,34 @@ public class CryptoAssetCostBasisTests
     }
 
     [Fact]
+    public void Proportional_TransferOutLargerThanTheKnownBalance_SendsTheKnownCoinsWithTheirCost()
+    {
+        // History explains 0.1 BTC, but 0.4 BTC leaves (the rest had no history); the wallet keeps 0.2 afterwards.
+        var asset = Asset(Tx(ETransactionType.Buy, 0.1m, 50_000m, 0), Tx(ETransactionType.TransferOut, 0.4m, 0m, 1));
+        asset.RecalculateFromTransactions(TransferCostPolicy.Proportional);
+        asset.ReconcileBalance(0.2m);
+
+        var costBasis = asset.GetCostBasis(70_000m, TransferCostPolicy.Proportional);
+
+        // The known 0.1 BTC and its 5,000 cost left; what remains has no history, so it shows no gain or loss.
+        asset.HistoryBalance().Should().Be(0m);
+        costBasis.UnexplainedBalance.Should().Be(0.2m);
+        costBasis.Invested.Should().Be(14_000m);
+        costBasis.GainLoss.Should().Be(0m);
+    }
+
+    [Fact]
+    public void Legacy_TransferOutLargerThanTheKnownBalance_IsStillSkipped()
+    {
+        var asset = Asset(Tx(ETransactionType.Buy, 0.1m, 50_000m, 0), Tx(ETransactionType.TransferOut, 0.4m, 0m, 1));
+
+        asset.RecalculateFromTransactions(TransferCostPolicy.Legacy);
+
+        asset.Balance.Should().Be(0.1m);
+        asset.TotalInvested.Should().Be(5_000m);
+    }
+
+    [Fact]
     public void CostBasis_ValuesBalanceWithoutHistoryAtTheCurrentPrice()
     {
         // Account 33 (STAGE, 2026-11-09): 8 BTC buys totalling 0.000459 BTC, while the Bybit wallet holds 0.00052366.

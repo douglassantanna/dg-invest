@@ -26,6 +26,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
     private readonly DataContext _context;
     private readonly ILogger<BybitOrderSyncService> _logger;
     private readonly ICacheService _cacheService;
+    private readonly IBybitService? _bybitService;
 
     public BybitOrderSyncService(
         ICoinMarketCapService coinMarketCapService,
@@ -35,8 +36,10 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         DataContext context,
         ILogger<BybitOrderSyncService> logger,
         ICacheService cacheService,
-        IOptions<CostBasisSettings>? costBasisSettings = null)
+        IOptions<CostBasisSettings>? costBasisSettings = null,
+        IBybitService? bybitService = null)
     {
+        _bybitService = bybitService;
         _coinMarketCapService = coinMarketCapService;
         _transactionService = transactionService;
         _blobStorageService = blobStorageService;
@@ -214,7 +217,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         var successAt = ParseExchangeDate(deposit.SuccessAt);
 
-        var depositPrice = await GetMarketPriceAsync(symbol, cancellationToken);
+        var depositPrice = await GetPriceAtAsync(symbol, successAt, cancellationToken);
 
         var depositCryptoTx = new CryptoTransaction(
             amount,
@@ -321,7 +324,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
         var successAt = ParseExchangeDate(withdrawal.CreateTime ?? withdrawal.SuccessAt);
 
-        var withdrawalPrice = await GetMarketPriceAsync(symbol, cancellationToken);
+        var withdrawalPrice = await GetPriceAtAsync(symbol, successAt, cancellationToken);
 
         var withdrawalCryptoTx = new CryptoTransaction(
             amount,
@@ -436,9 +439,6 @@ public class BybitOrderSyncService : IBybitOrderSyncService
 
     public async Task<bool> ProcessInternalTransferAsync(BybitInternalTransferRow transfer, Account account, int userId, CancellationToken cancellationToken, bool applyCashBalance = true)
     {
-        if (!IsCashCoin(transfer.Coin))
-            return true;
-
         // Decide whether the transfer involves this account before validating it, so a malformed transfer between
         // two other accounts is ignored here rather than reported as a skipped item.
         var isTransferIn = IsTransferMatch(account, transfer.ToAccountType, transfer.ToMemberId);
@@ -462,12 +462,17 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         if (existingTx)
             return true;
 
-        var transactionType = isTransferIn
-            ? EAccountTransactionType.TransferIn
-            : EAccountTransactionType.TransferOut;
         var timestamp = long.TryParse(transfer.Timestamp, out var unixMilliseconds)
             ? DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).DateTime
             : DateTime.UtcNow;
+
+        if (!IsCashCoin(transfer.Coin))
+            return await ProcessCryptoTransferAsync(transfer, account, userId, isTransferIn, amount, exchangeTransactionId,
+                new DateTimeOffset(DateTime.SpecifyKind(timestamp, DateTimeKind.Utc)), cancellationToken);
+
+        var transactionType = isTransferIn
+            ? EAccountTransactionType.TransferIn
+            : EAccountTransactionType.TransferOut;
         var accountTx = new AccountTransaction(
             date: timestamp,
             transactionType: transactionType,
@@ -494,6 +499,82 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         await _context.SaveChangesAsync(cancellationToken);
         _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
         return true;
+    }
+
+    // A coin moved between two of the user's Bybit UIDs. Each side records its half from its own sync: a TransferOut on
+    // the source and a TransferIn on the destination, priced at what the coins cost the source, so the cost moves with
+    // them. Cash and total deposited are not touched: the account history entry is a crypto deposit or withdrawal.
+    private async Task<bool> ProcessCryptoTransferAsync(BybitInternalTransferRow transfer, Account account, int userId, bool isTransferIn,
+        decimal amount, string exchangeTransactionId, DateTimeOffset transferredAt, CancellationToken cancellationToken)
+    {
+        var cryptoAsset = await FindOrCreateCryptoAssetAsync(account, transfer.Coin, cancellationToken);
+        if (cryptoAsset == null)
+        {
+            await WriteTransferSyncLogAsync(transfer, userId, account.Id, $"Could not resolve asset for symbol {transfer.Coin}", cancellationToken);
+            return false;
+        }
+
+        var price = await GetTransferPriceAsync(transfer, account, cryptoAsset, isTransferIn, amount, transferredAt, cancellationToken);
+        cryptoAsset.AddHistoricalTransaction(new CryptoTransaction(
+            amount,
+            price,
+            transferredAt,
+            "Bybit",
+            isTransferIn ? ETransactionType.TransferIn : ETransactionType.TransferOut,
+            0), _transferCostPolicy);
+
+        RecordWithoutCashMutation(account, new AccountTransaction(
+            date: transferredAt.UtcDateTime,
+            transactionType: isTransferIn ? EAccountTransactionType.DepositCrypto : EAccountTransactionType.WithdrawCrypto,
+            amount: amount,
+            cryptoCurrentPrice: price,
+            exchangeName: "Bybit",
+            notes: isTransferIn
+                ? $"Auto-synced from Bybit {transfer.Coin} transfer {transfer.TransferId} from UID {transfer.FromMemberId}"
+                : $"Auto-synced from Bybit {transfer.Coin} transfer {transfer.TransferId} to UID {transfer.ToMemberId}",
+            cryptoAssetId: cryptoAsset.Id,
+            cryptoAsset: cryptoAsset,
+            fee: 0,
+            exchangeTransactionId: exchangeTransactionId,
+            exchangeStatus: "InternalTransfer"));
+
+        await _context.SaveChangesAsync(cancellationToken);
+        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{userId}");
+        _logger.LogInformation("Bybit sync: recorded {Coin} transfer {TransferId} ({Direction}) for account {AccountId} at {Price}",
+            transfer.Coin, transfer.TransferId, isTransferIn ? "in" : "out", account.Id, price);
+        return true;
+    }
+
+    // The source's average cost just before the transfer. Falls back to the market price at the transfer when the
+    // source is not one of the user's accounts, or its history does not explain the coins sent: carrying an average
+    // from incomplete history would record a wrong cost for good.
+    private async Task<decimal> GetTransferPriceAsync(BybitInternalTransferRow transfer, Account account, CryptoAsset accountAsset,
+        bool isTransferIn, decimal amount, DateTimeOffset transferredAt, CancellationToken cancellationToken)
+    {
+        var sourceAsset = isTransferIn
+            ? await FindSourceAssetAsync(account, transfer.FromMemberId, transfer.Coin, cancellationToken)
+            : accountAsset;
+        if (sourceAsset?.AveragePriceBefore(transferredAt, amount) is { } averagePrice)
+            return averagePrice;
+
+        _logger.LogInformation("Bybit sync: no known cost for {Coin} transfer {TransferId} from UID {FromUid}; using the market price at the transfer",
+            transfer.Coin, transfer.TransferId, transfer.FromMemberId);
+        return await GetPriceAtAsync(transfer.Coin, transferredAt, cancellationToken);
+    }
+
+    private async Task<CryptoAsset?> FindSourceAssetAsync(Account account, string sourceUid, string coin, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(sourceUid))
+            return null;
+
+        var source = await _context.Accounts
+            .Include(a => a.CryptoAssets).ThenInclude(a => a.Transactions)
+            .FirstOrDefaultAsync(a => a.UserId == account.UserId
+                && a.Id != account.Id
+                && a.Exchange == "Bybit"
+                && a.ExternalId == sourceUid
+                && !a.IsDeleted, cancellationToken);
+        return source?.CryptoAssets.FirstOrDefault(a => a.Symbol.Equals(coin, StringComparison.OrdinalIgnoreCase));
     }
 
     private static Response RecordWithoutCashMutation(Account account, AccountTransaction accountTransaction)
@@ -905,6 +986,17 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             && (accountType.Equals("UNIFIED", StringComparison.OrdinalIgnoreCase)
                 || accountType.Equals("FUND", StringComparison.OrdinalIgnoreCase))
             && string.Equals(account.ExternalId, memberId, StringComparison.Ordinal);
+    }
+
+    // Price at the time an event happened, from Bybit's candles. Only when Bybit has no {coin}USDT candle does it fall back
+    // to today's CoinMarketCap price. A failed candle request throws, so the event is retried rather than mispriced.
+    private async Task<decimal> GetPriceAtAsync(string symbol, DateTimeOffset at, CancellationToken cancellationToken)
+    {
+        if (_bybitService is not null && await _bybitService.GetSpotPriceAtAsync(symbol, at, cancellationToken) is { } price)
+            return price;
+
+        _logger.LogWarning("Bybit sync: no {Symbol}USDT candle at {At}; using the current CoinMarketCap price", symbol, at);
+        return await GetMarketPriceAsync(symbol, cancellationToken);
     }
 
     private async Task<decimal> GetMarketPriceAsync(string symbol, CancellationToken cancellationToken)

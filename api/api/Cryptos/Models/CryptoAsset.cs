@@ -110,8 +110,17 @@ public class CryptoAsset : Entity
         (Balance, TotalInvested) = Replay(_transactions, policy);
     }
 
-    // Quantity explained by the transaction history. It does not depend on the cost policy.
-    public decimal HistoryBalance() => Replay(_transactions, TransferCostPolicy.Legacy).Balance;
+    // Quantity explained by the transaction history, as Proportional counts it (the only policy that shows the coins
+    // without history): a transfer out larger than the known balance empties it.
+    public decimal HistoryBalance() => Replay(_transactions, TransferCostPolicy.Proportional).Balance;
+
+    // Average cost per coin from the transactions before `at`, or null when that history does not hold at least
+    // `quantity` coins with a known cost (missing history, or coins that arrived without one).
+    public decimal? AveragePriceBefore(DateTimeOffset at, decimal quantity)
+    {
+        var (balance, invested) = Replay(_transactions.Where(t => t.PurchaseDate < at), TransferCostPolicy.Proportional);
+        return balance > 0 && balance >= quantity && invested > 0 ? invested / balance : null;
+    }
 
     // Cost figures for display. Under Proportional, coins Bybit holds beyond what history explains (Balance was
     // reconciled to the wallet) are valued at the current price instead of at zero cost, so they add no gain.
@@ -185,10 +194,15 @@ public class CryptoAsset : Entity
                     break;
 
                 case ETransactionType.TransferOut:
-                    if (t.Amount > balance) break; // skip transfers without a known opening balance
+                    // More can leave than history explains (coins without history). Under Proportional the known coins
+                    // are sent first, with their cost, so that cost does not stay on coins that are gone. Legacy keeps
+                    // its shipped behaviour and skips such a transfer.
+                    if (t.Amount > balance && policy == TransferCostPolicy.Legacy) break;
+                    var sent = Math.Min(t.Amount, balance);
+                    if (sent == 0) break;
                     if (policy == TransferCostPolicy.Proportional)
-                        invested -= t.Amount * (balance == 0 ? 0 : invested / balance);
-                    balance -= t.Amount;
+                        invested -= sent * (invested / balance);
+                    balance -= sent;
                     if (balance == 0) invested = 0;
                     break;
             }

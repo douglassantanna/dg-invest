@@ -292,8 +292,8 @@ How transfers and balance without history are treated depends on `CostBasisSetti
 
 | | `Legacy` (default, being phased out) | `Proportional` |
 |---|---|---|
-| **Transfer in** (crypto deposit) | Adds coins at **zero cost**, ignoring the recorded price | Adds cost at the **recorded price** (market price when the deposit was recorded) |
-| **Transfer out** (crypto withdrawal) | Keeps the **full cost** on the remaining coins, so the average price jumps | Removes cost at the **average price**, like a sale |
+| **Transfer in** (crypto deposit) | Adds coins at **zero cost**, ignoring the recorded price | Adds cost at the **recorded price**: the market price at the deposit time, or the source's average cost for a transfer between your own accounts (see [Transfers](#transfers)) |
+| **Transfer out** (crypto withdrawal) | Keeps the **full cost** on the remaining coins, so the average price jumps. A transfer larger than the history explains is ignored. | Removes cost at the **average price**, like a sale. If more leaves than the history explains, the known coins leave first with their cost; what remains counts as balance without history. |
 | **Balance without history** (Bybit only) | Counts as free coins, which **inflates** the gain | Valued at the **current price**, so it adds no gain or loss. The asset page shows a "Without history" card and a note suggesting the historical import. |
 
 **Current setting:** STAGE uses `Proportional` (since 2026-11-10); PROD uses `Legacy`.
@@ -322,7 +322,18 @@ Example: buy 1 BTC at 60k, then withdraw 0.5 BTC. With `Legacy` the remaining 0.
 |---|---|
 | Within the same UID (Funding ↔ Unified) | Nothing. It nets to zero. |
 | Between UIDs (master ↔ sub, sub ↔ sub) in USDT/USDC | `TransferOut` on the source account and `TransferIn` on the destination, each side recorded by that account's own sync. They count toward each account's total deposited and net to zero across your accounts. |
-| Between UIDs in other coins (e.g. BTC) | Not recorded in history yet. Quantities move only through wallet reconciliation (see Known limitations). |
+| Between UIDs in other coins (e.g. BTC) | `TransferOut` on the source coin and `TransferIn` on the destination coin, each side recorded by that account's own sync. The account history shows them as a crypto withdrawal and a crypto deposit, so cash and total deposited do not change. |
+
+**Cost of crypto moved between your own accounts.** The destination's `TransferIn` is priced at the **source's average cost just before the transfer**, replayed from the source's history. Under `Proportional`, the source loses that cost and the destination gains it, so the average price is the same on both sides. The **market price at the transfer time** is used instead when:
+- the source UID is not one of your accounts in DG Invest;
+- the source's history before the transfer holds fewer coins than were sent (missing history, or the source has not imported its earlier buys yet);
+- the source's coins have no known cost.
+
+Under `Legacy`, a `TransferIn` ignores the price, so the coins still arrive at zero cost.
+
+**Market price at a past time.** Crypto deposits, crypto withdrawals and the transfer fallback use the close of Bybit's public 1-minute `{COIN}USDT` spot candle at the event time (`/v5/market/kline`, no key needed). If Bybit does not list that pair, today's CoinMarketCap price is used and a warning is logged. If the candle request fails, the event is retried on the next sync instead of being recorded at a fallback price.
+
+Rows recorded before this change keep their price. Crypto transfers that happened before it are only recorded by a historical import, because the checkpoint has already passed them.
 
 If a key lacks permission to list transfers (Bybit error `10005`), the sync **skips transfers** for that account and logs a warning, but still imports orders, deposits and withdrawals. Cash is still reconciled from the wallet. Only the `TransferIn`/`TransferOut` history entries, and therefore that account's total deposited, are missing. After adding the permission, run the historical import to recover them: the checkpoint has already moved past the skipped range.
 
@@ -429,8 +440,7 @@ These are tracked in the integration review and planned for upcoming PRs:
 
 - **Cost basis:**
   - Environments still on `TransferCostPolicy = Legacy` (PROD) use the Legacy rules described in [Cost basis](#cost-basis).
-  - Crypto transfers between your own accounts are not recorded, so cost is lost at the destination.
-  - Deposits record the price at processing time, not at deposit time, which is wrong for backfilled deposits.
+  - Deposits, withdrawals and transfers recorded before 2026-11 keep the price from processing time (today's CoinMarketCap price), not the event time.
 - **Cost and resilience:** the timer runs every 30 s with sequential Bybit calls, ~15 per account; there is no short timeout or rate-limit handling.
 
 ---
