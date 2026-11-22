@@ -293,7 +293,7 @@ How transfers and balance without history are treated depends on `CostBasisSetti
 | | `Legacy` (default, being phased out) | `Proportional` |
 |---|---|---|
 | **Transfer in** (crypto deposit) | Adds coins at **zero cost**, ignoring the recorded price | Adds cost at the **recorded price**: the market price at the deposit time, or the source's average cost for a transfer between your own accounts (see [Transfers](#transfers)) |
-| **Transfer out** (crypto withdrawal) | Keeps the **full cost** on the remaining coins, so the average price jumps | Removes cost at the **average price**, like a sale |
+| **Transfer out** (crypto withdrawal) | Keeps the **full cost** on the remaining coins, so the average price jumps. A transfer larger than the history explains is ignored. | Removes cost at the **average price**, like a sale. If more leaves than the history explains, the known coins leave first with their cost; what remains counts as balance without history. |
 | **Balance without history** (Bybit only) | Counts as free coins, which **inflates** the gain | Valued at the **current price**, so it adds no gain or loss. The asset page shows a "Without history" card and a note suggesting the historical import. |
 
 **Current setting:** STAGE uses `Proportional` (since 2026-11-10); PROD uses `Legacy`.
