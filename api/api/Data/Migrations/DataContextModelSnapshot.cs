@@ -210,6 +210,33 @@ namespace api.Migrations
                     b.ToTable("UserPortfolioSnapshots");
                 });
 
+            modelBuilder.Entity("api.Exchanges.Models.BybitPendingOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId", "OrderId")
+                        .IsUnique();
+
+                    b.ToTable("BybitPendingOrders", (string)null);
+                });
+
             modelBuilder.Entity("api.Exchanges.Models.ExchangeIntegration", b =>
                 {
                     b.Property<int>("Id")
@@ -523,6 +550,15 @@ namespace api.Migrations
                         .HasForeignKey("CryptoAssetId");
 
                     b.Navigation("CryptoAsset");
+                });
+
+            modelBuilder.Entity("api.Exchanges.Models.BybitPendingOrder", b =>
+                {
+                    b.HasOne("api.Cryptos.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("api.Exchanges.Models.ExchangeIntegration", b =>

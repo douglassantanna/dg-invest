@@ -11,6 +11,7 @@ public class BybitService : IBybitService
     private const string SubMembersEndpoint = "/v5/user/submembers";
     private const string OrderHistoryEndpoint = "/v5/order/history";
     private const string ExecutionHistoryEndpoint = "/v5/execution/list";
+    private const string OpenOrdersEndpoint = "/v5/order/realtime";
     private const string DepositHistoryEndpoint = "/v5/asset/deposit/query-record";
     private const string WithdrawalHistoryEndpoint = "/v5/asset/withdraw/query-record";
     private const string InternalTransferHistoryEndpoint = "/v5/asset/transfer/query-inter-transfer-list";
@@ -181,6 +182,37 @@ public class BybitService : IBybitService
             _logger.LogDebug(ex, "Bybit order history request failed");
             throw;
         }
+    }
+
+    public async Task<List<BybitOrderData>> GetOpenOrdersAsync(string apiKey, string apiSecret, BybitRegion region, CancellationToken cancellationToken = default)
+        => await GetPagedAsync(
+            cursor =>
+            {
+                var query = new Dictionary<string, object>
+                {
+                    ["category"] = "spot",
+                    ["openOnly"] = 0,
+                    ["limit"] = 50
+                };
+                if (!string.IsNullOrWhiteSpace(cursor))
+                    query["cursor"] = cursor;
+
+                return SendPrivateGetAsync<BybitOrderHistoryResponse>(apiKey, apiSecret, region, OpenOrdersEndpoint, query, cancellationToken);
+            },
+            response => (response.RetCode, response.RetMsg, response.Result.List, response.Result.NextPageCursor),
+            "open orders", cancellationToken);
+
+    // By order id, Bybit ignores openOnly and also returns the order once closed (it keeps the last 500 closed orders).
+    public async Task<BybitOrderData?> GetOrderAsync(string apiKey, string apiSecret, BybitRegion region, string orderId, CancellationToken cancellationToken = default)
+    {
+        var response = await SendPrivateGetAsync<BybitOrderHistoryResponse>(
+            apiKey, apiSecret, region, OpenOrdersEndpoint,
+            new Dictionary<string, object> { ["category"] = "spot", ["orderId"] = orderId },
+            cancellationToken);
+        if (response.RetCode != 0)
+            throw new BybitApiException(response.RetCode, response.RetMsg, OpenOrdersEndpoint);
+
+        return response.Result.List.FirstOrDefault(order => order.OrderId == orderId);
     }
 
     // Order history filters by creation time, so a limit order that fills after its window has passed never comes back

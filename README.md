@@ -257,7 +257,12 @@ The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enab
    - once its last fill leaves nothing open (`leavesQty = 0`), it is rebuilt from the fills: quantity = sum of the fills, price = quantity-weighted average, fees from the fills, **dated by the last fill**;
    - it then goes through the normal order import (same deduplication and rules).
 
-   An order that fills partly and is **cancelled later** cannot be told apart from an open order using fills alone, so it is only picked up by the historical import.
+   **Partly filled orders.** A cancel is not a fill, so an order that fills partly and is cancelled long after its window would still be missed. The sync **remembers** such orders in `BybitPendingOrders` (one row per account and order):
+   - a row is added when a fill leaves part of the order open (`leavesQty > 0`), or when order history returns it as `PartiallyFilled`;
+   - on each sync, only when the account has pending rows, one call lists the open orders (`/v5/order/realtime`). Rows still open are kept; each row that left the list is looked up once by order id (Bybit returns the last 500 closed orders);
+   - closed **with** fills (`PartiallyFilledCanceled`, or `Filled`): imported through the normal order path, then the row is removed;
+   - already imported, or closed **without** fills (`Cancelled`, `Rejected`): the row is removed;
+   - not found for **30 days**: the row is removed with a warning in the Function logs; run the historical import for that period.
 
    Orders imported:
    - `Filled`;
@@ -459,7 +464,7 @@ These are tracked in the integration review and planned for upcoming PRs:
   - Environments still on `TransferCostPolicy = Legacy` (PROD) use the Legacy rules described in [Cost basis](#cost-basis).
   - Deposits, withdrawals and transfers recorded before 2026-11 keep the price from processing time (today's CoinMarketCap price), not the event time.
 - **Sequential calls:** accounts are synced one after another, ~13 calls per account per run, plus one per new or late-filled order.
-- **Partly filled, then cancelled later:** such a limit order is only imported by the historical import (see [Limit orders that fill late](#how-sync-works)).
+- **Pending orders not found:** a partly filled order Bybit no longer returns by id (beyond its last 500 closed orders, or after a Bybit restart) is dropped after 30 days and needs the historical import.
 
 ---
 

@@ -115,14 +115,17 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 ? new DateTimeOffset(dateTime.Subtract(SyncOverlap), TimeSpan.Zero)
                 : now - InitialLookback;
             var events = new List<SyncEvent>();
+            var partlyOpenOrderIds = new HashSet<string>(StringComparer.Ordinal);
             for (var windowCount = 0; windowStart < now && windowCount < MaxWindowsPerSync; windowCount++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var windowEnd = windowStart + MaxWindow < now ? windowStart + MaxWindow : now;
                 events.AddRange(await CollectEventsAsync(
-                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: false, account, cancellationToken));
+                    apiKey.Value, apiSecret.Value, region, (windowStart, windowEnd), dropOutsideWindow: false, account, cancellationToken, partlyOpenOrderIds));
                 windowStart = windowEnd;
             }
+
+            var pending = await ResolvePendingOrdersAsync(account, apiKey.Value, apiSecret.Value, region, events, cancellationToken);
 
             var checkpointAt = windowStart.UtcDateTime;
 
@@ -145,6 +148,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                     lastOrderId = order.OrderId;
             }
 
+            await SavePendingOrdersAsync(account, pending, partlyOpenOrderIds, cancellationToken);
             await ReconcileCurrentCryptoBalancesAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
             await SyncCashBalanceAsync(account, apiKey.Value, apiSecret.Value, region, cancellationToken);
 
@@ -529,7 +533,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         (DateTimeOffset Start, DateTimeOffset End) window,
         bool dropOutsideWindow,
         Account account,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ISet<string>? partlyOpenOrderIds = null)
     {
         var accountId = account.Id;
         var events = new List<SyncEvent>();
@@ -556,7 +561,11 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
         // Order history is filtered by creation time: a limit order that fills after its window has passed is never
         // returned again. Fills are listed by execution time, so they catch it.
-        foreach (var lateOrder in await CollectLateFilledOrdersAsync(apiKey, apiSecret, region, startTime, endTime, orders, account, cancellationToken))
+        // A partly filled order still open may be cancelled long after its window; remember it (see BybitPendingOrder).
+        foreach (var order in orders.Where(order => order.OrderStatus == "PartiallyFilled" && !HasImportedOrder(account, order.OrderId)))
+            partlyOpenOrderIds?.Add(order.OrderId);
+
+        foreach (var lateOrder in await CollectLateFilledOrdersAsync(apiKey, apiSecret, region, startTime, endTime, orders, account, cancellationToken, partlyOpenOrderIds))
         {
             var timestamp = TryGetTimestamp(lateOrder.Order, out var filledAt) ? filledAt : (DateTimeOffset?)null;
             if (dropOutsideWindow && (timestamp is null || timestamp < window.Start || timestamp >= window.End))
@@ -729,7 +738,8 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         long endTime,
         IReadOnlyCollection<BybitOrderData> listedOrders,
         Account account,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ISet<string>? partlyOpenOrderIds)
     {
         List<BybitExecutionData> fills;
         try
@@ -759,9 +769,92 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                     orderId, orderFills.Count);
                 lateOrders.Add(new LateFilledOrder(order, orderFills));
             }
+            else if (orderFills.Count > 0)
+            {
+                partlyOpenOrderIds?.Add(orderId);
+            }
         }
 
         return lateOrders;
+    }
+
+    private sealed record PendingOrders(IReadOnlySet<string> KnownIds, List<BybitPendingOrder> Resolved);
+
+    // Checks the orders remembered as partly filled. Still open: kept. Closed with fills (partly filled then cancelled,
+    // or filled): imported now through the normal order path. Imported already, closed without fills, or not found for
+    // BybitPendingOrder.GiveUpAfter: dropped. No Bybit call when nothing is pending; otherwise one call lists the open
+    // orders and only orders that left that list are looked up.
+    private async Task<PendingOrders> ResolvePendingOrdersAsync(
+        Account account,
+        string apiKey,
+        string apiSecret,
+        BybitRegion region,
+        List<SyncEvent> events,
+        CancellationToken cancellationToken)
+    {
+        var pending = await _context.BybitPendingOrders
+            .Where(order => order.AccountId == account.Id)
+            .ToListAsync(cancellationToken);
+        var knownIds = pending.Select(order => order.OrderId).ToHashSet(StringComparer.Ordinal);
+        var resolved = pending.Where(order => HasImportedOrder(account, order.OrderId)).ToList();
+        var toCheck = pending.Except(resolved).ToList();
+        if (toCheck.Count == 0)
+            return new PendingOrders(knownIds, resolved);
+
+        HashSet<string> openIds;
+        try
+        {
+            openIds = (await _bybitService.GetOpenOrdersAsync(apiKey, apiSecret, region, cancellationToken))
+                .Select(order => order.OrderId)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+        catch (BybitApiException ex) when (BybitApiFailureClassifier.Classify(ex).Kind == BybitApiFailureKind.Other)
+        {
+            _logger.LogWarning("Bybit sync: open orders unavailable for account {AccountId} ({RetCode}); pending orders are checked next run",
+                account.Id, ex.RetCode);
+            return new PendingOrders(knownIds, resolved);
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var pendingOrder in toCheck.Where(order => !openIds.Contains(order.OrderId)))
+        {
+            var order = await _bybitService.GetOrderAsync(apiKey, apiSecret, region, pendingOrder.OrderId, cancellationToken);
+            if (order is null)
+            {
+                if (pendingOrder.IsExpired(now))
+                {
+                    _logger.LogWarning("Bybit sync: pending order {OrderId} for account {AccountId} not found for {Days} days; run the historical import to recover it",
+                        pendingOrder.OrderId, account.Id, BybitPendingOrder.GiveUpAfter.TotalDays);
+                    resolved.Add(pendingOrder);
+                }
+                continue;
+            }
+
+            if (IsExecuted(order))
+            {
+                _logger.LogInformation("Bybit sync: pending order {OrderId} closed as {Status}; importing it", order.OrderId, order.OrderStatus);
+                events.Add(new SyncEvent(TryGetTimestamp(order, out var createdAt) ? createdAt : DateTimeOffset.MaxValue, SyncEventKind.Order, order));
+                resolved.Add(pendingOrder);
+            }
+            else if (order.OrderStatus is not ("New" or "PartiallyFilled" or "Untriggered"))
+            {
+                resolved.Add(pendingOrder);
+            }
+        }
+
+        return new PendingOrders(knownIds, resolved);
+    }
+
+    // Runs after the events were processed, so a resolved order is only dropped once it was imported.
+    private async Task SavePendingOrdersAsync(Account account, PendingOrders pending, IEnumerable<string> partlyOpenOrderIds, CancellationToken cancellationToken)
+    {
+        _context.BybitPendingOrders.RemoveRange(pending.Resolved);
+        var now = DateTime.UtcNow;
+        foreach (var orderId in partlyOpenOrderIds.Where(orderId => !pending.KnownIds.Contains(orderId) && !HasImportedOrder(account, orderId)))
+            _context.BybitPendingOrders.Add(new BybitPendingOrder(account.Id, orderId, now));
+
+        if (_context.ChangeTracker.HasChanges())
+            await _context.SaveChangesAsync(cancellationToken);
     }
 
     private static bool HasImportedOrder(Account account, string orderId) =>
