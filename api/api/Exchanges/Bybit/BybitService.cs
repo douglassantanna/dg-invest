@@ -23,6 +23,8 @@ public class BybitService : IBybitService
     private const string KlineEndpoint = "/v5/market/kline";
     private const int UnsupportedSymbolRetCode = 10001;
     private const int RecvWindow = 60000;
+    // Flurl's default is 100 s. A slow Bybit should fail fast so one run does not overlap the next.
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
 
     private readonly bool _useTestnet;
     private readonly ILogger<BybitService> _logger;
@@ -87,7 +89,11 @@ public class BybitService : IBybitService
         BybitKlineResponse response;
         try
         {
-            response = await url.GetJsonAsync<BybitKlineResponse>(cancellationToken: cancellationToken);
+            response = await url.WithTimeout(RequestTimeout).GetJsonAsync<BybitKlineResponse>(cancellationToken: cancellationToken);
+        }
+        catch (FlurlHttpException ex) when (IsRateLimit(ex))
+        {
+            throw new BybitRateLimitException(KlineEndpoint, ex.StatusCode!.Value, ex);
         }
         catch (Exception ex) when (BybitApiFailureClassifier.HasTransportFailure(ex, cancellationToken))
         {
@@ -125,6 +131,10 @@ public class BybitService : IBybitService
             throw;
         }
         catch (BybitTransportException)
+        {
+            throw;
+        }
+        catch (BybitRateLimitException)
         {
             throw;
         }
@@ -407,17 +417,25 @@ public class BybitService : IBybitService
         try
         {
             return await url
+                .WithTimeout(RequestTimeout)
                 .WithHeader("X-BAPI-API-KEY", apiKey)
                 .WithHeader("X-BAPI-TIMESTAMP", timestamp)
                 .WithHeader("X-BAPI-SIGN", signature)
                 .WithHeader("X-BAPI-RECV-WINDOW", RecvWindow.ToString())
                 .GetJsonAsync<TResponse>(cancellationToken);
         }
+        catch (FlurlHttpException ex) when (IsRateLimit(ex))
+        {
+            throw new BybitRateLimitException(new Uri(url.ToString()).AbsolutePath, ex.StatusCode!.Value, ex);
+        }
         catch (Exception ex) when (BybitApiFailureClassifier.HasTransportFailure(ex, cancellationToken))
         {
             throw new BybitTransportException(new Uri(url.ToString()).AbsolutePath, ex);
         }
     }
+
+    // Bybit answers HTTP 403 when an IP exceeds its rate limit (lifted after about 10 minutes) and 429 when throttling.
+    private static bool IsRateLimit(FlurlHttpException exception) => exception.StatusCode is 403 or 429;
 
     private static async Task<List<TItem>> GetPagedAsync<TResponse, TItem>(
         Func<string?, Task<TResponse>> fetchPage,

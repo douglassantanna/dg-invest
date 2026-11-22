@@ -39,6 +39,30 @@ public class TestBybitIntegrationConnectionCommandHandlerTests
         (await context.SyncStatuses.AsNoTracking().SingleAsync()).LastVerifiedAt.Should().NotBeNull();
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Handle_WhenBybitRateLimits_Returns429InsteadOfACredentialError(bool httpLimit)
+    {
+        using var context = CreateContext();
+        var integration = new ExchangeIntegration(7, "Bybit");
+        integration.MarkConfigured();
+        context.ExchangeIntegrations.Add(integration);
+        await context.SaveChangesAsync();
+        var bybit = new Mock<IBybitService>();
+        bybit.Setup(service => service.TestConnectionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>()))
+            .ThrowsAsync(httpLimit
+                ? new BybitRateLimitException("/v5/account/info", 429, new Exception("throttled"))
+                : new BybitApiException(10006, "Too many visits"));
+        var handler = new TestBybitIntegrationConnectionCommandHandler(context, IntegrationCredentialVault(7).Object, bybit.Object);
+
+        var response = await handler.Handle(new TestBybitIntegrationConnectionCommand(7), CancellationToken.None);
+
+        response.IsSuccess.Should().BeFalse();
+        response.Data.Should().Be(429);
+        response.Message.Should().Be(BybitErrorMessages.RateLimited);
+    }
+
     [Fact]
     public async Task Handle_WhenKeyVaultIsUnavailable_Returns503WithoutCallingBybit()
     {

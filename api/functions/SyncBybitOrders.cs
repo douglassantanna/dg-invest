@@ -40,7 +40,7 @@ public class SyncBybitOrders
     }
 
     [Function("SyncBybitOrders")]
-    public async Task Run([TimerTrigger("*/30 * * * * *")] TimerInfo timer, FunctionContext context)
+    public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo timer, FunctionContext context)
     {
         var cancellationToken = context.CancellationToken;
 
@@ -71,6 +71,7 @@ public class SyncBybitOrders
             if (accounts.Count == 0)
                 return;
 
+            var rateLimited = false;
             foreach (var accountsByUser in accounts.GroupBy(account => account.UserId))
             {
                 var userAccounts = accountsByUser.ToList();
@@ -81,6 +82,12 @@ public class SyncBybitOrders
                 foreach (var account in userAccounts)
                 {
                     var result = await _accountSyncService.SyncAsync(account, cancellationToken);
+                    if (result.FailureKind == BybitApiFailureKind.RateLimited)
+                    {
+                        rateLimited = true;
+                        break;
+                    }
+
                     if (result.FailureKind is BybitApiFailureKind.Transport or BybitApiFailureKind.PermanentCredential)
                     {
                         classifiedFailure = result;
@@ -90,6 +97,14 @@ public class SyncBybitOrders
 
                     if (!result.IsSuccess && !result.IsSkipped)
                         otherFailure ??= result;
+                }
+
+                // Bybit limits per IP, so every account would hit the same limit: stop the run and let the next one
+                // retry. Nothing is recorded, so a rate limit never counts toward the auto-pause.
+                if (rateLimited)
+                {
+                    _logger.LogWarning("SyncBybitOrders: Bybit rate limit reached; stopping this run, the next one retries");
+                    break;
                 }
 
                 if (classifiedFailure is not null)

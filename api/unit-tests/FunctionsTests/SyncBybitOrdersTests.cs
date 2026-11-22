@@ -288,7 +288,7 @@ public class SyncBybitOrdersTests
     }
 
     [Fact]
-    public async Task Run_WhenAccountBalanceIsZero_ShouldPopulateStablecoinCashBeforeProcessingOrders()
+    public async Task Run_WhenAccountBalanceIsZero_ShouldRecordTheWalletCashAsTheOpeningBalance()
     {
         var options = new DbContextOptionsBuilder<DataContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -323,6 +323,10 @@ public class SyncBybitOrdersTests
          bybitService.Setup(x => x.GetOrderHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
          bybitService.Setup(x => x.GetDepositHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
          bybitService.Setup(x => x.GetWithdrawalHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+        // The wallet is read at the end of the run, so the rest of the run has to succeed first.
+        bybitService.Setup(x => x.GetInternalTransferHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetUniversalTransferHistoryAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), 50, It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>())).ReturnsAsync([]);
+        bybitService.Setup(x => x.GetAccountCoinBalancesAsync("api-key", "api-secret", It.IsAny<BybitRegion>(), It.IsAny<string>(), It.IsAny<string?>())).ReturnsAsync(new BybitAccountCoinBalancesResponse());
         var orderSyncService = new Mock<IBybitOrderSyncService>();
         orderSyncService.Setup(x => x.ProcessOpeningBalanceAsync(account, 1, 11000m, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -421,7 +425,7 @@ public class SyncBybitOrdersTests
         await function.Run(null!, functionContext.Object);
 
         orderSyncService.Verify(x => x.MarkSyncStatusErrorAsync(1, account.Id,
-            "Bybit rejected sync request: 10003 - API key is invalid", It.IsAny<CancellationToken>()), Times.Once);
+            It.Is<string>(message => message.Contains("[Bybit 10003]")), It.IsAny<CancellationToken>()), Times.Once);
         integration.Status.Should().Be(ExchangeIntegration.AutoPausedStatus);
         integration.Enabled.Should().BeFalse();
          bybitService.Verify(x => x.GetDepositHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Never);
@@ -597,6 +601,59 @@ public class SyncBybitOrdersTests
         functionContext.SetupGet(x => x.CancellationToken).Returns(cancellation.Token);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => function.Run(null!, functionContext.Object));
+    }
+
+    [Fact]
+    public async Task Run_WhenBybitRateLimits_StopsTheRunWithoutCountingTowardAutoPause()
+    {
+        var options = new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var context = new DataContext(options);
+        var first = new Account("First", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var second = new Account("Second", 1, EAccountType.Exchange, "Bybit", "UID-002");
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.MarkEnabled();
+        context.AddRange(first, second, integration);
+        await context.SaveChangesAsync();
+        foreach (var account in new[] { first, second })
+        {
+            var status = new SyncStatus(1, account.Id, "Bybit");
+            status.EnableForCredentials();
+            context.SyncStatuses.Add(status);
+        }
+        await context.SaveChangesAsync();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "credential"));
+        var bybitService = new Mock<IBybitService>();
+        bybitService.Setup(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
+            .ThrowsAsync(new BybitRateLimitException("/v5/order/history", 403, new Exception("forbidden")));
+        var orderSyncService = new Mock<IBybitOrderSyncService>();
+        var function = CreateFunction(bybitService.Object, orderSyncService.Object, keyVault.Object, context);
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+
+        // The limit applies to the whole IP, so the run stops after the first account.
+        bybitService.Verify(x => x.GetOrderHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()), Times.Once);
+        var stored = await context.ExchangeIntegrations.SingleAsync();
+        stored.ConsecutiveTransportFailures.Should().Be(0);
+        stored.Enabled.Should().BeTrue();
+        stored.Status.Should().NotBe("Error");
+        orderSyncService.Verify(x => x.MarkSyncStatusErrorAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public void Run_IsScheduledEveryMinute()
+    {
+        var trigger = typeof(SyncBybitOrders).GetMethod(nameof(SyncBybitOrders.Run))!
+            .GetParameters()[0]
+            .GetCustomAttributes(typeof(TimerTriggerAttribute), false)
+            .Cast<TimerTriggerAttribute>()
+            .Single();
+
+        trigger.Schedule.Should().Be("0 */1 * * * *");
     }
 
     private static IConfiguration EnabledConfiguration() => new ConfigurationBuilder()

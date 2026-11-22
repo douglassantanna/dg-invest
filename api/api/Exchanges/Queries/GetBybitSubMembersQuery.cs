@@ -64,6 +64,11 @@ public class GetBybitSubMembersQueryHandler : IRequestHandler<GetBybitSubMembers
                 var region = BybitEndpoints.Parse(integration?.Region);
                 subMembers = await _bybitService.GetSubAccountsAsync(apiKey.Value!, apiSecret.Value!, region);
             }
+            catch (Exception ex) when (BybitApiFailureClassifier.IsRateLimit(ex))
+            {
+                _logger.LogWarning(ex, "GetBybitSubMembers: Bybit rate limit for user {UserId}", request.UserId);
+                return new Response(BybitErrorMessages.RateLimited, false, 429);
+            }
             catch (BybitApiException ex)
             {
                 _logger.LogWarning(ex, "GetBybitSubMembers: Bybit rejected request for user {UserId}", request.UserId);

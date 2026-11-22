@@ -304,6 +304,102 @@ public class BybitAccountSyncServiceSyncTests
         processed.Should().Equal("partial-1");
     }
 
+    [Fact]
+    public async Task SyncAsync_ReadsTheWalletCashOnceAndUsesItForTheOpeningBalanceAndReconciliation()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.CashBalances[("FUND", "USDT")] = "1000";
+        harness.CashBalances[("UNIFIED", "USDC")] = "25.5";
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        // FUND and UNIFIED x USDT and USDC: one read of each per run.
+        harness.Bybit.Verify(s => s.GetAccountCoinBalanceAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Exactly(4));
+        harness.OrderSync.Verify(s => s.ProcessOpeningBalanceAsync(harness.Account, harness.Account.UserId, 1025.5m, It.IsAny<CancellationToken>()), Times.Once);
+        harness.Account.Balance.Should().Be(1025.5m);
+    }
+
+    [Fact]
+    public async Task SyncAsync_DoesNotFetchExecutionsForAnOrderAlreadyImportedWithItsExecution()
+    {
+        var harness = await Harness.CreateAsync();
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        harness.Account.AddCryptoAsset(asset);
+        asset.AddHistoricalTransaction(new CryptoTransaction(1, 100, Now.AddMinutes(-1), "Bybit", ETransactionType.Buy, 0,
+            exchangeOrderId: "imported-1", exchangeExecutionId: "exec-1"));
+        await harness.Context.SaveChangesAsync();
+        harness.Orders.AddRange([Order("new-1", "Buy", -1), Order("imported-1", "Buy", -1)]);
+        var executionsPassed = new Dictionary<string, IReadOnlyList<BybitExecutionData>?>();
+        harness.OrderSync.Setup(service => service.ProcessOrderAsync(
+                It.IsAny<BybitOrderData>(), It.IsAny<Account>(), It.IsAny<int>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyList<BybitExecutionData>?>(), It.IsAny<bool>()))
+            .Callback<BybitOrderData, Account, int, string, CancellationToken, IReadOnlyList<BybitExecutionData>?, bool>(
+                (order, _, _, _, _, executions, _) => executionsPassed[order.OrderId] = executions)
+            .ReturnsAsync(true);
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        harness.Bybit.Verify(s => s.GetExecutionHistoryAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), "new-1", It.IsAny<CancellationToken>()), Times.Once);
+        harness.Bybit.Verify(s => s.GetExecutionHistoryAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), "imported-1", It.IsAny<CancellationToken>()), Times.Never);
+        // Null tells the order sync not to touch the stored fee.
+        executionsPassed["imported-1"].Should().BeNull();
+        executionsPassed["new-1"].Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenBybitRateLimits_ReturnsRateLimitedWithoutMarkingTheAccountAsFailed()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Bybit.Setup(s => s.GetOrderHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
+                It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
+            .ThrowsAsync(new BybitApiException(10006, "Too many visits"));
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.FailureKind.Should().Be(BybitApiFailureKind.RateLimited);
+        result.Message.Should().Be(BybitErrorMessages.RateLimited);
+        harness.OrderSync.Verify(s => s.MarkSyncStatusErrorAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.OrderSync.Verify(s => s.UpsertSyncStatusAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenTheCashReadIsRateLimited_ReturnsRateLimitedAndKeepsTheCheckpoint()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.CashBalanceError = new BybitRateLimitException("/v5/asset/transfer/query-account-coin-balance", 429, new Exception("throttled"));
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.FailureKind.Should().Be(BybitApiFailureKind.RateLimited);
+        harness.OrderSync.Verify(s => s.UpsertSyncStatusAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<CancellationToken>(), It.IsAny<DateTime?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SyncAsync_WhenBybitRejectsTheRequest_RecordsAFriendlyMessageWithTheCode()
+    {
+        var harness = await Harness.CreateAsync();
+        harness.Bybit.Setup(s => s.GetOrderHistoryAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), It.IsAny<int?>(),
+                It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<long?>()))
+            .ThrowsAsync(new BybitApiException(131002, "Parameter error"));
+
+        var result = await harness.Service.SyncAsync(harness.Account, CancellationToken.None);
+
+        result.Message.Should().Contain("date range").And.Contain("[Bybit 131002]");
+        harness.OrderSync.Verify(s => s.MarkSyncStatusErrorAsync(
+            harness.Account.UserId, harness.Account.Id, result.Message, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static void AssertContiguousWindows(List<(long? Start, long? End)> requests, DateTime expectedStart)
     {
         requests.Should().NotBeEmpty();

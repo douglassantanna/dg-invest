@@ -354,7 +354,7 @@ public class ExchangeControllerIntegrationTests
             var status = await context.SyncStatuses.SingleAsync(candidate => candidate.AccountId == accountId);
             status.Status.Should().Be("Error");
             status.ErrorCount.Should().Be(1);
-            status.LastErrorMessage.Should().Contain("API key is invalid");
+            status.LastErrorMessage.Should().Contain("[Bybit 10003]");
             status.LastSyncAt.Should().BeNull();
         }
         finally

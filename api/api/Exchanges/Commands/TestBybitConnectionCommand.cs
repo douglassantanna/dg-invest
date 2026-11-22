@@ -65,6 +65,11 @@ public class TestBybitConnectionCommandHandler : IRequestHandler<TestBybitConnec
             var region = BybitEndpoints.Parse(syncStatus?.Region);
             success = await _bybitService.TestConnectionAsync(apiKey.Value!, apiSecret.Value!, region);
         }
+        catch (Exception ex) when (BybitApiFailureClassifier.IsRateLimit(ex))
+        {
+            _logger.LogWarning(ex, "TestBybitConnection: Bybit rate limit for account {AccountId}", request.AccountId);
+            return new Response(BybitErrorMessages.RateLimited, false, 429);
+        }
         catch (BybitTransportException ex)
         {
             _logger.LogWarning(ex, "TestBybitConnection: Bybit service unavailable for account {AccountId}", request.AccountId);

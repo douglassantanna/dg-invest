@@ -76,7 +76,8 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             .AnyAsync(asset => EF.Property<int>(asset, "AccountId") == account.Id, cancellationToken);
         if (alreadyProcessed)
         {
-            if (TryParseOrderValues(order, out var existingPrice, out _, out _))
+            // Null executions: the caller did not fetch them because the stored fee is already final.
+            if (executions is not null && TryParseOrderValues(order, out var existingPrice, out _, out _))
                 await ReconcileExistingOrderFeeAsync(order, account, baseSymbol, existingPrice, executions, cancellationToken, applyCashBalance);
             _logger.LogInformation("Bybit sync: order {OrderId} already saved, skipping", order.OrderId);
             await WriteSyncLogAsync(order, baseSymbol, userId, account.Id, "Duplicate", null, importSource, logId, cancellationToken);
