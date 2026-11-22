@@ -425,7 +425,6 @@ These are tracked in the integration review and planned for upcoming PRs:
 
 - **Cost basis:**
   - Environments still on `TransferCostPolicy = Legacy` (PROD) use the Legacy rules described in [Cost basis](#cost-basis).
-  - **Manual accounts:** a manual crypto deposit or withdrawal also changes the **cash** balance by quantity × price (`CryptoDepositTransaction` / `WithdrawCryptoTransaction`), counting the value twice. Bybit accounts are not affected, because their cash comes from the wallet.
   - Crypto transfers between your own accounts are not recorded, so cost is lost at the destination.
   - Deposits record the price at processing time, not at deposit time, which is wrong for backfilled deposits.
 - **Cost and resilience:** the timer runs every 30 s with sequential Bybit calls, ~15 per account; there is no short timeout or rate-limit handling.
@@ -435,6 +434,19 @@ These are tracked in the integration review and planned for upcoming PRs:
 ### Account transactions
 
 The **Accounts** page groups Manual portfolios and Exchange accounts, then shows the selected account's balance and transaction history.
+
+**How each transaction moves cash** ("Available Funds", `Account.Balance`) in a manual account:
+
+| Transaction | Cash | Coins |
+|---|---|---|
+| Fiat deposit / transfer in (USD) | + amount | — |
+| Withdraw to bank / transfer out (USD) | − amount | — |
+| Buy | − (quantity × price + fee) | + quantity |
+| Sell | + (quantity × price − fee) | − quantity |
+| **Crypto deposit** | **unchanged** | + quantity, cost per [Cost basis](#cost-basis) |
+| **Crypto withdrawal** | **unchanged** | − quantity, cost per [Cost basis](#cost-basis) |
+
+A crypto deposit or withdrawal moves the coin itself, so its value is counted once, in the coin's market value. Until 2026-11, they also added or removed quantity × price from cash, which counted the value twice. Exchange accounts take their cash from the Bybit wallet, so they were not affected.
 
 **Landing page:** Shows the 20 most recent transactions across all categories (deposits, withdrawals, buys, sells), grouped by date with the latest date group first. Each transaction displays its time.
 

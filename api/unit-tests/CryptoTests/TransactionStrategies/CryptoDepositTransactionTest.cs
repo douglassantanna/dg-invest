@@ -18,7 +18,7 @@ public class CryptoDepositTransactionTest
     }
 
     [Fact]
-    public void ExecuteTransaction_ShouldAddBalanceAndAddTransaction()
+    public void ExecuteTransaction_ShouldRecordTheTransactionWithoutChangingCash()
     {
         var account = new Account("test", 1);
         account.AddToBalance(5000);
@@ -40,7 +40,8 @@ public class CryptoDepositTransactionTest
         var result = _sut.ExecuteTransaction(account, accountTransaction);
 
         result.IsSuccess.Should().BeTrue();
-        account.Balance.Should().Be(5000 + (2m * 3000m));
+        // The coin itself is the deposit: adding its value to cash would count it twice.
+        account.Balance.Should().Be(5000);
         account.AccountTransactions.Should().Contain(accountTransaction);
     }
 }
