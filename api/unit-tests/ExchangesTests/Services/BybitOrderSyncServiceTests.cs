@@ -480,6 +480,56 @@ public class BybitOrderSyncServiceTests
     };
 
     [Fact]
+    public async Task ProcessInternalTransferAsync_WhenAmountCannotBeParsed_ShouldLogTheFailureByTransferId()
+    {
+        // A skipped transfer advances the checkpoint, so it must be identifiable in the sync logs.
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var blob = new Mock<IBlobStorageService>();
+        blob.Setup(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SyncLogEntry>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var sut = CreateService(context, blob.Object);
+
+        var result = await sut.ProcessInternalTransferAsync(BadTransfer(toMemberId: "UID-001"), account, 1, CancellationToken.None, applyCashBalance: false);
+
+        result.Should().BeFalse();
+        blob.Verify(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(),
+            It.Is<SyncLogEntry>(entry => entry.Status == "Failed" && entry.OrderId == "transfer-bad" && entry.AccountId == account.Id),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessInternalTransferAsync_WhenTransferDoesNotInvolveTheAccount_ShouldIgnoreItEvenIfMalformed()
+    {
+        // A malformed transfer between two other accounts must not be reported as a skipped item here.
+        using var context = CreateContext();
+        var account = new Account("Sub", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        context.Accounts.Add(account);
+        await context.SaveChangesAsync();
+        var blob = new Mock<IBlobStorageService>();
+        var sut = CreateService(context, blob.Object);
+
+        var result = await sut.ProcessInternalTransferAsync(BadTransfer(toMemberId: "UID-OTHER"), account, 1, CancellationToken.None, applyCashBalance: false);
+
+        result.Should().BeTrue();
+        blob.Verify(service => service.AppendLogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SyncLogEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static BybitInternalTransferRow BadTransfer(string toMemberId) => new()
+    {
+        TransferId = "transfer-bad",
+        Coin = "USDT",
+        Amount = "not-a-number",
+        FromAccountType = "UNIFIED",
+        FromMemberId = "UID-MASTER",
+        ToAccountType = "UNIFIED",
+        ToMemberId = toMemberId,
+        Timestamp = "1790000000000"
+    };
+
+    [Fact]
     public async Task ProcessInternalTransferAsync_WhenAccountReceivesStablecoin_ShouldCreateTransferInLedgerTransaction()
     {
         using var context = CreateContext();

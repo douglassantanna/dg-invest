@@ -439,15 +439,21 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         if (!IsCashCoin(transfer.Coin))
             return true;
 
-        if (!decimal.TryParse(transfer.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount))
-            return false;
-
+        // Decide whether the transfer involves this account before validating it, so a malformed transfer between
+        // two other accounts is ignored here rather than reported as a skipped item.
         var isTransferIn = IsTransferMatch(account, transfer.ToAccountType, transfer.ToMemberId);
         var isTransferOut = IsTransferMatch(account, transfer.FromAccountType, transfer.FromMemberId);
         if (isTransferIn && isTransferOut)
             return true;
         if (!isTransferIn && !isTransferOut)
             return true;
+
+        if (!decimal.TryParse(transfer.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var amount))
+        {
+            _logger.LogWarning("Bybit sync: transfer {TransferId} for account {AccountId} has an unparseable amount; skipped", transfer.TransferId, account.Id);
+            await WriteTransferSyncLogAsync(transfer, userId, account.Id, $"Could not parse amount '{transfer.Amount}'", cancellationToken);
+            return false;
+        }
 
         var direction = isTransferIn ? "in" : "out";
         var exchangeTransactionId = $"bybit-internal-transfer-{transfer.TransferId}-{direction}-{account.Id}";
@@ -481,6 +487,7 @@ public class BybitOrderSyncService : IBybitOrderSyncService
         if (!result.IsSuccess)
         {
             _logger.LogError("Bybit sync: internal transfer {TransferId} failed for account {AccountId}: {Message}", transfer.TransferId, account.Id, result.Message);
+            await WriteTransferSyncLogAsync(transfer, userId, account.Id, result.Message, cancellationToken);
             return false;
         }
 
@@ -727,6 +734,30 @@ public class BybitOrderSyncService : IBybitOrderSyncService
             ErrorMessage: errorMessage,
             Timestamp: DateTime.UtcNow,
             ImportSource: importSource);
+
+        var blobPath = BlobLogPaths.Daily("sync", DateTime.UtcNow);
+        await _blobStorageService.AppendLogAsync(_storageSettings.LogContainer, blobPath, entry, cancellationToken);
+    }
+
+    // Transfers that cannot be imported are skipped and the checkpoint moves past them, so the sync log is the only
+    // place a user can find them. OrderId carries the Bybit transfer id.
+    private async Task WriteTransferSyncLogAsync(BybitInternalTransferRow transfer, int userId, int accountId, string? errorMessage, CancellationToken cancellationToken)
+    {
+        _ = decimal.TryParse(transfer.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var qty);
+        var entry = new SyncLogEntry(
+            Id: Guid.NewGuid().ToString(),
+            UserId: userId,
+            AccountId: accountId,
+            ExchangeName: "Bybit",
+            OrderId: transfer.TransferId,
+            Symbol: transfer.Coin,
+            Side: "Transfer",
+            Qty: qty,
+            Price: 0,
+            Status: "Failed",
+            ErrorMessage: errorMessage,
+            Timestamp: DateTime.UtcNow,
+            ImportSource: "BybitTransfer");
 
         var blobPath = BlobLogPaths.Daily("sync", DateTime.UtcNow);
         await _blobStorageService.AppendLogAsync(_storageSettings.LogContainer, blobPath, entry, cancellationToken);
