@@ -147,35 +147,6 @@ namespace api.Migrations
                     b.ToTable("AccountTransactions");
                 });
 
-            modelBuilder.Entity("api.Cryptos.Models.Address", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AddressName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("AddressValue")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CryptoAssetId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CryptoAssetId");
-
-                    b.ToTable("Address");
-                });
-
             modelBuilder.Entity("api.Cryptos.Models.Crypto", b =>
                 {
                     b.Property<int>("Id")
@@ -554,17 +525,6 @@ namespace api.Migrations
                     b.Navigation("CryptoAsset");
                 });
 
-            modelBuilder.Entity("api.Cryptos.Models.Address", b =>
-                {
-                    b.HasOne("api.Models.Cryptos.CryptoAsset", "CryptoAsset")
-                        .WithMany("Addresses")
-                        .HasForeignKey("CryptoAssetId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CryptoAsset");
-                });
-
             modelBuilder.Entity("api.Exchanges.Models.ExchangeIntegration", b =>
                 {
                     b.HasOne("api.Cryptos.Models.Account", "MasterAccount")
@@ -598,8 +558,6 @@ namespace api.Migrations
 
             modelBuilder.Entity("api.Models.Cryptos.CryptoAsset", b =>
                 {
-                    b.Navigation("Addresses");
-
                     b.Navigation("Transactions");
                 });
 

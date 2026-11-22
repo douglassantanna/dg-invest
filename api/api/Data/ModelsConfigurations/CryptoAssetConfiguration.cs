@@ -15,6 +15,5 @@ public class CryptoAssetConfiguration : IEntityTypeConfiguration<CryptoAsset>
         builder.Property(x => x.Balance).HasPrecision(18, 8);
         builder.Ignore(x => x.AveragePrice);
         builder.Property(x => x.TotalInvested).HasPrecision(18, 8);
-        builder.HasMany(x => x.Addresses).WithOne(x => x.CryptoAsset);
     }
 }

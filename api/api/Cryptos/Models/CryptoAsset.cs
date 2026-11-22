@@ -14,8 +14,6 @@ public class CryptoAsset : Entity
     public DateTimeOffset CreatedAt { get; set; }
     private readonly List<CryptoTransaction> _transactions = new();
     public IReadOnlyCollection<CryptoTransaction> Transactions => _transactions.AsReadOnly();
-    private readonly List<Address> _addresses = new();
-    public IReadOnlyCollection<Address> Addresses => _addresses.AsReadOnly();
     public bool Deleted { get; private set; }
     public int CoinMarketCapId { get; private set; }
 
@@ -39,11 +37,6 @@ public class CryptoAsset : Entity
     public void Delete()
     {
         Deleted = true;
-    }
-
-    public void AddAddress(Address address)
-    {
-        _addresses.Add(address);
     }
 
     public void AddTransaction(CryptoTransaction transaction, TransferCostPolicy policy = TransferCostPolicy.Legacy)

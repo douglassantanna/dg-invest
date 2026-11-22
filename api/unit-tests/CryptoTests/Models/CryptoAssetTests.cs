@@ -13,14 +13,6 @@ public class CryptoAssetTests
         _validCryptoAsset = new CryptoAsset("BTC", "USD", "BTC", 1);
     }
 
-    [Fact]
-    public void CreateCryptoAsset_WhenAddedAddress_AddressListShouldNotBeEmpty()
-    {
-        var cryptoAsset = _validCryptoAsset;
-        cryptoAsset.AddAddress(new Address());
-        cryptoAsset.Addresses.Should().HaveCount(1);
-    }
-
     // BUY: TotalInvested = (amount * price) + fee
     // Two buys of amount=1: price1 with fee=0 and price2 with fee=0
     // TotalInvested = price1 + price2

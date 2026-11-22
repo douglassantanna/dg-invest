@@ -22,4 +22,8 @@ public class BybitApiKeyInfo
     public int ReadOnly { get; set; }
 
     public bool IsReadOnly => ReadOnly == 1;
+
+    // UID of the account that owns the key (the sub-account's UID for a sub-account key). 0 when not reported.
+    [JsonPropertyName("userID")]
+    public long UserId { get; set; }
 }
