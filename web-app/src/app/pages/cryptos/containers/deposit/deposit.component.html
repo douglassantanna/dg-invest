@@ -15,7 +15,8 @@
 
       <div>
         <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount</label>
-        <input type="number" id="amount" formControlName="amount"
+        <input type="text" id="amount" formControlName="amount" appNumberMask
+          [maxDecimals]="accountTransactionType.value == depositType.DepositCrypto ? 8 : 2"
           class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
       </div>
 
@@ -37,7 +38,7 @@
       <div>
         <label for="pricePerUnit" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current
           Price</label>
-        <input type="number" id="pricePerUnit" formControlName="currentPrice"
+        <input type="text" id="pricePerUnit" formControlName="currentPrice" appNumberMask [maxDecimals]="8"
           class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
         @if (currentPrice.hasError('required')) {
         <p class="mt-2 text-sm text-red-600 dark:text-red-400">Required field.</p>

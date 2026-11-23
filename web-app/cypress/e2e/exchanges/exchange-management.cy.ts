@@ -211,7 +211,8 @@ describe('Exchange management', () => {
 
     cy.get('#bybit-api-key').type('api-key');
     cy.get('#bybit-api-secret').type('api-secret');
-    cy.get('#bybit-master-uid').type('10001');
+    // Digits only: other characters are dropped, and the request still gets '10001'.
+    cy.get('#bybit-master-uid').type('10 0-01a').should('have.value', '10001');
     cy.contains('button', 'Connect Bybit').click();
     cy.wait('@saveIntegrationCredentials');
     cy.get('#bybit-api-key').should('have.value', '');

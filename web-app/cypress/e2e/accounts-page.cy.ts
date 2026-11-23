@@ -366,6 +366,35 @@ describe('Accounts page', () => {
     cy.get('app-account header h1').should('contain.text', '18,340.43');
   });
 
+  it('formats deposit and withdrawal amounts while typing and sends plain numbers', () => {
+    visitAccounts();
+    cy.intercept('POST', `${api}/deposit-fund`, { statusCode: 201, body: { isSuccess: true } }).as('depositFund');
+    cy.intercept('POST', `${api}/withdraw-fund`, { statusCode: 201, body: { isSuccess: true } }).as('withdrawFund');
+
+    cy.contains('button', 'Deposit').should('be.enabled').click();
+    cy.get('#transactionType').select('1');
+    // Fiat: thousand separators, 2 decimals, invalid characters dropped.
+    cy.get('app-deposit #amount').type('1234567.891').should('have.value', '1,234,567.89');
+    cy.get('app-deposit #amount').clear().type('12a,345.6').should('have.value', '12,345.6');
+    // Crypto allows 8 decimals; switching back to Fiat re-applies the 2-decimal mask to what was typed.
+    cy.get('app-deposit #amount').clear();
+    // force: the sticky header can overlap the select once the crypto fields appear in the small test viewport.
+    cy.get('#transactionType').select('2', { force: true });
+    cy.get('app-deposit #amount').type('1.12345678').should('have.value', '1.12345678');
+    cy.get('#transactionType').select('1', { force: true });
+    cy.get('app-deposit #amount').should('have.value', '1.12');
+    cy.get('app-deposit #purchaseDate').type('2026-10-16');
+    cy.get('app-deposit').contains('button', 'Save').click();
+    cy.wait('@depositFund').its('request.body.amount').should('equal', 1.12);
+    cy.get('app-deposit').should('not.exist');
+
+    cy.contains('button', 'Withdraw').should('be.enabled').click();
+    cy.get('app-withdraw #amount').type('2500.759').should('have.value', '2,500.75');
+    cy.get('app-withdraw #purchaseDate').type('2026-10-16');
+    cy.get('app-withdraw').contains('button', 'Save').click();
+    cy.wait('@withdrawFund').its('request.body.amount').should('equal', 2500.75);
+  });
+
   it('hides previous account details while switching and ignores a late response', () => {
     visitAccounts();
     delayNextManualAccountDetails = true;

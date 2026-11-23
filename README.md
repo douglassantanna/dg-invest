@@ -476,6 +476,20 @@ The list shows the selected account's assets with price, balance, invested amoun
 
 **Hide zero and dust balances** hides assets **worth less than US$1** (`Balance × current price`, `CryptoAsset.DustWorthThreshold`). This includes Bybit balance without history, such as wallet dust worth cents. The filter runs after prices are fetched. When a coin has **no price** (CoinMarketCap failed or does not list it), its worth is unknown, so the older rule applies: shown if it has a balance and either no recorded cost or a cost of at least US$0.10. A CoinMarketCap outage therefore never empties the list. With the toggle off, every asset is shown.
 
+### Number inputs
+
+Amount, price, fee and UID fields format while you type. There is no mask library: two standalone directives live in `web-app/src/app/core/directives`.
+
+| Directive | Used for | Behaviour |
+|---|---|---|
+| `appNumberMask` (default 2 decimals) | Fiat amounts: deposit (fiat), withdraw | Shows `1,234.56` (en-US); digits and one `.` only; extra decimals are cut, not rounded |
+| `appNumberMask [maxDecimals]="8"` | Coin quantities, prices and fees: add transaction, crypto deposit | Same, up to 8 decimals, so prices like `0.00001234` fit |
+| `appDigitsOnly` | Bybit master UID | Digits only; the value stays a string |
+
+When the precision changes after typing (a deposit switched from Crypto to Fiat), the mask is re-applied to what is shown and the form value is updated, so what is sent always matches the screen.
+
+The form control always gets a **plain number** (`1234.56`, or `null` when empty), so request payloads are unchanged. The inputs are `type="text"` with `inputmode="decimal"`, because `type="number"` cannot display separators.
+
 ### Account transactions
 
 The **Accounts** page groups Manual portfolios and Exchange accounts, then shows the selected account's balance and transaction history.

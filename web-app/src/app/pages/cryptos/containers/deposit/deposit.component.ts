@@ -5,6 +5,7 @@ import { AccountTransactionType } from 'src/app/core/models/deposit-fund-command
 import { ToastService } from 'src/app/core/services/toast.service';
 import { UpperCasePipe } from '@angular/common';
 import { tap } from 'rxjs';
+import { NumberMaskDirective } from 'src/app/core/directives/number-mask.directive';
 import { ViewCryptoInformation } from 'src/app/core/models/view-crypto-information';
 import { AccountService } from 'src/app/core/services/account.service';
 import { CryptoService } from 'src/app/core/services/crypto.service';
@@ -12,7 +13,7 @@ import { CryptoService } from 'src/app/core/services/crypto.service';
 @Component({
   selector: 'app-deposit',
   standalone: true,
-  imports: [ReactiveFormsModule, UpperCasePipe],
+  imports: [ReactiveFormsModule, UpperCasePipe, NumberMaskDirective],
   templateUrl: './deposit.component.html',
   styleUrl: './deposit.component.scss'
 })

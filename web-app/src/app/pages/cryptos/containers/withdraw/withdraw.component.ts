@@ -2,11 +2,12 @@ import { Component, inject, output, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { WithdrawFundCommand } from 'src/app/core/models/deposit-fund-command';
 import { AccountService } from 'src/app/core/services/account.service';
+import { NumberMaskDirective } from 'src/app/core/directives/number-mask.directive';
 
 @Component({
   selector: 'app-withdraw',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, NumberMaskDirective],
   templateUrl: './withdraw.component.html',
   styleUrl: './withdraw.component.scss'
 })

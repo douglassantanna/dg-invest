@@ -6,6 +6,7 @@ import { ETransactionType } from 'src/app/core/models/etransaction-type';
 import { FormatCurrencyPipe } from 'src/app/core/pipes/format-currency.pipe';
 import { CryptoService } from 'src/app/core/services/crypto.service';
 import { ModalComponent } from 'src/app/layout/modal/modal.component';
+import { NumberMaskDirective } from 'src/app/core/directives/number-mask.directive';
 
 @Component({
   selector: 'app-add-transaction',
@@ -16,7 +17,8 @@ import { ModalComponent } from 'src/app/layout/modal/modal.component';
     ReactiveFormsModule,
     ModalComponent,
     FormatCurrencyPipe,
-    DatePipe]
+    DatePipe,
+    NumberMaskDirective]
 })
 export class AddTransactionComponent {
   cryptoAssetId = input(0);
