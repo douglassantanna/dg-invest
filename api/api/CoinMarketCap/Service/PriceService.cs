@@ -65,6 +65,10 @@ public class PriceService : IPriceService
                 continue;
 
             prices[id] = price;
+            // Two requests can refresh the same coin at once. One that started earlier but finished later must not
+            // replace the newer price another request already stored.
+            if (_cache.TryGetValue(Key(id), out CachedPrice? stored) && stored is not null && stored.FetchedAt > now)
+                continue;
             _cache.Set(Key(id), new CachedPrice(price, now), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = KeepLastKnownFor });
         }
 

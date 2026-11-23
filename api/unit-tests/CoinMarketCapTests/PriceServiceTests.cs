@@ -83,6 +83,26 @@ public class PriceServiceTests
     }
 
     [Fact]
+    public async Task ASlowerOlderRefreshDoesNotOverwriteANewerPrice()
+    {
+        // Request A starts first but CoinMarketCap answers it last; request B starts later and finishes first.
+        var slowResponse = new TaskCompletionSource<GetQuoteResponse>();
+        _coinMarketCap.SetupSequence(c => c.GetQuotesByIds(It.IsAny<string[]>()))
+            .Returns(slowResponse.Task)
+            .ReturnsAsync(Response(new() { [Btc] = 61_000m }));
+
+        var requestA = Service().GetPricesAsync([Btc]);
+        _clock.Advance(TimeSpan.FromSeconds(5));
+        (await Service().GetPricesAsync([Btc])).PriceOf(Btc).Should().Be(61_000m);
+        slowResponse.SetResult(Response(new() { [Btc] = 60_000m }));
+        (await requestA).PriceOf(Btc).Should().Be(60_000m);
+
+        // The newer price stays cached and fresh.
+        _coinMarketCap.Setup(c => c.GetQuotesByIds(It.IsAny<string[]>())).ThrowsAsync(new InvalidOperationException("must not be called"));
+        (await Service().GetPricesAsync([Btc])).PriceOf(Btc).Should().Be(61_000m);
+    }
+
+    [Fact]
     public async Task NoCoins_NoCall()
     {
         var lookup = await Service().GetPricesAsync([]);
@@ -90,6 +110,11 @@ public class PriceServiceTests
         lookup.Prices.Should().BeEmpty();
         _coinMarketCap.Verify(c => c.GetQuotesByIds(It.IsAny<string[]>()), Times.Never);
     }
+
+    private static GetQuoteResponse Response(Dictionary<int, decimal> prices) =>
+        new(new Status(0, null), prices.ToDictionary(
+            price => price.Key.ToString(),
+            price => new Coin(price.Key, $"Coin {price.Key}", $"C{price.Key}", DateTime.UtcNow, new Quote(new USD(price.Value, DateTime.UtcNow, 0)))));
 
     private void Quotes(Dictionary<int, decimal> prices)
     {
