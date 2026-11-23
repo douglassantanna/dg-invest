@@ -26,7 +26,6 @@ public record GetCryptoAssetsQuery : IRequest<PageList<UserCryptoAssetDto>>
 public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery, PageList<UserCryptoAssetDto>>
 {
     private readonly TransferCostPolicy _transferCostPolicy;
-    private const decimal MinimumVisibleInvestedAmount = 0.10m;
 
     private readonly DataContext _context;
     private readonly ICoinMarketCapService _coinMarketCapService;
@@ -69,11 +68,6 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
 
             var cryptoAssets = account.CryptoAssets.AsQueryable();
 
-            if (request.HideZeroBalance)
-            {
-                cryptoAssets = cryptoAssets.Where(x => x.HasMeaningfulInvestment(MinimumVisibleInvestedAmount));
-            }
-
             if (!string.IsNullOrEmpty(request.AssetName))
             {
                 var assetName = request.AssetName.ToLower().Trim();
@@ -95,9 +89,14 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                 }
             }
 
-            var cryptoAssetDtos = filteredAssets.Select(ca =>
+            // The dust filter needs prices, so it runs after the CoinMarketCap lookup (see CryptoAsset.IsVisibleWhenHidingDust).
+            var pricedAssets = filteredAssets
+                .Select(ca => (Asset: ca, Price: _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)))
+                .Where(item => !request.HideZeroBalance || item.Asset.IsVisibleWhenHidingDust(item.Price));
+
+            var cryptoAssetDtos = pricedAssets.Select(item =>
             {
-                var price = _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse);
+                var (ca, price) = item;
                 var costBasis = ca.GetCostBasis(price, _transferCostPolicy);
                 return new ViewMinimalCryptoAssetDto(
                     Id: ca.Id,
