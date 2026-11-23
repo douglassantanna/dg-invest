@@ -724,7 +724,6 @@ public class BybitOrderSyncServiceTests
             blobStorage,
             Options.Create(new AzureStorageSettings()),
             context,
-            Mock.Of<ILogger<BybitOrderSyncService>>(),
-            Mock.Of<ICacheService>());
+            Mock.Of<ILogger<BybitOrderSyncService>>());
     }
 }

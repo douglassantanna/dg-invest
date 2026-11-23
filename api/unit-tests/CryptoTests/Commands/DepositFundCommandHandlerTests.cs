@@ -5,13 +5,11 @@ public class DepositFundCommandHandlerTests
     private readonly Mock<ILogger<DepositFundCommandHandler>> _loggerMock;
     private readonly Mock<ITransactionService> _transactionServiceMock;
     private readonly DataContext _context;
-    private readonly Mock<ICacheService> _cacheServiceMock;
 
     public DepositFundCommandHandlerTests()
     {
         _loggerMock = new Mock<ILogger<DepositFundCommandHandler>>();
         _transactionServiceMock = new Mock<ITransactionService>();
-        _cacheServiceMock = new Mock<ICacheService>();
         var options = new DbContextOptionsBuilder<DataContext>()
            .UseInMemoryDatabase(Guid.NewGuid().ToString())
            .Options;
@@ -29,7 +27,7 @@ public class DepositFundCommandHandlerTests
             Notes: "test");
 
         var handler = new DepositFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -56,7 +54,7 @@ public class DepositFundCommandHandlerTests
             Notes: "fiat deposit");
 
         var handler = new DepositFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -87,7 +85,7 @@ public class DepositFundCommandHandlerTests
             ExchangeName: "Bybit");
 
         var handler = new DepositFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -112,7 +110,7 @@ public class DepositFundCommandHandlerTests
             ExchangeName: "Bybit");
 
         var handler = new DepositFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
 

@@ -1,4 +1,3 @@
-using api.Cache;
 using api.Data;
 using api.Shared;
 using FluentValidation;
@@ -22,13 +21,11 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
 {
     private readonly DataContext _context;
     private readonly ILogger<SelectAccountCommandHandler> _logger;
-    private readonly ICacheService _cacheService;
 
-    public SelectAccountCommandHandler(DataContext context, ILogger<SelectAccountCommandHandler> logger, ICacheService cacheService)
+    public SelectAccountCommandHandler(DataContext context, ILogger<SelectAccountCommandHandler> logger)
     {
         _context = context;
         _logger = logger;
-        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(SelectAccountCommand request, CancellationToken cancellationToken)
@@ -56,7 +53,6 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
         {
             _context.Users.Update(user);
             await _context.SaveChangesAsync(cancellationToken);
-            InvalidateCache(request);
 
             return new Response("Account selected successfully", true);
         }
@@ -66,24 +62,6 @@ public class SelectAccountCommandHandler : IRequestHandler<SelectAccountCommand,
             return new Response("Error selecting account", false);
         }
     }
-
-    private void InvalidateCache(SelectAccountCommand request)
-    {
-        var keysToRemove = new List<string>
-        {
-            $"{CacheKeyConstants.UserAccounts}{request.UserId}",
-            $"{CacheKeyConstants.UserAccountDetails}{request.UserId}",
-            CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(request.UserId.ToString())
-        };
-
-        keysToRemove.AddRange(CacheKeyConstants.GetAllUserMarketDataCacheKeys(request.UserId));
-
-        foreach (var key in keysToRemove.Where(k => !string.IsNullOrEmpty(k)))
-        {
-            _cacheService.Remove(key);
-        }
-    }
-
 
     private async Task<ValidationResult> ValidateRequestAsync(SelectAccountCommand request)
     {

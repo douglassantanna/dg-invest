@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using api.Cache;
 using api.Cryptos.Exceptions;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
@@ -49,18 +48,15 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
     private readonly ILogger<AddTransactionCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
     private readonly DataContext _context;
-    private readonly ICacheService _cacheService;
 
     public AddTransactionCommandHandler(ILogger<AddTransactionCommandHandler> logger,
                                         ITransactionService transactionService,
                                         DataContext context,
-                                        ICacheService cacheService,
                                         IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
-        _cacheService = cacheService;
         _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
@@ -123,8 +119,6 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
 
-            InvalidateCache(request.UserId.ToString(), cryptoAsset.Id.ToString());
-
             return new Response("ok", true);
         }
         catch (CryptoAssetException ex)
@@ -134,17 +128,6 @@ public class AddTransactionCommandHandler : IRequestHandler<AddTransactionComman
         }
     }
 
-    private void InvalidateCache(string userId, string cryptoAssetId)
-    {
-        var cachedAccountKey = $"{CacheKeyConstants.UserAccountDetails}{userId}";
-        var cachedCryptoAssetKey = $"{CacheKeyConstants.UserCryptoAsset}{cryptoAssetId}";
-        var cachedCryptoAssetsKey = CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(userId);
-
-        _cacheService.Remove(cachedAccountKey);
-        _cacheService.Remove(cachedCryptoAssetKey);
-        _cacheService.Remove(cachedCryptoAssetsKey);
-
-    }
     private EAccountTransactionType GetAccountTransactionType(ETransactionType transactionType)
     {
         return transactionType == ETransactionType.Buy ? EAccountTransactionType.Out : EAccountTransactionType.In;

@@ -12,7 +12,6 @@ public class SelectAccountCommandHandlerTests
 {
     private readonly DataContext _context;
     private readonly Mock<ILogger<SelectAccountCommandHandler>> _mockLogger;
-    private readonly Mock<ICacheService> _mockCacheService;
     private readonly SelectAccountCommandHandler _handler;
 
     public SelectAccountCommandHandlerTests()
@@ -25,8 +24,7 @@ public class SelectAccountCommandHandlerTests
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
         _mockLogger = new Mock<ILogger<SelectAccountCommandHandler>>();
-        _mockCacheService = new Mock<ICacheService>();
-        _handler = new SelectAccountCommandHandler(_context, _mockLogger.Object, _mockCacheService.Object);
+        _handler = new SelectAccountCommandHandler(_context, _mockLogger.Object);
     }
 
     [Fact]
@@ -99,7 +97,6 @@ public class SelectAccountCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Message.Should().Be("Account selected successfully");
-        _mockCacheService.Verify(x => x.Remove(It.IsAny<string>()), Times.AtLeast(1));
     }
 
     [Fact]
@@ -116,6 +113,5 @@ public class SelectAccountCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        _mockCacheService.Verify(x => x.Remove(It.IsAny<string>()), Times.AtLeast(1));
     }
 }

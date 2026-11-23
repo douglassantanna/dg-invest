@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using api.Cache;
 using api.CoinMarketCap.Service;
 using api.Data;
 using api.Exchanges.Services;
@@ -19,7 +18,6 @@ namespace api.Controllers;
 public class RecalculateController : ControllerBase
 {
     private readonly DataContext _context;
-    private readonly ICacheService _cacheService;
     private readonly IBybitAccountSyncService _bybitAccountSyncService;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly RecalculationSettings _settings;
@@ -27,14 +25,12 @@ public class RecalculateController : ControllerBase
 
     public RecalculateController(
         DataContext context,
-        ICacheService cacheService,
         IBybitAccountSyncService bybitAccountSyncService,
         ICoinMarketCapService coinMarketCapService,
         IOptions<RecalculationSettings> settings,
         IOptions<CostBasisSettings> costBasisSettings)
     {
         _context = context;
-        _cacheService = cacheService;
         _bybitAccountSyncService = bybitAccountSyncService;
         _coinMarketCapService = coinMarketCapService;
         _settings = settings.Value;
@@ -121,14 +117,7 @@ public class RecalculateController : ControllerBase
             foreach (var asset in account.CryptoAssets)
             {
                 asset.RecalculateFromTransactions(_transferCostPolicy);
-
-                // evict per-asset cache
-                _cacheService.Remove($"{CacheKeyConstants.UserCryptoAsset}{asset.Id}");
             }
-
-            // evict per-user caches
-            _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{account.UserId}");
-            _cacheService.Remove(CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(account.UserId.ToString()));
         }
 
         await _context.SaveChangesAsync();

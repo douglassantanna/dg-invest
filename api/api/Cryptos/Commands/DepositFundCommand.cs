@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
@@ -55,18 +54,15 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
     private readonly DataContext _context;
     private readonly ILogger<DepositFundCommandHandler> _logger;
     private readonly ITransactionService _transactionService;
-    private readonly ICacheService _cacheService;
     public DepositFundCommandHandler(
         ILogger<DepositFundCommandHandler> logger,
         ITransactionService transactionService,
         DataContext context,
-        ICacheService cacheService,
         IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
-        _cacheService = cacheService;
         _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
@@ -111,9 +107,6 @@ public class DepositFundCommandHandler : IRequestHandler<DepositFundCommand, Res
 
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
-
-            var cachedAccount = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
-            _cacheService.Remove(cachedAccount);
 
             return new Response("Deposit added succesfully", true);
         }

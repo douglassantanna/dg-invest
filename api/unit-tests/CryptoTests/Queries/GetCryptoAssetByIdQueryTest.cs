@@ -1,84 +1,55 @@
-using api.Cache;
-using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
-using api.Cryptos.Models;
 using api.Cryptos.Queries;
 using api.Cryptos.Repositories;
-using api.Models.Cryptos;
-using Microsoft.Extensions.Logging;
-using Moq;
+using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace unit_tests.CryptoTests.Queries;
+
 public class GetCryptoAssetByIdQueryTest
 {
-    private readonly Mock<ICryptoAssetRepository> _cryptoAssetRepositoryMock;
-    private readonly Mock<ICoinMarketCapService> _coinMarketCapServiceMock;
-    private readonly Mock<ILogger<GetCryptoAssetByIdQueryHandler>> _loggerMock;
-    private readonly Mock<ICacheService> _cacheServiceMock;
-
-    public GetCryptoAssetByIdQueryTest()
+    [Fact]
+    public async Task WhenNoPriceIsAvailableBecauseCoinMarketCapFailed_ReturnsAnError()
     {
-        _cryptoAssetRepositoryMock = new Mock<ICryptoAssetRepository>();
-        _coinMarketCapServiceMock = new Mock<ICoinMarketCapService>();
-        _loggerMock = new Mock<ILogger<GetCryptoAssetByIdQueryHandler>>();
-        _cacheServiceMock = new Mock<ICacheService>();
+        var handler = Handler(new PriceLookup(new Dictionary<int, decimal>(), FetchFailed: true));
+
+        var response = await handler.Handle(new GetCryptoAssetByIdQuery(CryptoAssetId: 1), CancellationToken.None);
+
+        response.IsSuccess.Should().BeFalse();
     }
 
     [Fact]
-    public async Task GetCryptoAssetById_WhenBalanceIsZero_ShouldReturnPercentPriceDifferenceZero()
+    public async Task WhenCoinMarketCapFailedButAPriceIsKnown_UsesIt()
     {
-        // Arrange
-        var command = new GetCryptoAssetByIdQuery(CryptoAssetId: 1);
-        _cryptoAssetRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), null))
-                                  .ReturnsAsync(GetCryptoAsset());
+        var handler = Handler(new PriceLookup(new Dictionary<int, decimal> { [1] = 30m }, FetchFailed: true));
 
-        _coinMarketCapServiceMock.Setup(x => x.GetQuotesByIds(new[] { It.IsAny<string>() }))
-                             .ReturnsAsync(It.IsAny<GetQuoteResponse>());
+        var response = await handler.Handle(new GetCryptoAssetByIdQuery(CryptoAssetId: 1), CancellationToken.None);
 
-        var handler = new GetCryptoAssetByIdQueryHandler(_coinMarketCapServiceMock.Object,
-                                                         _cryptoAssetRepositoryMock.Object,
-                                                         _loggerMock.Object,
-                                                         _cacheServiceMock.Object);
-        // Act
-
-        var result = await handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        ViewCryptoAssetDto? viewResult = result.Data as ViewCryptoAssetDto;
-        // viewResult?.Cards[0].Percent.Should().Be(0);
+        response.IsSuccess.Should().BeTrue();
+        ((ViewCryptoAssetDto)response.Data!).CryptoAssetData.Single(card => card.Title == "Current price").Value.Should().Be(30m);
     }
 
-    private static CryptoAsset GetCryptoAsset()
+    [Fact]
+    public async Task WhenCoinMarketCapDoesNotListTheCoin_StillReturnsTheAsset()
     {
-        CryptoAsset cryptoAsset = new("BTC", "USD", "BTC", 1);
-        List<CryptoTransaction> transactions = new()
-        {
-            new(amount: 1,
-                price: 15,
-                purchaseDate: DateTimeOffset.Parse("2023-10-10"),
-                exchangeName: "Binance",
-                transactionType: ETransactionType.Buy,
-                fee: 0.0m),
-            new(amount: 1,
-                price: 28,
-                purchaseDate: DateTimeOffset.Parse("2023-10-10"),
-                exchangeName: "Binance",
-                transactionType: ETransactionType.Buy,
-                fee: 0.0m),
-            new(amount: 2,
-                price: 50,
-                purchaseDate: DateTimeOffset.Parse("2023-12-10"),
-                exchangeName: "Binance",
-                transactionType: ETransactionType.Sell,
-                fee: 0.0m)
-        };
+        var handler = Handler(new PriceLookup(new Dictionary<int, decimal>(), FetchFailed: false));
 
-        foreach (var transaction in transactions)
-        {
-            cryptoAsset.AddTransaction(transaction);
-        }
+        var response = await handler.Handle(new GetCryptoAssetByIdQuery(CryptoAssetId: 1), CancellationToken.None);
 
-        return cryptoAsset;
+        response.IsSuccess.Should().BeTrue();
+        ((ViewCryptoAssetDto)response.Data!).CryptoAssetData.Single(card => card.Title == "Current price").Value.Should().Be(0m);
+    }
+
+    private static GetCryptoAssetByIdQueryHandler Handler(PriceLookup prices)
+    {
+        var asset = new CryptoAsset("BTC", "USD", "BTC", 1);
+        asset.AddTransaction(new CryptoTransaction(1, 15, DateTimeOffset.Parse("2023-10-10"), "Binance", ETransactionType.Buy, 0));
+        var repository = new Mock<ICryptoAssetRepository>();
+        repository.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<Func<IQueryable<CryptoAsset>, IIncludableQueryable<CryptoAsset, object>>?>()))
+            .ReturnsAsync(asset);
+        var priceService = new Mock<IPriceService>();
+        priceService.Setup(p => p.GetPricesAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>())).ReturnsAsync(prices);
+        return new GetCryptoAssetByIdQueryHandler(priceService.Object, repository.Object, NullLogger<GetCryptoAssetByIdQueryHandler>.Instance);
     }
 }

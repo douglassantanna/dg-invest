@@ -741,7 +741,6 @@ public class BybitAccountSyncServiceSyncTests
                 orderSync.Object,
                 keyVault.Object,
                 context,
-                Mock.Of<ICacheService>(),
                 Mock.Of<ICoinMarketCapService>(),
                 NullLogger<BybitAccountSyncService>.Instance);
 

@@ -5,13 +5,11 @@ public class WithdrawFundCommandHandlerTests
     private readonly Mock<ILogger<WithdrawFundCommandHandler>> _loggerMock;
     private readonly Mock<ITransactionService> _transactionServiceMock;
     private readonly DataContext _context;
-    private readonly Mock<ICacheService> _cacheServiceMock;
 
     public WithdrawFundCommandHandlerTests()
     {
         _loggerMock = new Mock<ILogger<WithdrawFundCommandHandler>>();
         _transactionServiceMock = new Mock<ITransactionService>();
-        _cacheServiceMock = new Mock<ICacheService>();
         var options = new DbContextOptionsBuilder<DataContext>()
            .UseInMemoryDatabase(Guid.NewGuid().ToString())
            .Options;
@@ -28,7 +26,7 @@ public class WithdrawFundCommandHandlerTests
             Notes: "test");
 
         var handler = new WithdrawFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -54,7 +52,7 @@ public class WithdrawFundCommandHandlerTests
             Notes: "bank withdrawal");
 
         var handler = new WithdrawFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -85,7 +83,7 @@ public class WithdrawFundCommandHandlerTests
             ExchangeName: "Bybit");
 
         var handler = new WithdrawFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
     }
@@ -108,7 +106,7 @@ public class WithdrawFundCommandHandlerTests
             ExchangeName: "Bybit");
 
         var handler = new WithdrawFundCommandHandler(
-            _loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+            _loggerMock.Object, _transactionServiceMock.Object, _context);
 
         var result = await handler.Handle(command, CancellationToken.None);
 

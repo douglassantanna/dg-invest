@@ -46,9 +46,6 @@ public class GetMarketDataByTimeframeQueryHandler : IRequestHandler<GetMarketDat
             ETimeframe._6m => (now_aligned - (180 * 86400)) / 86400 * 86400,
             _ => throw new ArgumentOutOfRangeException("time frame not supported")
         };
-
-        var cacheKey = CacheKeyConstants.GenerateMarketDataCacheKey(request, startTime);
-
         // var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey,
         // async (ct) =>
         // {

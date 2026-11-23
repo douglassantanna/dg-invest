@@ -1,4 +1,3 @@
-using api.Cache;
 using api.Data;
 using api.Shared;
 using api.Users.Dtos;
@@ -11,35 +10,27 @@ public class GetUserAccountsQueryHandler : IRequestHandler<GetUserAccountsQuery,
 {
     private readonly ILogger<GetUserAccountsQueryHandler> _logger;
     private readonly DataContext _context;
-    private readonly ICacheService _cacheService;
 
     public GetUserAccountsQueryHandler(
         ILogger<GetUserAccountsQueryHandler> logger,
-        DataContext context,
-        ICacheService cacheService)
+        DataContext context)
     {
         _logger = logger;
         _context = context;
-        _cacheService = cacheService;
     }
+
+    // Not cached: a small query, and a cached list went stale after selecting or creating an account.
     public async Task<Response> Handle(GetUserAccountsQuery request, CancellationToken cancellationToken)
     {
         try
         {
-            var cacheKey = $"{CacheKeyConstants.UserAccounts}{request.UserId}";
-            var absoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            var accounts = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
-            {
-                return await _context.Accounts
-                    .AsNoTracking()
-                    .Where(x => x.UserId == request.UserId && !x.IsDeleted)
-                    .OrderByDescending(x => x.IsSelected == true)
-                    .Select(x => new SimpleAccountDto(x.Id, x.Name, x.Balance, x.IsSelected,
-                        x.Exchange == "Bybit"))
-                    .ToListAsync(ct);
-            },
-            absoluteExpirationRelativeToNow,
-            cancellationToken);
+            var accounts = await _context.Accounts
+                .AsNoTracking()
+                .Where(x => x.UserId == request.UserId && !x.IsDeleted)
+                .OrderByDescending(x => x.IsSelected == true)
+                .Select(x => new SimpleAccountDto(x.Id, x.Name, x.Balance, x.IsSelected,
+                    x.Exchange == "Bybit"))
+                .ToListAsync(cancellationToken);
 
             return new Response("", true, accounts);
         }

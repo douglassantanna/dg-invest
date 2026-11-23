@@ -685,7 +685,6 @@ public class SyncBybitOrdersTests
                 orderSyncService,
                 keyVaultService,
                  context,
-                 Mock.Of<ICacheService>(),
                  Mock.Of<ICoinMarketCapService>(),
                  NullLogger<BybitAccountSyncService>.Instance),
             keyVaultService,

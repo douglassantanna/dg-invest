@@ -470,9 +470,22 @@ These are tracked in the integration review and planned for upcoming PRs:
 
 ---
 
+### Prices and caching
+
+Current prices come from CoinMarketCap through `IPriceService` (`PriceService`):
+- **one price per coin, shared by every user and request**, reused for **60 seconds**. CoinMarketCap itself updates about once a minute;
+- a request asks for its coins' prices, and only coins missing or older than 60 seconds are fetched, **in one CoinMarketCap call**;
+- if CoinMarketCap fails, the **last known price** (kept up to 24 hours) is used. With no known price, the list shows 0 for that coin and the asset page returns an error, as before.
+
+**Not cached** (read from the database on every request, so always current): the crypto list (`/cryptos`), the asset page, and the user's accounts. At this scale these queries take milliseconds; CoinMarketCap is the slow, rate-limited part.
+
+**Still cached** (rarely change): the coin list (10 minutes) and the admin users list (5 minutes).
+
+All caches are in memory, inside the API process. The Functions host has its own memory, so the sync cannot clear API caches; nothing it writes is cached by the API.
+
 ### Crypto list (`/cryptos`)
 
-The list shows the selected account's assets with price, balance, invested amount, market value and gain/loss (`GET /api/Crypto/list-assets`, cached for 1 minute per **selected account** and filter combination, so switching accounts never shows the previous account's cached list).
+The list shows the selected account's assets with price, balance, invested amount, market value and gain/loss (`GET /api/Crypto/list-assets`). It is read from the database on every request, so it reflects account switches, trades and syncs immediately; only prices are cached (see [Prices and caching](#prices-and-caching)).
 
 **Hide zero and dust balances** hides assets **worth less than US$1** (`Balance × current price`, `CryptoAsset.DustWorthThreshold`). This includes Bybit balance without history, such as wallet dust worth cents. The filter runs after prices are fetched. When a coin has **no price** (CoinMarketCap failed or does not list it), its worth is unknown, so the older rule applies: shown if it has a balance and either no recorded cost or a cost of at least US$0.10. A CoinMarketCap outage therefore never empties the list. With the toggle off, every asset is shown.
 

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using api.Cache;
 using api.Cryptos.Models;
 using api.Cryptos.TransactionStrategies.Contracts;
 using api.Data;
@@ -55,19 +54,16 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
     private readonly ITransactionService _transactionService;
     private readonly ILogger<WithdrawFundCommandHandler> _logger;
     private readonly DataContext _context;
-    private readonly ICacheService _cacheService;
 
     public WithdrawFundCommandHandler(
         ILogger<WithdrawFundCommandHandler> logger,
         ITransactionService transactionService,
         DataContext context,
-        ICacheService cacheService,
         IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _logger = logger;
         _transactionService = transactionService;
         _context = context;
-        _cacheService = cacheService;
         _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
@@ -153,9 +149,6 @@ public class WithdrawFundCommandHandler : IRequestHandler<WithdrawFundCommand, R
 
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
-
-            var cachedAccount = $"{CacheKeyConstants.UserAccountDetails}{request.UserId}";
-            _cacheService.Remove(cachedAccount);
 
             return new Response("Withdraw succesfully", true);
         }

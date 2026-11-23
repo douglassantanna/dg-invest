@@ -1,13 +1,10 @@
 using api.Cryptos.Models;
 using Microsoft.Extensions.Options;
-using api.Cache;
-using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
 using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
-using Flurl.Http;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,86 +20,55 @@ public record GetCryptoAssetsQuery : IRequest<PageList<UserCryptoAssetDto>>
     public int UserId { get; set; }
     public string SubAccountTag { get; set; } = string.Empty;
 }
+// Not cached: the account and its assets are read from the database on every request (cheap at this scale), so the
+// list is correct right after switching account, a trade or a sync. Only prices are shared, through IPriceService.
 public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery, PageList<UserCryptoAssetDto>>
 {
+    private const int MaxPageSize = 50;
     private readonly TransferCostPolicy _transferCostPolicy;
-
     private readonly DataContext _context;
-    private readonly ICoinMarketCapService _coinMarketCapService;
-    private readonly ILogger<GetCryptoAssetsQueryHandler> _logger;
-    private readonly ICacheService _cacheService;
+    private readonly IPriceService _priceService;
+
     public GetCryptoAssetsQueryHandler(DataContext context,
-                                        ICoinMarketCapService coinMarketCapService,
-                                        ILogger<GetCryptoAssetsQueryHandler> logger,
-                                        ICacheService cacheService,
+                                        IPriceService priceService,
         IOptions<CostBasisSettings>? costBasisSettings = null)
     {
         _context = context;
-        _coinMarketCapService = coinMarketCapService;
-        _logger = logger;
-        _cacheService = cacheService;
+        _priceService = priceService;
         _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
     }
 
     public async Task<PageList<UserCryptoAssetDto>> Handle(GetCryptoAssetsQuery request, CancellationToken cancellationToken)
     {
-        var selectedAccountId = await _context.Accounts
+        IQueryable<Account> accounts = _context.Accounts
             .AsNoTracking()
-            .Where(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted)
-            .Select(x => x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (selectedAccountId == 0)
+            .AsSplitQuery()
+            .Include(x => x.AccountTransactions);
+        // Transaction history is only read under Proportional (balance without history); skip it otherwise.
+        accounts = _transferCostPolicy == TransferCostPolicy.Proportional
+            ? accounts.Include(x => x.CryptoAssets).ThenInclude(ca => ca.Transactions)
+            : accounts.Include(x => x.CryptoAssets);
+        var account = await accounts
+            .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted, cancellationToken);
+
+        if (account == null)
             return PageList<UserCryptoAssetDto>.Empty();
 
-        var cacheKey = CacheKeyConstants.GenerateCryptoAssetsCacheKey(request.UserId.ToString(), selectedAccountId, request.AssetName ?? "", request.SortBy ?? "", request.SortOrder ?? "", request.HideZeroBalance);
-        var absoluteExpiration = TimeSpan.FromMinutes(1);
-        var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
+        var assets = account.CryptoAssets.AsEnumerable();
+        if (!string.IsNullOrEmpty(request.AssetName))
         {
-            IQueryable<Account> accounts = _context.Accounts
-                .AsNoTracking()
-                .AsSplitQuery()
-                .Include(x => x.AccountTransactions);
-            // Transaction history is only read under Proportional (balance without history); skip it otherwise.
-            accounts = _transferCostPolicy == TransferCostPolicy.Proportional
-                ? accounts.Include(x => x.CryptoAssets).ThenInclude(ca => ca.Transactions)
-                : accounts.Include(x => x.CryptoAssets);
-            var account = await accounts
-                .FirstOrDefaultAsync(x => x.Id == selectedAccountId && x.UserId == request.UserId && !x.IsDeleted, ct);
+            var assetName = request.AssetName.ToLower().Trim();
+            assets = assets.Where(x => x.CryptoCurrency.ToLower().Contains(assetName));
+        }
+        var filteredAssets = assets.ToList();
 
-            if (account == null)
-            {
-                return PageList<UserCryptoAssetDto>.Empty();
-            }
+        var prices = await _priceService.GetPricesAsync(filteredAssets.Select(asset => asset.CoinMarketCapId), cancellationToken);
 
-            var cryptoAssets = account.CryptoAssets.AsQueryable();
-
-            if (!string.IsNullOrEmpty(request.AssetName))
-            {
-                var assetName = request.AssetName.ToLower().Trim();
-                cryptoAssets = cryptoAssets.Where(x => x.CryptoCurrency.ToLower().Contains(assetName));
-            }
-
-            var filteredAssets = cryptoAssets.ToList();
-
-            GetQuoteResponse? cmpResponse = null;
-            if (cryptoAssets.Any())
-            {
-                try
-                {
-                    cmpResponse = await GetCryptosFromcoinMarketCap(cryptoAssets.ToList());
-                }
-                catch (FlurlHttpException ex)
-                {
-                    _logger.LogError(ex, "Error getting quotes from CoinMarketCap");
-                }
-            }
-
-            // The dust filter needs prices, so it runs after the CoinMarketCap lookup (see CryptoAsset.IsVisibleWhenHidingDust).
-            var pricedAssets = filteredAssets
-                .Select(ca => (Asset: ca, Price: _coinMarketCapService.GetCryptoCurrencyPriceById(ca.CoinMarketCapId, cmpResponse)))
-                .Where(item => !request.HideZeroBalance || item.Asset.IsVisibleWhenHidingDust(item.Price));
-
-            var cryptoAssetDtos = pricedAssets.Select(item =>
+        // The dust filter needs prices, so it runs after the price lookup (see CryptoAsset.IsVisibleWhenHidingDust).
+        var cryptoAssetDtos = filteredAssets
+            .Select(ca => (Asset: ca, Price: prices.PriceOf(ca.CoinMarketCapId)))
+            .Where(item => !request.HideZeroBalance || item.Asset.IsVisibleWhenHidingDust(item.Price))
+            .Select(item =>
             {
                 var (ca, price) = item;
                 var costBasis = ca.GetCostBasis(price, _transferCostPolicy);
@@ -116,55 +82,20 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                     InvestmentGainLossValue: costBasis.GainLoss,
                     InvestmentGainLossPercentage: costBasis.GainLossPercentage,
                     CoinMarketCapId: ca.CoinMarketCapId,
-                    Image: ca.Symbol.ToLower()
-                );
+                    Image: ca.Symbol.ToLower());
             });
 
-            if (!string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc")
-            {
-                cryptoAssetDtos = cryptoAssetDtos.OrderBy(GetSortProperty(request));
-            }
-            else
-            {
-                cryptoAssetDtos = cryptoAssetDtos.OrderByDescending(GetSortProperty(request));
-            }
+        cryptoAssetDtos = !string.IsNullOrEmpty(request.SortBy) && request.SortOrder?.ToLower() == "asc"
+            ? cryptoAssetDtos.OrderBy(GetSortProperty(request))
+            : cryptoAssetDtos.OrderByDescending(GetSortProperty(request));
 
-            int maxPageSize = 50;
-            request.PageSize = Math.Min(request.PageSize, maxPageSize);
+        request.PageSize = Math.Min(request.PageSize, MaxPageSize);
+        IEnumerable<UserCryptoAssetDto> result =
+        [
+            new UserCryptoAssetDto(account.Balance, account.Name, cryptoAssetDtos.ToList(), account.TotalDeposited(), account.Exchange == "Bybit")
+        ];
 
-            IEnumerable<UserCryptoAssetDto> result;
-
-            if (!cryptoAssetDtos.Any())
-            {
-                result = [new UserCryptoAssetDto(account.Balance, account.Name, [], account.TotalDeposited(), account.Exchange == "Bybit")];
-            }
-            else
-            {
-                result =
-                [
-                    new UserCryptoAssetDto
-                    (
-                        account.Balance,
-                        account.Name,
-                        cryptoAssetDtos,
-                        account.TotalDeposited(),
-                        account.Exchange == "Bybit"
-                    )
-                ];
-            }
-
-            return PageList<UserCryptoAssetDto>.Create(result, request.Page, request.PageSize);
-        },
-        absoluteExpiration,
-        cancellationToken);
-
-        return cachedResults;
-    }
-
-    private async Task<GetQuoteResponse> GetCryptosFromcoinMarketCap(List<CryptoAsset> accountQuery)
-    {
-        string[] ids = accountQuery.Select(x => x.CoinMarketCapId.ToString()).ToArray();
-        return await _coinMarketCapService.GetQuotesByIds(ids);
+        return PageList<UserCryptoAssetDto>.Create(result, request.Page, request.PageSize);
     }
 
     private static Func<ViewMinimalCryptoAssetDto, object> GetSortProperty(GetCryptoAssetsQuery request) =>
