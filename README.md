@@ -486,6 +486,8 @@ Amount, price, fee and UID fields format while you type. There is no mask librar
 | `appNumberMask [maxDecimals]="8"` | Coin quantities, prices and fees: add transaction, crypto deposit | Same, up to 8 decimals, so prices like `0.00001234` fit |
 | `appDigitsOnly` | Bybit master UID | Digits only; the value stays a string |
 
+When the precision changes after typing (a deposit switched from Crypto to Fiat), the mask is re-applied to what is shown and the form value is updated, so what is sent always matches the screen.
+
 The form control always gets a **plain number** (`1234.56`, or `null` when empty), so request payloads are unchanged. The inputs are `type="text"` with `inputmode="decimal"`, because `type="number"` cannot display separators.
 
 ### Account transactions

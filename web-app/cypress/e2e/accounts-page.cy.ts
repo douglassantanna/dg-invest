@@ -376,9 +376,16 @@ describe('Accounts page', () => {
     // Fiat: thousand separators, 2 decimals, invalid characters dropped.
     cy.get('app-deposit #amount').type('1234567.891').should('have.value', '1,234,567.89');
     cy.get('app-deposit #amount').clear().type('12a,345.6').should('have.value', '12,345.6');
+    // Crypto allows 8 decimals; switching back to Fiat re-applies the 2-decimal mask to what was typed.
+    cy.get('app-deposit #amount').clear();
+    // force: the sticky header can overlap the select once the crypto fields appear in the small test viewport.
+    cy.get('#transactionType').select('2', { force: true });
+    cy.get('app-deposit #amount').type('1.12345678').should('have.value', '1.12345678');
+    cy.get('#transactionType').select('1', { force: true });
+    cy.get('app-deposit #amount').should('have.value', '1.12');
     cy.get('app-deposit #purchaseDate').type('2026-10-16');
     cy.get('app-deposit').contains('button', 'Save').click();
-    cy.wait('@depositFund').its('request.body.amount').should('equal', 12345.6);
+    cy.wait('@depositFund').its('request.body.amount').should('equal', 1.12);
     cy.get('app-deposit').should('not.exist');
 
     cy.contains('button', 'Withdraw').should('be.enabled').click();
