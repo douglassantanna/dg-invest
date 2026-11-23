@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using api.AzureKeyVault;
-using api.Cache;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Models;
 using api.Data;
@@ -27,7 +26,6 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
     private readonly IBybitOrderSyncService _orderSyncService;
     private readonly IKeyVaultService _keyVaultService;
     private readonly DataContext _context;
-    private readonly ICacheService _cacheService;
     private readonly ICoinMarketCapService _coinMarketCapService;
     private readonly ILogger<BybitAccountSyncService> _logger;
 
@@ -36,7 +34,6 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         IBybitOrderSyncService orderSyncService,
         IKeyVaultService keyVaultService,
         DataContext context,
-        ICacheService cacheService,
         ICoinMarketCapService coinMarketCapService,
         ILogger<BybitAccountSyncService> logger,
         IOptions<CostBasisSettings>? costBasisSettings = null)
@@ -45,7 +42,6 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         _orderSyncService = orderSyncService;
         _keyVaultService = keyVaultService;
         _context = context;
-        _cacheService = cacheService;
         _coinMarketCapService = coinMarketCapService;
         _logger = logger;
         _transferCostPolicy = costBasisSettings?.Value.TransferCostPolicy ?? TransferCostPolicy.Legacy;
@@ -420,7 +416,6 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
         foreach (var cashAsset in account.CryptoAssets.Where(asset => BybitCashBalance.IsCashCoin(asset.Symbol)))
         {
             cashAsset.ReconcileBalance(0);
-            _cacheService.Remove($"{CacheKeyConstants.UserCryptoAsset}{cashAsset.Id}");
         }
 
         foreach (var asset in cryptoAssets)
@@ -518,12 +513,9 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             }
 
             asset.ReconcileBalance(currentBalance);
-            _cacheService.Remove($"{CacheKeyConstants.UserCryptoAsset}{asset.Id}");
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{account.UserId}");
-        _cacheService.Remove(CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(account.UserId.ToString()));
     }
 
     private async Task<List<SyncEvent>> CollectEventsAsync(
@@ -944,7 +936,6 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             cash.Total);
         account.AddToBalance(cash.Total - account.Balance);
         await _context.SaveChangesAsync(cancellationToken);
-        _cacheService.Remove($"{CacheKeyConstants.UserAccountDetails}{account.UserId}");
     }
 
     private async Task<(decimal Total, bool IsComplete)> GetBybitCashBalanceAsync(

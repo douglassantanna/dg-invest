@@ -17,11 +17,9 @@ public class AddTransactionCommandTests
     private readonly Mock<ITransactionService> _transactionServiceMock;
     private readonly DataContext _context;
     private readonly AddTransactionCommand _validCommand;
-    private readonly Mock<ICacheService> _cacheServiceMock;
 
     public AddTransactionCommandTests()
     {
-        _cacheServiceMock = new Mock<ICacheService>();
         _loggerMock = new Mock<ILogger<AddTransactionCommandHandler>>();
         _transactionServiceMock = new Mock<ITransactionService>();
         var options = new DbContextOptionsBuilder<DataContext>()
@@ -90,7 +88,7 @@ public class AddTransactionCommandTests
     public async Task Handler_WhenAccountNotFound_ShouldReturnNotFound()
     {
         // Arrange
-        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context);
 
         // Act
         var result = await handler.Handle(_validCommand, CancellationToken.None);
@@ -113,7 +111,7 @@ public class AddTransactionCommandTests
             .Setup(x => x.ExecuteTransaction(It.IsAny<Account>(), It.IsAny<AccountTransaction>()))
             .Returns(new Response("Transaction failed", false));
 
-        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context, _cacheServiceMock.Object);
+        var handler = new AddTransactionCommandHandler(_loggerMock.Object, _transactionServiceMock.Object, _context);
 
         // Act
         var result = await handler.Handle(_validCommand, CancellationToken.None);

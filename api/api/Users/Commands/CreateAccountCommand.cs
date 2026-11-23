@@ -1,4 +1,3 @@
-using api.Cache;
 using api.Shared;
 using api.Users.Repositories;
 using MediatR;
@@ -14,12 +13,10 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
 {
     private readonly IUserRepository _userRepository;
     private readonly ILogger<CreateAccountCommandHandler> _logger;
-    private readonly ICacheService _cacheService;
-    public CreateAccountCommandHandler(IUserRepository userRepository, ILogger<CreateAccountCommandHandler> logger, ICacheService cacheService)
+    public CreateAccountCommandHandler(IUserRepository userRepository, ILogger<CreateAccountCommandHandler> logger)
     {
         _userRepository = userRepository;
         _logger = logger;
-        _cacheService = cacheService;
     }
     public async Task<Response> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
     {
@@ -40,8 +37,6 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
             }
 
             await _userRepository.UpdateAsync(userResult.Value);
-            var cachedKey = $"{CacheKeyConstants.UserAccounts}{request.UserId}";
-            _cacheService.Remove(cachedKey);
             return new Response("", true);
         }
         catch (Exception ex)

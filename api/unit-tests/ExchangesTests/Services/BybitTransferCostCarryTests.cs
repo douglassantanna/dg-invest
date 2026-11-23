@@ -204,7 +204,6 @@ public class BybitTransferCostCarryTests
             Options.Create(new AzureStorageSettings()),
             context,
             Mock.Of<ILogger<BybitOrderSyncService>>(),
-            Mock.Of<ICacheService>(),
             Options.Create(new CostBasisSettings { TransferCostPolicy = TransferCostPolicy.Proportional }),
             bybit);
     }

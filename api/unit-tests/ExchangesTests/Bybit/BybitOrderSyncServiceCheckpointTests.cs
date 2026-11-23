@@ -59,8 +59,7 @@ public class BybitOrderSyncServiceCheckpointTests
             Mock.Of<IBlobStorageService>(),
             Options.Create(new AzureStorageSettings()),
             backfillContext,
-            NullLogger<BybitOrderSyncService>.Instance,
-            Mock.Of<ICacheService>());
+            NullLogger<BybitOrderSyncService>.Instance);
 
         await service.UpsertSyncStatusAsync(
             1,

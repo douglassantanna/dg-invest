@@ -82,6 +82,8 @@ public static class ServiceExtensions
     {
         services.AddScoped<IPasswordHelper, PasswordHelper>();
         services.AddScoped<ICoinMarketCapService, CoinMarketCapService>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<IPriceService, PriceService>();
         services.AddScoped<IQueueService, QueueService>();
         services.AddSingleton<IJWTService, JWTService>();
         services.AddSingleton<IEmailService, MailtrapEmailService>();

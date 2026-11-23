@@ -87,7 +87,6 @@ public class BybitAccountSyncServiceBackfillTests
             orderSyncService.Object,
             keyVault.Object,
             context,
-            Mock.Of<ICacheService>(),
             Mock.Of<ICoinMarketCapService>(),
             NullLogger<BybitAccountSyncService>.Instance);
 

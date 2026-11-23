@@ -1,4 +1,3 @@
-using api.Cache;
 using api.Data;
 using api.Models.Cryptos;
 using api.Shared;
@@ -27,16 +26,13 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
 {
     private readonly DataContext _context;
     private readonly ILogger<AddCryptoAssetToAccountListCommandHandler> _logger;
-    private readonly ICacheService _cacheService;
 
     public AddCryptoAssetToAccountListCommandHandler(
         DataContext context,
-        ILogger<AddCryptoAssetToAccountListCommandHandler> logger,
-        ICacheService cacheService)
+        ILogger<AddCryptoAssetToAccountListCommandHandler> logger)
     {
         _context = context;
         _logger = logger;
-        _cacheService = cacheService;
     }
 
     public async Task<Response> Handle(AddCryptoAssetToAccountListCommand request, CancellationToken cancellationToken)
@@ -72,8 +68,6 @@ public class AddCryptoAssetToAccountListCommandHandler : IRequestHandler<AddCryp
 
             _context.Accounts.Update(account);
             await _context.SaveChangesAsync(cancellationToken);
-            var cachedCryptoAssets = CacheKeyConstants.GetLastCryptoAssetsCacheKeyForUser(request.UserId.ToString());
-            _cacheService.Remove(cachedCryptoAssets);
             return new Response("", true);
         }
         catch (Exception ex)

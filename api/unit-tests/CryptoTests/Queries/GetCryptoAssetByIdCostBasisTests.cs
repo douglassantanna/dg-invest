@@ -1,4 +1,3 @@
-using api.Cache;
 using api.CoinMarketCap;
 using api.CoinMarketCap.Service;
 using api.Cryptos.Dtos;
@@ -51,34 +50,19 @@ public class GetCryptoAssetByIdCostBasisTests
         var repository = new Mock<ICryptoAssetRepository>();
         repository.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<Func<IQueryable<CryptoAsset>, IIncludableQueryable<CryptoAsset, object>>?>()))
             .ReturnsAsync(asset);
-        var coinMarketCap = new Mock<ICoinMarketCapService>();
-        coinMarketCap.Setup(c => c.GetQuotesByIds(It.IsAny<string[]>())).ReturnsAsync(new GetQuoteResponse(null!, new Dictionary<string, Coin>()));
-        coinMarketCap.Setup(c => c.GetCryptoCurrencyPriceById(It.IsAny<int>(), It.IsAny<GetQuoteResponse>())).Returns(CurrentPrice);
+        var priceService = new Mock<IPriceService>();
+        priceService.Setup(p => p.GetPricesAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PriceLookup(new Dictionary<int, decimal> { [1] = CurrentPrice }, FetchFailed: false));
 
         var handler = new GetCryptoAssetByIdQueryHandler(
-            coinMarketCap.Object,
+            priceService.Object,
             repository.Object,
             NullLogger<GetCryptoAssetByIdQueryHandler>.Instance,
-            new PassThroughCache(),
             Options.Create(new CostBasisSettings { TransferCostPolicy = policy }));
 
         var response = await handler.Handle(new GetCryptoAssetByIdQuery(CryptoAssetId: 1), CancellationToken.None);
 
         response.IsSuccess.Should().BeTrue(response.Message);
         return ((ViewCryptoAssetDto)response.Data!).CryptoAssetData;
-    }
-
-    private sealed class PassThroughCache : ICacheService
-    {
-        public Task<T> GetOrCreateAsync<T>(string cacheKey, Func<CancellationToken, Task<T>> factory, TimeSpan? absoluteExpiration = null, CancellationToken cancellationToken = default)
-            => factory(cancellationToken);
-
-        public void Remove(string cacheKey) { }
-
-        public bool TryGetValue<T>(string cacheKey, out T value)
-        {
-            value = default!;
-            return false;
-        }
     }
 }
