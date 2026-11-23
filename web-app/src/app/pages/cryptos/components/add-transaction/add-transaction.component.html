@@ -19,7 +19,7 @@
       <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Amount
       </label>
-      <input type="number" id="amount" name="amount" formControlName="amount"
+      <input type="text" id="amount" name="amount" formControlName="amount" appNumberMask [maxDecimals]="8"
         class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
     </div>
 
@@ -30,7 +30,7 @@
       <label for="pricePerUnit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Price per Unit
       </label>
-      <input type="number" id="pricePerUnit" name="pricePerUnit" formControlName="price"
+      <input type="text" id="pricePerUnit" name="pricePerUnit" formControlName="price" appNumberMask [maxDecimals]="8"
         class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
     </div>
 
@@ -38,7 +38,7 @@
       <label for="fee" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Fee
       </label>
-      <input type="number" id="fee" name="fee" formControlName="fee"
+      <input type="text" id="fee" name="fee" formControlName="fee" appNumberMask [maxDecimals]="8"
         class="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
     </div>
   </div>

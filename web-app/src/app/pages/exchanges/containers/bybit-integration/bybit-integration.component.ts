@@ -9,6 +9,7 @@ import { BybitSubMemberDto } from 'src/app/core/models/bybit-sub-member';
 import { Response } from 'src/app/core/models/response';
 import { SyncStatusDto } from 'src/app/core/models/sync-status';
 import { ExchangeService } from 'src/app/core/services/exchange.service';
+import { DigitsOnlyDirective } from 'src/app/core/directives/digits-only.directive';
 
 export interface BybitAccountRow extends BybitSubaccountRowDto {
   lastSyncAt: string | null;
@@ -19,7 +20,7 @@ export interface BybitAccountRow extends BybitSubaccountRowDto {
 @Component({
   selector: 'app-bybit-integration',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, DigitsOnlyDirective],
   templateUrl: './bybit-integration.component.html',
 })
 export class BybitIntegrationComponent implements OnInit {
