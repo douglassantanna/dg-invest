@@ -82,6 +82,16 @@ public class CryptoAsset : Entity
         return ((currentPrice - AveragePrice) / AveragePrice) * 100;
     }
 
+    // "Hide zero and dust balances" on /cryptos hides assets worth less than US$1.
+    public const decimal DustWorthThreshold = 1m;
+    // Used only when the price is unknown, so a CoinMarketCap outage does not empty the list.
+    private const decimal MinimumVisibleInvestedAmount = 0.10m;
+
+    public bool IsVisibleWhenHidingDust(decimal currentPrice) =>
+        currentPrice > 0
+            ? CurrentWorth(currentPrice) >= DustWorthThreshold
+            : HasMeaningfulInvestment(MinimumVisibleInvestedAmount);
+
     public bool HasMeaningfulInvestment(decimal minimumInvestedAmount)
         => Balance > 0 && (TotalInvested == 0 || TotalInvested >= minimumInvestedAmount);
 

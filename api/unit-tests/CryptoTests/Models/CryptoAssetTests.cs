@@ -218,6 +218,36 @@ public class CryptoAssetTests
         cryptoAsset.HasMeaningfulInvestment(0.10m).Should().Be(expected);
     }
 
+    [Theory]
+    [InlineData(0.99, false)]
+    [InlineData(1.00, true)]
+    [InlineData(1.01, true)]
+    public void IsVisibleWhenHidingDust_WithAPrice_HidesAssetsWorthLessThanOneDollar(decimal currentPrice, bool expected)
+    {
+        var cryptoAsset = new CryptoAsset("Test", "USD", "TEST", 1);
+        cryptoAsset.AddBalance(1m);
+
+        cryptoAsset.IsVisibleWhenHidingDust(currentPrice).Should().Be(expected);
+    }
+
+    [Fact]
+    public void IsVisibleWhenHidingDust_WithAnEmptyBalance_IsHidden()
+    {
+        new CryptoAsset("Test", "USD", "TEST", 1).IsVisibleWhenHidingDust(50_000m).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(5, true)]
+    [InlineData(0.05, false)]
+    public void IsVisibleWhenHidingDust_WithoutAPrice_FallsBackToTheInvestedAmount(decimal investedAmount, bool expected)
+    {
+        // No price (CoinMarketCap failed or does not list the coin): worth is unknown, so the list must not empty out.
+        var cryptoAsset = new CryptoAsset("Test", "USD", "TEST", 1);
+        cryptoAsset.AddTransaction(new CryptoTransaction(1, investedAmount, DateTimeOffset.Parse("2023-10-10"), "Bybit", ETransactionType.Buy, 0));
+
+        cryptoAsset.IsVisibleWhenHidingDust(0m).Should().Be(expected);
+    }
+
     // AveragePrice = TotalInvested / Balance
     // Two buys of amount=1 at price1 and price2 (no fees) → AveragePrice = (price1 + price2) / 2
     [Theory]
