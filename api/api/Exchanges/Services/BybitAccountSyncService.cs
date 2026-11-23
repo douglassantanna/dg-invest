@@ -101,6 +101,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             }
 
             var region = BybitEndpoints.Parse(syncStatus.Region);
+            await EnsureHistoryLoadedAsync(account, cancellationToken);
 
             // Fetch from the checkpoint to now in explicit windows of at most 7 days. With only a
             // startTime, Bybit returns startTime + 7 days for orders/transfers (silently dropping
@@ -237,6 +238,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
                 return BybitAccountSyncResult.Skipped("Bybit credentials are not configured for this account");
 
             var region = BybitEndpoints.Parse(syncStatus.Region);
+            await EnsureHistoryLoadedAsync(account, cancellationToken);
             var events = new List<SyncEvent>();
             var windowStart = start;
 
@@ -353,6 +355,7 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
             if (string.IsNullOrWhiteSpace(apiKey.Value) || string.IsNullOrWhiteSpace(apiSecret.Value))
                 return BybitAccountSyncResult.Skipped("Bybit credentials are not configured for this account");
 
+            await EnsureHistoryLoadedAsync(account, cancellationToken);
             await ReconcileCurrentCryptoBalancesAsync(
                 account,
                 apiKey.Value,
@@ -849,6 +852,23 @@ public sealed class BybitAccountSyncService : IBybitAccountSyncService
 
         if (_context.ChangeTracker.HasChanges())
             await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    // Callers may pass only the account row (the timer does, so accounts that end up skipped never load their history).
+    // Once the account will be synced, its assets and their transactions are loaded here; callers that already included
+    // them (the API commands) are left as they are.
+    private async Task EnsureHistoryLoadedAsync(Account account, CancellationToken cancellationToken)
+    {
+        var entry = _context.Entry(account);
+        if (entry.State == EntityState.Detached)
+            return;
+
+        var assets = entry.Collection(a => a.CryptoAssets);
+        if (assets.IsLoaded)
+            return;
+
+        await assets.Query().Include(asset => asset.Transactions).AsSplitQuery().LoadAsync(cancellationToken);
+        assets.IsLoaded = true;
     }
 
     private static bool HasImportedOrder(Account account, string orderId) =>

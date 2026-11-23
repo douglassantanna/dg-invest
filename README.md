@@ -233,6 +233,8 @@ Authorization: Bearer <jwt>
 
 The timer `SyncBybitOrders` (every minute, `0 */1 * * * *`, when `BybitSync:Enabled`) and the manual **Sync now** button (`POST /api/Exchange/bybit/sync/{accountId}`) both run `BybitAccountSyncService.SyncAsync`. For each enabled account, one run does the following:
 
+The timer lists only account ids, then loads and syncs **one account at a time**. An account's assets and transactions are loaded only once it passes the checks in step 1, so accounts that are skipped (sync paused, integration disconnected, no key) never load their history. EF's tracked entities are cleared after each user, so memory does not grow with the number of accounts.
+
 1. **Checks** that the account has a sync status, sync is enabled, the integration is connected (not disconnected or auto-paused) and credentials exist.
 2. **Picks the start of the range:**
    - `LastSyncAt − 5 min` (the 5-minute overlap catches late arrivals);

@@ -645,6 +645,40 @@ public class SyncBybitOrdersTests
     }
 
     [Fact]
+    public async Task Run_DoesNotKeepAccountHistoryLoadedAfterTheRun()
+    {
+        // Accounts are loaded one at a time and the tracker is cleared after each user, instead of loading every
+        // account with every asset and transaction up front and keeping them for the whole run.
+        var options = new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var context = new DataContext(options);
+        var account = new Account("Bybit", 1, EAccountType.Exchange, "Bybit", "UID-001");
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        account.AddCryptoAsset(asset);
+        asset.AddHistoricalTransaction(new CryptoTransaction(1, 100, DateTimeOffset.UtcNow.AddDays(-1), "Bybit", ETransactionType.Buy, 0));
+        var integration = new ExchangeIntegration(1, "Bybit");
+        integration.MarkEnabled();
+        context.AddRange(account, integration);
+        await context.SaveChangesAsync();
+        var status = new SyncStatus(1, account.Id, "Bybit");
+        status.EnableForCredentials();
+        context.SyncStatuses.Add(status);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var keyVault = new Mock<IKeyVaultService>();
+        keyVault.Setup(x => x.GetSecretReadResultAsync(It.IsAny<string>()))
+            .ReturnsAsync(new KeyVaultSecretReadResult(KeyVaultSecretReadStatus.Found, "credential"));
+        var function = CreateFunction(new Mock<IBybitService>().Object, Mock.Of<IBybitOrderSyncService>(), keyVault.Object, context);
+        var functionContext = new Mock<FunctionContext>();
+        functionContext.SetupGet(x => x.CancellationToken).Returns(CancellationToken.None);
+
+        await function.Run(null!, functionContext.Object);
+
+        context.ChangeTracker.Entries<CryptoTransaction>().Should().BeEmpty();
+        context.ChangeTracker.Entries<CryptoAsset>().Should().BeEmpty();
+    }
+
+    [Fact]
     public void Run_IsScheduledEveryMinute()
     {
         var trigger = typeof(SyncBybitOrders).GetMethod(nameof(SyncBybitOrders.Run))!

@@ -661,6 +661,55 @@ public class BybitAccountSyncServiceSyncTests
         ExecTime = Ms(minutesFromNow)
     };
 
+    [Fact]
+    public async Task SyncAsync_WhenTheAccountWillNotSync_DoesNotLoadItsHistory()
+    {
+        var harness = await Harness.CreateAsync();
+        await AddImportedBtcOrderAsync(harness, "imported-1");
+        (await harness.Context.SyncStatuses.SingleAsync()).Disable();
+        await harness.Context.SaveChangesAsync();
+        var account = await ReloadWithoutHistoryAsync(harness);
+
+        var result = await harness.Service.SyncAsync(account, CancellationToken.None);
+
+        result.IsSkipped.Should().BeTrue(result.Message);
+        harness.Context.Entry(account).Collection(a => a.CryptoAssets).IsLoaded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SyncAsync_WithAnAccountLoadedWithoutHistory_LoadsAssetsAndTransactionsBeforeSyncing()
+    {
+        // How the timer passes accounts: only the account row. Its history must be loaded, or an imported order
+        // would look new (and its executions would be fetched again).
+        var harness = await Harness.CreateAsync();
+        await AddImportedBtcOrderAsync(harness, "imported-1");
+        var account = await ReloadWithoutHistoryAsync(harness);
+        harness.Orders.Add(Order("imported-1", "Buy", -1));
+        CaptureProcessedOrders(harness);
+
+        var result = await harness.Service.SyncAsync(account, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        account.CryptoAssets.Should().ContainSingle().Which.Transactions.Should().ContainSingle();
+        harness.Bybit.Verify(s => s.GetExecutionHistoryAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<BybitRegion>(), "imported-1", It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static async Task AddImportedBtcOrderAsync(Harness harness, string orderId)
+    {
+        var asset = new CryptoAsset("Bitcoin", "Bitcoin", "BTC", 1);
+        harness.Account.AddCryptoAsset(asset);
+        asset.AddHistoricalTransaction(new CryptoTransaction(1, 100, Now.AddMinutes(-1), "Bybit", ETransactionType.Buy, 0,
+            exchangeOrderId: orderId, exchangeExecutionId: "exec-1"));
+        await harness.Context.SaveChangesAsync();
+    }
+
+    private static async Task<Account> ReloadWithoutHistoryAsync(Harness harness)
+    {
+        harness.Context.ChangeTracker.Clear();
+        return await harness.Context.Accounts.SingleAsync(a => a.Id == harness.Account.Id);
+    }
+
     private static void AssertContiguousWindows(List<(long? Start, long? End)> requests, DateTime expectedStart)
     {
         requests.Should().NotBeEmpty();
