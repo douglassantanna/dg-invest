@@ -48,6 +48,33 @@ public class GetCryptoAssetsDustFilterTests
         visible.Should().Contain("btc");
     }
 
+    [Fact]
+    public async Task CachedList_AfterSwitchingAccount_ReturnsTheNewlySelectedAccount()
+    {
+        // The list is cached for a minute. The key must include the selected account: switching only clears the last
+        // cached variant, so another variant (here: the other toggle value) would still hold the previous account.
+        await using var context = await AccountWithAssetsAsync();
+        var brother = new Account("brother", 1);
+        context.Accounts.Add(brother);
+        await context.SaveChangesAsync();
+        var cache = new MemoryCacheService(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
+        var handler = new GetCryptoAssetsQueryHandler(context, PricedCoinMarketCap(new() { [Btc] = 50_000m, [Uma] = 1.20m }),
+            NullLogger<GetCryptoAssetsQueryHandler>.Instance, cache);
+
+        (await AccountTagAsync(handler, hideZeroBalance: true)).Should().Be("main");
+        await context.Accounts.Where(account => account.Name == "main").ForEachAsync(account => account.Deselect());
+        brother.Select();
+        await context.SaveChangesAsync();
+
+        (await AccountTagAsync(handler, hideZeroBalance: true)).Should().Be("brother");
+    }
+
+    private static async Task<string> AccountTagAsync(GetCryptoAssetsQueryHandler handler, bool hideZeroBalance)
+    {
+        var page = await handler.Handle(new GetCryptoAssetsQuery { UserId = 1, PageSize = 50, HideZeroBalance = hideZeroBalance }, CancellationToken.None);
+        return page.Items.Single().AccountTag;
+    }
+
     private static async Task<DataContext> AccountWithAssetsAsync()
     {
         var context = new DataContext(new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);

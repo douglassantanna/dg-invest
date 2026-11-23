@@ -14,9 +14,11 @@ public static class CacheKeyConstants
   public const string AllCryptos = "all_cryptos";
   public const string AllUsers = "all_users";
   private static readonly ConcurrentDictionary<string, string> _cacheKeyHistory = new();
-  public static string GenerateCryptoAssetsCacheKey(string userId, string assetName, string sortBy, string sortOrder, bool hideZeroBalance)
+  // Includes the selected account: the list shows the selected account, and switching accounts only removes the last
+  // key generated for the user, so another cached variant would otherwise keep showing the previous account.
+  public static string GenerateCryptoAssetsCacheKey(string userId, int accountId, string assetName, string sortBy, string sortOrder, bool hideZeroBalance)
   {
-    var parts = new List<string> { UserAllCryptoAssets, userId };
+    var parts = new List<string> { UserAllCryptoAssets, userId, $"account{accountId}" };
 
     if (!string.IsNullOrEmpty(assetName)) parts.Add(assetName);
     if (!string.IsNullOrEmpty(sortBy)) parts.Add(sortBy);

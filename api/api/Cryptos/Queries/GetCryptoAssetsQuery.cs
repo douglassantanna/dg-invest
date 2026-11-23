@@ -46,7 +46,15 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
 
     public async Task<PageList<UserCryptoAssetDto>> Handle(GetCryptoAssetsQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = CacheKeyConstants.GenerateCryptoAssetsCacheKey(request.UserId.ToString(), request.AssetName ?? "", request.SortBy ?? "", request.SortOrder ?? "", request.HideZeroBalance);
+        var selectedAccountId = await _context.Accounts
+            .AsNoTracking()
+            .Where(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted)
+            .Select(x => x.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (selectedAccountId == 0)
+            return PageList<UserCryptoAssetDto>.Empty();
+
+        var cacheKey = CacheKeyConstants.GenerateCryptoAssetsCacheKey(request.UserId.ToString(), selectedAccountId, request.AssetName ?? "", request.SortBy ?? "", request.SortOrder ?? "", request.HideZeroBalance);
         var absoluteExpiration = TimeSpan.FromMinutes(1);
         var cachedResults = await _cacheService.GetOrCreateAsync(cacheKey, async (ct) =>
         {
@@ -59,7 +67,7 @@ public class GetCryptoAssetsQueryHandler : IRequestHandler<GetCryptoAssetsQuery,
                 ? accounts.Include(x => x.CryptoAssets).ThenInclude(ca => ca.Transactions)
                 : accounts.Include(x => x.CryptoAssets);
             var account = await accounts
-                .FirstOrDefaultAsync(x => x.IsSelected && x.UserId == request.UserId && !x.IsDeleted, ct);
+                .FirstOrDefaultAsync(x => x.Id == selectedAccountId && x.UserId == request.UserId && !x.IsDeleted, ct);
 
             if (account == null)
             {

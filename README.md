@@ -472,7 +472,7 @@ These are tracked in the integration review and planned for upcoming PRs:
 
 ### Crypto list (`/cryptos`)
 
-The list shows the selected account's assets with price, balance, invested amount, market value and gain/loss (`GET /api/Crypto/list-assets`, cached for 1 minute per filter combination).
+The list shows the selected account's assets with price, balance, invested amount, market value and gain/loss (`GET /api/Crypto/list-assets`, cached for 1 minute per **selected account** and filter combination, so switching accounts never shows the previous account's cached list).
 
 **Hide zero and dust balances** hides assets **worth less than US$1** (`Balance × current price`, `CryptoAsset.DustWorthThreshold`). This includes Bybit balance without history, such as wallet dust worth cents. The filter runs after prices are fetched. When a coin has **no price** (CoinMarketCap failed or does not list it), its worth is unknown, so the older rule applies: shown if it has a balance and either no recorded cost or a cost of at least US$0.10. A CoinMarketCap outage therefore never empties the list. With the toggle off, every asset is shown.
 
