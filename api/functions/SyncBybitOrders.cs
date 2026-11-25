@@ -55,9 +55,10 @@ public class SyncBybitOrders
         {
             await SendPendingPauseNotificationsAsync(cancellationToken);
 
+            // Only ids here: each account is loaded when its turn comes, and its assets and transactions are loaded by
+            // the sync service only if it will actually sync (see BybitAccountSyncService.EnsureHistoryLoadedAsync).
             var accounts = await _context.Accounts
-                .Include(a => a.CryptoAssets)
-                    .ThenInclude(ca => ca.Transactions)
+                .AsNoTracking()
                 .Where(a => a.ExternalId != null
                             && a.Enabled
                             && !a.IsDeleted
@@ -66,6 +67,8 @@ public class SyncBybitOrders
                             && _context.ExchangeIntegrations
                                 .Where(integration => integration.UserId == a.UserId && integration.Exchange == "Bybit")
                                 .All(integration => integration.Enabled))
+                .OrderBy(a => a.UserId).ThenBy(a => a.Id)
+                .Select(a => new { a.Id, a.UserId })
                 .ToListAsync(cancellationToken);
 
             if (accounts.Count == 0)
@@ -74,13 +77,17 @@ public class SyncBybitOrders
             var rateLimited = false;
             foreach (var accountsByUser in accounts.GroupBy(account => account.UserId))
             {
-                var userAccounts = accountsByUser.ToList();
+                var userAccountIds = accountsByUser.Select(account => account.Id).ToList();
                 BybitAccountSyncResult? classifiedFailure = null;
                 BybitAccountSyncResult? otherFailure = null;
                 int? failureAccountId = null;
 
-                foreach (var account in userAccounts)
+                foreach (var accountId in userAccountIds)
                 {
+                    var account = await _context.Accounts.SingleOrDefaultAsync(candidate => candidate.Id == accountId, cancellationToken);
+                    if (account is null)
+                        continue;
+
                     var result = await _accountSyncService.SyncAsync(account, cancellationToken);
                     if (result.FailureKind == BybitApiFailureKind.RateLimited)
                     {
@@ -108,18 +115,14 @@ public class SyncBybitOrders
                 }
 
                 if (classifiedFailure is not null)
-                {
-                    await RecordIntegrationFailureAsync(userAccounts, classifiedFailure, failureAccountId, cancellationToken);
-                    continue;
-                }
-
-                if (otherFailure is not null)
-                {
+                    await RecordIntegrationFailureAsync(accountsByUser.Key, userAccountIds, classifiedFailure, failureAccountId, cancellationToken);
+                else if (otherFailure is not null)
                     await RecordNonTransportFailureAsync(accountsByUser.Key, otherFailure, cancellationToken);
-                    continue;
-                }
+                else
+                    await RecordSuccessfulCycleAsync(accountsByUser.Key, cancellationToken);
 
-                await RecordSuccessfulCycleAsync(accountsByUser.Key, cancellationToken);
+                // Release this user's accounts, assets and transactions before the next user.
+                _context.ChangeTracker.Clear();
             }
 
             await SendPendingPauseNotificationsAsync(cancellationToken);
@@ -136,12 +139,12 @@ public class SyncBybitOrders
     }
 
     private async Task RecordIntegrationFailureAsync(
-        IReadOnlyCollection<Account> accounts,
+        int userId,
+        IReadOnlyCollection<int> accountIds,
         BybitAccountSyncResult failure,
         int? accountId,
         CancellationToken cancellationToken)
     {
-        var userId = accounts.First().UserId;
         var integration = await _context.ExchangeIntegrations
             .SingleOrDefaultAsync(item => item.UserId == userId && item.Exchange == "Bybit", cancellationToken);
         if (integration is null || !integration.Enabled)
@@ -165,8 +168,8 @@ public class SyncBybitOrders
         await _context.SaveChangesAsync(cancellationToken);
 
         BybitCredentialReader.Invalidate(_keyVaultService, userId, null);
-        foreach (var account in accounts)
-            BybitCredentialReader.Invalidate(_keyVaultService, userId, account.Id);
+        foreach (var userAccountId in accountIds)
+            BybitCredentialReader.Invalidate(_keyVaultService, userId, userAccountId);
 
         if (paused)
         {
