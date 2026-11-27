@@ -3,14 +3,17 @@
 # credential vault. One-time migration for environments created before the credential vault.
 # Environments deployed after it never write bybit-* secrets to the app vault.
 #
-# Usage: infra/scripts/migrate-bybit-secrets.sh <stage|prod>
+# Usage: infra/scripts/migrate-bybit-secrets.sh <stage|prod> [source-vault]
+#
+# - source-vault defaults to the environment's app vault (dginvest-<env>-sec-weu1). Pass the old
+#   environment's vault when the credentials live elsewhere, as for the PROD move to new resources.
 #
 # - Idempotent: re-running overwrites with the same values. Run it again after restarting the
 #   API and Function App, to catch credentials saved to the old vault mid-migration.
 # - Secret values never reach stdout, logs or process arguments.
 # - Copies only. Deleting bybit-* secrets from the app vault is a separate, manual step after
 #   validation (see infra/README.md).
-# - Requires Key Vault Secrets User on the app vault and Key Vault Secrets Officer on the
+# - Requires Key Vault Secrets User on the source vault and Key Vault Secrets Officer on the
 #   credential vault for the signed-in identity.
 set -euo pipefail
 
@@ -18,12 +21,12 @@ environment_name="${1:-}"
 case "$environment_name" in
   stage | prod) ;;
   *)
-    echo "Usage: $0 <stage|prod>" >&2
+    echo "Usage: $0 <stage|prod> [source-vault]" >&2
     exit 1
     ;;
 esac
 
-source_vault="dginvest-${environment_name}-sec-weu1"
+source_vault="${2:-dginvest-${environment_name}-sec-weu1}"
 target_vault="dginvest-${environment_name}-cred-weu1"
 
 names=$(az keyvault secret list \

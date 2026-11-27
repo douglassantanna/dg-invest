@@ -7,13 +7,13 @@ targetScope = 'resourceGroup'
 param environmentName string
 
 param location string = 'westeurope'
-@description('Region for the shared Azure SQL logical server and its databases. Keep consistent across PROD and STAGE.')
+@description('Region for the environment Azure SQL logical server and its database.')
 param sqlLocation string = 'francecentral'
 param sqlAdministratorLogin string = 'dginvestSqlAdmin'
 @secure()
 param sqlAdministratorPassword string
 
-@description('Daily ingestion cap (GB) for the shared Log Analytics workspace, as a decimal string. Ingestion stops for the rest of the UTC day once reached. Use \'-1\' for no cap.')
+@description('Daily ingestion cap (GB) for the environment Log Analytics workspace, as a decimal string. Ingestion stops for the rest of the UTC day once reached. Use \'-1\' for no cap.')
 param logAnalyticsDailyQuotaGb string = '0.15'
 
 @description('Cost-basis rule for crypto transfers and Bybit balance without history. Switch to Proportional after reviewing GET /api/Recalculate/preview; see the README "Cost basis" section.')
@@ -30,9 +30,11 @@ param enableRecalculation bool = false
 param bindCustomDomain bool = false
 param frontendCustomDomain string
 
-var appServicePlanName = 'dginvest-apps-weu-f1'
-var sqlServerName = 'dginvest-data-frc-01'
-var logAnalyticsWorkspaceName = 'dginvest-observe-weu-01'
+// PROD and STAGE each have their own App Service plan, SQL server and Log Analytics workspace, all in the same
+// resource group. STAGE keeps the names it was created with (they were shared before), so it is not recreated.
+var appServicePlanName = environmentName == 'prod' ? 'dginvest-prod-apps-weu-f1' : 'dginvest-apps-weu-f1'
+var sqlServerName = environmentName == 'prod' ? 'dginvest-prod-data-frc-01' : 'dginvest-data-frc-01'
+var logAnalyticsWorkspaceName = environmentName == 'prod' ? 'dginvest-prod-observe-weu-01' : 'dginvest-observe-weu-01'
 
 var apiName = 'dginvest-${environmentName}-api-weu-01'
 var functionName = 'dginvest-${environmentName}-jobs-weu-01'
@@ -70,7 +72,7 @@ var commonTags = {
   ManagedBy: 'Bicep'
 }
 
-resource sharedAppServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: appServicePlanName
   location: location
   kind: 'app'
@@ -85,7 +87,7 @@ resource sharedAppServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
     perSiteScaling: false
     zoneRedundant: false
   }
-  tags: union(commonTags, { Environment: 'shared', Component: 'apps' })
+  tags: union(commonTags, { Component: 'apps' })
 }
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
@@ -97,7 +99,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
     publicNetworkAccess: 'Enabled'
     minimalTlsVersion: '1.2'
   }
-  tags: union(commonTags, { Environment: 'shared', Component: 'data' })
+  tags: union(commonTags, { Component: 'data' })
 }
 
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01' = {
@@ -133,7 +135,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
       enableLogAccessUsingOnlyResourcePermissions: true
     }
   }
-  tags: union(commonTags, { Environment: 'shared', Component: 'observability' })
+  tags: union(commonTags, { Component: 'observability' })
 }
 
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -278,7 +280,7 @@ resource apiApp 'Microsoft.Web/sites@2024-04-01' = {
   }
   properties: {
     httpsOnly: true
-    serverFarmId: sharedAppServicePlan.id
+    serverFarmId: appServicePlan.id
     publicNetworkAccess: 'Enabled'
     clientAffinityEnabled: false
     siteConfig: {

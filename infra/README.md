@@ -1,11 +1,21 @@
 # Azure infrastructure deployment
 
-Infrastructure is deployed to the existing `TestDouglas` resource group in the MPN subscription. PROD and STAGE are test environments; application resources are in `westeurope`, while the shared SQL server and databases are in `francecentral`. Application code deployments remain separate.
+Infrastructure is deployed to the existing `TestDouglas` resource group in the MPN subscription. PROD and STAGE are test environments; application resources are in `westeurope`, while each environment's SQL server and database are in `francecentral`.
+
+Each environment has its own App Service plan (Windows F1), SQL logical server and Log Analytics workspace, all in `TestDouglas`. Nothing is shared between PROD and STAGE, so a firewall change, a full log cap or a STAGE outage does not affect PROD:
+
+| Resource | STAGE | PROD |
+|---|---|---|
+| App Service plan | `dginvest-apps-weu-f1` | `dginvest-prod-apps-weu-f1` |
+| SQL server | `dginvest-data-frc-01` | `dginvest-prod-data-frc-01` |
+| Log Analytics | `dginvest-observe-weu-01` | `dginvest-prod-observe-weu-01` |
+
+STAGE keeps the names it was created with, from when these were shared. Application code deployments remain separate.
 
 ## Deploy with GitHub Actions
 
 1. Configure the GitHub Environment `azure-infra-sandbox` with the existing OIDC variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`.
-2. Add the SQL logical server administrator password as the Environment secret `SQL_ADMIN_PASSWORD`. The `.bicepparam` file reads it from the workflow process environment; never put the password value in a repository file.
+2. Add the SQL logical server administrator password as the Environment secret `SQL_ADMIN_PASSWORD`. PROD and STAGE servers use the same password. The `.bicepparam` file reads it from the workflow process environment; never put the password value in a repository file.
 3. Before deploying, verify the resource providers required by the template are registered in the subscription identified by `AZURE_SUBSCRIPTION_ID`. This includes `Microsoft.Insights`, `Microsoft.OperationalInsights`, `Microsoft.KeyVault`, `Microsoft.Web`, `Microsoft.Sql`, and `Microsoft.Storage`. `Microsoft.Insights` and `Microsoft.OperationalInsights` are separate providers. Register any missing provider at subscription scope.
 4. Run **Deploy Azure Infrastructure** with `stage` or `prod` and leave `apply` disabled first. Review validation and `what-if` output.
 5. Run it again with `apply` enabled only after reviewing the changes.
@@ -20,9 +30,9 @@ When `apply` is enabled, the workflow also deletes the obsolete `<env>-app-<n>` 
 
 ### Log Analytics daily cap
 
-The shared workspace has a daily ingestion cap (`logAnalyticsDailyQuotaGb`, default `0.15` GB). When the cap is reached, ingestion stops until the next UTC day, so telemetry for the rest of that day is lost. Raise it, or set `-1`, while investigating an incident.
+Each workspace has a daily ingestion cap (`logAnalyticsDailyQuotaGb`, default `0.15` GB). When the cap is reached, ingestion stops until the next UTC day, so telemetry for the rest of that day is lost. Raise it, or set `-1`, while investigating an incident.
 
-The workflow serializes PROD and STAGE deployments because both update shared resources: the Windows F1 App Service plan and Log Analytics workspace in `westeurope`, plus the SQL logical server in `francecentral`. Keep `sqlLocation` consistent in both parameter files.
+The workflow still runs one deployment at a time, because both environments deploy to the same resource group.
 
 ## Runtime secrets and permissions
 
@@ -75,7 +85,7 @@ This applies only to environments that stored `bybit-*` secrets in the app vault
 
 1. Deploy the infrastructure. The credential vault is created, and both apps point `BybitKeyVaultSettings__VaultUri` at it.
 2. Assign the credential vault roles above (API: Secrets Officer; Function App: Secrets User). Also assign the API Secrets User on the app vault, but keep its existing Secrets Officer there for now.
-3. Run `infra/scripts/migrate-bybit-secrets.sh <env>` as an operator with Secrets User on the app vault and Secrets Officer on the credential vault. It copies the secrets without printing their values.
+3. Run `infra/scripts/migrate-bybit-secrets.sh <env> [source-vault]` as an operator with Secrets User on the source vault and Secrets Officer on the credential vault. The source defaults to the environment's app vault; pass the old environment's vault when the credentials live elsewhere (the new PROD copies from the current PROD vault). It copies the secrets without printing their values.
 4. Restart the API and Function App. This clears the 24-hour in-memory Bybit secret cache in `KeyVaultService`.
 5. Run the script again. This catches credentials saved to the old vault between steps 1 and 3.
 6. Validate: manual sync (`POST /api/Exchange/bybit/sync/{id}`), the timer sync, and saving, updating and disconnecting Bybit credentials.
@@ -87,11 +97,11 @@ The SQL server administrator credential is only for provisioning and database ad
 
 ## Databases and domain cutover
 
-Bicep creates the shared SQL server and an empty Basic 5 DTU / 2 GB database for the selected environment. The owner exports/imports the existing data manually and validates it. Bicep does not migrate, replace, or delete database contents.
+Bicep creates the environment SQL server and an empty Basic 5 DTU / 2 GB database for the selected environment. The owner exports/imports the existing data manually and validates it. Bicep does not migrate, replace, or delete database contents.
 
 Custom-domain binding is disabled by default (`bindCustomDomain = false`). Validate each new Static Web App using its Azure hostname first. The current domains `app.sanfi.xyz` and `stage.sanfi.xyz` stay attached to the existing apps until their new counterparts and imported data pass validation and cutover is approved. Cloudflare DNS records are always configured manually by the owner. Only then should the relevant binding be enabled in that environment parameter file and deployed.
 
-The API CORS allowlist includes the environment Static Web App default hostname and matching custom domain. PROD and STAGE do not allow each other's origins. The API stays on its `azurewebsites.net` hostname because the shared F1 plan does not support API custom domains.
+The API CORS allowlist includes the environment Static Web App default hostname and matching custom domain. PROD and STAGE do not allow each other's origins. The API stays on its `azurewebsites.net` hostname because the F1 plan does not support API custom domains.
 
 ## Local Bicep validation
 
