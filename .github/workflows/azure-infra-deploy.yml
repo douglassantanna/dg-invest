@@ -95,9 +95,15 @@ jobs:
         if: ${{ inputs.apply }}
         env:
           TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
-          SQL_SERVER_NAME: dginvest-data-frc-01
         run: |
           set -euo pipefail
+          # Each environment has its own SQL server; take its name from the deployment just applied.
+          SQL_SERVER_NAME=$(az deployment group show \
+            --resource-group TestDouglas \
+            --name "dginvest-${TARGET_ENVIRONMENT}-infra" \
+            --query properties.outputs.sqlServerName.value \
+            --output tsv)
+          test -n "$SQL_SERVER_NAME" || { echo "sqlServerName output not found."; exit 1; }
           # Earlier deployments added one rule per collected outbound IP, named <env>-app-<n>.
           # AllowAllWindowsAzureIps now covers Azure-hosted apps, so those rules are removed.
           # Only this naming pattern is touched; developer or home-IP rules are kept.
